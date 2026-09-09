@@ -1,0 +1,165 @@
+"""SQLite local para memoria controlada; no carga la base completa."""
+from __future__ import annotations
+
+from contextlib import contextmanager
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import re
+import sqlite3
+from uuid import uuid4
+
+from bot_ia.change_management import ChangeManager
+from bot_ia.contracts import Confidence, UniverseRegistry
+
+from .models import MemoryMatch, MemoryStatus, MemoryType, PersistentMemoryRecord
+
+_TOKENS = re.compile(r"[\wáéíóúüñ]+", re.IGNORECASE)
+_SECRET = re.compile(r"(?:sk-[A-Za-z0-9_-]{12,}|AIza[A-Za-z0-9_-]{12,}|\d{8,12}:[A-Za-z0-9_-]{20,})")
+
+
+class MemoryStorageError(RuntimeError):
+    pass
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class MemoryStore:
+    def __init__(self, workspace_root: Path, registry: UniverseRegistry, database_path: str = "work/bot_ia_memory.sqlite3") -> None:
+        self._registry = registry
+        self._path = ChangeManager(workspace_root).resolve_target(database_path)
+        self._closed = False
+        self._initialize()
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+    def close(self) -> None:
+        self._closed = True
+
+    def _connection(self) -> sqlite3.Connection:
+        if self._closed:
+            raise MemoryStorageError("memory store is closed")
+        connection = sqlite3.connect(self._path)
+        connection.row_factory = sqlite3.Row
+        return connection
+
+    @contextmanager
+    def _transaction(self):
+        connection = self._connection()
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    def _initialize(self) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(self._path)
+        try:
+            connection.execute("CREATE TABLE IF NOT EXISTS memories (memory_id TEXT PRIMARY KEY, universe_id TEXT NOT NULL, user_id TEXT NOT NULL, conversation_id TEXT, memory_type TEXT NOT NULL, content TEXT NOT NULL, source TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, approved INTEGER NOT NULL, status TEXT NOT NULL, confidence TEXT NOT NULL, expires_at TEXT, revoked_at TEXT, tags TEXT NOT NULL, related_entities TEXT NOT NULL, provenance TEXT NOT NULL, supersedes TEXT, conflicts_with TEXT NOT NULL)")
+            connection.execute("CREATE INDEX IF NOT EXISTS memory_lookup ON memories(universe_id, user_id, status, approved, expires_at)")
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    def propose(self, *, universe_id: str, user_id: str, conversation_id: str | None, memory_type: MemoryType, content: str, source: str, provenance: str, confidence: Confidence = Confidence.MEDIUM, expires_at: datetime | None = None, tags: tuple[str, ...] = (), related_entities: tuple[str, ...] = ()) -> PersistentMemoryRecord:
+        if not self._registry.contains(universe_id):
+            raise MemoryStorageError("memory universe is not registered")
+        if not user_id or not content.strip() or not source or not provenance or any(_SECRET.search(value) for value in (content, source, provenance)):
+            raise MemoryStorageError("memory contains invalid or sensitive content")
+        now = _now()
+        record = PersistentMemoryRecord(str(uuid4()), universe_id, user_id, conversation_id, memory_type, content.strip(), source, now, now, False, MemoryStatus.PROPOSED, confidence, expires_at, None, tuple(tags), tuple(related_entities), provenance)
+        self._insert(record)
+        return record
+
+    def _insert(self, record: PersistentMemoryRecord) -> None:
+        with self._transaction() as connection:
+            try:
+                connection.execute("INSERT INTO memories VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", self._values(record))
+            except sqlite3.IntegrityError as error:
+                raise MemoryStorageError("duplicate memory id") from error
+
+    @staticmethod
+    def _values(record: PersistentMemoryRecord) -> tuple[object, ...]:
+        return (record.memory_id, record.universe_id, record.user_id, record.conversation_id, record.memory_type.value, record.content, record.source, record.created_at.isoformat(), record.updated_at.isoformat(), int(record.approved_by_author), record.status.value, record.confidence.value, record.expires_at.isoformat() if record.expires_at else None, record.revoked_at.isoformat() if record.revoked_at else None, json.dumps(record.tags), json.dumps(record.related_entities), record.provenance, record.supersedes, json.dumps(record.conflicts_with))
+
+    def get(self, memory_id: str) -> PersistentMemoryRecord:
+        with self._transaction() as connection:
+            row = connection.execute("SELECT * FROM memories WHERE memory_id=?", (memory_id,)).fetchone()
+        if row is None:
+            raise MemoryStorageError("memory not found")
+        return self._record(row)
+
+    def approve(self, memory_id: str, *, approved_by_author: str) -> PersistentMemoryRecord:
+        if not approved_by_author.strip():
+            raise MemoryStorageError("explicit approver is required")
+        record = self.get(memory_id)
+        if record.status is not MemoryStatus.PROPOSED:
+            raise MemoryStorageError("only proposed memory can be approved")
+        return self._update(record, approved=True, status=MemoryStatus.ACTIVE, provenance=f"{record.provenance}; approved_by:{approved_by_author}")
+
+    def revoke(self, memory_id: str) -> PersistentMemoryRecord:
+        return self._update(self.get(memory_id), status=MemoryStatus.REVOKED, revoked_at=_now())
+
+    def archive(self, memory_id: str) -> PersistentMemoryRecord:
+        return self._update(self.get(memory_id), status=MemoryStatus.ARCHIVED)
+
+    def record_conflict(self, memory_id: str, source_id: str) -> PersistentMemoryRecord:
+        if not source_id:
+            raise MemoryStorageError("conflicting source id is required")
+        record = self.get(memory_id)
+        return self._update(record, status=MemoryStatus.CONFLICT, conflicts=tuple(dict.fromkeys((*record.conflicts_with, source_id))))
+
+    def supersede(self, old_memory_id: str, replacement_memory_id: str) -> PersistentMemoryRecord:
+        old, replacement = self.get(old_memory_id), self.get(replacement_memory_id)
+        if old.universe_id != replacement.universe_id or old.user_id != replacement.user_id or replacement.status is not MemoryStatus.ACTIVE:
+            raise MemoryStorageError("replacement must be active and share memory scope")
+        self._update(old, status=MemoryStatus.ARCHIVED)
+        return self._update(replacement, supersedes=old.memory_id)
+
+    def expire_due(self, now: datetime | None = None) -> int:
+        now = now or _now()
+        with self._transaction() as connection:
+            cursor = connection.execute("UPDATE memories SET status=?, updated_at=? WHERE status=? AND expires_at IS NOT NULL AND expires_at<=?", (MemoryStatus.EXPIRED.value, now.isoformat(), MemoryStatus.ACTIVE.value, now.isoformat()))
+        return cursor.rowcount
+
+    def retrieve(self, *, universe_id: str, user_id: str, conversation_id: str | None, query: str, now: datetime | None = None, limit: int = 5) -> tuple[MemoryMatch, ...]:
+        if not self._registry.contains(universe_id) or not user_id or limit < 1:
+            raise MemoryStorageError("invalid memory retrieval scope")
+        self.expire_due(now)
+        terms = set(_TOKENS.findall(query.casefold()))
+        if not terms:
+            return ()
+        with self._transaction() as connection:
+            rows = connection.execute("SELECT * FROM memories WHERE universe_id=? AND user_id=? AND status=? AND approved=1 AND (expires_at IS NULL OR expires_at>?) AND (conversation_id IS NULL OR conversation_id=?) LIMIT 100", (universe_id, user_id, MemoryStatus.ACTIVE.value, (now or _now()).isoformat(), conversation_id)).fetchall()
+        matches = []
+        for row in rows:
+            record = self._record(row)
+            words = set(_TOKENS.findall((record.content + " " + " ".join(record.tags)).casefold()))
+            overlap = len(terms & words)
+            if overlap:
+                matches.append(MemoryMatch(record, overlap / len(terms)))
+        return tuple(sorted(matches, key=lambda item: (-item.relevance, -item.record.confidence.value.count("h"), item.record.created_at), reverse=False)[:limit])
+
+    def _update(self, record: PersistentMemoryRecord, *, approved: bool | None = None, status: MemoryStatus | None = None, revoked_at: datetime | None = None, provenance: str | None = None, supersedes: str | None = None, conflicts: tuple[str, ...] | None = None) -> PersistentMemoryRecord:
+        updated = PersistentMemoryRecord(record.memory_id, record.universe_id, record.user_id, record.conversation_id, record.memory_type, record.content, record.source, record.created_at, _now(), record.approved_by_author if approved is None else approved, record.status if status is None else status, record.confidence, record.expires_at, record.revoked_at if revoked_at is None else revoked_at, record.tags, record.related_entities, record.provenance if provenance is None else provenance, record.supersedes if supersedes is None else supersedes, record.conflicts_with if conflicts is None else conflicts)
+        with self._transaction() as connection:
+            connection.execute("UPDATE memories SET universe_id=?, user_id=?, conversation_id=?, memory_type=?, content=?, source=?, created_at=?, updated_at=?, approved=?, status=?, confidence=?, expires_at=?, revoked_at=?, tags=?, related_entities=?, provenance=?, supersedes=?, conflicts_with=? WHERE memory_id=?", (*self._values(updated)[1:], updated.memory_id))
+        return updated
+
+    @staticmethod
+    def _record(row: sqlite3.Row) -> PersistentMemoryRecord:
+        try:
+            return PersistentMemoryRecord(row["memory_id"], row["universe_id"], row["user_id"], row["conversation_id"], MemoryType(row["memory_type"]), row["content"], row["source"], datetime.fromisoformat(row["created_at"]), datetime.fromisoformat(row["updated_at"]), bool(row["approved"]), MemoryStatus(row["status"]), Confidence(row["confidence"]), datetime.fromisoformat(row["expires_at"]) if row["expires_at"] else None, datetime.fromisoformat(row["revoked_at"]) if row["revoked_at"] else None, tuple(json.loads(row["tags"])), tuple(json.loads(row["related_entities"])), row["provenance"], row["supersedes"], tuple(json.loads(row["conflicts_with"])))
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            raise MemoryStorageError("invalid memory record on disk") from error

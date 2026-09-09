@@ -1,0 +1,13 @@
+[project]
+name = "bot-ia"
+version = "0.1.0"
+description = "Fundamentos locales y deterministas para BOT-IA"
+requires-python = ">=3.14"
+dependencies = []
+
+[tool.bot_ia]
+phase = "1C"
+network = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

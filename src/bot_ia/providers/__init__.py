@@ -1,0 +1,52 @@
+"""Gateway de proveedores de BOT-IA."""
+
+from .adapters import (
+    BaseProvider,
+    GeminiProvider,
+    GroqProvider,
+    OpenAICompatibleProvider,
+    OpenAIProvider,
+    OpenRouterProvider,
+    OllamaProvider,
+)
+from .factory import build_provider_manager
+
+from .health import ProviderHealthRecord
+
+from .manager import (
+    ProviderManager,
+    ProviderOutcome,
+)
+
+from .models import (
+    FailureClass,
+    ProviderAccount,
+    ProviderHealth,
+    ProviderModel,
+    ProviderRequest,
+    ProviderResponse,
+    ProviderStatus,
+    ProviderUsage,
+)
+
+__all__ = [
+    "BaseProvider",
+    "GeminiProvider",
+    "GroqProvider",
+    "OpenAICompatibleProvider",
+    "OpenAIProvider",
+    "OpenRouterProvider",
+    "OllamaProvider",
+    "build_provider_manager",
+    "ProviderHealthRecord",
+    "ProviderManager",
+    "ProviderOutcome",
+    "FailureClass",
+    "ProviderAccount",
+    "ProviderHealth",
+    "ProviderModel",
+    "ProviderRequest",
+    "ProviderResponse",
+    "ProviderStatus",
+    "ProviderUsage",
+]

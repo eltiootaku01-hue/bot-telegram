@@ -1,0 +1,32 @@
+[providers.gemini]
+enabled = true
+model = "gemini-3.8-flash"
+max_output_tokens = 16
+timeout_seconds = 30.0
+fallback = ""
+
+[providers.openai]
+enabled = false
+model = "openai-test"
+max_output_tokens = 128
+timeout_seconds = 30.0
+fallback = ""
+
+[services.supabase]
+enabled = false
+url = ""
+
+[services.telegram]
+enabled = false
+[providers.ollama]
+enabled = true
+model = "gemma3:latest"
+max_output_tokens = 256
+timeout_seconds = 120.0
+fallback = ""
+[universes.one_neko_punch]
+display_name = "One Neko Punch"
+root_path = "C:/Users/USER/Documents/Codex/2026-09-04/referenced-chatgpt-conversation-this-is-an/one-neko-punch"
+spoiler_policy = "strict"
+language = "es"
+
