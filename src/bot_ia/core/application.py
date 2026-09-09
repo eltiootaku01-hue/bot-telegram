@@ -49,7 +49,6 @@ class InMemorySessionStore:
         universe_id: str | None,
     ) -> SessionState | None:
         state = self.get(user_id, conversation_id)
-
         if state is not None or universe_id is None:
             return state
 
@@ -116,7 +115,17 @@ class BotApplication:
 
         execution = None
 
-        if self._executor:
+        # The current LocalWorkflow requires a resolved universe. Local and
+        # clarification routes can nevertheless be universe-independent, so
+        # skip the workflow only for those routes when no universe exists.
+        workflow_required = (
+            self._executor is not None
+            and not (
+                universe_id is None
+                and decision.route in {Route.LOCAL, Route.CLARIFICATION}
+            )
+        )
+        if workflow_required:
             if hasattr(self._executor, "execute"):
                 execution = self._executor.execute(
                     request,

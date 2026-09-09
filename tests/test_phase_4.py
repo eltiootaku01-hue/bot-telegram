@@ -60,6 +60,14 @@ class Phase4Tests(unittest.TestCase):
         self.assertTrue(context.excessive)
         self.assertTrue(any("budget" in item for item in context.omissions))
 
+    def test_critical_rules_are_fail_closed_when_budget_is_too_small(self) -> None:
+        with self.assertRaisesRegex(ValueError, "critical context rule"):
+            self.builder.build(
+                self.pack("Kuro"),
+                TokenBudget(1),
+                critical_rules=("security_no_invention: factual_output -> evidence_required",),
+            )
+
     def test_context_is_insufficient_without_evidence(self) -> None:
         context = self.builder.build(self.pack("inexistente"), TokenBudget(100))
         self.assertFalse(context.sufficient)

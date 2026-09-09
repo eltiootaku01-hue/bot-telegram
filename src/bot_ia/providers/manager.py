@@ -101,16 +101,16 @@ class ProviderManager:
         result: list[tuple[str, str | None]] = []
 
         def add_provider(provider_id: str, preferred_account: str | None = None) -> None:
+            # An explicit account is a hard selection. Other accounts may only
+            # be considered when the caller explicitly supplies them through
+            # fallback_accounts.
             if preferred_account is not None:
                 result.append((provider_id, preferred_account))
-            accounts = [
-                account_id for (pid, account_id) in self._account_providers
-                if pid == provider_id and account_id != preferred_account
-            ]
-            for account_id in accounts:
-                result.append((provider_id, account_id))
-            if not accounts and preferred_account is None and (provider_id, provider_id) in self._account_providers:
-                result.append((provider_id, provider_id))
+                return
+
+            for account_id in self._account_providers:
+                if account_id[0] == provider_id:
+                    result.append((provider_id, account_id[1]))
 
         add_provider(request.provider, request.account_id)
         for account in fallback_accounts:
@@ -118,14 +118,11 @@ class ProviderManager:
                 result.append((request.provider, account))
         if fallback_provider and fallback_provider != request.provider:
             add_provider(fallback_provider)
-        # preserve order while removing duplicates
         return list(dict.fromkeys(result))
 
     def _resolve(self, provider_id: str, account_id: str | None) -> BaseProvider | None:
         if account_id is not None:
-            provider = self._account_providers.get((provider_id, account_id))
-            if provider is not None:
-                return provider
+            return self._account_providers.get((provider_id, account_id))
         return self._providers.get(provider_id)
 
     def _make_request(self, request: ProviderRequest, provider_id: str, account_id: str | None, provider: BaseProvider | None) -> ProviderRequest:

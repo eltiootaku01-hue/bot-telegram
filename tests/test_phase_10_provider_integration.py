@@ -5,12 +5,11 @@ import unittest
 from bot_ia.contracts import (
     AuthorityLevel,
     CanonStatus,
-    Confidence,
     SourceStatus,
     UniverseDefinition,
     UniverseRegistry,
 )
-from bot_ia.core import LocalBrain, Route, Router
+from bot_ia.core import LocalBrain, Router
 from bot_ia.core.application import (
     ApplicationRequest,
     BotApplication,
@@ -22,9 +21,7 @@ from bot_ia.memory import MemoryStore
 from bot_ia.providers import (
     GeminiProvider,
     ProviderManager,
-    ProviderResponse,
     ProviderStatus,
-    ProviderUsage,
 )
 
 
@@ -147,11 +144,9 @@ class Phase10ProviderIntegrationTests(unittest.TestCase):
         response = self.handle("Escribe una escena.")
 
         self.assertEqual(1, len(self.transport.calls))
-
         payload = self.transport.calls[0]["payload"]
 
         self.assertEqual("gemini-test", payload["model"])
-
         text = payload["input"]
 
         self.assertIn("UNIVERSE: alpha_world", text)
@@ -161,39 +156,22 @@ class Phase10ProviderIntegrationTests(unittest.TestCase):
             "Treat the supplied context as the source of truth for the project.",
             text,
         )
+        self.assertIn("security_no_invention: factual_output -> evidence_required", text)
         self.assertIn("CONTEXT:", text)
         self.assertIn("USER REQUEST:", text)
         self.assertIn("Escribe una escena.", text)
-
         self.assertEqual(
             "gemini-test",
             response.execution.provider_response.model,
         )
-    def test_search_route_can_use_provider_as_evidence_worker(self) -> None:
-        response = self.handle("Â¿QuiÃ©n es Kuro?")
 
-        provider_response = response.execution.provider_response
+    def test_search_route_uses_evidence_gate_without_calling_provider(self) -> None:
+        response = self.handle("¿Quién es Kuro?")
 
-        self.assertIsNotNone(provider_response)
-        self.assertEqual("gemini", provider_response.provider)
-        self.assertEqual(ProviderStatus.SUCCESS, provider_response.status)
-        self.assertEqual(
-            "Kuro protege Alpha.",
-            response.text,
-        )
-
-        self.assertEqual(1, len(self.transport.calls))
-
-        payload = self.transport.calls[0]["payload"]
-        text = payload["input"]
-
-        self.assertIn("UNIVERSE: alpha_world", text)
-        self.assertIn("INTENT: character", text)
-        self.assertIn("CONTEXT:", text)
-        self.assertIn("Kuro protege Alpha.", text)
-        self.assertIn("USER REQUEST:", text)
-        self.assertIn("Â¿QuiÃ©n es Kuro?", text)
-
+        self.assertIsNone(response.execution.provider_response)
+        self.assertEqual("Kuro protege Alpha.", response.text)
+        self.assertEqual(0, len(self.transport.calls))
+        self.assertIn("Kuro protege Alpha.", response.execution.context.text)
 
     def test_local_route_does_not_call_gemini(self) -> None:
         response = self.handle("Hola.")
@@ -208,7 +186,6 @@ class Phase10ProviderIntegrationTests(unittest.TestCase):
         self.assertIsNotNone(provider_response)
         self.assertEqual("gemini", provider_response.provider)
         self.assertEqual("gemini-test", provider_response.model)
-
         self.assertNotIn("test-key", response.execution.agent_result.answer)
 
     def test_usage_is_preserved_from_provider(self) -> None:
@@ -222,5 +199,3 @@ class Phase10ProviderIntegrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-

@@ -12,7 +12,7 @@ from .models import ContextPack, ContextSelection, TokenBudget
 
 
 class ContextBuilder:
-    ALGORITHM_VERSION = "context-v2"
+    ALGORITHM_VERSION = "context-v3"
 
     def build(
         self,
@@ -27,13 +27,6 @@ class ContextBuilder:
         selections: list[ContextSelection] = []
         omissions: list[str] = list(evidence.omissions)
         used_chars = 0
-        evidence_reserve = 0
-
-        if evidence.fragments:
-            evidence_reserve = max(
-                len(evidence.fragments[0].text),
-                0,
-            )
 
         def add(
             kind: str,
@@ -45,10 +38,7 @@ class ContextBuilder:
         ) -> bool:
             nonlocal used_chars
             estimated = math.ceil(len(text) / budget.chars_per_token)
-            effective_max_chars = budget.max_chars
-
-
-            if used_chars + len(text) > effective_max_chars:
+            if used_chars + len(text) > budget.max_chars:
                 omissions.append(f"omitted_{kind}_budget")
                 return False
             selections.append(
@@ -65,15 +55,21 @@ class ContextBuilder:
             used_chars += len(text)
             return True
 
+        # Security and evidence-integrity rules are fail-closed. A critical
+        # rule must never silently disappear because the context budget is too
+        # small; continuing would make downstream provider behavior unsafe.
         for rule in critical_rules:
-            add(
+            if not add(
                 "rule",
                 f"RULE: {rule}",
                 None,
                 None,
                 100.0,
                 "critical rule",
-            )
+            ):
+                raise ValueError(
+                    "critical context rule cannot fit within token budget"
+                )
 
         if state_summary:
             add(
@@ -102,15 +98,11 @@ class ContextBuilder:
                 in {SourceType.PLANNING, SourceType.OUTLINE}
                 and not future_task
             ):
-                omissions.append(
-                    f"omitted_planning:{fragment.source_id}"
-                )
+                omissions.append(f"omitted_planning:{fragment.source_id}")
                 continue
 
             if fragment.text in seen_text:
-                omissions.append(
-                    f"omitted_redundant:{fragment.source_id}"
-                )
+                omissions.append(f"omitted_redundant:{fragment.source_id}")
                 continue
 
             seen_text.add(fragment.text)
@@ -135,9 +127,7 @@ class ContextBuilder:
 
         for match in memory_matches:
             if match.record.universe_id != evidence.query.universe_id:
-                omissions.append(
-                    f"omitted_memory_universe:{match.record.memory_id}"
-                )
+                omissions.append(f"omitted_memory_universe:{match.record.memory_id}")
                 continue
 
             add(
@@ -149,31 +139,14 @@ class ContextBuilder:
                 "authorized relevant memory",
             )
 
-        evidence_count = sum(
-            item.kind == "evidence"
-            for item in selections
-        )
-
+        evidence_count = sum(item.kind == "evidence" for item in selections)
         sufficient = (
             evidence_count > 0
             and evidence.coverage.status is not CoverageStatus.NO_ENCONTRADO
         )
-
-        excessive = any(
-            item.endswith("_budget")
-            for item in omissions
-        )
-
-        text = "\n\n".join(
-            item.text
-            for item in selections
-        )
-
-        confidence = (
-            evidence.confidence
-            if sufficient
-            else Confidence.LOW
-        )
+        excessive = any(item.endswith("_budget") for item in omissions)
+        text = "\n\n".join(item.text for item in selections)
+        confidence = evidence.confidence if sufficient else Confidence.LOW
 
         return ContextPack(
             evidence.query.universe_id,

@@ -1,4 +1,4 @@
-﻿"""Flujo local inyectable que une evidencia, contexto, IA-chan y reglas."""
+"""Flujo local inyectable que une evidencia, contexto, IA-chan y reglas."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ class LocalExecution:
 
 
 class LocalWorkflow:
-    """Orquesta sÃƒÆ’Ã‚Â³lo dependencias locales o inyectadas; nunca carga credenciales."""
+    """Orquesta sólo dependencias locales o inyectadas; nunca carga credenciales."""
 
     def __init__(
     self,
@@ -48,7 +48,6 @@ class LocalWorkflow:
     provider_manager: ProviderManager | None = None,
     token_budget: TokenBudget | None = None,
     rule_factory: RuleFactory | None = None,
-   
     provider_config: ProviderConfig | None = None,
     provider_id: str = "local_fake",
     provider_model: str = "local-v1",
@@ -83,14 +82,26 @@ class LocalWorkflow:
         searched = decision.requires_search or decision.requires_agent or decision.requires_llm
         evidence = self._librarian.retrieve(query, self._entries.get(brain.universe_id, ())) if searched else self._empty_evidence(query)
 
+        rules = self._rule_factory(brain, decision)
+        resolution = RuleHierarchy.resolve(rules)
+        critical_rules = tuple(
+            f"{rule.rule_id}: {rule.subject} -> {rule.directive}"
+            for rule in rules
+            if rule.priority <= RulePriority.EVIDENCE_UNCERTAINTY_CONFLICTS
+        )
+
         memory_matches = ()
         if self._memory_store is not None:
             memory_matches = self._memory_store.retrieve(universe_id=brain.universe_id, user_id=request.user_id, conversation_id=request.conversation_id, query=brain.normalized.original)
-        context = self._context_builder.build(evidence, self._budget, memory_matches=memory_matches, future_task=decision.requires_llm)
+        context = self._context_builder.build(
+            evidence,
+            self._budget,
+            critical_rules=critical_rules,
+            memory_matches=memory_matches,
+            future_task=decision.requires_llm,
+        )
         ollie = self._ollie.build(brain.intent)
         agent = self._agents.dispatch(AgentRequest("ia_chan", brain.universe_id, brain.intent.value, brain.normalized.original, brain.state, context, evidence, constraints=(ollie.compact_request,) if ollie.compact_request else ()))
-        rules = self._rule_factory(brain, decision)
-        resolution = RuleHierarchy.resolve(rules)
         contract = agent.output_contract
         if contract is None:
             raise RuntimeError("IA-chan must return an output contract")
@@ -159,7 +170,10 @@ class LocalWorkflow:
         agent: AgentResult,
         context: ContextPack,
     ) -> ProviderResponse | None:
-        if self._provider_manager is None or not (decision.requires_llm or decision.requires_search):
+        # SEARCH is deliberately provider-free: EvidenceGate is authoritative
+        # for factual answers. Calling an LLM here would waste quota/latency and
+        # could produce an output that is discarded immediately afterwards.
+        if self._provider_manager is None or not decision.requires_llm:
             return None
 
         config = self._provider_config
@@ -230,4 +244,3 @@ class LocalWorkflow:
 
 def agent_output_context(agent: AgentResult, brain: BrainResult) -> str:
     return agent.answer
-
