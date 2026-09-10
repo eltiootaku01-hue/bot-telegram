@@ -9,6 +9,7 @@ class Rarity(StrEnum):
     A = "A"
     S = "S"
     SS = "SS"
+    SSS = "SSS"
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,4 +55,5 @@ RARITY_MULTIPLIER: dict[Rarity, float] = {
     Rarity.A: 1.50,
     Rarity.S: 1.80,
     Rarity.SS: 2.20,
+    Rarity.SSS: 2.60,
 }
