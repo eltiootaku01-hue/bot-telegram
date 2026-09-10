@@ -16,6 +16,7 @@ if SRC.is_dir():
 
 from bot_ia.config.dotenv import load_dotenv
 from bot_ia.core.application import ApplicationRequest
+from bot_ia.core.context_destinations import get_context_destination, list_context_destinations
 from bot_ia.core.context_sharing import build_shared_context
 from bot_ia.core.creative_assist import expand_scene_sketch
 from bot_ia.runtime import build_runtime
@@ -165,7 +166,7 @@ class BotIADesktop:
             self.send()
 
     def share_context(self) -> None:
-        """Prepara contexto local y ofrece copiarlo o abrir ChatGPT; nunca hace una llamada de red."""
+        """Prepara contexto local y ofrece destinos aprobados; nunca envía el contexto."""
         if self.last_execution is None:
             self._append("BOT-IA", "🔗 Todavía no hay una consulta procesada con evidencia para compartir. Primero realiza una consulta.")
             return
@@ -181,51 +182,38 @@ class BotIADesktop:
         preview.transient(self.root)
         preview.columnconfigure(0, weight=1)
         preview.rowconfigure(1, weight=1)
-        ttk.Label(
-            preview,
-            text="🔗 CONTEXTO PARA IA EXTERNA",
-            font=("Segoe UI", 15, "bold"),
-        ).grid(row=0, column=0, sticky="w", padx=12, pady=10)
+        ttk.Label(preview, text="🔗 CONTEXTO PARA IA EXTERNA", font=("Segoe UI", 15, "bold")).grid(row=0, column=0, sticky="w", padx=12, pady=10)
         text = tk.Text(preview, wrap="word", font=("Consolas", 10))
         text.grid(row=1, column=0, sticky="nsew", padx=12)
         text.insert("1.0", shared.text)
         text.configure(state="disabled")
         buttons = ttk.Frame(preview, padding=12)
         buttons.grid(row=2, column=0, sticky="ew")
-        ttk.Label(
-            buttons,
-            text=(
-                f"Universo: {shared.universe_id} | Fuentes: {len(shared.source_ids)} | "
-                f"Confianza: {shared.evidence_confidence} | Redacciones: {shared.redactions}"
-            ),
-        ).pack(side="left")
+        ttk.Label(buttons, text=f"Universo: {shared.universe_id} | Fuentes: {len(shared.source_ids)} | Confianza: {shared.evidence_confidence} | Redacciones: {shared.redactions}").pack(side="left")
 
-        def copy_context(open_chatgpt: bool = False) -> None:
+        def copy_context(destination_id: str | None = None) -> None:
             self.root.clipboard_clear()
             self.root.clipboard_append(shared.as_external_prompt())
             self.root.update()
-            if open_chatgpt:
-                webbrowser.open_new_tab("https://chatgpt.com/")
-                self._append("BOT-IA", "🔗 Contexto copiado. Abrí ChatGPT en el navegador; pega el contenido cuando estés listo.")
+            if destination_id is not None:
+                destination = get_context_destination(destination_id)
+                webbrowser.open_new_tab(destination.url)
+                self._append("BOT-IA", f"🔗 Contexto copiado. Abrí {destination.display_name}; pega el contenido cuando estés listo. BOT-IA no envió el contexto por red.")
             else:
                 self._append("BOT-IA", "🔗 Contexto copiado al portapapeles. Revísalo antes de pegarlo en una IA externa.")
             preview.destroy()
 
         def export_json() -> None:
             from tkinter import filedialog
-            destination = filedialog.asksaveasfilename(
-                parent=preview,
-                title="Exportar paquete de contexto",
-                defaultextension=".json",
-                filetypes=(("JSON", "*.json"), ("Todos los archivos", "*.*")),
-            )
+            destination = filedialog.asksaveasfilename(parent=preview, title="Exportar paquete de contexto", defaultextension=".json", filetypes=(("JSON", "*.json"), ("Todos los archivos", "*.*")))
             if not destination:
                 return
             Path(destination).write_text(shared.as_json(), encoding="utf-8")
             self._append("BOT-IA", f"📦 Paquete de contexto exportado: {Path(destination).name}")
 
         ttk.Button(buttons, text="📋 Copiar contexto", command=copy_context).pack(side="right", padx=(8, 0))
-        ttk.Button(buttons, text="🚀 Copiar + abrir ChatGPT", command=lambda: copy_context(True)).pack(side="right", padx=(8, 0))
+        for destination in reversed(list_context_destinations()):
+            ttk.Button(buttons, text=f"🚀 Copiar + abrir {destination.display_name}", command=lambda d=destination.destination_id: copy_context(d)).pack(side="right", padx=(8, 0))
         ttk.Button(buttons, text="📦 Exportar JSON", command=export_json).pack(side="right", padx=(8, 0))
         ttk.Button(buttons, text="Cancelar", command=preview.destroy).pack(side="right")
 
@@ -302,7 +290,3 @@ class BotIADesktop:
 
     def run(self) -> None:
         self.root.mainloop()
-
-
-if __name__ == "__main__":
-    BotIADesktop().run()
