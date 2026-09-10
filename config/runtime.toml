@@ -18,7 +18,7 @@ enabled = true
 model = "openai/gpt-oss-20b"
 max_output_tokens = 512
 timeout_seconds = 30.0
-fallback = "coze"
+fallback = "openrouter"
 
 [providers.groq.accounts.groq_main]
 secret_env = "GROQ_API_KEY"
@@ -30,7 +30,7 @@ enabled = true
 model = "openai/gpt-oss-20b"
 max_output_tokens = 512
 timeout_seconds = 30.0
-fallback = ""
+fallback = "coze"
 base_url = "https://openrouter.ai/api/v1"
 
 [providers.openrouter.accounts.openrouter_main]
