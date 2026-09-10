@@ -1,7 +1,8 @@
 from datetime import datetime
 
 from aiogram.types import Chat as TgChat, User as TgUser
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Chat, GameProfile, PointTransaction, User, UserChat
@@ -90,8 +91,16 @@ class MemberRepository:
         ))
         if profile is None:
             profile = GameProfile(user_id=user_id, chat_id=chat_id)
-            session.add(profile)
-            await session.flush()
+            try:
+                async with session.begin_nested():
+                    session.add(profile)
+                    await session.flush()
+            except IntegrityError:
+                profile = await session.scalar(select(GameProfile).where(
+                    GameProfile.user_id == user_id, GameProfile.chat_id == chat_id,
+                ))
+                if profile is None:
+                    raise
             if commit:
                 await session.commit()
                 await session.refresh(profile)
@@ -100,36 +109,54 @@ class MemberRepository:
     async def add_points(
         self, session: AsyncSession, *, user_id: int, chat_id: int, amount: int,
         reason: str, reference_type: str | None = None, reference_id: str | None = None,
+        commit: bool = True,
     ) -> int:
-        """Add spendable community points and record an immutable ledger entry."""
-        if amount == 0:
-            return (await self.get_or_create_game_profile(session, user_id, chat_id)).points
-        profile = await self.get_or_create_game_profile(session, user_id, chat_id)
-        profile.points = max(0, profile.points + amount)
-        profile.updated_at = datetime.utcnow()
-        session.add(PointTransaction(
-            user_id=user_id, chat_id=chat_id, amount=amount, reason=reason,
-            reference_type=reference_type, reference_id=reference_id,
-        ))
-        await session.commit()
+        """Atomically add points and record the ledger entry in the same transaction."""
+        if amount < 0:
+            raise ValueError("Point amount must not be negative")
+        profile = await self.get_or_create_game_profile(session, user_id, chat_id, commit=False)
+        if amount:
+            await session.execute(
+                update(GameProfile)
+                .where(GameProfile.id == profile.id)
+                .values(points=GameProfile.points + amount, updated_at=datetime.utcnow())
+            )
+            await session.refresh(profile)
+            session.add(PointTransaction(
+                user_id=user_id, chat_id=chat_id, amount=amount, reason=reason,
+                reference_type=reference_type, reference_id=reference_id,
+            ))
+        if commit:
+            await session.commit()
+            await session.refresh(profile)
         return profile.points
 
     async def spend_points(
         self, session: AsyncSession, *, user_id: int, chat_id: int, amount: int,
         reason: str, reference_type: str | None = None, reference_id: str | None = None,
+        commit: bool = True,
     ) -> int | None:
+        """Atomically spend points, preventing negative balances under concurrent requests."""
         if amount <= 0:
             raise ValueError("Point cost must be positive")
-        profile = await self.get_or_create_game_profile(session, user_id, chat_id)
-        if profile.points < amount:
+        profile = await self.get_or_create_game_profile(session, user_id, chat_id, commit=False)
+        result = await session.execute(
+            update(GameProfile)
+            .where(GameProfile.id == profile.id, GameProfile.points >= amount)
+            .values(points=GameProfile.points - amount, updated_at=datetime.utcnow())
+        )
+        if result.rowcount != 1:
+            if commit:
+                await session.rollback()
             return None
-        profile.points -= amount
-        profile.updated_at = datetime.utcnow()
+        await session.refresh(profile)
         session.add(PointTransaction(
             user_id=user_id, chat_id=chat_id, amount=-amount, reason=reason,
             reference_type=reference_type, reference_id=reference_id,
         ))
-        await session.commit()
+        if commit:
+            await session.commit()
+            await session.refresh(profile)
         return profile.points
 
     @staticmethod
