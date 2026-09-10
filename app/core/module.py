@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 
-from aiogram import Router
+from aiogram import Bot, Router
 
 
 class BotModule(ABC):
-    """Small plugin boundary inspired by mature bot/cog systems."""
+    """Plugin boundary with optional startup/shutdown lifecycle hooks."""
 
     name: str
 
@@ -15,3 +15,9 @@ class BotModule(ABC):
     def setup(self) -> None:
         """Register handlers, filters and middleware owned by this module."""
         raise NotImplementedError
+
+    async def on_startup(self, bot: Bot) -> None:
+        """Optional long-lived tasks/resources for a module."""
+
+    async def on_shutdown(self) -> None:
+        """Optional cleanup hook."""
