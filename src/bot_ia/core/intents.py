@@ -29,10 +29,11 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule(Intent.CHARACTER, (r"\bquien es\b", r"\bpersonaje\b", r"\balias\b")),
     IntentRule(Intent.HELP, (r"^ayuda\b", r"^help\b", r"\bcomo funciona\b", r"\bque puedes hacer\b", r"\bme puedes ayudar\b", r"\bme ayudas\b")),
     IntentRule(Intent.GREETING, (r"^(hola|buenas|hey|buen dia|buenas tardes|buenas noches)\b", r"^(gracias|muchas gracias|genial|perfecto|ok|okay|dale|jaja|jeje|que tal|como estas)\b")),
+    # Sólo preguntas sobre el inventario/documentación completa. Una pregunta
+    # sobre una entidad concreta debe seguir por la ruta factual.
     IntentRule(Intent.KNOWLEDGE_OVERVIEW, (
         r"\bque (?:informacion|datos|documentacion) tienes\b",
         r"\bque (?:informacion|datos|documentacion) hay\b",
-        r"\bque sabes (?:sobre|de)\b",
         r"\bque tienes disponible\b",
         r"\binformacion disponible\b",
         r"\bdocumentacion disponible\b",
