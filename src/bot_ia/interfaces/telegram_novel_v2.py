@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from bot_ia.core.application import ApplicationRequest, BotApplication
-from bot_ia.interfaces.telegram import TelegramOutbound, parse_callback_update
+from bot_ia.interfaces.telegram import TelegramOutbound, parse_callback_update, parse_update
 from bot_ia.interfaces.telegram_ui import TelegramNovelAdapter
 
 
@@ -32,7 +32,7 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
         if callback.data == "menu:edit":
             return TelegramOutbound(
                 callback.conversation_id,
-                "📝 EDITOR\n\nElige qué quieres revisar. Luego envía el texto o indícame el archivo principal.",
+                "📝 EDITOR\n\nElige qué quieres revisar. Luego envía el texto que quieres analizar.",
                 "local",
                 EDITOR_MENU,
             )
@@ -40,17 +40,17 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
             self._pending[(callback.user_id, callback.conversation_id)] = callback.data
             return TelegramOutbound(
                 callback.conversation_id,
-                "📂 Envía ahora el texto que quieres revisar.\n\nLa biblioteca se usará como evidencia de continuidad; la API sólo se utilizará si corresponde y queda autorizada explícitamente.",
+                "📂 Envía ahora el texto que quieres revisar.\n\nLa biblioteca se usará como evidencia de continuidad; la API no se usará silenciosamente.",
                 "local",
                 (("❌ Cancelar", "menu:main"),),
             )
         if callback.data == "menu:library":
-            return self._library_menu(callback.conversation_id)
+            return self._library_menu(callback.user_id, callback.conversation_id)
         return super().handle_callback(update)
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" not in update:
-            inbound = __import__("bot_ia.interfaces.telegram", fromlist=["parse_update"]).parse_update(update)
+            inbound = parse_update(update)
             key = (inbound.user_id, inbound.conversation_id)
             pending = self._pending.get(key)
             if pending in EDITOR_REQUESTS:
@@ -60,12 +60,12 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
                 return self.from_response(inbound.conversation_id, response)
         return super().handle_update(update)
 
-    def _library_menu(self, chat_id: str) -> TelegramOutbound:
+    def _library_menu(self, user_id: str, chat_id: str) -> TelegramOutbound:
         executor = getattr(self._application, "_executor", None)
         entries = getattr(executor, "_entries", {}) if executor is not None else {}
         universe_id = "one_neko_punch"
         try:
-            state = self._application._sessions.get("", "")
+            state = self._application._sessions.get(user_id, chat_id)
             if state is not None:
                 universe_id = state.universe_id
         except Exception:
