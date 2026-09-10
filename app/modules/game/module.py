@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 
 from aiogram import Bot, F
 from aiogram.filters import Command
@@ -12,6 +13,7 @@ from app.db.repositories import MemberRepository
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterStore
 from app.game.engine import GameEngine
+from app.game.progression import capture_reward, collection_status
 from app.game.wild_scheduler import WildWaifuScheduler
 from app.ui.game_keyboards import combat_keyboard, game_hub_keyboard, gacha_keyboard
 
@@ -50,7 +52,10 @@ class GameModule(BotModule):
         await message.answer("🎮 <b>Zona de juegos</b>", reply_markup=game_hub_keyboard())
 
     async def gacha(self, message: Message) -> None:
-        await message.answer("🎰 <b>Gacha de personajes</b>\n\nLas ilustraciones y rarezas crecerán por niveles.", reply_markup=gacha_keyboard())
+        await message.answer(
+            "🎰 <b>Gacha de personajes</b>\n\nLas ilustraciones y rarezas crecerán por niveles.",
+            reply_markup=gacha_keyboard(),
+        )
 
     async def inventory_callback(self, callback: CallbackQuery) -> None:
         if callback.message is None:
@@ -60,6 +65,8 @@ class GameModule(BotModule):
         await callback.answer()
 
     async def inventory(self, message: Message) -> None:
+        if message.from_user is None:
+            return
         await self._show_inventory(message, message.from_user.id, message.chat.id)
 
     async def _show_inventory(self, source: Message, user_id: int, chat_id: int) -> None:
@@ -72,7 +79,13 @@ class GameModule(BotModule):
             lines = [f"🎒 <b>Inventario de {source.from_user.first_name}</b>"]
             for item in rows:
                 character = get_character(item.character_id)
-                lines.append(f"• {character.name} · clase {item.rarity} · Nv.{item.level} · EXP {item.experience} · ×{item.copies} · Evo.{item.evolution_stage}")
+                progress = collection_status(item)
+                lines.append(
+                    f"• {character.name} · clase {item.rarity} · Nv.{item.level} · "
+                    f"EXP {item.experience} · ×{item.copies} · Evo.{item.evolution_stage}"
+                )
+                if progress.can_evolve:
+                    lines.append("  ↳ ✨ <b>Lista para evolucionar</b>")
             lines.append("\n⏱️ Esta consulta se borra automáticamente en 2 minutos.")
             text = "\n".join(lines)
         sent = await source.answer(text)
@@ -101,7 +114,11 @@ class GameModule(BotModule):
 
     async def _show_combat(self, message: Message) -> None:
         taiga = get_character("taiga")
-        await message.answer(f"⚔️ <b>{taiga.name}</b> — {taiga.anime}\n\n⚔️ {taiga.attack_name}\n🛡️ {taiga.defense_name}\n✨ {taiga.special_name}\n\nElegí una acción.", reply_markup=combat_keyboard())
+        await message.answer(
+            f"⚔️ <b>{taiga.name}</b> — {taiga.anime}\n\n"
+            f"⚔️ {taiga.attack_name}\n🛡️ {taiga.defense_name}\n✨ {taiga.special_name}\n\nElegí una acción.",
+            reply_markup=combat_keyboard(),
+        )
 
     async def gacha_roll(self, callback: CallbackQuery) -> None:
         rarity = self.engine.roll_gacha(seed=str(callback.id))
@@ -128,7 +145,7 @@ class GameModule(BotModule):
             return
         async with self.database.session() as session:
             encounter = await self.encounters.get(session, encounter_id)
-            if encounter is None:
+            if encounter is None or datetime.utcnow() >= encounter.expires_at:
                 await callback.answer("La waifu ya se fue. 😭", show_alert=True)
                 return
             character = get_character(encounter.character_id)
@@ -136,20 +153,36 @@ class GameModule(BotModule):
             if int(index) >= len(options):
                 await callback.answer("Respuesta inválida.", show_alert=True)
                 return
-            result = await self.encounters.claim_attempt(session, encounter_id, callback.from_user.id, options[int(index)])
+            result = await self.encounters.claim_attempt(
+                session, encounter_id, callback.from_user.id, options[int(index)]
+            )
             if result is None:
                 await callback.answer("Ya intentaste o el evento terminó. 😭", show_alert=True)
                 return
             if not result:
                 await callback.answer("❌ Fallaste. Esta oportunidad era solo tuya.", show_alert=True)
                 return
-            profile = await MemberRepository().get_or_create_game_profile(session, callback.from_user.id, encounter.chat_id)
-            owned = await session.scalar(select(GameCollection).where(GameCollection.profile_id == profile.id, GameCollection.character_id == character.id))
+            profile = await MemberRepository().get_or_create_game_profile(
+                session, callback.from_user.id, encounter.chat_id
+            )
+            owned = await session.scalar(
+                select(GameCollection).where(
+                    GameCollection.profile_id == profile.id,
+                    GameCollection.character_id == character.id,
+                )
+            )
             if owned is None:
-                session.add(GameCollection(profile_id=profile.id, character_id=character.id, rarity=encounter.rarity))
+                owned = GameCollection(
+                    profile_id=profile.id, character_id=character.id, rarity=encounter.rarity
+                )
+                session.add(owned)
             else:
                 owned.copies += 1
+            capture_reward(profile, owned)
             encounter.status = "captured"
             await session.commit()
-        await callback.message.edit_text(f"🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n✨ Clase {encounter.rarity} · ahora forma parte de su colección.")
+        await callback.message.edit_text(
+            f"🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n"
+            f"✨ Clase {encounter.rarity} · ahora forma parte de su colección."
+        )
         await callback.answer("¡CAPTURADA! 🎉", show_alert=True)
