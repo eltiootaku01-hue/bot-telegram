@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from typing import Protocol
 
 
+CAPTURE_POINTS_FIRST = 10
+CAPTURE_POINTS_DUPLICATE = 10
+
+
 class CollectionLike(Protocol):
     level: int
     experience: int
@@ -15,6 +19,7 @@ class ProgressionResult:
     experience: int
     evolution_stage: int
     evolved: bool
+    points_gained: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,7 +47,6 @@ def add_character_experience(
         total -= current_level * 100
         current_level += 1
 
-    # 1st form is the base card. Copies 4, 7 and 10 unlock forms 2, 3 and 4.
     wanted_stage = min(4, 1 + max(0, copies - 1) // 3)
     evolved = wanted_stage > evolution_stage
     return ProgressionResult(
@@ -50,11 +54,13 @@ def add_character_experience(
         experience=total,
         evolution_stage=max(evolution_stage, wanted_stage),
         evolved=evolved,
+        points_gained=0,
     )
 
 
 def capture_reward(profile: object, collection: CollectionLike) -> ProgressionResult:
-    """Apply the deterministic reward from a successful wild capture."""
+    """Apply deterministic character progression after a successful capture."""
+    points = CAPTURE_POINTS_FIRST if collection.copies == 1 else CAPTURE_POINTS_DUPLICATE
     gained = 25 if collection.copies == 1 else 40
     result = add_character_experience(
         level=collection.level,
@@ -62,6 +68,13 @@ def capture_reward(profile: object, collection: CollectionLike) -> ProgressionRe
         evolution_stage=collection.evolution_stage,
         gained=gained,
         copies=collection.copies,
+    )
+    result = ProgressionResult(
+        level=result.level,
+        experience=result.experience,
+        evolution_stage=result.evolution_stage,
+        evolved=result.evolved,
+        points_gained=points,
     )
     collection.level = result.level
     collection.experience = result.experience
