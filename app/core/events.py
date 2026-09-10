@@ -33,7 +33,9 @@ class EventBus:
         payload: dict,
         *,
         event_id: str | None = None,
+        commit: bool = True,
     ) -> EventEnvelope:
+        """Publish an event, optionally making it part of the caller's transaction."""
         envelope = EventEnvelope(event_id or uuid.uuid4().hex, event_type, payload)
         event = DomainEvent(
             event_id=envelope.event_id,
@@ -41,6 +43,9 @@ class EventBus:
             payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
         )
         session.add(event)
+        if not commit:
+            await session.flush()
+            return envelope
         try:
             await session.commit()
         except IntegrityError:
