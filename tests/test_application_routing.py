@@ -23,7 +23,7 @@ class ApplicationRoutingTests(unittest.TestCase):
 
         response = app.handle(ApplicationRequest("u1", "c1", "Hola."))
 
-        self.assertEqual("Solicitud local procesada.", response.text)
+        self.assertEqual("¡Hola! Soy IA-chan. Estoy lista para ayudarte. ¿Qué quieres hacer?", response.text)
         self.assertIsNone(response.execution)
 
 
