@@ -60,8 +60,11 @@ class EventBus:
                 )
             return envelope
 
-        # A duplicate dedupe key must only roll back its SAVEPOINT, never poison
-        # the caller's surrounding transaction.
+        # A SAVEPOINT released as the outermost transaction can commit on SQLite.
+        # Ensure a real caller transaction exists first so commit=False stays atomic
+        # with the caller's work and rollback() can still discard the event.
+        if not session.in_transaction():
+            await session.begin()
         try:
             async with session.begin_nested():
                 session.add(event)
