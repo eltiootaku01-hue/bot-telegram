@@ -6,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import RareDropApproval
 
 
-HIGH_RARITIES = {"A", "S", "SS", "SSS"}
+# Everything above public C is exceptional. The owner is asked privately
+# before the drop can be awarded to a player.
+HIGH_RARITIES = {"B", "A", "S", "SS", "SSS"}
 
 
 async def propose(
@@ -19,7 +21,7 @@ async def propose(
 ) -> RareDropApproval:
     """Create a private approval request; caller must notify the configured owner."""
     if rarity not in HIGH_RARITIES:
-        raise ValueError("Only A/S/SS/SSS drops require private approval")
+        raise ValueError("Only B/A/S/SS/SSS drops require private approval")
     request = RareDropApproval(
         character_id=character_id,
         rarity=rarity,
