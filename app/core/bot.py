@@ -8,6 +8,7 @@ from app.db.database import Database
 from app.middleware.member_sync import MemberSyncMiddleware
 from app.modules.admin.module import AdminModule
 from app.modules.cami_media.module import CamiMediaModule
+from app.modules.cami_media.publisher import CamiMediaPublisher
 from app.modules.chat.module import ChatModule
 from app.modules.chie.module import ChieModule
 from app.modules.game.module import GameModule
@@ -43,6 +44,7 @@ def build_dispatcher(settings: Settings, identity: BotIdentity) -> tuple[Bot, Di
         registry.register(AdminModule(database))
     elif identity is BotIdentity.CAMI:
         registry.register(CamiMediaModule(database))
+        registry.register(CamiMediaPublisher(database))
         registry.register(AdminModule(database))
     elif identity is BotIdentity.CHIE:
         registry.register(ChieModule(database))
