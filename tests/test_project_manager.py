@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from bot_ia.core.project_manager import ProjectError, ProjectManager
 
@@ -68,6 +69,26 @@ class ProjectManagerTests(unittest.TestCase):
 
             with self.assertRaises(ProjectError):
                 ProjectManager(root)
+
+    def test_partial_directory_creation_is_rolled_back(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manager = ProjectManager(root)
+            original_mkdir = Path.mkdir
+            calls = {"count": 0}
+
+            def fail_on_second_mkdir(self, *args, **kwargs):
+                calls["count"] += 1
+                if calls["count"] == 2:
+                    raise OSError("simulated disk failure")
+                return original_mkdir(self, *args, **kwargs)
+
+            with patch.object(Path, "mkdir", new=fail_on_second_mkdir):
+                with self.assertRaises(OSError):
+                    manager.create_novel("Parcial")
+
+            self.assertFalse((manager.projects_dir / "parcial").exists())
+            self.assertEqual(manager.all(), ())
 
 
 if __name__ == "__main__":

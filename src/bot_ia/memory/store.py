@@ -16,12 +16,7 @@ from .models import MemoryMatch, MemoryStatus, MemoryType, PersistentMemoryRecor
 
 _TOKENS = re.compile(r"[\wáéíóúüñ]+", re.IGNORECASE)
 _SECRET = re.compile(r"(?:sk-[A-Za-z0-9_-]{12,}|AIza[A-Za-z0-9_-]{12,}|\d{8,12}:[A-Za-z0-9_-]{20,})")
-_CONFIDENCE_RANK = {
-    Confidence.HIGH: 3,
-    Confidence.MEDIUM: 2,
-    Confidence.LOW: 1,
-    Confidence.NONE: 0,
-}
+_CONFIDENCE_RANK = {Confidence.HIGH: 3, Confidence.MEDIUM: 2, Confidence.LOW: 1, Confidence.NONE: 0}
 
 
 class MemoryStorageError(RuntimeError):
@@ -33,6 +28,9 @@ def _now() -> datetime:
 
 
 class MemoryStore:
+    SCHEMA_VERSION = 1
+    APPLICATION_ID = 0x4249414D  # "BIAM"
+
     def __init__(self, workspace_root: Path, registry: UniverseRegistry, database_path: str = "work/bot_ia_memory.sqlite3") -> None:
         self._registry = registry
         self._path = ChangeManager(workspace_root).resolve_target(database_path)
@@ -49,8 +47,9 @@ class MemoryStore:
     def _connection(self) -> sqlite3.Connection:
         if self._closed:
             raise MemoryStorageError("memory store is closed")
-        connection = sqlite3.connect(self._path)
+        connection = sqlite3.connect(self._path, timeout=10.0)
         connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA busy_timeout=10000")
         return connection
 
     @contextmanager
@@ -67,10 +66,20 @@ class MemoryStore:
 
     def _initialize(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        connection = sqlite3.connect(self._path)
+        connection = sqlite3.connect(self._path, timeout=10.0)
         try:
-            connection.execute("CREATE TABLE IF NOT EXISTS memories (memory_id TEXT PRIMARY KEY, universe_id TEXT NOT NULL, user_id TEXT NOT NULL, conversation_id TEXT, memory_type TEXT NOT NULL, content TEXT NOT NULL, source TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, approved INTEGER NOT NULL, status TEXT NOT NULL, confidence TEXT NOT NULL, expires_at TEXT, revoked_at TEXT, tags TEXT NOT NULL, related_entities TEXT NOT NULL, provenance TEXT NOT NULL, supersedes TEXT, conflicts_with TEXT NOT NULL)")
-            connection.execute("CREATE INDEX IF NOT EXISTS memory_lookup ON memories(universe_id, user_id, status, approved, expires_at)")
+            connection.execute("PRAGMA busy_timeout=10000")
+            application_id = connection.execute("PRAGMA application_id").fetchone()[0]
+            if application_id not in (0, self.APPLICATION_ID):
+                raise MemoryStorageError("database belongs to another application")
+            connection.execute(f"PRAGMA application_id={self.APPLICATION_ID}")
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            if version > self.SCHEMA_VERSION:
+                raise MemoryStorageError("memory database is newer than this BOT-IA version")
+            if version == 0:
+                connection.execute("CREATE TABLE IF NOT EXISTS memories (memory_id TEXT PRIMARY KEY, universe_id TEXT NOT NULL, user_id TEXT NOT NULL, conversation_id TEXT, memory_type TEXT NOT NULL, content TEXT NOT NULL, source TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, approved INTEGER NOT NULL, status TEXT NOT NULL, confidence TEXT NOT NULL, expires_at TEXT, revoked_at TEXT, tags TEXT NOT NULL, related_entities TEXT NOT NULL, provenance TEXT NOT NULL, supersedes TEXT, conflicts_with TEXT NOT NULL)")
+                connection.execute("CREATE INDEX IF NOT EXISTS memory_lookup ON memories(universe_id, user_id, status, approved, expires_at)")
+                connection.execute(f"PRAGMA user_version={self.SCHEMA_VERSION}")
             connection.commit()
         except Exception:
             connection.rollback()
@@ -130,8 +139,13 @@ class MemoryStore:
         old, replacement = self.get(old_memory_id), self.get(replacement_memory_id)
         if old.universe_id != replacement.universe_id or old.user_id != replacement.user_id or replacement.status is not MemoryStatus.ACTIVE:
             raise MemoryStorageError("replacement must be active and share memory scope")
-        self._update(old, status=MemoryStatus.ARCHIVED)
-        return self._update(replacement, supersedes=old.memory_id)
+        with self._transaction() as connection:
+            now = _now().isoformat()
+            archived = connection.execute("UPDATE memories SET status=?, updated_at=? WHERE memory_id=? AND status=?", (MemoryStatus.ARCHIVED.value, now, old.memory_id, MemoryStatus.ACTIVE.value))
+            linked = connection.execute("UPDATE memories SET supersedes=?, updated_at=? WHERE memory_id=? AND status=?", (old.memory_id, now, replacement.memory_id, MemoryStatus.ACTIVE.value))
+            if archived.rowcount != 1 or linked.rowcount != 1:
+                raise MemoryStorageError("memory supersession was not applied atomically")
+        return self.get(replacement.memory_id)
 
     def expire_due(self, now: datetime | None = None) -> int:
         now = now or _now()
@@ -142,20 +156,30 @@ class MemoryStore:
     def retrieve(self, *, universe_id: str, user_id: str, conversation_id: str | None, query: str, now: datetime | None = None, limit: int = 5) -> tuple[MemoryMatch, ...]:
         if not self._registry.contains(universe_id) or not user_id or limit < 1:
             raise MemoryStorageError("invalid memory retrieval scope")
+        now = now or _now()
         self.expire_due(now)
-        terms = set(_TOKENS.findall(query.casefold()))
+        terms = tuple(dict.fromkeys(_TOKENS.findall(query.casefold())))
         if not terms:
             return ()
+        clauses = []
+        parameters: list[object] = [universe_id, user_id, MemoryStatus.ACTIVE.value, now.isoformat(), conversation_id]
+        for term in terms:
+            pattern = f"%{term}%"
+            clauses.append("(content LIKE ? OR tags LIKE ?)")
+            parameters.extend((pattern, pattern))
+        candidate_filter = " OR ".join(clauses)
+        sql = f"SELECT * FROM memories WHERE universe_id=? AND user_id=? AND status=? AND approved=1 AND (expires_at IS NULL OR expires_at>?) AND (conversation_id IS NULL OR conversation_id=?) AND ({candidate_filter})"
         with self._transaction() as connection:
-            rows = connection.execute("SELECT * FROM memories WHERE universe_id=? AND user_id=? AND status=? AND approved=1 AND (expires_at IS NULL OR expires_at>?) AND (conversation_id IS NULL OR conversation_id=?) LIMIT 100", (universe_id, user_id, MemoryStatus.ACTIVE.value, (now or _now()).isoformat(), conversation_id)).fetchall()
+            rows = connection.execute(sql, tuple(parameters)).fetchall()
         matches = []
+        term_set = set(terms)
         for row in rows:
             record = self._record(row)
             words = set(_TOKENS.findall((record.content + " " + " ".join(record.tags)).casefold()))
-            overlap = len(terms & words)
+            overlap = len(term_set & words)
             if overlap:
-                matches.append(MemoryMatch(record, overlap / len(terms)))
-        return tuple(sorted(matches, key=lambda item: (-item.relevance, -_CONFIDENCE_RANK[item.record.confidence], item.record.created_at), reverse=False)[:limit])
+                matches.append(MemoryMatch(record, overlap / len(term_set)))
+        return tuple(sorted(matches, key=lambda item: (-item.relevance, -_CONFIDENCE_RANK[item.record.confidence], -item.record.created_at.timestamp()))[:limit])
 
     def _update(self, record: PersistentMemoryRecord, *, approved: bool | None = None, status: MemoryStatus | None = None, revoked_at: datetime | None = None, provenance: str | None = None, supersedes: str | None = None, conflicts: tuple[str, ...] | None = None) -> PersistentMemoryRecord:
         updated = PersistentMemoryRecord(record.memory_id, record.universe_id, record.user_id, record.conversation_id, record.memory_type, record.content, record.source, record.created_at, _now(), record.approved_by_author if approved is None else approved, record.status if status is None else status, record.confidence, record.expires_at, record.revoked_at if revoked_at is None else revoked_at, record.tags, record.related_entities, record.provenance if provenance is None else provenance, record.supersedes if supersedes is None else supersedes, record.conflicts_with if conflicts is None else conflicts)

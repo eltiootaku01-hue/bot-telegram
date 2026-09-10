@@ -32,6 +32,8 @@ class ProjectManager:
         self._workspace_root = workspace_root.resolve()
         self._registry_path = (self._workspace_root / registry_path).resolve()
         self._projects_dir = (self._workspace_root / projects_dir).resolve()
+        if not self._registry_path.is_relative_to(self._workspace_root) or not self._projects_dir.is_relative_to(self._workspace_root):
+            raise ProjectError("project storage must remain inside the workspace")
         self._registry_path.parent.mkdir(parents=True, exist_ok=True)
         self._projects_dir.mkdir(parents=True, exist_ok=True)
         self._records = self._load()
@@ -63,20 +65,27 @@ class ProjectManager:
         root = (self._projects_dir / project_id).resolve()
         if not root.is_relative_to(self._projects_dir) or root.exists():
             raise ProjectError("project path is invalid or already exists")
-        for directory in self._REQUIRED_DIRECTORIES:
-            (root / directory).mkdir(parents=True, exist_ok=False)
-        record = ProjectRecord(project_id, name, root)
-        self._records[project_id] = record
         try:
-            self._write()
+            root.mkdir(parents=True, exist_ok=False)
+            for directory in self._REQUIRED_DIRECTORIES:
+                (root / directory).mkdir(exist_ok=False)
+            record = ProjectRecord(project_id, name, root)
+            self._records[project_id] = record
+            try:
+                self._write()
+            except Exception:
+                self._records.pop(project_id, None)
+                raise
+            return record
         except Exception:
-            self._records.pop(project_id, None)
-            for child in sorted(root.rglob("*"), reverse=True):
-                if child.is_dir():
-                    child.rmdir()
-            root.rmdir()
+            if root.exists() and root.is_dir():
+                for child in sorted(root.rglob("*"), reverse=True):
+                    if child.is_file() or child.is_symlink():
+                        child.unlink()
+                    elif child.is_dir():
+                        child.rmdir()
+                root.rmdir()
             raise
-        return record
 
     @classmethod
     def slugify(cls, value: str) -> str:
