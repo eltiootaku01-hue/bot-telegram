@@ -5,9 +5,11 @@ from datetime import datetime
 
 from aiogram import Bot
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
+from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import Chat, GameEncounter
+from app.db.models import GameEncounter
 from app.game.catalog import wild_characters
 from app.game.encounters import encounter_options, new_encounter
 from app.ui.game_keyboards import encounter_keyboard
@@ -16,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class WildWaifuScheduler:
-    """Creates occasional public encounters, capped at classes D/C."""
+    """Creates occasional public encounters only in the configured community."""
 
     def __init__(self, bot: Bot, database: Database) -> None:
         self.bot = bot
@@ -66,15 +68,21 @@ class WildWaifuScheduler:
             logger.exception("Wild waifu spawn task failed")
 
     async def _group_ids(self) -> list[int]:
-        async with self.database.sessions() as session:
+        """Only the currently configured Chie community may receive wild encounters."""
+        async with self.database.session() as session:
             result = await session.scalars(
-                select(Chat.id).where(Chat.type.in_(["group", "supergroup"]))
+                select(SetupSession.chat_id)
+                .where(
+                    SetupSession.bot_identity == "chie",
+                    SetupSession.status == "configured",
+                )
+                .order_by(SetupSession.id.desc())
             )
-            return list(result)
+            return list(dict.fromkeys(result))
 
     async def _has_active_encounter(self, chat_id: int) -> bool:
         now = datetime.utcnow()
-        async with self.database.sessions() as session:
+        async with self.database.session() as session:
             encounter = await session.scalar(
                 select(GameEncounter.id)
                 .where(
@@ -121,9 +129,15 @@ class WildWaifuScheduler:
             answer=encounter.answer,
             expires_at=expires,
         )
-        async with self.database.sessions() as session:
+        async with self.database.session() as session:
             session.add(record)
-            await session.commit()
+            try:
+                await session.commit()
+            except IntegrityError:
+                # A second Sunna process may have raced us. The partial unique index
+                # on active encounters makes only one winner possible.
+                await session.rollback()
+                return
 
         try:
             sent = await self.bot.send_message(
@@ -131,14 +145,14 @@ class WildWaifuScheduler:
             )
         except Exception:
             logger.exception("Failed to publish encounter %s in chat %s", encounter.id, chat_id)
-            async with self.database.sessions() as session:
+            async with self.database.session() as session:
                 saved = await session.get(GameEncounter, encounter.id)
                 if saved is not None:
                     saved.status = "cancelled"
                     await session.commit()
             return
 
-        async with self.database.sessions() as session:
+        async with self.database.session() as session:
             saved = await session.get(GameEncounter, encounter.id)
             if saved is not None:
                 saved.message_id = sent.message_id
@@ -148,7 +162,7 @@ class WildWaifuScheduler:
         await self.expire(encounter.id, chat_id, sent.message_id)
 
     async def expire(self, encounter_id: str, chat_id: int, message_id: int) -> None:
-        async with self.database.sessions() as session:
+        async with self.database.session() as session:
             encounter = await session.get(GameEncounter, encounter_id)
             if encounter is None or encounter.status != "active":
                 return
