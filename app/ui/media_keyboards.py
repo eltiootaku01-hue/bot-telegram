@@ -13,10 +13,15 @@ def cami_media_actions(asset_id: int) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def cami_pending_requests(requests: list[tuple[int, str]]) -> InlineKeyboardMarkup:
+def cami_pending_requests(asset_id: int, requests: list[tuple[int, str]]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for request_id, label in requests:
-        builder.row(InlineKeyboardButton(text=label[:40], callback_data=f"cami:req:link:{request_id}"))
+        builder.row(
+            InlineKeyboardButton(
+                text=label[:40],
+                callback_data=f"cami:req:link:{asset_id}:{request_id}",
+            )
+        )
     return builder.as_markup()
 
 
