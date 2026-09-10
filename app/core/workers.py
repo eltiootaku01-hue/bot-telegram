@@ -4,8 +4,6 @@ import asyncio
 import json
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta
-from typing import Any
 
 from app.core.events import EventBus
 from app.core.jobs import JobQueue
@@ -55,7 +53,7 @@ class DurableWorker:
             if not did_work:
                 try:
                     await asyncio.wait_for(self._stopping.wait(), timeout=self.poll_seconds)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     pass
 
     async def _recover(self) -> None:
