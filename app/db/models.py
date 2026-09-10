@@ -95,8 +95,20 @@ class GameAttempt(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class RareDropApproval(Base):
+    """High-rarity candidates never enter a group until the owner approves them privately."""
+    __tablename__ = "rare_drop_approvals"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    character_id: Mapped[str] = mapped_column(String(100))
+    rarity: Mapped[str] = mapped_column(String(32))
+    target_user_id: Mapped[int] = mapped_column(BigInteger)
+    target_chat_id: Mapped[int] = mapped_column(BigInteger)
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
 class MediaAsset(Base):
-    """Telegram-backed image asset awaiting tagging, game use or publication."""
     __tablename__ = "media_assets"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     telegram_file_id: Mapped[str] = mapped_column(String(512), unique=True)
