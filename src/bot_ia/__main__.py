@@ -6,7 +6,8 @@ from pathlib import Path
 
 from bot_ia.config.dotenv import load_dotenv
 from bot_ia.core.application import ApplicationRequest
-from bot_ia.interfaces.telegram import TelegramAdapter, TelegramApiClient, TelegramPoller
+from bot_ia.interfaces.telegram import TelegramApiClient, TelegramPoller
+from bot_ia.interfaces.telegram_ui import TelegramNovelAdapter
 from bot_ia.interfaces.web import run_web_server
 from bot_ia.runtime import build_runtime
 
@@ -54,7 +55,7 @@ def _run_telegram(application) -> None:
     client = TelegramApiClient.from_environment()
     if not client.smoke_test():
         raise RuntimeError("Telegram getMe check failed")
-    result = TelegramPoller(client, TelegramAdapter(application)).run()
+    result = TelegramPoller(client, TelegramNovelAdapter(application)).run()
     print(
         "Telegram detenido:",
         f"polls={result.polls}",
