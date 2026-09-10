@@ -10,7 +10,7 @@ from sqlalchemy import select, update
 
 from app.core.module import BotModule
 from app.db.database import Database
-from app.db.models import Chat, GameProfile, User
+from app.db.models import Chat, GameProfile
 from app.db.trivia_models import TriviaRound
 from app.game.trivia import TriviaService
 from app.ui.game_keyboards import trivia_keyboard
@@ -58,7 +58,9 @@ class TriviaModule(BotModule):
                 return False
         except Exception:
             async with self.database.session() as session:
-                await session.execute(update(TriviaRound).where(TriviaRound.id == round_row.id).values(status="failed"))
+                await session.execute(
+                    update(TriviaRound).where(TriviaRound.id == round_row.id).values(status="failed")
+                )
                 await session.commit()
             return False
         return True
@@ -79,7 +81,9 @@ class TriviaModule(BotModule):
             await callback.answer(f"¡Correcto! +{round_row.points} puntos", show_alert=True)
             if callback.message is not None:
                 await callback.message.edit_text(
-                    f"🎉 <b>{callback.from_user.first_name}</b> ganó la trivia.\n🏆 +{round_row.points} puntos · 💰 saldo: {balance}\n\n💡 {round_row.explanation}"
+                    f"🎉 <b>{callback.from_user.first_name}</b> ganó la trivia.\n"
+                    f"🏆 +{round_row.points} puntos · 💰 saldo: {balance}\n\n"
+                    f"💡 {round_row.explanation}"
                 )
             return
         if result == "wrong":
@@ -93,7 +97,12 @@ class TriviaModule(BotModule):
         if message.chat.type != "private" or message.from_user is None:
             return
         async with self.database.session() as session:
-            profile = await session.scalar(select(GameProfile).where(GameProfile.user_id == message.from_user.id, GameProfile.chat_id == message.chat.id))
+            profile = await session.scalar(
+                select(GameProfile).where(
+                    GameProfile.user_id == message.from_user.id,
+                    GameProfile.chat_id == message.chat.id,
+                )
+            )
         points = profile.points if profile is not None else 0
         await message.answer(f"💰 <b>{message.from_user.first_name}</b>: {points} puntos")
 
@@ -107,7 +116,11 @@ class TriviaModule(BotModule):
         while True:
             try:
                 async with self.database.session() as session:
-                    chats = list(await session.scalars(select(Chat.id).where(Chat.type.in_(["group", "supergroup"]))))
+                    chats = list(
+                        await session.scalars(
+                            select(Chat.id).where(Chat.type.in_(["group", "supergroup"]))
+                        )
+                    )
                 if chats:
                     await self._publish(random.choice(chats))
             except Exception:
