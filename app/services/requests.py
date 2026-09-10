@@ -5,7 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import DomainEvent, FanRequest, GameProfile, PointTransaction, RequestStatus
+from app.db.models import DomainEvent, FanRequest, GameProfile, RequestStatus
+from app.db.repositories import MemberRepository
 
 
 DEFAULT_REQUEST_COST = 50
@@ -45,18 +46,6 @@ class RequestService:
                 )
                 return existing, profile.points if profile else 0
 
-        profile = await session.scalar(
-            select(GameProfile).where(GameProfile.user_id == user_id, GameProfile.chat_id == chat_id)
-        )
-        if profile is None:
-            profile = GameProfile(user_id=user_id, chat_id=chat_id)
-            session.add(profile)
-            await session.flush()
-        if profile.points < points_cost:
-            return None
-
-        profile.points -= points_cost
-        profile.updated_at = datetime.utcnow()
         request = FanRequest(
             user_id=user_id,
             chat_id=chat_id,
@@ -69,16 +58,20 @@ class RequestService:
         )
         session.add(request)
         await session.flush()
-        session.add(
-            PointTransaction(
-                user_id=user_id,
-                chat_id=chat_id,
-                amount=-points_cost,
-                reason="Pedido de fan",
-                reference_type="fan_request",
-                reference_id=str(request.id),
-            )
+
+        remaining = await MemberRepository().spend_points(
+            session,
+            user_id=user_id,
+            chat_id=chat_id,
+            amount=points_cost,
+            reason="Pedido de fan",
+            reference_type="fan_request",
+            reference_id=str(request.id),
+            commit=False,
         )
+        if remaining is None:
+            return None
+
         session.add(
             DomainEvent(
                 event_id=f"fan-request-created:{request.id}",
@@ -118,7 +111,7 @@ class RequestService:
             )
             return existing, profile.points if profile else 0
         await session.refresh(request)
-        return request, profile.points
+        return request, remaining
 
     async def create(
         self,
