@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.module import BotModule
 from app.db.database import Database
-from app.db.models import GameAttempt, GameCollection, GameEncounter, PointTransaction
+from app.db.models import GameAttempt, GameCollection, PointTransaction
 from app.db.repositories import MemberRepository
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterStore
@@ -187,7 +187,6 @@ class GameModule(BotModule):
             if int(index) >= len(options):
                 await callback.answer("Respuesta inválida.", show_alert=True)
                 return
-
             attempt = GameAttempt(
                 encounter_id=encounter_id,
                 user_id=callback.from_user.id,
@@ -201,19 +200,16 @@ class GameModule(BotModule):
                 await session.rollback()
                 await callback.answer("Ya intentaste o el evento terminó. 😭", show_alert=True)
                 return
-
             if not attempt.correct:
                 await session.commit()
                 await callback.answer("❌ Fallaste. Esta oportunidad era solo tuya.", show_alert=True)
                 return
-
-            profile = await MemberRepository().get_or_create_game_profile(session, callback.from_user.id, encounter.chat_id)
-            owned = await session.scalar(
-                select(GameCollection).where(
-                    GameCollection.profile_id == profile.id,
-                    GameCollection.character_id == character.id,
-                )
+            profile = await MemberRepository().get_or_create_game_profile(
+                session, callback.from_user.id, encounter.chat_id, commit=False
             )
+            owned = await session.scalar(select(GameCollection).where(
+                GameCollection.profile_id == profile.id, GameCollection.character_id == character.id,
+            ))
             if owned is None:
                 owned = GameCollection(profile_id=profile.id, character_id=character.id, rarity=encounter.rarity)
                 session.add(owned)
@@ -222,16 +218,11 @@ class GameModule(BotModule):
             progress = capture_reward(profile, owned)
             profile.points = max(0, profile.points + progress.points_gained)
             profile.updated_at = datetime.utcnow()
-            session.add(
-                PointTransaction(
-                    user_id=callback.from_user.id,
-                    chat_id=encounter.chat_id,
-                    amount=progress.points_gained,
-                    reason="Captura de waifu",
-                    reference_type="encounter",
-                    reference_id=encounter.id,
-                )
-            )
+            session.add(PointTransaction(
+                user_id=callback.from_user.id, chat_id=encounter.chat_id,
+                amount=progress.points_gained, reason="Captura de waifu",
+                reference_type="encounter", reference_id=encounter.id,
+            ))
             encounter.status = "captured"
             await session.commit()
             balance = profile.points
