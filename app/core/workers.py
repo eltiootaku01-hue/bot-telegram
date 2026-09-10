@@ -76,16 +76,30 @@ class DurableWorker:
                 event = await self.events.claim(session, event_type=event_type)
             if event is None:
                 continue
+            lock_time = event.locked_at
             handler = self.event_handlers[event.event_type]
             try:
                 await handler(json.loads(event.payload))
             except Exception as exc:
                 logger.exception("Event handler failed: %s", event.event_type)
                 async with self.database.session() as session:
-                    await self.events.fail(session, event.event_id, str(exc))
+                    changed = await self.events.fail(
+                        session,
+                        event.event_id,
+                        str(exc),
+                        lock_time=lock_time,
+                    )
+                if not changed:
+                    logger.warning("Event lease lost before failure update: %s", event.event_id)
             else:
                 async with self.database.session() as session:
-                    await self.events.complete(session, event.event_id)
+                    changed = await self.events.complete(
+                        session,
+                        event.event_id,
+                        lock_time=lock_time,
+                    )
+                if not changed:
+                    logger.warning("Event lease lost before completion: %s", event.event_id)
             return True
         return False
 
@@ -97,16 +111,30 @@ class DurableWorker:
                 job = await self.jobs.claim(session, job_type=job_type)
             if job is None:
                 continue
+            lock_time = job.locked_at
             handler = self.job_handlers[job.job_type]
             try:
                 await handler(json.loads(job.payload))
             except Exception as exc:
                 logger.exception("Job handler failed: %s", job.job_type)
                 async with self.database.session() as session:
-                    await self.jobs.fail(session, job.id, str(exc))
+                    changed = await self.jobs.fail(
+                        session,
+                        job.id,
+                        str(exc),
+                        lock_time=lock_time,
+                    )
+                if not changed:
+                    logger.warning("Job lease lost before failure update: %s", job.id)
             else:
                 async with self.database.session() as session:
-                    await self.jobs.complete(session, job.id)
+                    changed = await self.jobs.complete(
+                        session,
+                        job.id,
+                        lock_time=lock_time,
+                    )
+                if not changed:
+                    logger.warning("Job lease lost before completion: %s", job.id)
             return True
         return False
 
