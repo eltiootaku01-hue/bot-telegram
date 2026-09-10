@@ -67,50 +67,46 @@ class DurableWorker:
             )
 
     async def _process_one_event(self) -> bool:
-        async with self.database.session() as session:
-            event = await self.events.claim(session)
-        if event is None:
+        if not self.event_handlers:
             return False
-        handler = self.event_handlers.get(event.event_type)
-        if handler is None:
+        for event_type in tuple(self.event_handlers):
             async with self.database.session() as session:
-                await self.events.fail(
-                    session,
-                    event.event_id,
-                    f"No handler registered for event type {event.event_type}",
-                )
+                event = await self.events.claim(session, event_type=event_type)
+            if event is None:
+                continue
+            handler = self.event_handlers[event.event_type]
+            try:
+                await handler(json.loads(event.payload))
+            except Exception as exc:
+                logger.exception("Event handler failed: %s", event.event_type)
+                async with self.database.session() as session:
+                    await self.events.fail(session, event.event_id, str(exc))
+            else:
+                async with self.database.session() as session:
+                    await self.events.complete(session, event.event_id)
             return True
-        try:
-            await handler(json.loads(event.payload))
-        except Exception as exc:
-            logger.exception("Event handler failed: %s", event.event_type)
-            async with self.database.session() as session:
-                await self.events.fail(session, event.event_id, str(exc))
-        else:
-            async with self.database.session() as session:
-                await self.events.complete(session, event.event_id)
-        return True
+        return False
 
     async def _process_one_job(self) -> bool:
-        async with self.database.session() as session:
-            job = await self.jobs.claim(session)
-        if job is None:
+        if not self.job_handlers:
             return False
-        handler = self.job_handlers.get(job.job_type)
-        if handler is None:
+        for job_type in tuple(self.job_handlers):
             async with self.database.session() as session:
-                await self.jobs.fail(session, job.id, f"No handler registered for job type {job.job_type}")
+                job = await self.jobs.claim(session, job_type=job_type)
+            if job is None:
+                continue
+            handler = self.job_handlers[job.job_type]
+            try:
+                await handler(json.loads(job.payload))
+            except Exception as exc:
+                logger.exception("Job handler failed: %s", job.job_type)
+                async with self.database.session() as session:
+                    await self.jobs.fail(session, job.id, str(exc))
+            else:
+                async with self.database.session() as session:
+                    await self.jobs.complete(session, job.id)
             return True
-        try:
-            await handler(json.loads(job.payload))
-        except Exception as exc:
-            logger.exception("Job handler failed: %s", job.job_type)
-            async with self.database.session() as session:
-                await self.jobs.fail(session, job.id, str(exc))
-        else:
-            async with self.database.session() as session:
-                await self.jobs.complete(session, job.id)
-        return True
+        return False
 
     def stop(self) -> None:
         self._stopping.set()
