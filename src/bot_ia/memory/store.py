@@ -27,6 +27,10 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _contains_secret(*values: object) -> bool:
+    return any(_SECRET.search(str(value)) for value in values if value is not None)
+
+
 class MemoryStore:
     SCHEMA_VERSION = 1
     APPLICATION_ID = 0x4249414D  # "BIAM"
@@ -90,14 +94,18 @@ class MemoryStore:
     def propose(self, *, universe_id: str, user_id: str, conversation_id: str | None, memory_type: MemoryType, content: str, source: str, provenance: str, confidence: Confidence = Confidence.MEDIUM, expires_at: datetime | None = None, tags: tuple[str, ...] = (), related_entities: tuple[str, ...] = ()) -> PersistentMemoryRecord:
         if not self._registry.contains(universe_id):
             raise MemoryStorageError("memory universe is not registered")
-        if not user_id or not content.strip() or not source or not provenance or any(_SECRET.search(value) for value in (content, source, provenance)):
-            raise MemoryStorageError("memory contains invalid or sensitive content")
+        if not user_id or not content.strip() or not source or not provenance:
+            raise MemoryStorageError("memory contains invalid content")
+        if _contains_secret(user_id, conversation_id, content, source, provenance, tags, related_entities):
+            raise MemoryStorageError("memory contains sensitive content")
         now = _now()
         record = PersistentMemoryRecord(str(uuid4()), universe_id, user_id, conversation_id, memory_type, content.strip(), source, now, now, False, MemoryStatus.PROPOSED, confidence, expires_at, None, tuple(tags), tuple(related_entities), provenance)
         self._insert(record)
         return record
 
     def _insert(self, record: PersistentMemoryRecord) -> None:
+        if _contains_secret(record.user_id, record.conversation_id, record.content, record.source, record.provenance, record.tags, record.related_entities):
+            raise MemoryStorageError("memory contains sensitive content")
         with self._transaction() as connection:
             try:
                 connection.execute("INSERT INTO memories VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", self._values(record))
@@ -118,6 +126,8 @@ class MemoryStore:
     def approve(self, memory_id: str, *, approved_by_author: str) -> PersistentMemoryRecord:
         if not approved_by_author.strip():
             raise MemoryStorageError("explicit approver is required")
+        if _contains_secret(approved_by_author):
+            raise MemoryStorageError("approver contains sensitive content")
         record = self.get(memory_id)
         if record.status is not MemoryStatus.PROPOSED:
             raise MemoryStorageError("only proposed memory can be approved")
@@ -132,6 +142,8 @@ class MemoryStore:
     def record_conflict(self, memory_id: str, source_id: str) -> PersistentMemoryRecord:
         if not source_id:
             raise MemoryStorageError("conflicting source id is required")
+        if _contains_secret(source_id):
+            raise MemoryStorageError("conflicting source id contains sensitive content")
         record = self.get(memory_id)
         return self._update(record, status=MemoryStatus.CONFLICT, conflicts=tuple(dict.fromkeys((*record.conflicts_with, source_id))))
 
@@ -183,8 +195,12 @@ class MemoryStore:
 
     def _update(self, record: PersistentMemoryRecord, *, approved: bool | None = None, status: MemoryStatus | None = None, revoked_at: datetime | None = None, provenance: str | None = None, supersedes: str | None = None, conflicts: tuple[str, ...] | None = None) -> PersistentMemoryRecord:
         updated = PersistentMemoryRecord(record.memory_id, record.universe_id, record.user_id, record.conversation_id, record.memory_type, record.content, record.source, record.created_at, _now(), record.approved_by_author if approved is None else approved, record.status if status is None else status, record.confidence, record.expires_at, record.revoked_at if revoked_at is None else revoked_at, record.tags, record.related_entities, record.provenance if provenance is None else provenance, record.supersedes if supersedes is None else supersedes, record.conflicts_with if conflicts is None else conflicts)
+        if _contains_secret(updated.user_id, updated.conversation_id, updated.content, updated.source, updated.provenance, updated.tags, updated.related_entities):
+            raise MemoryStorageError("memory contains sensitive content")
         with self._transaction() as connection:
-            connection.execute("UPDATE memories SET universe_id=?, user_id=?, conversation_id=?, memory_type=?, content=?, source=?, created_at=?, updated_at=?, approved=?, status=?, confidence=?, expires_at=?, revoked_at=?, tags=?, related_entities=?, provenance=?, supersedes=?, conflicts_with=? WHERE memory_id=?", (*self._values(updated)[1:], updated.memory_id))
+            cursor = connection.execute("UPDATE memories SET universe_id=?, user_id=?, conversation_id=?, memory_type=?, content=?, source=?, created_at=?, updated_at=?, approved=?, status=?, confidence=?, expires_at=?, revoked_at=?, tags=?, related_entities=?, provenance=?, supersedes=?, conflicts_with=? WHERE memory_id=?", (*self._values(updated)[1:], updated.memory_id))
+            if cursor.rowcount != 1:
+                raise MemoryStorageError("memory update did not affect exactly one record")
         return updated
 
     @staticmethod
