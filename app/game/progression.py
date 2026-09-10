@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 
 from sqlalchemy import case, select, update
@@ -54,8 +55,6 @@ async def apply_capture_progression(
     session: AsyncSession,
     *,
     profile_id: int,
-    user_id: int,
-    chat_id: int,
     character_id: str,
     rarity: str,
 ) -> tuple[GameCollection, ProgressionResult]:
@@ -121,7 +120,7 @@ async def apply_capture_progression(
         .where(GameProfile.id == profile_id)
         .values(
             experience=GameProfile.experience + gained,
-            updated_at=__import__("datetime").datetime.utcnow(),
+            updated_at=datetime.utcnow(),
         )
     )
     await session.refresh(profile)
