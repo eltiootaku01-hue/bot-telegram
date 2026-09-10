@@ -103,11 +103,12 @@ class TelegramNovelAdapter(TelegramAdapter):
             used = int(getattr(record, "total_tokens", 0))
             state = getattr(getattr(record, "state", None), "value", "unknown")
             if budget > 0:
-                pct = max(0.0, min(100.0, 100.0 * used / budget))
-                lines.append(f"• {provider}/{account}: {pct:.1f}% del presupuesto configurado ({used:,}/{budget:,} tokens), estado={state}")
+                consumed = max(0.0, min(100.0, 100.0 * used / budget))
+                remaining = 100.0 - consumed
+                lines.append(f"• {provider}/{account}: 🔋 {remaining:.1f}% restante ({consumed:.1f}% consumido), estado={state}")
             else:
-                lines.append(f"• {provider}/{account}: {used:,} tokens conocidos, estado={state}; porcentaje no calculable")
-        lines.append("El porcentaje sólo representa el presupuesto local configurado; no es el saldo real del proveedor.")
+                lines.append(f"• {provider}/{account}: {used:,} tokens conocidos, estado={state}; batería porcentual no calculable")
+        lines.append("La batería porcentual usa un presupuesto local configurado; no representa el saldo real del proveedor.")
         return TelegramOutbound(chat_id, "\n".join(lines), "local", (("⬅️ Menú", "menu:main"),))
 
     @staticmethod
