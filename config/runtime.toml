@@ -65,34 +65,44 @@ url = ""
 [services.telegram]
 enabled = false
 
+# Each novel has its own canonical root. The reference universe is metadata
+# only: it never becomes canon automatically.
 [universes.one_neko_punch]
 display_name = "One Neko Punch"
 root_path = "env:BOT_IA_ONE_NEKO_PUNCH_ROOT"
+reference_universe_id = "one_punch_man"
+reference_display_name = "One-Punch Man"
 spoiler_policy = "strict"
 language = "es"
 
-# Future novel projects keep their own canonical roots and can reference a
-# separate source universe without mixing canon automatically.
 [universes.neko_fish_online]
 display_name = "Neko Fish Online"
 root_path = "env:BOT_IA_NEKO_FISH_ONLINE_ROOT"
+reference_universe_id = "sword_art_online"
+reference_display_name = "Sword Art Online"
 spoiler_policy = "strict"
 language = "es"
 
 [universes.neko_of_the_dead]
 display_name = "Neko of the Dead"
 root_path = "env:BOT_IA_NEKO_OF_THE_DEAD_ROOT"
+reference_universe_id = "highschool_of_the_dead"
+reference_display_name = "Highschool of the Dead"
 spoiler_policy = "strict"
 language = "es"
 
 [universes.my_neko_academia]
 display_name = "My Neko Academia"
 root_path = "env:BOT_IA_MY_NEKO_ACADEMIA_ROOT"
+reference_universe_id = "my_hero_academia"
+reference_display_name = "My Hero Academia"
 spoiler_policy = "strict"
 language = "es"
 
 [universes.attack_on_neko]
 display_name = "Attack on Neko"
 root_path = "env:BOT_IA_ATTACK_ON_NEKO_ROOT"
+reference_universe_id = "attack_on_titan"
+reference_display_name = "Attack on Titan"
 spoiler_policy = "strict"
 language = "es"
