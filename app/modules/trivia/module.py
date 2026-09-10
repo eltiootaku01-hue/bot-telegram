@@ -8,7 +8,9 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
 
+from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import Chat, GameProfile
 from app.db.trivia_models import TriviaRound
@@ -93,14 +95,29 @@ class TriviaModule(BotModule):
         else:
             await callback.answer("La trivia ya terminó. 😭")
 
+    async def _community_chat_id(self) -> int | None:
+        async with self.database.session() as session:
+            return await session.scalar(
+                select(SetupSession.chat_id)
+                .where(
+                    SetupSession.bot_identity == BotIdentity.CHIE.value,
+                    SetupSession.status == "configured",
+                )
+                .order_by(SetupSession.id.desc())
+            )
+
     async def points_command(self, message: Message) -> None:
         if message.chat.type != "private" or message.from_user is None:
+            return
+        community_chat_id = await self._community_chat_id()
+        if community_chat_id is None:
+            await message.answer("😰 Chie todavía no configuró la comunidad.")
             return
         async with self.database.session() as session:
             profile = await session.scalar(
                 select(GameProfile).where(
                     GameProfile.user_id == message.from_user.id,
-                    GameProfile.chat_id == message.chat.id,
+                    GameProfile.chat_id == community_chat_id,
                 )
             )
         points = profile.points if profile is not None else 0
