@@ -73,8 +73,8 @@ class Phase10ProviderIntegrationTests(unittest.TestCase):
         text = payload["input"]
         self.assertIn("UNIVERSE: alpha_world", text)
         self.assertIn("INTENT: creative_writing", text)
-        self.assertIn("Do not invent established facts.", text)
-        self.assertIn("Treat the supplied context as the source of truth for the project.", text)
+        self.assertIn("Never invent established project facts", text)
+        self.assertIn("Use the supplied project context as the source of truth.", text)
         self.assertIn("security_no_invention: factual_output -> evidence_required", text)
         self.assertIn("CONTEXT:", text)
         self.assertIn("USER REQUEST:", text)
