@@ -56,18 +56,35 @@ class TriviaService:
             expires_at=datetime.utcnow() + timedelta(seconds=duration_seconds),
         )
         session.add(round_row)
+        try:
+            async with session.begin_nested():
+                await session.flush()
+        except IntegrityError:
+            return None
         await session.commit()
         await session.refresh(round_row)
         return round_row, question
 
-    async def answer(self, session: AsyncSession, round_id: int, user_id: int, option_index: int) -> tuple[str, int | None]:
+    async def answer(
+        self,
+        session: AsyncSession,
+        round_id: int,
+        user_id: int,
+        option_index: int,
+        *,
+        chat_id: int | None = None,
+    ) -> tuple[str, int | None]:
         round_row = await session.get(TriviaRound, round_id)
         if round_row is None or round_row.status != "active":
             return "expired", None
+        if chat_id is not None and round_row.chat_id != chat_id:
+            return "wrong_chat", None
         if datetime.utcnow() >= round_row.expires_at:
             round_row.status = "expired"
             await session.commit()
             return "expired", None
+        if option_index < 0 or option_index >= len(json.loads(round_row.options)):
+            return "invalid", None
         try:
             session.add(TriviaAttempt(round_id=round_id, user_id=user_id, option_index=option_index))
             await session.flush()
