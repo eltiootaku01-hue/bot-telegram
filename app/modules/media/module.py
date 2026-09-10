@@ -3,17 +3,18 @@ import re
 from aiogram import F
 from aiogram.filters import Command
 from aiogram.types import Message
-from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.core.module import BotModule
 from app.db.database import Database
 from app.db.models import MediaAsset
+from app.db.repositories import MemberRepository
 from app.media.library import MediaLibrary
+from app.services.requests import DEFAULT_REQUEST_COST, RequestService
 
 
 class MediaModule(BotModule):
-    """Private media inbox; web administration will later control publication."""
+    """Media inbox and fan-request intake; web administration controls the queue."""
 
     name = "media"
 
@@ -22,6 +23,7 @@ class MediaModule(BotModule):
         self.database = database
         self.settings = get_settings()
         self.library = MediaLibrary()
+        self.requests = RequestService()
 
     def setup(self) -> None:
         self.router.message.register(self.request, Command("pedido"))
@@ -31,8 +33,44 @@ class MediaModule(BotModule):
         self.router.channel_post.register(self.capture_channel_document, F.document)
 
     async def request(self, message: Message) -> None:
+        if message.from_user is None:
+            return
+        raw = (message.text or "").partition(" ")[2].strip()
+        if not raw:
+            await message.answer(
+                f"📝 Usá <code>/pedido personaje + detalle</code>.\n"
+                f"Costo provisional: ⭐ {DEFAULT_REQUEST_COST} puntos."
+            )
+            return
+        async with self.database.session() as session:
+            request = await self.requests.create(
+                session,
+                user_id=message.from_user.id,
+                chat_id=message.chat.id,
+                description=raw,
+                points_cost=DEFAULT_REQUEST_COST,
+                source_message_id=message.message_id,
+            )
+            balance = await MemberRepository().spend_points(
+                session,
+                user_id=message.from_user.id,
+                chat_id=message.chat.id,
+                amount=DEFAULT_REQUEST_COST,
+                reason="Pedido de fan",
+                reference_type="fan_request",
+                reference_id=str(request.id),
+            )
+            if balance is None:
+                await message.answer(
+                    f"❌ Necesitás ⭐ {DEFAULT_REQUEST_COST} puntos para hacer un pedido."
+                )
+                return
+            request.status = "pending_admin"
+            await session.commit()
         await message.answer(
-            "📥 Pedido recibido. La biblioteca de imágenes y su publicación se gestionarán desde la web privada."
+            f"📥 <b>Pedido #{request.id} recibido.</b>\n"
+            f"⭐ -{DEFAULT_REQUEST_COST} puntos · saldo: {balance}\n"
+            "El pedido quedó en la cola privada para revisión."
         )
 
     def _allowed_storage_chat(self, message: Message) -> bool:
