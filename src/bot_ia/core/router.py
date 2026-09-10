@@ -16,7 +16,16 @@ class Router:
         if result.intent in {Intent.GREETING, Intent.HELP, Intent.KNOWLEDGE_OVERVIEW, Intent.ORGANIZATION, Intent.UNIVERSE_CHANGE}:
             return RouteDecision(Route.LOCAL, "deterministic local request", result.confidence, result.intent, result.universe_id)
         if result.intent is Intent.EDITORIAL_REVIEW:
-            return RouteDecision(Route.AGENT, "editorial review requires future agent", result.confidence, result.intent, result.universe_id, requires_agent=True, agent_id="editor")
+            return RouteDecision(
+                Route.LLM,
+                "editorial review uses supplied local context and an explicit writing provider",
+                result.confidence,
+                result.intent,
+                result.universe_id,
+                requires_agent=True,
+                requires_llm=True,
+                agent_id="editor",
+            )
         if result.intent in {Intent.CREATIVE_WRITING, Intent.IDEA}:
             return RouteDecision(Route.LLM, "creative request requires future LLM", result.confidence, result.intent, result.universe_id, requires_llm=True, agent_id="ia_chan")
         if result.intent in self._SEARCH_INTENTS:
