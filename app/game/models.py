@@ -3,11 +3,12 @@ from enum import StrEnum
 
 
 class Rarity(StrEnum):
-    COMMON = "common"
-    RARE = "rare"
-    EPIC = "epic"
-    LEGENDARY = "legendary"
-    MYTHIC = "mythic"
+    D = "D"
+    C = "C"
+    B = "B"
+    A = "A"
+    S = "S"
+    SS = "SS"
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,9 +48,10 @@ class CombatResult:
 
 
 RARITY_MULTIPLIER: dict[Rarity, float] = {
-    Rarity.COMMON: 1.00,
-    Rarity.RARE: 1.15,
-    Rarity.EPIC: 1.35,
-    Rarity.LEGENDARY: 1.60,
-    Rarity.MYTHIC: 1.90,
+    Rarity.D: 1.00,
+    Rarity.C: 1.10,
+    Rarity.B: 1.25,
+    Rarity.A: 1.50,
+    Rarity.S: 1.80,
+    Rarity.SS: 2.20,
 }
