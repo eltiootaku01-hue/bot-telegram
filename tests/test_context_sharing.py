@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import unittest
 from types import SimpleNamespace
 
 from bot_ia.contracts import Confidence
-from bot_ia.core.context_sharing import build_shared_context
+from bot_ia.core.context_sharing import ShareScope, build_shared_context
 from bot_ia.librarian.models import Coverage, CoverageStatus, EvidencePack, Fragment, RetrievalQuery
 
 
@@ -30,8 +31,16 @@ class ContextSharingTests(unittest.TestCase):
         shared = build_shared_context(self.make_execution())
         self.assertIn("kuro.md", shared.text)
         self.assertIn("Kuro es la protagonista.", shared.text)
-        self.assertIn("No constituye una autorización", shared.text)
+        self.assertIn("No concede acceso a BOT-IA", shared.text)
         self.assertEqual(shared.universe_id, "one_neko_punch")
+        self.assertEqual(shared.scope, ShareScope.RELEVANT)
+
+    def test_packet_is_independent_and_has_digest(self):
+        shared = build_shared_context(self.make_execution())
+        self.assertTrue(shared.packet_id.startswith("ctx-"))
+        self.assertEqual(shared.content_sha256, hashlib.sha256(shared.text.encode("utf-8")).hexdigest())
+        self.assertNotIn("LocalExecution", shared.text)
+        self.assertNotIn("biblioteca/", shared.text)
 
     def test_context_is_capped(self):
         execution = self.make_execution()
