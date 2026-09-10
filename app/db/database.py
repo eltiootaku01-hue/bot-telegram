@@ -31,6 +31,12 @@ def _ensure_compatibility(connection) -> None:
             "ALTER TABLE media_assets ADD COLUMN published_request_message_id BIGINT"
         ))
 
+    connection.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_fan_request_source "
+        "ON fan_requests(user_id, chat_id, source_message_id) "
+        "WHERE source_message_id IS NOT NULL"
+    ))
+
 
 class Database:
     """Async SQLAlchemy gateway shared by Telegram, games and future web admin."""
