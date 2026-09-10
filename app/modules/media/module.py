@@ -6,9 +6,7 @@ from aiogram.types import Message
 
 from app.core.config import get_settings
 from app.core.module import BotModule
-from app.db.database import Database
 from app.db.models import MediaAsset
-from app.db.repositories import MemberRepository
 from app.media.library import MediaLibrary
 from app.services.requests import DEFAULT_REQUEST_COST, RequestService
 
@@ -43,7 +41,7 @@ class MediaModule(BotModule):
             )
             return
         async with self.database.session() as session:
-            request = await self.requests.create(
+            result = await self.requests.create_paid(
                 session,
                 user_id=message.from_user.id,
                 chat_id=message.chat.id,
@@ -51,22 +49,12 @@ class MediaModule(BotModule):
                 points_cost=DEFAULT_REQUEST_COST,
                 source_message_id=message.message_id,
             )
-            balance = await MemberRepository().spend_points(
-                session,
-                user_id=message.from_user.id,
-                chat_id=message.chat.id,
-                amount=DEFAULT_REQUEST_COST,
-                reason="Pedido de fan",
-                reference_type="fan_request",
-                reference_id=str(request.id),
-            )
-            if balance is None:
+            if result is None:
                 await message.answer(
                     f"❌ Necesitás ⭐ {DEFAULT_REQUEST_COST} puntos para hacer un pedido."
                 )
                 return
-            request.status = "pending_admin"
-            await session.commit()
+            request, balance = result
         await message.answer(
             f"📥 <b>Pedido #{request.id} recibido.</b>\n"
             f"⭐ -{DEFAULT_REQUEST_COST} puntos · saldo: {balance}\n"
