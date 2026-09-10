@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from sqlalchemy import inspect, text
+from sqlalchemy import event, inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.models import Base
@@ -38,11 +38,25 @@ def _ensure_compatibility(connection) -> None:
     ))
 
 
+def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None:
+    """Tune SQLite for the four bot processes sharing one local database."""
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA busy_timeout=10000")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+    finally:
+        cursor.close()
+
+
 class Database:
     """Async SQLAlchemy gateway shared by Telegram, games and future web admin."""
 
     def __init__(self, url: str) -> None:
         self.engine = create_async_engine(url, future=True)
+        if url.startswith("sqlite"):
+            event.listen(self.engine.sync_engine, "connect", _configure_sqlite_connection)
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
 
     async def create_schema(self) -> None:
