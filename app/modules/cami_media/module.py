@@ -38,13 +38,16 @@ class CamiMediaModule(BotModule):
         self.router.callback_query.register(self.link_request, F.data.startswith("cami:req:link:"))
 
     def _is_media_staff(self, message: Message) -> bool:
+        """Only the explicitly configured owner may operate Cami's private media desk."""
         return bool(
-            message.from_user
-            and (not self.settings.admin_user_id or message.from_user.id == self.settings.admin_user_id)
+            message.chat.type == "private"
+            and message.from_user is not None
+            and self.settings.admin_user_id
+            and message.from_user.id == self.settings.admin_user_id
         )
 
     async def receive_photo(self, message: Message) -> None:
-        if message.chat.type != "private" or not message.photo or not self._is_media_staff(message):
+        if not self._is_media_staff(message) or not message.photo:
             return
         photo = message.photo[-1]
         async with self.database.session() as session:
@@ -69,10 +72,8 @@ class CamiMediaModule(BotModule):
 
     async def receive_schedule_or_tags(self, message: Message) -> None:
         if (
-            message.chat.type != "private"
-            or message.from_user is None
+            not self._is_media_staff(message)
             or not message.text
-            or not self._is_media_staff(message)
         ):
             return
         async with self.database.session() as session:
@@ -232,7 +233,6 @@ class CamiMediaModule(BotModule):
         if (
             callback.message is None
             or callback.data is None
-            or callback.message.chat.type != "private"
             or not self._is_media_staff(callback.message)
         ):
             await callback.answer("Acción inválida.", show_alert=True)
