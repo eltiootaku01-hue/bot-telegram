@@ -48,6 +48,13 @@ class CamiMediaPublisher(BotModule):
     async def publish(self, bot: Bot, payload: dict) -> None:
         asset_id = int(payload["asset_id"])
         destination = str(payload.get("destination", "both"))
+        if destination not in {"both", "group"}:
+            raise ValueError(f"Unsupported media destination: {destination}")
+        if destination == "both" and not self.settings.publish_page_chat_id:
+            raise RuntimeError(
+                "Media destination 'both' requires PUBLISH_PAGE_CHAT_ID to be configured"
+            )
+
         async with self.database.session() as session:
             asset = await session.get(MediaAsset, asset_id)
             if asset is None or asset.status != "scheduled":
@@ -68,27 +75,52 @@ class CamiMediaPublisher(BotModule):
                 raise RuntimeError("Configured community has no #noticias topic")
             file_id = asset.telegram_file_id
             caption = self._caption(asset)
-
-        if destination not in {"both", "group"}:
-            raise ValueError(f"Unsupported media destination: {destination}")
+            group_message_id = asset.published_group_message_id
+            page_message_id = asset.published_page_message_id
 
         try:
-            await bot.send_photo(
-                group_id,
-                file_id,
-                message_thread_id=thread_id,
-                caption=caption,
-            )
-            if destination == "both" and self.settings.publish_page_chat_id:
-                await bot.send_photo(self.settings.publish_page_chat_id, file_id, caption=caption)
+            if group_message_id is None:
+                sent = await bot.send_photo(
+                    group_id,
+                    file_id,
+                    message_thread_id=thread_id,
+                    caption=caption,
+                )
+                async with self.database.session() as session:
+                    current = await session.get(MediaAsset, asset_id)
+                    if current is None or current.status != "scheduled":
+                        return
+                    if current.published_group_message_id is None:
+                        current.published_group_message_id = sent.message_id
+                        current.updated_at = datetime.utcnow()
+                        await session.commit()
+
+            if destination == "both" and page_message_id is None:
+                sent = await bot.send_photo(
+                    self.settings.publish_page_chat_id,
+                    file_id,
+                    caption=caption,
+                )
+                async with self.database.session() as session:
+                    current = await session.get(MediaAsset, asset_id)
+                    if current is None or current.status != "scheduled":
+                        return
+                    if current.published_page_message_id is None:
+                        current.published_page_message_id = sent.message_id
+                        current.updated_at = datetime.utcnow()
+                        await session.commit()
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
             raise RuntimeError(f"Telegram rejected scheduled publication: {exc}") from exc
 
         async with self.database.session() as session:
-            asset = await session.get(MediaAsset, asset_id)
-            if asset is not None and asset.status == "scheduled":
-                asset.status = "published"
-                asset.updated_at = datetime.utcnow()
+            current = await session.get(MediaAsset, asset_id)
+            if current is None or current.status != "scheduled":
+                return
+            group_done = current.published_group_message_id is not None
+            page_done = destination != "both" or current.published_page_message_id is not None
+            if group_done and page_done:
+                current.status = "published"
+                current.updated_at = datetime.utcnow()
                 await session.commit()
 
     @staticmethod
