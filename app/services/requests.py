@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import DomainEvent, FanRequest, GameProfile, PointTransaction, RequestStatus
@@ -29,6 +30,20 @@ class RequestService:
             raise ValueError("Request description cannot be empty")
         if points_cost <= 0:
             raise ValueError("Request cost must be positive")
+
+        if source_message_id is not None:
+            existing = await session.scalar(
+                select(FanRequest).where(
+                    FanRequest.user_id == user_id,
+                    FanRequest.chat_id == chat_id,
+                    FanRequest.source_message_id == source_message_id,
+                )
+            )
+            if existing is not None:
+                profile = await session.scalar(
+                    select(GameProfile).where(GameProfile.user_id == user_id, GameProfile.chat_id == chat_id)
+                )
+                return existing, profile.points if profile else 0
 
         profile = await session.scalar(
             select(GameProfile).where(GameProfile.user_id == user_id, GameProfile.chat_id == chat_id)
@@ -83,7 +98,25 @@ class RequestService:
                 ),
             )
         )
-        await session.commit()
+        try:
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()
+            if source_message_id is None:
+                raise
+            existing = await session.scalar(
+                select(FanRequest).where(
+                    FanRequest.user_id == user_id,
+                    FanRequest.chat_id == chat_id,
+                    FanRequest.source_message_id == source_message_id,
+                )
+            )
+            if existing is None:
+                raise
+            profile = await session.scalar(
+                select(GameProfile).where(GameProfile.user_id == user_id, GameProfile.chat_id == chat_id)
+            )
+            return existing, profile.points if profile else 0
         await session.refresh(request)
         return request, profile.points
 
