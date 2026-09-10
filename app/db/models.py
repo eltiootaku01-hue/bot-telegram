@@ -10,7 +10,6 @@ class Base(DeclarativeBase):
 
 class User(Base):
     __tablename__ = "users"
-
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     username: Mapped[str | None] = mapped_column(String(255))
     first_name: Mapped[str] = mapped_column(String(255), default="")
@@ -23,7 +22,6 @@ class User(Base):
 
 class Chat(Base):
     __tablename__ = "chats"
-
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     type: Mapped[str] = mapped_column(String(32), default="unknown")
     title: Mapped[str | None] = mapped_column(String(255))
@@ -33,11 +31,8 @@ class Chat(Base):
 
 
 class UserChat(Base):
-    """Durable membership/activity relationship; game state stays separate."""
-
     __tablename__ = "user_chats"
     __table_args__ = (UniqueConstraint("user_id", "chat_id", name="uq_user_chat"),)
-
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
@@ -50,11 +45,8 @@ class UserChat(Base):
 
 
 class GameProfile(Base):
-    """One durable player profile per Telegram user/chat pair."""
-
     __tablename__ = "game_profiles"
     __table_args__ = (UniqueConstraint("user_id", "chat_id", name="uq_game_profile"),)
-
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
@@ -66,25 +58,21 @@ class GameProfile(Base):
 
 
 class GameCollection(Base):
-    """A player's owned character; copies handle duplicate pulls."""
-
     __tablename__ = "game_collection"
     __table_args__ = (UniqueConstraint("profile_id", "character_id", name="uq_collection_character"),)
-
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(ForeignKey("game_profiles.id", ondelete="CASCADE"))
     character_id: Mapped[str] = mapped_column(String(100))
     rarity: Mapped[str] = mapped_column(String(32))
     level: Mapped[int] = mapped_column(Integer, default=1)
     copies: Mapped[int] = mapped_column(Integer, default=1)
+    experience: Mapped[int] = mapped_column(Integer, default=0)
+    evolution_stage: Mapped[int] = mapped_column(Integer, default=1)
     obtained_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class GameEncounter(Base):
-    """A timed group encounter. The answer is only evaluated for the clicking user."""
-
     __tablename__ = "game_encounters"
-
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     chat_id: Mapped[int] = mapped_column(BigInteger)
     character_id: Mapped[str] = mapped_column(String(100))
@@ -97,11 +85,8 @@ class GameEncounter(Base):
 
 
 class GameAttempt(Base):
-    """One attempt per user and encounter, enforced by a DB uniqueness constraint."""
-
     __tablename__ = "game_attempts"
     __table_args__ = (UniqueConstraint("encounter_id", "user_id", name="uq_encounter_attempt"),)
-
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     encounter_id: Mapped[str] = mapped_column(ForeignKey("game_encounters.id", ondelete="CASCADE"))
     user_id: Mapped[int] = mapped_column(BigInteger)
@@ -110,9 +95,29 @@ class GameAttempt(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class MediaAsset(Base):
+    """Telegram-backed image asset awaiting tagging, game use or publication."""
+    __tablename__ = "media_assets"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    telegram_file_id: Mapped[str] = mapped_column(String(512), unique=True)
+    telegram_unique_id: Mapped[str | None] = mapped_column(String(255))
+    source_chat_id: Mapped[int] = mapped_column(BigInteger)
+    source_message_id: Mapped[int] = mapped_column(BigInteger)
+    media_type: Mapped[str] = mapped_column(String(32), default="photo")
+    character_id: Mapped[str | None] = mapped_column(String(100))
+    anime: Mapped[str | None] = mapped_column(String(255))
+    tags: Mapped[str] = mapped_column(String(2000), default="")
+    category: Mapped[str | None] = mapped_column(String(64))
+    rarity: Mapped[str | None] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32), default="inbox")
+    publish_group: Mapped[bool] = mapped_column(default=False)
+    publish_page: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class BotSetting(Base):
     __tablename__ = "bot_settings"
-
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     chat_id: Mapped[int | None] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
     key: Mapped[str] = mapped_column(String(100))
