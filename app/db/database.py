@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -6,6 +7,8 @@ from app.db.models import Base
 
 
 class Database:
+    """Async SQLAlchemy gateway shared by Telegram, games and future web admin."""
+
     def __init__(self, url: str) -> None:
         self.engine = create_async_engine(url, future=True)
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
@@ -14,6 +17,7 @@ class Database:
         async with self.engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
 
+    @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
         async with self.sessions() as session:
             yield session
