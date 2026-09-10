@@ -13,9 +13,10 @@ from app.db.repositories import MemberRepository
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterStore
 from app.game.engine import GameEngine
+from app.game.fusion import fuse_collection
 from app.game.progression import capture_reward, collection_status
 from app.game.wild_scheduler import WildWaifuScheduler
-from app.ui.game_keyboards import combat_keyboard, game_hub_keyboard, gacha_keyboard
+from app.ui.game_keyboards import combat_keyboard, fusion_keyboard, game_hub_keyboard, gacha_keyboard
 
 
 class GameModule(BotModule):
@@ -37,6 +38,7 @@ class GameModule(BotModule):
         self.router.callback_query.register(self.inventory_callback, F.data == "game:inventory:open")
         self.router.callback_query.register(self.combat_open, F.data == "game:combat:open")
         self.router.callback_query.register(self.gacha_roll, F.data == "game:gacha:roll")
+        self.router.callback_query.register(self.fusion, F.data.startswith("game:fusion:"))
         self.router.callback_query.register(self.combat_action, F.data.startswith("game:combat:"))
         self.router.callback_query.register(self.encounter_answer, F.data.startswith("game:encounter:"))
 
@@ -76,6 +78,7 @@ class GameModule(BotModule):
             rows = list(await session.scalars(select(GameCollection).where(GameCollection.profile_id == profile.id)))
         if not rows:
             text = "🎒 <b>Inventario</b>\n\nTodavía no tenés personajes. ¡Salí a cazar una waifu!"
+            markup = None
         else:
             lines = [f"🎒 <b>Inventario de {source.from_user.first_name}</b>"]
             for item in rows:
@@ -86,10 +89,14 @@ class GameModule(BotModule):
                     f"EXP {item.experience} · ×{item.copies} · Evo.{item.evolution_stage}"
                 )
                 if progress.can_evolve:
-                    lines.append("  ↳ ✨ <b>Lista para evolucionar</b>")
-            lines.append("\n⏱️ Esta consulta se borra automáticamente en 2 minutos.")
+                    lines.append(
+                        f"  ↳ ✨ <b>Puede pasar a {progress.next_rarity}</b> "
+                        f"(requiere {progress.evolution_copies} copias)"
+                    )
             text = "\n".join(lines)
-        sent = await source.answer(text)
+            markup = fusion_keyboard(rows[0].character_id) if any(collection_status(r).can_evolve for r in rows) else None
+        text += "\n\n⏱️ Esta consulta se borra automáticamente en 2 minutos."
+        sent = await source.answer(text, reply_markup=markup)
         task_name = f"delete-inventory-{sent.chat.id}-{sent.message_id}"
         self.tasks.start(task_name, self._delete_later(sent, 120))
 
@@ -100,6 +107,31 @@ class GameModule(BotModule):
             await message.delete()
         except Exception:
             pass
+
+    async def fusion(self, callback: CallbackQuery) -> None:
+        character_id = (callback.data or "").split(":", 2)[-1]
+        if not character_id or callback.message is None:
+            await callback.answer("Fusión inválida.", show_alert=True)
+            return
+        async with self.database.session() as session:
+            profile = await MemberRepository().get_or_create_game_profile(
+                session, callback.from_user.id, callback.message.chat.id
+            )
+            try:
+                result = await fuse_collection(
+                    session, profile_id=profile.id, character_id=character_id
+                )
+            except ValueError as exc:
+                await callback.answer(str(exc), show_alert=True)
+                return
+            await session.commit()
+        character = get_character(character_id)
+        await callback.message.edit_text(
+            f"✨ <b>{character.name} evolucionó!</b>\n"
+            f"{result.from_rarity} → <b>{result.to_rarity}</b>\n"
+            f"Se usaron {result.consumed} copias y quedaron ×{result.remaining}."
+        )
+        await callback.answer("¡Evolución completada! ✨")
 
     async def game_hub(self, callback: CallbackQuery) -> None:
         if callback.message is not None:
@@ -155,40 +187,25 @@ class GameModule(BotModule):
             if int(index) >= len(options):
                 await callback.answer("Respuesta inválida.", show_alert=True)
                 return
-            result = await self.encounters.claim_attempt(
-                session, encounter_id, callback.from_user.id, options[int(index)]
-            )
+            result = await self.encounters.claim_attempt(session, encounter_id, callback.from_user.id, options[int(index)])
             if result is None:
                 await callback.answer("Ya intentaste o el evento terminó. 😭", show_alert=True)
                 return
             if not result:
                 await callback.answer("❌ Fallaste. Esta oportunidad era solo tuya.", show_alert=True)
                 return
-            profile = await MemberRepository().get_or_create_game_profile(
-                session, callback.from_user.id, encounter.chat_id
-            )
-            owned = await session.scalar(
-                select(GameCollection).where(
-                    GameCollection.profile_id == profile.id,
-                    GameCollection.character_id == character.id,
-                )
-            )
+            profile = await MemberRepository().get_or_create_game_profile(session, callback.from_user.id, encounter.chat_id)
+            owned = await session.scalar(select(GameCollection).where(GameCollection.profile_id == profile.id, GameCollection.character_id == character.id))
             if owned is None:
-                owned = GameCollection(
-                    profile_id=profile.id, character_id=character.id, rarity=encounter.rarity
-                )
+                owned = GameCollection(profile_id=profile.id, character_id=character.id, rarity=encounter.rarity)
                 session.add(owned)
             else:
                 owned.copies += 1
             progress = capture_reward(profile, owned)
             points = await MemberRepository().add_points(
-                session,
-                user_id=callback.from_user.id,
-                chat_id=encounter.chat_id,
-                amount=progress.points_gained,
-                reason="Captura de waifu",
-                reference_type="encounter",
-                reference_id=encounter.id,
+                session, user_id=callback.from_user.id, chat_id=encounter.chat_id,
+                amount=progress.points_gained, reason="Captura de waifu",
+                reference_type="encounter", reference_id=encounter.id,
             )
             encounter.status = "captured"
             await session.commit()
