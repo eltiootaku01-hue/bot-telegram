@@ -8,7 +8,9 @@ from bot_ia.contracts import Confidence, SessionState
 
 from .models import EntityCandidate, ReferenceResolution
 
-_PRONOUNS = frozenset({"ella", "el", "él", "ellas", "ellos", "esa", "eso", "esta", "este"})
+# "el" sin tilde se excluye deliberadamente: normalmente es artículo y
+# provocaría referencias falsas en frases como "el capítulo" o "el problema".
+_PRONOUNS = frozenset({"ella", "él", "ellas", "ellos", "esa", "eso", "esa", "esta", "este"})
 
 
 class ReferenceResolver:
