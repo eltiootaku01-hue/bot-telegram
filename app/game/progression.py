@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 from typing import Protocol
 
+from sqlalchemy import case, select, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.models import GameCollection, GameProfile
 from app.game.evolution import next_fusion
 
 
@@ -45,8 +50,95 @@ def add_character_experience(*, level: int, experience: int, evolution_stage: in
     return ProgressionResult(current_level, total, max(1, evolution_stage), False, 0)
 
 
+async def apply_capture_progression(
+    session: AsyncSession,
+    *,
+    profile_id: int,
+    user_id: int,
+    chat_id: int,
+    character_id: str,
+    rarity: str,
+) -> tuple[GameCollection, ProgressionResult]:
+    """Apply one capture with atomic counters so simultaneous captures cannot lose copies/XP."""
+    collection = await session.scalar(
+        select(GameCollection).where(
+            GameCollection.profile_id == profile_id,
+            GameCollection.character_id == character_id,
+        )
+    )
+
+    first_capture = collection is None
+    if first_capture:
+        collection = GameCollection(
+            profile_id=profile_id,
+            character_id=character_id,
+            rarity=rarity,
+            level=1,
+            copies=1,
+            experience=25,
+            evolution_stage=1,
+        )
+        try:
+            async with session.begin_nested():
+                session.add(collection)
+                await session.flush()
+        except IntegrityError:
+            collection = await session.scalar(
+                select(GameCollection).where(
+                    GameCollection.profile_id == profile_id,
+                    GameCollection.character_id == character_id,
+                )
+            )
+            if collection is None:
+                raise
+            first_capture = False
+
+    gained = 25 if first_capture else 40
+    points = CAPTURE_POINTS_FIRST if first_capture else CAPTURE_POINTS_DUPLICATE
+
+    if not first_capture:
+        total_xp = GameCollection.experience + gained
+        level_up = total_xp >= GameCollection.level * 100
+        await session.execute(
+            update(GameCollection)
+            .where(GameCollection.id == collection.id)
+            .values(
+                copies=GameCollection.copies + 1,
+                level=case((level_up, GameCollection.level + 1), else_=GameCollection.level),
+                experience=case(
+                    (level_up, total_xp - (GameCollection.level * 100)),
+                    else_=total_xp,
+                ),
+            )
+        )
+        await session.refresh(collection)
+
+    profile = await session.get(GameProfile, profile_id)
+    if profile is None:
+        raise ValueError("Game profile disappeared during capture")
+    await session.execute(
+        update(GameProfile)
+        .where(GameProfile.id == profile_id)
+        .values(
+            experience=GameProfile.experience + gained,
+            updated_at=__import__("datetime").datetime.utcnow(),
+        )
+    )
+    await session.refresh(profile)
+    profile.level = max(1, 1 + profile.experience // 500)
+    await session.flush()
+
+    return collection, ProgressionResult(
+        level=collection.level,
+        experience=collection.experience,
+        evolution_stage=collection.evolution_stage,
+        evolved=False,
+        points_gained=points,
+    )
+
+
 def capture_reward(profile: object, collection: CollectionLike) -> ProgressionResult:
-    """Apply deterministic XP/point progression after a successful capture."""
+    """Legacy pure helper kept for callers that do not persist concurrent state."""
     points = CAPTURE_POINTS_FIRST if collection.copies == 1 else CAPTURE_POINTS_DUPLICATE
     gained = 25 if collection.copies == 1 else 40
     result = add_character_experience(
