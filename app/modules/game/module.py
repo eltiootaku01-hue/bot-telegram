@@ -74,8 +74,7 @@ class GameModule(BotModule):
         taiga = get_character("taiga")
         await message.answer(
             f"⚔️ <b>{taiga.name}</b> — {taiga.anime}\n\n"
-            f"⚔️ {taiga.attack_name}\n🛡️ {taiga.defense_name}\n✨ {taiga.special_name}\n\n"
-            "Elegí una acción.",
+            f"⚔️ {taiga.attack_name}\n🛡️ {taiga.defense_name}\n✨ {taiga.special_name}\n\nElegí una acción.",
             reply_markup=combat_keyboard(),
         )
 
@@ -95,8 +94,7 @@ class GameModule(BotModule):
             await callback.answer("Evento inválido.", show_alert=True)
             return
         encounter_id, index = parts[2], parts[4]
-        options = ["ryuuji", "kitamura", "ami"]
-        if index not in {"0", "1", "2"} or callback.message is None:
+        if callback.message is None or not index.isdigit():
             await callback.answer("Respuesta inválida.", show_alert=True)
             return
 
@@ -105,6 +103,10 @@ class GameModule(BotModule):
             if encounter is None:
                 await callback.answer("La waifu ya se fue. 😭", show_alert=True)
                 return
+            options = ["ryuuji", "kitamura", "ami"] if encounter.question else ["capture"]
+            if int(index) >= len(options):
+                await callback.answer("Respuesta inválida.", show_alert=True)
+                return
             result = await self.encounters.claim_attempt(
                 session, encounter_id, callback.from_user.id, options[int(index)]
             )
@@ -112,6 +114,7 @@ class GameModule(BotModule):
                 await callback.answer("Ya intentaste o el evento terminó. 😭", show_alert=True)
                 return
             if not result:
+                # Callback answers are private: a wrong answer is shown only to the clicker.
                 await callback.answer("❌ Fallaste. Esta oportunidad era solo tuya.", show_alert=True)
                 return
 
@@ -126,7 +129,13 @@ class GameModule(BotModule):
                 )
             )
             if owned is None:
-                session.add(GameCollection(profile_id=profile.id, character_id=character.id, rarity=encounter.rarity))
+                session.add(
+                    GameCollection(
+                        profile_id=profile.id,
+                        character_id=character.id,
+                        rarity=encounter.rarity,
+                    )
+                )
             else:
                 owned.copies += 1
             encounter.status = "captured"
