@@ -46,35 +46,32 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
         key = (callback.user_id, callback.conversation_id)
         data = callback.data
         if data == "menu:edit":
+            self._selected_main.pop(key, None)
+            self._selected_secondary.pop(key, None)
             return TelegramOutbound(callback.conversation_id, "📝 EDITOR\n\nElige qué quieres revisar.", "local", EDITOR_MENU)
         if data in EDITOR_REQUESTS:
             self._pending[key] = data
+            self._selected_main.pop(key, None)
+            self._selected_secondary.pop(key, None)
             return TelegramOutbound(
                 callback.conversation_id,
                 "📂 ¿Cómo quieres proporcionar el texto? Puedes pegarlo directamente o elegir un archivo de la biblioteca.",
                 "local",
                 (("📂 Elegir archivo principal", "edit:file:main"),),
-                )
+            )
         if data == "edit:file:main":
             return self._file_menu(callback.user_id, callback.conversation_id, secondary=False)
         if data == "edit:file:secondary":
             return self._file_menu(callback.user_id, callback.conversation_id, secondary=True)
         if data.startswith("edit:select:"):
-            source_id = data.removeprefix("edit:select:")
-            return self._select_file(callback.user_id, callback.conversation_id, source_id, secondary=False)
+            return self._select_file(callback.user_id, callback.conversation_id, data.removeprefix("edit:select:"), secondary=False)
         if data.startswith("edit:select2:"):
-            source_id = data.removeprefix("edit:select2:")
-            return self._select_file(callback.user_id, callback.conversation_id, source_id, secondary=True)
+            return self._select_file(callback.user_id, callback.conversation_id, data.removeprefix("edit:select2:"), secondary=True)
         if data == "edit:run":
             return self._run_selected(callback.user_id, callback.conversation_id)
         if data == "menu:research":
             self._pending[key] = "research"
-            return TelegramOutbound(
-                callback.conversation_id,
-                "🔎 INVESTIGAR\n\nEscribe la pregunta. BOT-IA buscará primero en la biblioteca y no usará una API sin autorización explícita.",
-                "local",
-                (("⬅️ Menú", "menu:main"),),
-            )
+            return TelegramOutbound(callback.conversation_id, "🔎 INVESTIGAR\n\nEscribe la pregunta. BOT-IA buscará primero en la biblioteca y no usará una API sin autorización explícita.", "local", (("⬅️ Menú", "menu:main"),))
         if data == "menu:library":
             return self._library_menu(callback.user_id, callback.conversation_id)
         if data == "menu:main":
@@ -117,22 +114,23 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
             return TelegramOutbound(chat_id, "📂 No hay archivos indexados para la novela activa.", "local", (("⬅️ Editor", "menu:edit"),))
         rows = []
         prefix = "edit:select2:" if secondary else "edit:select:"
-        for entry in entries[:12]:
+        for index, entry in enumerate(entries[:12]):
             record = getattr(entry, "record", None)
-            source_id = str(getattr(record, "source_id", ""))
-            path = str(getattr(record, "path", source_id))
-            if source_id:
-                rows.append(((path[-48:], prefix + source_id),))
+            path = str(getattr(record, "path", f"fuente-{index}"))
+            rows.append(((path[-48:], prefix + str(index)),))
         rows.append((("⬅️ Editor", "menu:edit"),))
         title = "📎 ARCHIVO SECUNDARIO" if secondary else "📂 ARCHIVO PRINCIPAL"
         return TelegramOutbound(chat_id, f"{title}\n\nNovela: {universe_id}\nSelecciona una fuente indexada:", "local", tuple(rows))
 
-    def _select_file(self, user_id: str, chat_id: str, source_id: str, *, secondary: bool) -> TelegramOutbound:
+    def _select_file(self, user_id: str, chat_id: str, index_text: str, *, secondary: bool) -> TelegramOutbound:
         key = (user_id, chat_id)
         _, entries = self._entries_for(user_id, chat_id)
-        entry = next((item for item in entries if getattr(getattr(item, "record", None), "source_id", "") == source_id), None)
-        if entry is None:
+        try:
+            index = int(index_text)
+            entry = entries[index]
+        except (ValueError, IndexError, TypeError):
             return TelegramOutbound(chat_id, "No encontré ese archivo en la biblioteca activa. No ejecutaré una selección ambigua.", "local", (("⬅️ Editor", "menu:edit"),))
+        source_id = str(getattr(getattr(entry, "record", None), "source_id", ""))
         if secondary:
             self._selected_secondary[key] = source_id
         else:
@@ -151,12 +149,12 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
         main = next((item for item in entries if getattr(getattr(item, "record", None), "source_id", "") == main_id), None)
         if main is None:
             return TelegramOutbound(chat_id, "El archivo principal ya no está disponible en la biblioteca activa.", "local", (("⬅️ Editor", "menu:edit"),))
-        request = EDITOR_REQUESTS[action] + "\n\nARCHIVO PRINCIPAL:\n" + str(getattr(main, "content", ""))
+        request = EDITOR_REQUESTS[action] + "\n\nARCHIVO PRINCIPAL:\n" + str(getattr(main, "content", ""))[:12000]
         secondary_id = self._selected_secondary.get(key)
         if secondary_id:
             secondary = next((item for item in entries if getattr(getattr(item, "record", None), "source_id", "") == secondary_id), None)
             if secondary is not None:
-                request += "\n\nARCHIVO SECUNDARIO / CONTEXTO:\n" + str(getattr(secondary, "content", ""))
+                request += "\n\nARCHIVO SECUNDARIO / CONTEXTO:\n" + str(getattr(secondary, "content", ""))[:6000]
         self._pending.pop(key, None)
         self._selected_main.pop(key, None)
         self._selected_secondary.pop(key, None)
