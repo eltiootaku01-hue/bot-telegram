@@ -31,8 +31,22 @@ secret_env = "GROQ_API_KEY"
 priority = 10
 cooldown_seconds = 30.0
 
+# OpenRouter is available as an explicit provider without being inserted into
+# the normal OpenAI -> Groq -> Coze fallback chain.
+[providers.openrouter]
+enabled = true
+model = "openai/gpt-oss-20b"
+max_output_tokens = 512
+timeout_seconds = 30.0
+fallback = ""
+base_url = "https://openrouter.ai/api/v1"
+
+[providers.openrouter.accounts.openrouter_main]
+secret_env = "OPENROUTER_API_KEY"
+priority = 10
+cooldown_seconds = 30.0
+
 # Coze is an agent/API provider rather than a normal model endpoint.
-# COZE_BOT_ID identifies the published Coze bot/agent used by this account.
 [providers.coze]
 enabled = false
 model = "coze-bot"
