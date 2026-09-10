@@ -16,6 +16,7 @@ from bot_ia.providers import ProviderManager, ProviderRequest, ProviderResponse,
 
 from .application import ApplicationRequest
 from .evidence_gate import EvidenceGate
+from .external_policy import wrap_external_proposal
 from .local_response import build_local_response
 from .models import BrainResult, RouteDecision
 from .ollie import OllieGuideBuilder
@@ -139,7 +140,30 @@ class LocalWorkflow:
 
         provider_response = self._run_local_provider(decision, brain, agent, context)
 
-        if decision.requires_search:
+        if (
+            decision.external_api_authorized
+            and provider_response is not None
+            and provider_response.status is ProviderStatus.SUCCESS
+            and provider_response.output_text
+        ):
+            # External provider output is useful research material, but it is
+            # deliberately downgraded to a proposal. It can never establish
+            # canon or overwrite the library by passing through this workflow.
+            external_text = wrap_external_proposal(provider_response.output_text)
+            if contract is not None:
+                contract = replace(
+                    contract,
+                    response_type=ResponseType.PROPOSAL,
+                    answer=external_text,
+                    evidence_sufficient=False,
+                    certainty=Confidence.LOW,
+                    uncertainty="external_api_unverified",
+                    proposed_action="review_before_library_incorporation",
+                )
+                agent = replace(agent, answer=external_text, output_contract=contract)
+            else:
+                agent = replace(agent, answer=external_text)
+        elif decision.requires_search:
             gated_text = self._evidence_gate.build_factual_answer(evidence)
             if contract is not None:
                 contract = replace(contract, answer=gated_text)
@@ -212,17 +236,24 @@ class LocalWorkflow:
         if cached is not None:
             return replace(cached, request_id=f"cache:{cached.request_id}")
 
+        external_instructions = (
+            "This is an explicitly authorized external research call. Treat your output as unverified research material, not as project canon or library truth. Do not claim that your answer has been incorporated into the project. Clearly flag uncertainty or disputed facts.\n"
+            if decision.external_api_authorized
+            else ""
+        )
         provider_input = (
             "You are IA-chan, a warm Spanish-speaking coauthoring assistant.\n"
             "Answer naturally and directly. Keep the conversation coherent with the user's wording.\n"
             "Do not mention internal agents, routing, briefs, or provider mechanics unless asked.\n"
             "Use the supplied project context as the source of truth.\n"
             "Never invent established project facts; label inference, uncertainty, and new creative proposals clearly.\n"
-            "If the request is creative, you may create new material, but do not silently turn it into canon.\n\n"
-            f"UNIVERSE: {brain.universe_id}\n"
-            f"INTENT: {brain.intent.value}\n\n"
-            f"CONTEXT:\n{context_key}\n\n"
-            f"USER REQUEST:\n{brain.normalized.original}"
+            "If the request is creative, you may create new material, but do not silently turn it into canon.\n"
+            + external_instructions
+            + "\n"
+            + f"UNIVERSE: {brain.universe_id}\n"
+            + f"INTENT: {brain.intent.value}\n\n"
+            + f"CONTEXT:\n{context_key}\n\n"
+            + f"USER REQUEST:\n{brain.normalized.original}"
         )
         provider_request = ProviderRequest(
             config.provider_id,
