@@ -24,7 +24,7 @@ def expand_scene_sketch(sketch: str, *, max_questions: int = 20) -> str:
         f"1. ¿Qué ocurre exactamente en este momento ({focus})?",
         "2. ¿Dónde está Kuro y qué estaba haciendo justo antes?",
         "3. ¿Qué acaba de ocurrir que rompe la normalidad?",
-        "4. ¿A quién salva, encuentra, sigue o afecta Kuro?",
+        "4. ¿A quién ayuda o salva Kuro, y qué sabemos de esa persona?",
         "5. ¿Quién es esa persona y qué sabemos de ella?",
         "6. ¿Por qué Kuro decide intervenir en lugar de continuar caminando?",
         "7. ¿Kuro actúa por instinto, curiosidad, miedo, empatía, hambre, obligación u otro motivo?",
@@ -40,7 +40,7 @@ def expand_scene_sketch(sketch: str, *, max_questions: int = 20) -> str:
         "17. ¿Kuro intenta quedarse para ayudar o busca marcharse cuanto antes? ¿Por qué?",
         "18. ¿Qué consecuencia deja el rescate para Kuro, para la persona salvada o para el capítulo?",
         "19. ¿El hueco funciona mejor como una escena completa o como varios mini-sketches de acciones encadenadas?",
-        "20. ¿Qué debería quedar preparado al final para enlazar naturalmente con la siguiente escena?",
+        "20. ¿La escena termina aquí o qué debería quedar preparado al final para enlazar naturalmente con la siguiente escena?",
     )
     return "\n".join(questions[:max_questions])
 
