@@ -8,7 +8,7 @@ from pathlib import PurePosixPath
 
 from bot_ia.core.models import EntityCandidate
 
-from .models import CatalogEntry
+from .models import CatalogEntry, SourceType
 
 
 class EntityIndex:
@@ -49,24 +49,26 @@ class EntityIndex:
             if not _looks_like_character(entry, frontmatter):
                 continue
 
-            entity_id = _scalar(frontmatter.get("id"))
-            name = _scalar(frontmatter.get("name"))
+            entity_specs = _declared_entity(frontmatter)
+            if entity_specs is None:
+                entity_specs = _heading_entities(entry.content)
 
-            if not entity_id or not name:
-                continue
+            for entity_id, name, aliases in entity_specs:
+                if not entity_id or not name:
+                    continue
 
-            if entity_id not in seen_ids:
-                candidates.append(
-                    EntityCandidate(
-                        entity_id=entity_id,
-                        universe_id=entry.record.universe_id,
-                        name=name,
-                        aliases=_aliases(frontmatter.get("aliases")),
+                if entity_id not in seen_ids:
+                    candidates.append(
+                        EntityCandidate(
+                            entity_id=entity_id,
+                            universe_id=entry.record.universe_id,
+                            name=name,
+                            aliases=aliases,
+                        )
                     )
-                )
-                seen_ids.add(entity_id)
+                    seen_ids.add(entity_id)
 
-            entries_by_entity.setdefault(entity_id, []).append(entry)
+                entries_by_entity.setdefault(entity_id, []).append(entry)
 
         frozen_entries = {
             entity_id: tuple(
@@ -102,7 +104,55 @@ def _looks_like_character(
         return True
 
     path = PurePosixPath(str(entry.record.path))
-    return "characters" in path.parts
+    return (
+        "characters" in path.parts
+        or "personajes" in path.parts
+        or entry.metadata.source_type is SourceType.CHARACTER
+    )
+
+
+def _declared_entity(frontmatter: dict[str, object]) -> tuple[tuple[str, str, tuple[str, ...]], ...] | None:
+    """Lee una ficha con id/name/aliases; devuelve None si no es una ficha declarativa."""
+    entity_id = _scalar(frontmatter.get("id"))
+    name = _scalar(frontmatter.get("name"))
+    if not entity_id or not name:
+        return None
+    return ((entity_id, name, _aliases(frontmatter.get("aliases"))),)
+
+
+def _heading_entities(content: str) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
+    """Extrae personajes de encabezados de una fuente ya clasificada como CHARACTER.
+
+    Se limita a encabezados de nivel 3 para evitar convertir párrafos o capítulos
+    completos en entidades. Los encabezados repetidos se deduplican por id.
+    """
+    entities: list[tuple[str, str, tuple[str, ...]]] = []
+    seen: set[str] = set()
+
+    for line in content.splitlines():
+        match = re.match(r"^###\s+(.+?)\s*$", line)
+        if not match:
+            continue
+
+        name = match.group(1).strip()
+        if not name:
+            continue
+
+        entity_id = _slug(name)
+        if not entity_id or entity_id in seen:
+            continue
+
+        entities.append((entity_id, name, ()))
+        seen.add(entity_id)
+
+    return tuple(entities)
+
+
+def _slug(value: str) -> str:
+    normalized = value.casefold().strip()
+    normalized = re.sub(r"[^\w\s-]", "", normalized, flags=re.UNICODE)
+    normalized = re.sub(r"[\s_-]+", "-", normalized).strip("-")
+    return normalized
 
 
 def _parse_frontmatter(content: str) -> dict[str, object]:
