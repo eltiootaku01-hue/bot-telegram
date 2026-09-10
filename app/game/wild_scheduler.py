@@ -9,12 +9,11 @@ from app.db.database import Database
 from app.db.models import Chat, GameEncounter
 from app.game.catalog import wild_characters
 from app.game.encounters import new_encounter
-from app.game.models import Rarity
 from app.ui.game_keyboards import encounter_keyboard
 
 
 class WildWaifuScheduler:
-    """Creates occasional group encounters, strictly capped at class B."""
+    """Creates occasional public encounters, capped at classes D/C."""
 
     def __init__(self, bot: Bot, database: Database) -> None:
         self.bot = bot
@@ -59,26 +58,14 @@ class WildWaifuScheduler:
         if not characters:
             return
         character = random.choice(characters)
-        if character.rarity not in {Rarity.D, Rarity.C, Rarity.B}:
-            return
         encounter = new_encounter(character)
         expires = encounter.expires_at
-
-        if character.rarity == Rarity.B:
-            options = ["Ryuuji", "Kitamura", "Ami"]
-            text = (
-                "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
-                f"👤 <b>{character.name}</b> · clase B\n"
-                f"🧠 <b>Pregunta de nicho:</b> {encounter.question}\n"
-                "⚠️ Cada persona tiene <b>una sola oportunidad</b>."
-            )
-        else:
-            options = [character.name]
-            text = (
-                "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
-                f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
-                "⚡ ¡Elegí su nombre antes de que desaparezca!"
-            )
+        options = [character.name]
+        text = (
+            "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
+            f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
+            "⚡ ¡Elegí su nombre antes de que desaparezca!"
+        )
 
         record = GameEncounter(
             id=encounter.id,
