@@ -104,6 +104,26 @@ def _http_post(url: str, payload: dict[str, object], timeout: float) -> dict[str
     return decoded
 
 
+def _split_message(text: str, limit: int = 4096) -> tuple[str, ...]:
+    if not text:
+        raise TelegramInputError("Telegram text cannot be empty")
+    if limit < 1:
+        raise ValueError("message limit must be positive")
+    chunks: list[str] = []
+    remaining = text
+    while len(remaining) > limit:
+        cut = remaining.rfind("\n", 0, limit + 1)
+        if cut < limit // 2:
+            cut = remaining.rfind(" ", 0, limit + 1)
+        if cut <= 0:
+            cut = limit
+        chunks.append(remaining[:cut].rstrip())
+        remaining = remaining[cut:].lstrip()
+    if remaining:
+        chunks.append(remaining)
+    return tuple(chunks)
+
+
 class TelegramApiClient:
     def __init__(self, token: str, *, transport: TelegramTransport | None = None, timeout_seconds: float = 15.0, max_retries: int = 2, retry_delay_seconds: float = 1.0, sleeper: Callable[[float], None] = time.sleep) -> None:
         if not token:
@@ -121,9 +141,11 @@ class TelegramApiClient:
         return cls(token)
 
     def send(self, outbound: TelegramOutbound) -> dict[str, object]:
-        if not outbound.text or len(outbound.text) > 4096:
-            raise TelegramInputError("Telegram text must contain 1-4096 characters")
-        return self._call("sendMessage", outbound.payload())
+        chunks = _split_message(outbound.text)
+        result: dict[str, object] | None = None
+        for chunk in chunks:
+            result = self._call("sendMessage", {"chat_id": outbound.chat_id, "text": chunk})
+        return result or {"ok": True}
 
     def get_updates(self, *, offset: int | None = None, timeout_seconds: int = 25) -> tuple[dict[str, object], ...]:
         if offset is not None and offset < 0:
@@ -220,19 +242,24 @@ class TelegramPoller:
                     skipped += 1
                     self._logger("telegram update skipped")
                     continue
-                self._offset = update_id + 1
                 try:
                     outbound = self._adapter.handle_update(update)
                 except TelegramInputError:
+                    # Poisoned/unsupported updates are acknowledged so they do not
+                    # block the queue forever.
+                    self._offset = update_id + 1
                     skipped += 1
                     self._logger("telegram update rejected")
                     continue
-                processed += 1
                 try:
                     self._client.send(outbound)
                 except (TelegramTransportError, TelegramApiError, TelegramInputError):
+                    # Do not advance the offset until delivery succeeds; Telegram
+                    # can redeliver the update after a transient failure.
                     self._logger("telegram response delivery failed")
                     continue
+                self._offset = update_id + 1
+                processed += 1
                 sent += 1
             if self._running and not updates:
                 self._sleeper(self._config.idle_delay_seconds)
