@@ -60,7 +60,6 @@ class GameProfile(Base):
 
 
 class PointTransaction(Base):
-    """Auditable point ledger shared by the game and future sibling bots."""
     __tablename__ = "point_transactions"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -166,7 +165,6 @@ class RequestStatus(StrEnum):
 
 
 class FanRequest(Base):
-    """Fan request paid with shared points; the web admin will manage its workflow."""
     __tablename__ = "fan_requests"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -189,3 +187,39 @@ class BotSetting(Base):
     chat_id: Mapped[int | None] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
     key: Mapped[str] = mapped_column(String(100))
     value: Mapped[str] = mapped_column(String(4000), default="")
+
+
+class DomainEvent(Base):
+    """Durable event envelope shared by all bot identities."""
+    __tablename__ = "domain_events"
+    __table_args__ = (UniqueConstraint("event_id", name="uq_domain_event_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    event_id: Mapped[str] = mapped_column(String(64))
+    event_type: Mapped[str] = mapped_column(String(100))
+    payload: Mapped[str] = mapped_column(String(10000), default="{}")
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    available_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    last_error: Mapped[str | None] = mapped_column(String(4000))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class DurableJob(Base):
+    """Persistent one-shot work item; dedupe_key makes retries idempotent."""
+    __tablename__ = "durable_jobs"
+    __table_args__ = (UniqueConstraint("dedupe_key", name="uq_durable_job_dedupe"),)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    job_type: Mapped[str] = mapped_column(String(100))
+    dedupe_key: Mapped[str] = mapped_column(String(255))
+    payload: Mapped[str] = mapped_column(String(10000), default="{}")
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    run_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    last_error: Mapped[str | None] = mapped_column(String(4000))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
