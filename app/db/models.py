@@ -96,7 +96,6 @@ class GameAttempt(Base):
 
 
 class RareDropApproval(Base):
-    """High-rarity candidates never enter a group until the owner approves them privately."""
     __tablename__ = "rare_drop_approvals"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     character_id: Mapped[str] = mapped_column(String(100))
@@ -126,6 +125,18 @@ class MediaAsset(Base):
     publish_page: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class GameCharacterArt(Base):
+    """Maps a Telegram-hosted asset to a character's visual progression stage."""
+    __tablename__ = "game_character_art"
+    __table_args__ = (UniqueConstraint("character_id", "evolution_stage", name="uq_character_art_stage"),)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    character_id: Mapped[str] = mapped_column(String(100))
+    evolution_stage: Mapped[int] = mapped_column(Integer, default=1)
+    asset_id: Mapped[int] = mapped_column(ForeignKey("media_assets.id", ondelete="CASCADE"))
+    is_primary: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class BotSetting(Base):
