@@ -29,6 +29,7 @@ async def test_capture_progression_keeps_copies_and_xp_across_repeated_captures(
         character_id="anya",
         rarity="D",
     )
+    first_copies = first_collection.copies
     await session.commit()
 
     second_collection, second = await apply_capture_progression(
@@ -41,7 +42,7 @@ async def test_capture_progression_keeps_copies_and_xp_across_repeated_captures(
 
     assert first.points_gained == 10
     assert second.points_gained == 10
-    assert first_collection.copies == 1
+    assert first_copies == 1
     assert second_collection.copies == 2
     assert second_collection.experience == 65
 
