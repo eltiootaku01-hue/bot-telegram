@@ -10,14 +10,12 @@ class FusionRule:
     copies_required: int
 
 
-# The numbers are deliberately data, not scattered through handlers, so they can
-# be tuned later without rewriting the game module.
+# Tuneable game economy. The final S rank is intentionally expensive.
 FUSION_RULES: tuple[FusionRule, ...] = (
     FusionRule("D", "C", 10),
-    FusionRule("C", "B", 20),
-    FusionRule("B", "A", 40),
-    FusionRule("A", "S", 60),
-    FusionRule("S", "SS", 80),
+    FusionRule("C", "B", 40),
+    FusionRule("B", "A", 60),
+    FusionRule("A", "S", 80),
 )
 
 
@@ -32,11 +30,7 @@ def can_fuse(rarity: str, copies: int) -> bool:
 
 
 def consume_for_fusion(rarity: str, copies: int) -> tuple[FusionRule, int]:
-    """Validate a fusion and return the rule plus remaining copies.
-
-    Persistence is intentionally handled by the caller so this pure function is
-    easy to test and cannot partially update a player's collection.
-    """
+    """Validate a fusion and return the rule plus remaining copies."""
     rule = next_fusion(rarity)
     if rule is None:
         raise ValueError(f"No fusion rule exists for rarity {rarity!r}")
