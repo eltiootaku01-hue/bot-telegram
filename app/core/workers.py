@@ -57,14 +57,16 @@ class DurableWorker:
                     pass
 
     async def _recover(self) -> None:
-        async with self.database.session() as session:
-            recovered_events = await self.events.recover_stale(session)
-        async with self.database.session() as session:
-            recovered_jobs = await self.jobs.recover_stale(session)
-        if recovered_events or recovered_jobs:
-            logger.warning(
-                "Recovered stale work: events=%s jobs=%s", recovered_events, recovered_jobs
-            )
+        for event_type in tuple(self.event_handlers):
+            async with self.database.session() as session:
+                recovered = await self.events.recover_stale(session, event_type=event_type)
+            if recovered:
+                logger.warning("Recovered stale events: type=%s count=%s", event_type, recovered)
+        for job_type in tuple(self.job_handlers):
+            async with self.database.session() as session:
+                recovered = await self.jobs.recover_stale(session, job_type=job_type)
+            if recovered:
+                logger.warning("Recovered stale jobs: type=%s count=%s", job_type, recovered)
 
     async def _process_one_event(self) -> bool:
         if not self.event_handlers:
