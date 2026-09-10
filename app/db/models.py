@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -150,6 +151,36 @@ class GameCharacterArt(Base):
     asset_id: Mapped[int] = mapped_column(ForeignKey("media_assets.id", ondelete="CASCADE"))
     is_primary: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class RequestStatus(StrEnum):
+    NEW = "new"
+    NEEDS_INFO = "needs_info"
+    PENDING_ADMIN = "pending_admin"
+    APPROVED = "approved"
+    SCHEDULED = "scheduled"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
+
+
+class FanRequest(Base):
+    """Fan request paid with shared points; the web admin will manage its workflow."""
+    __tablename__ = "fan_requests"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    description: Mapped[str] = mapped_column(String(4000))
+    character_id: Mapped[str | None] = mapped_column(String(100))
+    special_details: Mapped[str | None] = mapped_column(String(2000))
+    status: Mapped[str] = mapped_column(String(32), default=RequestStatus.NEW.value)
+    points_cost: Mapped[int] = mapped_column(Integer, default=0)
+    source_message_id: Mapped[int | None] = mapped_column(BigInteger)
+    admin_note: Mapped[str | None] = mapped_column(String(4000))
+    due_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class BotSetting(Base):
