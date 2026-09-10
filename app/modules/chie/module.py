@@ -1,15 +1,16 @@
 from aiogram import Bot, F
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, ChatMemberAdministrator, Message
+from aiogram.types import CallbackQuery, ChatMemberAdministrator, ChatMemberOwner, Message
 from sqlalchemy import select
 
+from app.core.access import is_chat_staff
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
-from app.ui.control_keyboards import command_hub_keyboard, chie_setup_keyboard
+from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard
 
 
 REQUIRED_ADMIN_PERMISSIONS = {
@@ -53,68 +54,55 @@ class ChieModule(BotModule):
 
     async def configure_group(self, message: Message, bot: Bot) -> None:
         if message.chat.type not in {"group", "supergroup"}:
-            await message.answer("😰 Ese comando tiene que ejecutarse dentro del grupo que querés configurar.")
+            return
+        if not await is_chat_staff(message, bot):
             return
         member = await bot.get_chat_member(message.chat.id, bot.id)
-        if not isinstance(member, ChatMemberAdministrator):
+        if not isinstance(member, (ChatMemberAdministrator, ChatMemberOwner)):
             await message.answer("😰 Necesito ser administradora del grupo antes de reformarlo.")
             return
-
         missing = [label for attr, label in REQUIRED_ADMIN_PERMISSIONS.items() if not getattr(member, attr, False)]
         if missing:
             await message.answer("Me faltan estos permisos: " + ", ".join(missing) + ".")
             return
-
         async with self.database.session() as session:
-            existing = await session.scalar(
-                select(SetupSession).where(
-                    SetupSession.user_id == message.from_user.id,
-                    SetupSession.bot_identity == BotIdentity.CHIE.value,
-                )
-            )
+            existing = await session.scalar(select(SetupSession).where(
+                SetupSession.user_id == message.from_user.id,
+                SetupSession.bot_identity == BotIdentity.CHIE.value,
+            ))
             if existing:
                 existing.chat_id = message.chat.id
                 existing.status = "awaiting_confirmation"
             else:
-                session.add(
-                    SetupSession(
-                        user_id=message.from_user.id,
-                        chat_id=message.chat.id,
-                        bot_identity=BotIdentity.CHIE.value,
-                        status="awaiting_confirmation",
-                    )
-                )
+                session.add(SetupSession(
+                    user_id=message.from_user.id,
+                    chat_id=message.chat.id,
+                    bot_identity=BotIdentity.CHIE.value,
+                    status="awaiting_confirmation",
+                ))
             await session.commit()
-
-        await message.answer(
-            "✅ Permisos comprobados. Ya sé qué grupo configurar.\n\n"
-            "Volvé al chat privado conmigo y tocá <b>Ya me agregaste de admin</b>."
-        )
+        await message.answer("✅ Permisos comprobados. Volvé al chat privado conmigo y tocá <b>Ya me agregaste de admin</b>.")
 
     async def check_setup(self, callback: CallbackQuery, bot: Bot) -> None:
         if not callback.from_user or not callback.message:
             return
         async with self.database.session() as session:
-            setup = await session.scalar(
-                select(SetupSession).where(
-                    SetupSession.user_id == callback.from_user.id,
-                    SetupSession.bot_identity == BotIdentity.CHIE.value,
-                    SetupSession.status == "awaiting_confirmation",
-                )
-            )
+            setup = await session.scalar(select(SetupSession).where(
+                SetupSession.user_id == callback.from_user.id,
+                SetupSession.bot_identity == BotIdentity.CHIE.value,
+                SetupSession.status == "awaiting_confirmation",
+            ))
             if not setup:
                 await callback.answer("Primero ejecutá /configurar dentro del grupo.", show_alert=True)
                 return
             chat_id = setup.chat_id
-
         member = await bot.get_chat_member(chat_id, bot.id)
-        missing = [] if isinstance(member, ChatMemberAdministrator) else list(REQUIRED_ADMIN_PERMISSIONS.values())
-        if isinstance(member, ChatMemberAdministrator):
+        missing = [] if isinstance(member, (ChatMemberAdministrator, ChatMemberOwner)) else list(REQUIRED_ADMIN_PERMISSIONS.values())
+        if isinstance(member, (ChatMemberAdministrator, ChatMemberOwner)):
             missing = [label for attr, label in REQUIRED_ADMIN_PERMISSIONS.items() if not getattr(member, attr, False)]
         if missing:
             await callback.answer("Todavía me faltan: " + ", ".join(missing), show_alert=True)
             return
-
         topic_keys = ("comandos", "noticias", "undiacomohoy", "recomendaciondiaria", "curiosidades", "estrenos", "memes", "material", "anime", "debates", "trivia", "waifumon", "puntos", "pedidos")
         created = 0
         failures: list[str] = []
@@ -126,32 +114,22 @@ class ChieModule(BotModule):
             except (RuntimeError, TelegramBadRequest, TelegramForbiddenError) as exc:
                 failures.append(f"{key}: {exc}")
                 break
-
         if not failures:
             try:
                 commands_thread = await self.topics.get_thread_id(chat_id, "comandos")
                 if commands_thread is not None:
-                    await bot.send_message(
-                        chat_id,
-                        "🤖 <b>Panel de comandos</b>\nLos botones son el acceso rápido. Los comandos siguen disponibles como alternativa y para automatizaciones.",
-                        message_thread_id=commands_thread,
-                        reply_markup=command_hub_keyboard(),
-                    )
+                    await bot.send_message(chat_id, "🤖 <b>Panel de la comunidad</b>\nLos botones son el acceso rápido.", message_thread_id=commands_thread, reply_markup=command_hub_keyboard())
             except (TelegramBadRequest, TelegramForbiddenError) as exc:
                 failures.append(f"publicar panel: {exc}")
-
         async with self.database.session() as session:
-            setup = await session.scalar(
-                select(SetupSession).where(
-                    SetupSession.user_id == callback.from_user.id,
-                    SetupSession.bot_identity == BotIdentity.CHIE.value,
-                )
-            )
+            setup = await session.scalar(select(SetupSession).where(
+                SetupSession.user_id == callback.from_user.id,
+                SetupSession.bot_identity == BotIdentity.CHIE.value,
+            ))
             if setup:
                 setup.status = "configured" if not failures else "partial"
                 await session.commit()
-
-        await callback.answer("Configuración terminada." if not failures else "Configuración parcial.", show_alert=False)
+        await callback.answer("Configuración terminada." if not failures else "Configuración parcial.")
         text = f"🎉 <b>Chie ya está trabajando.</b>\nTemas creados en esta pasada: {created}."
         if failures:
             text += "\n\n⚠️ Me detuve porque Telegram rechazó una operación. Revisá permisos y que el grupo sea un supergrupo con Foro activado."
@@ -162,11 +140,10 @@ class ChieModule(BotModule):
             await callback.message.edit_text("Configuración cancelada. Cuando quieras, tocá /start y volvemos a intentarlo.")
         await callback.answer()
 
-    async def command_hub_command(self, message: Message) -> None:
-        await message.answer(
-            "🤖 <b>Panel de la comunidad</b>\nElegí qué querés hacer. Los botones llaman funciones concretas; los comandos quedan como acceso alternativo.",
-            reply_markup=command_hub_keyboard(),
-        )
+    async def command_hub_command(self, message: Message, bot: Bot) -> None:
+        if message.chat.type != "private" and not await is_chat_staff(message, bot):
+            return
+        await message.answer("🤖 <b>Panel de la comunidad</b>\nElegí qué querés hacer.", reply_markup=command_hub_keyboard())
 
     async def command_hub(self, callback: CallbackQuery) -> None:
         if not callback.message:
