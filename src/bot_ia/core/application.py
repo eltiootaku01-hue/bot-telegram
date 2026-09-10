@@ -23,6 +23,7 @@ class ApplicationRequest:
     user_id: str
     conversation_id: str
     message: str
+    allow_external_api: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +121,19 @@ class BotApplication:
             brain = replace(brain, state=state)
 
         decision = self._router.decide(brain)
+
+        # External provider use is an explicit capability, never an implicit
+        # fallback from a missing local fact. This flag is normally supplied by
+        # a contextual Telegram button or another trusted UI.
+        if request.allow_external_api and decision.route is Route.SEARCH:
+            decision = replace(
+                decision,
+                route=Route.LLM,
+                reason="external API explicitly authorized by user",
+                requires_search=False,
+                requires_llm=True,
+                agent_id="ia_chan",
+            )
 
         if brain.state is not None:
             self._sessions.put(
