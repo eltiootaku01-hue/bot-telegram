@@ -1,5 +1,5 @@
 from app.db.models import FanRequest, MediaAsset
-from app.ui.control_keyboards import cami_pending_requests
+from app.ui.media_keyboards import cami_pending_requests
 
 
 def test_media_asset_links_to_fan_request() -> None:
