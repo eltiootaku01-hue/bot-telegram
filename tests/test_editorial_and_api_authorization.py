@@ -22,7 +22,7 @@ class EditorialAndApiAuthorizationTests(unittest.TestCase):
 
     def test_editorial_review_is_executable_by_writing_provider(self):
         decision = Router().decide(self._brain(Intent.EDITORIAL_REVIEW))
-        self.assertIs(decision.route, Route.LLM)
+        self.assertIs(decision.route, Route.AGENT)
         self.assertTrue(decision.requires_agent)
         self.assertTrue(decision.requires_llm)
         self.assertEqual(decision.agent_id, "editor")
