@@ -1,4 +1,4 @@
-from aiogram import F
+from aiogram import Bot, F
 from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, ChatMemberUpdated, Message
 
@@ -29,13 +29,14 @@ class SystemModule(BotModule):
     async def ping(self, message: Message) -> None:
         await message.answer("pong")
 
-    async def bot_added(self, event: ChatMemberUpdated) -> None:
+    async def bot_added(self, event: ChatMemberUpdated, bot: Bot) -> None:
         old_status = event.old_chat_member.status
         new_status = event.new_chat_member.status
         joined = new_status in {"member", "administrator"} and old_status in {"left", "kicked"}
         if not joined or event.chat.type not in {"group", "supergroup"}:
             return
-        await event.chat.send_message(
+        await bot.send_message(
+            event.chat.id,
             "🎮 <b>VBot se unió a la partida.</b>\n\n"
             "Podés usar estos accesos; el resto de la interfaz aparecerá solo cuando corresponda.",
             reply_markup=game_hub_keyboard(),
