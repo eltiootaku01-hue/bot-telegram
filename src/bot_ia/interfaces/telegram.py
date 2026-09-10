@@ -129,7 +129,7 @@ class TelegramAdapter:
         inbound = parse_update(update)
         command = inbound.text.casefold().split()[0]
         if command in {"/start", "/menu"}:
-            return TelegramOutbound(inbound.conversation_id, "¡Listo! ¿Qué quieres hacer?", "local", self.MAIN_MENU)
+            return TelegramOutbound(inbound.conversation_id, "¡listo! ¿Qué quieres hacer?", "local", self.MAIN_MENU)
         if command == "/help":
             return TelegramOutbound(inbound.conversation_id, "Puedes hablarme normalmente. También tienes el menú para escribir, editar, consultar la biblioteca, revisar continuidad o generar ideas.", "local", self.MAIN_MENU)
         response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, inbound.text))
@@ -162,15 +162,11 @@ class TelegramAdapter:
 
     @staticmethod
     def from_response(chat_id: str, response: ApplicationResponse) -> TelegramOutbound:
-        keyboard: tuple[tuple[tuple[str, str], ...], ...] = (("⬅️ Menú", "menu:main"),)
+        keyboard: tuple[tuple[tuple[str, str], ...], ...] = ()
         execution = response.execution
         evidence = getattr(execution, "evidence", None)
         if evidence is not None and getattr(evidence.coverage, "status", None) in {CoverageStatus.NO_ENCONTRADO, CoverageStatus.NO_ESTABLECIDO}:
-            keyboard = (
-                (("🔐 Usar API para esta consulta", "fallback:api"),),
-                (("📋 Preparar prompt para otra IA", "fallback:prompt"),),
-                (("⬅️ Menú", "menu:main"),),
-            )
+            keyboard = ((("🔐 Usar API para esta consulta", "fallback:api"),), (("📋 Preparar prompt para otra IA", "fallback:prompt"),), (("⬅️ Menú", "menu:main"),))
         return TelegramOutbound(chat_id, response.text, response.decision.route.value, keyboard)
 
 
