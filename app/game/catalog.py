@@ -22,7 +22,9 @@ CHARACTERS: dict[str, Character] = {
     ),
 }
 
-WILD_RARITIES = frozenset({Rarity.D, Rarity.C, Rarity.B})
+# Public wild encounters stop at C. B/A/S/SS/SSS are exceptional drops
+# and can only enter a player's collection after private owner approval.
+WILD_RARITIES = frozenset({Rarity.D, Rarity.C})
 
 
 def get_character(character_id: str) -> Character:
@@ -30,5 +32,5 @@ def get_character(character_id: str) -> Character:
 
 
 def wild_characters() -> tuple[Character, ...]:
-    """Public wild encounters are deliberately capped at B."""
+    """Return only characters eligible for normal public encounters."""
     return tuple(character for character in CHARACTERS.values() if character.rarity in WILD_RARITIES)
