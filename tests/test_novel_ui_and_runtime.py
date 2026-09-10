@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from bot_ia.config.loader import _resolve_universe_path
-from bot_ia.interfaces.telegram_novel_v2 import EDITOR_MENU, EDITOR_REQUESTS
+from bot_ia.interfaces.telegram_novel_v2 import EDITOR_MENU, EDITOR_REQUESTS, TelegramNovelV2Adapter
 
 
 class NovelUiAndRuntimeTests(unittest.TestCase):
@@ -24,11 +24,13 @@ class NovelUiAndRuntimeTests(unittest.TestCase):
     def test_editor_menu_has_all_declared_actions(self):
         labels = [callback for row in EDITOR_MENU for callback in row]
         callbacks = {data for _, data in labels}
-        self.assertEqual(
-            callbacks - {"menu:main"},
-            set(EDITOR_REQUESTS),
-        )
+        self.assertEqual(callbacks - {"menu:main"}, set(EDITOR_REQUESTS))
         self.assertEqual(len(EDITOR_REQUESTS), 7)
+
+    def test_novel_menu_exposes_research(self):
+        callbacks = {data for row in TelegramNovelV2Adapter.MAIN_MENU for _, data in row}
+        self.assertIn("menu:research", callbacks)
+        self.assertLessEqual(max(len(data) for data in callbacks), 64)
 
 
 if __name__ == "__main__":
