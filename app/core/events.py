@@ -42,16 +42,31 @@ class EventBus:
             event_type=event_type,
             payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
         )
-        session.add(event)
-        try:
-            if commit:
+        if commit:
+            session.add(event)
+            try:
                 await session.commit()
-            else:
-                async with session.begin_nested():
-                    await session.flush()
-        except IntegrityError:
-            if commit:
+            except IntegrityError:
                 await session.rollback()
+                existing = await session.scalar(
+                    select(DomainEvent).where(DomainEvent.event_id == envelope.event_id)
+                )
+                if existing is None:
+                    raise
+                return EventEnvelope(
+                    event_id=existing.event_id,
+                    event_type=existing.event_type,
+                    payload=json.loads(existing.payload),
+                )
+            return envelope
+
+        # A duplicate dedupe key must only roll back its SAVEPOINT, never poison
+        # the caller's surrounding transaction.
+        try:
+            async with session.begin_nested():
+                session.add(event)
+                await session.flush()
+        except IntegrityError:
             existing = await session.scalar(
                 select(DomainEvent).where(DomainEvent.event_id == envelope.event_id)
             )
