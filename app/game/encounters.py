@@ -58,5 +58,5 @@ def new_encounter(character: Character, now: datetime | None = None) -> Encounte
         character=character,
         expires_at=now + timedelta(seconds=duration),
         question=question,
-        answer="ryuuji" if question else "capture",
+        answer="ryuuji" if question else character.name,
     )
