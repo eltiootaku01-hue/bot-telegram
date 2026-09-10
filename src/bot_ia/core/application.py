@@ -9,6 +9,7 @@ from typing import Callable
 from bot_ia.contracts import SessionState
 
 from .brain import LocalBrain
+from .local_response import build_local_response
 from .models import BrainRequest, BrainResult, EntityCandidate, Route, RouteDecision
 from .router import Router
 
@@ -146,6 +147,9 @@ class BotApplication:
             if isinstance(execution, str)
             else getattr(execution, "text", None)
         )
+
+        if not text and universe_id is None and decision.route is Route.LOCAL:
+            text = build_local_response(brain.intent, brain.normalized.original)
 
         return ApplicationResponse(
             text or self._local_message(decision),
