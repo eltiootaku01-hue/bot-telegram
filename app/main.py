@@ -1,8 +1,6 @@
 import asyncio
 import logging
 
-from aiogram import Dispatcher
-
 from app.core.bot import build_dispatcher
 from app.core.config import get_settings
 from app.core.logging import configure_logging
@@ -11,11 +9,13 @@ from app.core.logging import configure_logging
 async def run() -> None:
     settings = get_settings()
     configure_logging(settings.log_level)
-    bot, dispatcher = build_dispatcher(settings)
+    bot, dispatcher, database = build_dispatcher(settings)
+    await database.create_schema()
 
     try:
         await dispatcher.start_polling(bot)
     finally:
+        await database.close()
         await bot.session.close()
 
 
