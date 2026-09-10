@@ -1,9 +1,10 @@
+import json
 from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import FanRequest, GameProfile, PointTransaction, RequestStatus
+from app.db.models import DomainEvent, FanRequest, GameProfile, PointTransaction, RequestStatus
 
 
 DEFAULT_REQUEST_COST = 50
@@ -61,6 +62,25 @@ class RequestService:
                 reason="Pedido de fan",
                 reference_type="fan_request",
                 reference_id=str(request.id),
+            )
+        )
+        session.add(
+            DomainEvent(
+                event_id=f"fan-request-created:{request.id}",
+                event_type="fan_request.created",
+                payload=json.dumps(
+                    {
+                        "request_id": request.id,
+                        "user_id": user_id,
+                        "chat_id": chat_id,
+                        "description": request.description,
+                        "points_cost": points_cost,
+                        "character_id": character_id,
+                        "special_details": special_details,
+                    },
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
             )
         )
         await session.commit()
