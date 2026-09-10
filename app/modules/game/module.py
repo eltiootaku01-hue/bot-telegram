@@ -211,6 +211,11 @@ class GameModule(BotModule):
             if encounter is None or datetime.utcnow() >= encounter.expires_at:
                 await callback.answer("La waifu ya se fue. 😭", show_alert=True)
                 return
+            # Callback data can be forwarded/replayed from another chat. The encounter
+            # is community-scoped, so never let a foreign message award points here.
+            if callback.message.chat.id != encounter.chat_id:
+                await callback.answer("Este encuentro pertenece a otra comunidad. 😰", show_alert=True)
+                return
             character = get_character(encounter.character_id)
             plan = Encounter(
                 id=encounter.id,
