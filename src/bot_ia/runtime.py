@@ -39,22 +39,13 @@ class RuntimeComponents:
                 return universe
         raise KeyError(f"universe not configured: {universe_id}")
 
-    def build_application(
-        self,
-        *,
-        default_universe_id: str | None = None,
-        provider_id: str = "openai",
-    ) -> BotApplication:
-        provider_config = self.registry.provider(provider_id)
+    def configured_universe_ids(self) -> tuple[str, ...]:
+        return tuple(universe.definition.universe_id for universe in self.universes)
 
-        entries_by_universe = {
-            universe.definition.universe_id: universe.entries
-            for universe in self.universes
-        }
-        entity_indexes_by_universe = {
-            universe.definition.universe_id: universe.entity_index
-            for universe in self.universes
-        }
+    def build_application(self, *, default_universe_id: str | None = None, provider_id: str = "openai") -> BotApplication:
+        provider_config = self.registry.provider(provider_id)
+        entries_by_universe = {universe.definition.universe_id: universe.entries for universe in self.universes}
+        entity_indexes_by_universe = {universe.definition.universe_id: universe.entity_index for universe in self.universes}
 
         def candidate_provider(universe_id: str) -> tuple:
             return self.universe(universe_id).entity_index.for_universe(universe_id)
@@ -66,7 +57,6 @@ class RuntimeComponents:
             memory_store=self.memory_store,
             provider_config=provider_config,
         )
-
         return BotApplication(
             LocalBrain(self.universe_registry),
             Router(),
@@ -77,13 +67,14 @@ class RuntimeComponents:
         )
 
 
-def _build_universe_runtime(
-    config: RuntimeConfig,
-) -> tuple[UniverseRegistry, tuple[UniverseRuntime, ...]]:
+def _build_universe_runtime(config: RuntimeConfig) -> tuple[UniverseRegistry, tuple[UniverseRuntime, ...]]:
     registry = UniverseRegistry()
     universes: list[UniverseRuntime] = []
-
     for universe in config.universes:
+        # Future novels may be declared in runtime.toml before their local
+        # folders exist. Do not let an unconfigured project block another one.
+        if not universe.root_path.is_dir():
+            continue
         definition = UniverseDefinition(
             universe_id=universe.universe_id,
             display_name=universe.display_name,
@@ -92,43 +83,15 @@ def _build_universe_runtime(
             language=universe.language,
         )
         registry.register(definition)
-
-        inventory = SourceInventory(definition.root_path)
-        entries = inventory.discover(definition.universe_id)
-        entity_index = EntityIndex(entries)
-        universes.append(
-            UniverseRuntime(
-                definition=definition,
-                entries=entries,
-                entity_index=entity_index,
-            )
-        )
-
+        entries = SourceInventory(definition.root_path).discover(definition.universe_id)
+        universes.append(UniverseRuntime(definition, entries, EntityIndex(entries)))
     return registry, tuple(universes)
 
 
-def build_runtime(
-    project_root: Path,
-    *,
-    key_loader=None,
-    transports=None,
-) -> RuntimeComponents:
+def build_runtime(project_root: Path, *, key_loader=None, transports=None) -> RuntimeComponents:
     config = load_default_runtime_config(project_root)
     registry = RuntimeRegistry(config)
     universe_registry, universes = _build_universe_runtime(config)
-
-    provider_manager = build_provider_manager(
-        config,
-        key_loader=key_loader,
-        transports=transports,
-    )
+    provider_manager = build_provider_manager(config, key_loader=key_loader, transports=transports)
     memory_store = MemoryStore(project_root, universe_registry)
-
-    return RuntimeComponents(
-        config=config,
-        registry=registry,
-        universe_registry=universe_registry,
-        universes=universes,
-        provider_manager=provider_manager,
-        memory_store=memory_store,
-    )
+    return RuntimeComponents(config, registry, universe_registry, universes, provider_manager, memory_store)
