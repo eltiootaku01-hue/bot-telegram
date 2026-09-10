@@ -29,8 +29,8 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule(Intent.CHARACTER, (r"\bquien es\b", r"\bpersonaje\b", r"\balias\b")),
     IntentRule(Intent.HELP, (r"^ayuda\b", r"^help\b", r"\bcomo funciona\b", r"\bque puedes hacer\b", r"\bme puedes ayudar\b", r"\bme ayudas\b")),
     IntentRule(Intent.GREETING, (r"^(hola|buenas|hey|buen dia|buenas tardes|buenas noches)\b", r"^(gracias|muchas gracias|genial|perfecto|ok|okay|dale|jaja|jeje|que tal|como estas)\b")),
-    # Sólo preguntas sobre el inventario/documentación completa. Una pregunta
-    # sobre una entidad concreta debe seguir por la ruta factual.
+    # Inventario general: incluye el nombre del universo/proyecto, pero no
+    # convierte una pregunta sobre una entidad concreta en un inventario.
     IntentRule(Intent.KNOWLEDGE_OVERVIEW, (
         r"\bque (?:informacion|datos|documentacion) tienes\b",
         r"\bque (?:informacion|datos|documentacion) hay\b",
@@ -38,6 +38,8 @@ RULES: tuple[IntentRule, ...] = (
         r"\binformacion disponible\b",
         r"\bdocumentacion disponible\b",
         r"\bque hay en (?:la )?(?:biblioteca|documentacion)\b",
+        r"\bque (?:informacion|datos|documentacion) tienes sobre (?:one\s+neko\s+punch|este\s+proyecto|este\s+universo)\b",
+        r"\bque hay sobre (?:one\s+neko\s+punch|este\s+proyecto|este\s+universo)\b",
     )),
     IntentRule(Intent.IDEA, (
         r"\bque\s+se\s+te\s+ocurre\b", r"\bque\s+ideas\b", r"\bideas\s+para\b",
