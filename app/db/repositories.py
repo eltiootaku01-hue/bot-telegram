@@ -4,7 +4,7 @@ from aiogram.types import Chat as TgChat, User as TgUser
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Chat, GameProfile, User, UserChat
+from app.db.models import Chat, GameProfile, PointTransaction, User, UserChat
 
 
 class MemberRepository:
@@ -115,6 +115,67 @@ class MemberRepository:
             await session.commit()
             await session.refresh(profile)
         return profile
+
+    async def add_points(
+        self,
+        session: AsyncSession,
+        *,
+        user_id: int,
+        chat_id: int,
+        amount: int,
+        reason: str,
+        reference_type: str | None = None,
+        reference_id: str | None = None,
+    ) -> int:
+        """Add spendable community points and record an immutable ledger entry."""
+        if amount == 0:
+            return (await self.get_or_create_game_profile(session, user_id, chat_id)).points
+        profile = await self.get_or_create_game_profile(session, user_id, chat_id)
+        profile.points = max(0, profile.points + amount)
+        profile.updated_at = datetime.utcnow()
+        session.add(
+            PointTransaction(
+                user_id=user_id,
+                chat_id=chat_id,
+                amount=amount,
+                reason=reason,
+                reference_type=reference_type,
+                reference_id=reference_id,
+            )
+        )
+        await session.commit()
+        return profile.points
+
+    async def spend_points(
+        self,
+        session: AsyncSession,
+        *,
+        user_id: int,
+        chat_id: int,
+        amount: int,
+        reason: str,
+        reference_type: str | None = None,
+        reference_id: str | None = None,
+    ) -> int | None:
+        if amount <= 0:
+            raise ValueError("Point cost must be positive")
+        profile = await self.get_or_create_game_profile(session, user_id, chat_id)
+        if profile.points < amount:
+            return None
+        profile.points -= amount
+        profile.updated_at = datetime.utcnow()
+        session.add(
+            PointTransaction(
+                user_id=user_id,
+                chat_id=chat_id,
+                amount=-amount,
+                reason=reason,
+                reference_type=reference_type,
+                reference_id=reference_id,
+            )
+        )
+        await session.commit()
+        return profile.points
 
     @staticmethod
     async def _ensure_user(session: AsyncSession, user: TgUser, now: datetime) -> None:
