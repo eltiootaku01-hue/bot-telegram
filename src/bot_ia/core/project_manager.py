@@ -25,6 +25,8 @@ class ProjectManager:
     """Registro persistente de proyectos creados por el usuario."""
 
     _ID_RE = re.compile(r"[^a-z0-9]+")
+    _VALID_ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    _REQUIRED_DIRECTORIES = ("biblioteca", "memoria", "canon", "historial", "config")
 
     def __init__(self, workspace_root: Path, *, registry_path: str = "work/projects.json", projects_dir: str = "work/projects") -> None:
         self._workspace_root = workspace_root.resolve()
@@ -61,7 +63,7 @@ class ProjectManager:
         root = (self._projects_dir / project_id).resolve()
         if not root.is_relative_to(self._projects_dir) or root.exists():
             raise ProjectError("project path is invalid or already exists")
-        for directory in ("biblioteca", "memoria", "canon", "historial", "config"):
+        for directory in self._REQUIRED_DIRECTORIES:
             (root / directory).mkdir(parents=True, exist_ok=False)
         record = ProjectRecord(project_id, name, root)
         self._records[project_id] = record
@@ -102,9 +104,18 @@ class ProjectManager:
             project_type = str(raw.get("project_type", "novel"))
             if not project_id or not display_name or not root_raw or project_type != "novel":
                 raise ProjectError("project registry contains incomplete data")
+            if not self._VALID_ID_RE.fullmatch(project_id) or project_id != self.slugify(display_name):
+                raise ProjectError(f"project registry contains an invalid project id: {project_id}")
+            if project_id in records:
+                raise ProjectError(f"project registry contains a duplicate project id: {project_id}")
             root = Path(root_raw).resolve()
             if not root.is_relative_to(self._projects_dir):
                 raise ProjectError("project registry path escapes projects directory")
+            if root != (self._projects_dir / project_id).resolve() or not root.is_dir():
+                raise ProjectError(f"project directory is missing or misplaced: {project_id}")
+            missing = tuple(directory for directory in self._REQUIRED_DIRECTORIES if not (root / directory).is_dir())
+            if missing:
+                raise ProjectError(f"project directory is incomplete: {project_id}")
             records[project_id] = ProjectRecord(project_id, display_name, root, project_type)
         return records
 

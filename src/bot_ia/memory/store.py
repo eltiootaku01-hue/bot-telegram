@@ -16,6 +16,12 @@ from .models import MemoryMatch, MemoryStatus, MemoryType, PersistentMemoryRecor
 
 _TOKENS = re.compile(r"[\wáéíóúüñ]+", re.IGNORECASE)
 _SECRET = re.compile(r"(?:sk-[A-Za-z0-9_-]{12,}|AIza[A-Za-z0-9_-]{12,}|\d{8,12}:[A-Za-z0-9_-]{20,})")
+_CONFIDENCE_RANK = {
+    Confidence.HIGH: 3,
+    Confidence.MEDIUM: 2,
+    Confidence.LOW: 1,
+    Confidence.NONE: 0,
+}
 
 
 class MemoryStorageError(RuntimeError):
@@ -149,7 +155,7 @@ class MemoryStore:
             overlap = len(terms & words)
             if overlap:
                 matches.append(MemoryMatch(record, overlap / len(terms)))
-        return tuple(sorted(matches, key=lambda item: (-item.relevance, -item.record.confidence.value.count("h"), item.record.created_at), reverse=False)[:limit])
+        return tuple(sorted(matches, key=lambda item: (-item.relevance, -_CONFIDENCE_RANK[item.record.confidence], item.record.created_at), reverse=False)[:limit])
 
     def _update(self, record: PersistentMemoryRecord, *, approved: bool | None = None, status: MemoryStatus | None = None, revoked_at: datetime | None = None, provenance: str | None = None, supersedes: str | None = None, conflicts: tuple[str, ...] | None = None) -> PersistentMemoryRecord:
         updated = PersistentMemoryRecord(record.memory_id, record.universe_id, record.user_id, record.conversation_id, record.memory_type, record.content, record.source, record.created_at, _now(), record.approved_by_author if approved is None else approved, record.status if status is None else status, record.confidence, record.expires_at, record.revoked_at if revoked_at is None else revoked_at, record.tags, record.related_entities, record.provenance if provenance is None else provenance, record.supersedes if supersedes is None else supersedes, record.conflicts_with if conflicts is None else conflicts)

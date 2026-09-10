@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -39,6 +40,34 @@ class ProjectManagerTests(unittest.TestCase):
             manager = ProjectManager(Path(temporary))
             with self.assertRaises(ProjectError):
                 manager.create_novel("   ")
+
+    def test_corrupt_registry_duplicate_ids_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manager = ProjectManager(root)
+            record = manager.create_novel("Fragmentado")
+            payload = json.loads(manager.registry_path.read_text(encoding="utf-8"))
+            payload.append(payload[0])
+            manager.registry_path.write_text(json.dumps(payload), encoding="utf-8")
+
+            with self.assertRaises(ProjectError):
+                ProjectManager(root)
+            self.assertTrue(record.root_path.is_dir())
+
+    def test_missing_project_directory_fails_closed_instead_of_becoming_empty(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manager = ProjectManager(root)
+            record = manager.create_novel("Fragmentado")
+            for child in record.root_path.rglob("*"):
+                if child.is_file():
+                    child.unlink()
+            for child in sorted(record.root_path.glob("*"), reverse=True):
+                child.rmdir()
+            record.root_path.rmdir()
+
+            with self.assertRaises(ProjectError):
+                ProjectManager(root)
 
 
 if __name__ == "__main__":
