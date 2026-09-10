@@ -4,6 +4,7 @@ import argparse
 import os
 from pathlib import Path
 
+from bot_ia.config.dotenv import load_dotenv
 from bot_ia.core.application import ApplicationRequest
 from bot_ia.interfaces.telegram import TelegramAdapter, TelegramApiClient, TelegramPoller
 from bot_ia.interfaces.web import run_web_server
@@ -25,7 +26,7 @@ def _parser() -> argparse.ArgumentParser:
 
 def _build_application(project_root: Path):
     universe_id = os.getenv("BOT_IA_UNIVERSE", "one_neko_punch")
-    provider_id = os.getenv("BOT_IA_PROVIDER", "ollama")
+    provider_id = os.getenv("BOT_IA_PROVIDER", "gemini")
     runtime = build_runtime(project_root)
     runtime.registry.provider(provider_id)
     application = runtime.build_application(
@@ -90,8 +91,9 @@ def _run_web(application, host: str, port: int) -> None:
 
 
 def main() -> None:
-    args = _parser().parse_args()
     project_root = Path(__file__).resolve().parents[2]
+    load_dotenv(project_root / ".env")
+    args = _parser().parse_args()
     runtime, application, universe_id, provider_id = _build_application(project_root)
     try:
         if args.mode == "console":
