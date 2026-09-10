@@ -31,11 +31,11 @@ class EncounterStore:
             answer=answer,
             correct=answer.casefold().strip() == (encounter.answer or "").casefold().strip(),
         )
-        session.add(attempt)
         try:
-            await session.commit()
+            async with session.begin_nested():
+                session.add(attempt)
+                await session.flush()
         except IntegrityError:
-            await session.rollback()
             return None
         return attempt.correct
 
