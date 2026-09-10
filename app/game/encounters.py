@@ -9,6 +9,7 @@ from app.game.models import Character, Rarity
 @dataclass(frozen=True, slots=True)
 class EncounterPlan:
     requires_question: bool
+    label: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,16 +21,18 @@ class Encounter:
     answer: str | None = None
 
 
-# Wild alerts are intentionally capped at class B for now.
+# D is the everyday encounter. C is still easy: only pick the character name.
+# B and above progressively test niche knowledge. Wild group alerts are capped at B.
 PLANS: dict[Rarity, EncounterPlan] = {
-    Rarity.COMMON: EncounterPlan(False),
-    Rarity.RARE: EncounterPlan(True),
+    Rarity.D: EncounterPlan(False, "D"),
+    Rarity.C: EncounterPlan(False, "C"),
+    Rarity.B: EncounterPlan(True, "B"),
 }
 
 
 def new_encounter(character: Character, now: datetime | None = None) -> Encounter:
     now = now or datetime.utcnow()
-    plan = PLANS.get(character.rarity, EncounterPlan(False))
+    plan = PLANS.get(character.rarity, PLANS[Rarity.D])
     duration = randint(60, 600)
     question = (
         "¿Cómo se llama el protagonista masculino de Toradora!?"
