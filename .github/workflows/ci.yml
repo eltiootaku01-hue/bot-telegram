@@ -18,5 +18,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+      - name: Compile source and tests
+        run: python -m compileall -q src tests
+      - name: Import runtime surface
+        run: python -c "import bot_ia; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2"
       - name: Run test suite
         run: python -m unittest discover -s tests -v
