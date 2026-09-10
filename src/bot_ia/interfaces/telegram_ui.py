@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 from bot_ia.core.application import ApplicationRequest, BotApplication
 from bot_ia.core.creative_assist import build_stuck_menu, expand_scene_sketch
@@ -21,7 +22,8 @@ class TelegramNovelAdapter(TelegramAdapter):
         (("📖 Novela", "menu:novel"), ("📝 Editar", "menu:edit")),
         (("📚 Biblioteca", "menu:library"), ("🧭 Continuidad", "menu:continuity")),
         (("💡 Ideas", "menu:ideas"), ("🧰 Destrabar escena", "menu:unstick")),
-        (("📊 Estado API", "menu:api_status"), ("❓ Ayuda", "menu:help")),
+        (("📊 Estado API", "menu:api_status"), ("📈 Progreso", "menu:progress")),
+        (("❓ Ayuda", "menu:help"),),
     )
 
     def __init__(self, application: BotApplication) -> None:
@@ -47,7 +49,7 @@ class TelegramNovelAdapter(TelegramAdapter):
         if command in {"/start", "/menu"}:
             return TelegramOutbound(inbound.conversation_id, "¿Qué quieres hacer?", "local", self.MAIN_MENU)
         if command == "/help":
-            return TelegramOutbound(inbound.conversation_id, "Usa los botones para elegir novela, editar, consultar la biblioteca, revisar continuidad, ver el estado de APIs o destrabar una escena.", "local", self.MAIN_MENU)
+            return TelegramOutbound(inbound.conversation_id, "Usa los botones para elegir novela, editar, consultar la biblioteca, revisar continuidad, ver el estado de APIs, ver el progreso o destrabar una escena.", "local", self.MAIN_MENU)
         response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, inbound.text))
         return self.from_response(inbound.conversation_id, response)
 
@@ -78,6 +80,8 @@ class TelegramNovelAdapter(TelegramAdapter):
             return TelegramOutbound(callback.conversation_id, "📋 Escribe el boceto y prepararé un prompt para otra IA sin llamar a ninguna API.", "local", (("⬅️ Menú", "menu:main"),))
         if data == "menu:api_status":
             return self._api_status(callback.conversation_id)
+        if data == "menu:progress":
+            return self._chapter_progress(callback.conversation_id)
         if data == "fallback:api":
             original = self._last_message.get(key)
             if not original:
@@ -110,6 +114,20 @@ class TelegramNovelAdapter(TelegramAdapter):
                 lines.append(f"• {provider}/{account}: {used:,} tokens conocidos, estado={state}; batería porcentual no calculable")
         lines.append("La batería porcentual usa un presupuesto local configurado; no representa el saldo real del proveedor.")
         return TelegramOutbound(chat_id, "\n".join(lines), "local", (("⬅️ Menú", "menu:main"),))
+
+    def _chapter_progress(self, chat_id: str) -> TelegramOutbound:
+        executor = getattr(self._application, "_executor", None)
+        entries = getattr(executor, "_entries", {}) if executor is not None else {}
+        universe_id = os.getenv("BOT_IA_UNIVERSE", "one_neko_punch")
+        paths = [getattr(getattr(entry, "record", None), "path", "") for entry in entries.get(universe_id, ())]
+        chapters = sorted({int(n) for path in paths for n in re.findall(r"(?:cap(?:ítulo)?|cap)[ _-]?(\d+)", path.casefold())})
+        target = int(os.getenv("BOT_IA_TARGET_CHAPTERS", "0") or "0")
+        if target > 0:
+            pct = min(100.0, 100.0 * len(chapters) / target)
+            text = f"📈 PROGRESO DE CAPÍTULOS\n\nCapítulos detectados: {len(chapters)}\nObjetivo configurado: {target}\nCobertura documental: {pct:.1f}%\n\nNo es porcentaje de calidad ni de historia terminada; sólo mide capítulos documentados frente al objetivo configurado."
+        else:
+            text = f"📈 PROGRESO DE CAPÍTULOS\n\nCapítulos detectados en la biblioteca: {len(chapters)}\n\nEl porcentaje todavía no es calculable porque no hay un objetivo total configurado. Usa BOT_IA_TARGET_CHAPTERS para definirlo; BOT-IA no inventará un total."
+        return TelegramOutbound(chat_id, text, "local", (("⬅️ Menú", "menu:main"),))
 
     @staticmethod
     def _build_prompt(question: str) -> str:
