@@ -4,6 +4,7 @@ from aiogram.types import CallbackQuery, ChatMemberUpdated, Message
 
 from app.core.identity import BotIdentity, get_profile
 from app.core.module import BotModule
+from app.ui.control_keyboards import chie_start_keyboard
 from app.ui.game_keyboards import game_hub_keyboard
 
 
@@ -32,6 +33,13 @@ class SystemModule(BotModule):
         if self.identity is BotIdentity.SUNNA:
             text += "\n\n🎮 Zona de juego:"
             await message.answer(text, reply_markup=game_hub_keyboard())
+            return
+        if self.identity is BotIdentity.CHIE:
+            text += (
+                "\n\n😰 Si querés que prepare el grupo, primero necesito que me agregues "
+                "como administradora y después comprobaré los permisos."
+            )
+            await message.answer(text, reply_markup=chie_start_keyboard())
             return
         await message.answer(text)
 
