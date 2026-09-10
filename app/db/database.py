@@ -66,6 +66,10 @@ def _ensure_compatibility(connection) -> None:
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_active_game_encounter_chat "
         "ON game_encounters(chat_id) WHERE status = 'active'"
     ))
+    connection.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_active_trivia_round_chat "
+        "ON trivia_rounds(chat_id) WHERE status = 'active'"
+    ))
 
 
 def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None:
