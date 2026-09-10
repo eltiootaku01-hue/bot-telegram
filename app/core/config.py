@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./data/bot.db"
     admin_user_id: int = 0
     media_storage_chat_id: int = 0
+    publish_page_chat_id: int = 0
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", case_sensitive=False)
 
