@@ -29,6 +29,20 @@ PLANS: dict[Rarity, EncounterPlan] = {
     Rarity.B: EncounterPlan(True, "B"),
 }
 
+QUESTION_OPTIONS: dict[str, tuple[str, ...]] = {
+    "¿Cómo se llama el protagonista masculino de Toradora!?": (
+        "ryuuji",
+        "kitamura",
+        "ami",
+    ),
+}
+
+
+def encounter_options(encounter: Encounter) -> list[str]:
+    if encounter.question:
+        return list(QUESTION_OPTIONS.get(encounter.question, (encounter.answer or "",)))
+    return [encounter.character.name]
+
 
 def new_encounter(character: Character, now: datetime | None = None) -> Encounter:
     now = now or datetime.utcnow()
