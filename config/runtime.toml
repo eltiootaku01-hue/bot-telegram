@@ -13,12 +13,6 @@ secret_env = "OPENAI_API_KEY"
 priority = 10
 cooldown_seconds = 60.0
 
-# Add more OpenAI API keys here without changing application code.
-# [providers.openai.accounts.openai_alt]
-# secret_env = "OPENAI_API_KEY_ALT"
-# priority = 20
-# cooldown_seconds = 60.0
-
 [providers.groq]
 enabled = true
 model = "openai/gpt-oss-20b"
@@ -31,8 +25,6 @@ secret_env = "GROQ_API_KEY"
 priority = 10
 cooldown_seconds = 30.0
 
-# OpenRouter is available as an explicit provider without being inserted into
-# the normal OpenAI -> Groq -> Coze fallback chain.
 [providers.openrouter]
 enabled = true
 model = "openai/gpt-oss-20b"
@@ -46,7 +38,6 @@ secret_env = "OPENROUTER_API_KEY"
 priority = 10
 cooldown_seconds = 30.0
 
-# Coze is an agent/API provider rather than a normal model endpoint.
 [providers.coze]
 enabled = false
 model = "coze-bot"
@@ -60,8 +51,6 @@ secret_env = "COZE_API_TOKEN"
 priority = 10
 cooldown_seconds = 60.0
 
-# Optional local fallback only. Disabled by default to avoid unnecessary RAM/CPU use.
-# If enabled, use the lightweight Qwen 3 1B model only.
 [providers.ollama]
 enabled = false
 model = "qwen3:1b"
@@ -79,5 +68,31 @@ enabled = false
 [universes.one_neko_punch]
 display_name = "One Neko Punch"
 root_path = "env:BOT_IA_ONE_NEKO_PUNCH_ROOT"
+spoiler_policy = "strict"
+language = "es"
+
+# Future novel projects keep their own canonical roots and can reference a
+# separate source universe without mixing canon automatically.
+[universes.neko_fish_online]
+display_name = "Neko Fish Online"
+root_path = "env:BOT_IA_NEKO_FISH_ONLINE_ROOT"
+spoiler_policy = "strict"
+language = "es"
+
+[universes.neko_of_the_dead]
+display_name = "Neko of the Dead"
+root_path = "env:BOT_IA_NEKO_OF_THE_DEAD_ROOT"
+spoiler_policy = "strict"
+language = "es"
+
+[universes.my_neko_academia]
+display_name = "My Neko Academia"
+root_path = "env:BOT_IA_MY_NEKO_ACADEMIA_ROOT"
+spoiler_policy = "strict"
+language = "es"
+
+[universes.attack_on_neko]
+display_name = "Attack on Neko"
+root_path = "env:BOT_IA_ATTACK_ON_NEKO_ROOT"
 spoiler_policy = "strict"
 language = "es"
