@@ -52,13 +52,14 @@ class GameModule(BotModule):
         await super().on_shutdown()
 
     async def game(self, message: Message) -> None:
+        if message.chat.type != "private":
+            return
         await message.answer("🎮 <b>Zona de juegos</b>", reply_markup=game_hub_keyboard())
 
     async def gacha(self, message: Message) -> None:
-        await message.answer(
-            "🎰 <b>Gacha de personajes</b>\n\nLas ilustraciones y rarezas crecerán por niveles.",
-            reply_markup=gacha_keyboard(),
-        )
+        if message.chat.type != "private":
+            return
+        await message.answer("🎰 <b>Gacha de personajes</b>", reply_markup=gacha_keyboard())
 
     async def inventory_callback(self, callback: CallbackQuery) -> None:
         if callback.message is None:
@@ -68,7 +69,7 @@ class GameModule(BotModule):
         await callback.answer()
 
     async def inventory(self, message: Message) -> None:
-        if message.from_user is None:
+        if message.chat.type != "private" or message.from_user is None:
             return
         await self._show_inventory(message, message.from_user.id, message.chat.id)
 
@@ -81,6 +82,7 @@ class GameModule(BotModule):
             markup = None
         else:
             lines = [f"🎒 <b>Inventario de {source.from_user.first_name}</b>"]
+            evolvable = []
             for item in rows:
                 character = get_character(item.character_id)
                 progress = collection_status(item)
@@ -89,16 +91,16 @@ class GameModule(BotModule):
                     f"EXP {item.experience} · ×{item.copies} · Evo.{item.evolution_stage}"
                 )
                 if progress.can_evolve:
+                    evolvable.append(item.character_id)
                     lines.append(
                         f"  ↳ ✨ <b>Puede pasar a {progress.next_rarity}</b> "
                         f"(requiere {progress.evolution_copies} copias)"
                     )
             text = "\n".join(lines)
-            markup = fusion_keyboard(rows[0].character_id) if any(collection_status(r).can_evolve for r in rows) else None
+            markup = fusion_keyboard(evolvable[0]) if evolvable else None
         text += "\n\n⏱️ Esta consulta se borra automáticamente en 2 minutos."
         sent = await source.answer(text, reply_markup=markup)
-        task_name = f"delete-inventory-{sent.chat.id}-{sent.message_id}"
-        self.tasks.start(task_name, self._delete_later(sent, 120))
+        self.tasks.start(f"delete-inventory-{sent.chat.id}-{sent.message_id}", self._delete_later(sent, 120))
 
     @staticmethod
     async def _delete_later(message: Message, seconds: int) -> None:
@@ -114,21 +116,16 @@ class GameModule(BotModule):
             await callback.answer("Fusión inválida.", show_alert=True)
             return
         async with self.database.session() as session:
-            profile = await MemberRepository().get_or_create_game_profile(
-                session, callback.from_user.id, callback.message.chat.id
-            )
+            profile = await MemberRepository().get_or_create_game_profile(session, callback.from_user.id, callback.message.chat.id)
             try:
-                result = await fuse_collection(
-                    session, profile_id=profile.id, character_id=character_id
-                )
+                result = await fuse_collection(session, profile_id=profile.id, character_id=character_id)
             except ValueError as exc:
                 await callback.answer(str(exc), show_alert=True)
                 return
             await session.commit()
         character = get_character(character_id)
         await callback.message.edit_text(
-            f"✨ <b>{character.name} evolucionó!</b>\n"
-            f"{result.from_rarity} → <b>{result.to_rarity}</b>\n"
+            f"✨ <b>{character.name} evolucionó!</b>\n{result.from_rarity} → <b>{result.to_rarity}</b>\n"
             f"Se usaron {result.consumed} copias y quedaron ×{result.remaining}."
         )
         await callback.answer("¡Evolución completada! ✨")
@@ -139,6 +136,8 @@ class GameModule(BotModule):
         await callback.answer()
 
     async def combat(self, message: Message) -> None:
+        if message.chat.type != "private":
+            return
         await self._show_combat(message)
 
     async def combat_open(self, callback: CallbackQuery) -> None:
@@ -149,8 +148,8 @@ class GameModule(BotModule):
     async def _show_combat(self, message: Message) -> None:
         taiga = get_character("taiga")
         await message.answer(
-            f"⚔️ <b>{taiga.name}</b> — {taiga.anime}\n\n"
-            f"⚔️ {taiga.attack_name}\n🛡️ {taiga.defense_name}\n✨ {taiga.special_name}\n\nElegí una acción.",
+            f"⚔️ <b>{taiga.name}</b> — {taiga.anime}\n\n⚔️ {taiga.attack_name}\n"
+            f"🛡️ {taiga.defense_name}\n✨ {taiga.special_name}\n\nElegí una acción.",
             reply_markup=combat_keyboard(),
         )
 
@@ -202,16 +201,12 @@ class GameModule(BotModule):
             else:
                 owned.copies += 1
             progress = capture_reward(profile, owned)
-            points = await MemberRepository().add_points(
-                session, user_id=callback.from_user.id, chat_id=encounter.chat_id,
-                amount=progress.points_gained, reason="Captura de waifu",
-                reference_type="encounter", reference_id=encounter.id,
-            )
+            points = await MemberRepository().add_points(session, user_id=callback.from_user.id, chat_id=encounter.chat_id,
+                amount=progress.points_gained, reason="Captura de waifu", reference_type="encounter", reference_id=encounter.id)
             encounter.status = "captured"
             await session.commit()
         await callback.message.edit_text(
             f"🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n"
-            f"✨ Clase {encounter.rarity} · colección ×{owned.copies}\n"
-            f"⭐ +{progress.points_gained} puntos · saldo: {points}"
+            f"✨ Clase {encounter.rarity} · colección ×{owned.copies}\n⭐ +{progress.points_gained} puntos · saldo: {points}"
         )
         await callback.answer("¡CAPTURADA! 🎉", show_alert=True)
