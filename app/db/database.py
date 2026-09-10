@@ -1,11 +1,23 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.models import Base
 from app.db import community_models  # noqa: F401 - registers forum topic tables
 from app.db import trivia_models  # noqa: F401 - registers trivia tables
+
+
+def _ensure_compatibility(connection) -> None:
+    """Apply small additive migrations that create_all cannot perform."""
+    inspector = inspect(connection)
+    media_columns = {column["name"] for column in inspector.get_columns("media_assets")}
+    if "request_id" not in media_columns:
+        connection.execute(text(
+            "ALTER TABLE media_assets ADD COLUMN request_id BIGINT "
+            "REFERENCES fan_requests(id) ON DELETE SET NULL"
+        ))
 
 
 class Database:
@@ -18,6 +30,7 @@ class Database:
     async def create_schema(self) -> None:
         async with self.engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
+            await connection.run_sync(_ensure_compatibility)
 
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
