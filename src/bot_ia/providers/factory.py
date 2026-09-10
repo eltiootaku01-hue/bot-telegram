@@ -8,21 +8,21 @@ from typing import Callable
 from bot_ia.config import RuntimeConfig
 
 from .adapters import (
-    GeminiProvider,
     GroqProvider,
     HttpTransport,
     OllamaProvider,
     OpenAIProvider,
     OpenRouterProvider,
 )
+from .coze import CozeProvider
 from .manager import ProviderManager
 
 KeyLoader = Callable[[str], str | None]
 
 _PROVIDER_TYPES = {
-    "gemini": GeminiProvider,
     "openai": OpenAIProvider,
     "groq": GroqProvider,
+    "coze": CozeProvider,
     "openrouter": OpenRouterProvider,
     "ollama": OllamaProvider,
 }

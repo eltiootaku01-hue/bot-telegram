@@ -11,11 +11,14 @@ En la máquina que contiene el conocimiento, configura `.env` (usa
 
 ```text
 BOT_IA_ONE_NEKO_PUNCH_ROOT=C:\ruta\a\one-neko-punch
-BOT_IA_PROVIDER=gemini
-GEMINI_API_KEY=tu-clave-real
+BOT_IA_PROVIDER=openai
+OPENAI_API_KEY=tu-clave-real
 BOT_IA_API_TOKEN=un-token-largo-y-aleatorio
 BOT_IA_PUBLIC_BASE_URL=https://tu-dominio.example
 ```
+
+Groq y Coze son proveedores adicionales configurables. Coze requiere además
+`COZE_API_TOKEN` y `COZE_BOT_ID` cuando se habilita en `runtime.toml`.
 
 Después:
 
@@ -67,14 +70,15 @@ factual debe seguir pasando por `EvidenceGate` y el contrato de salida.
 
 ## 4. Providers
 
-Gemini está habilitado por defecto. OpenAI está preparado pero desactivado
-hasta que se configure y habilite. Ollama no es necesario para usar BOT-IA y
-está desactivado para no consumir recursos; si se habilita, la configuración
-prevista es `qwen3:1b`.
+El runtime está preparado para varias cuentas/API keys de OpenAI, además de
+Groq y Coze. La cadena configurada por defecto es OpenAI → Groq → Coze; Coze
+está desactivado hasta que se configure su token y bot. Ollama no es necesario
+para usar BOT-IA y está desactivado para no consumir recursos; si se habilita,
+la configuración prevista es `qwen3:1b`.
 
 ## 5. Importante sobre ChatGPT
 
 La integración no convierte una API local en una herramienta interna de
 ChatGPT. ChatGPT necesita poder alcanzar el endpoint por Internet y el GPT
 debe tener habilitadas las acciones. La disponibilidad para crear o editar
-GPTs depende actualmente de la cuenta y del espacio de trabajo.
+GPTs depende de la cuenta y del espacio de trabajo.

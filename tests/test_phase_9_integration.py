@@ -49,6 +49,16 @@ class Phase9IntegrationTests(unittest.TestCase):
         self.assertEqual("casual", response.execution.agent_result.output_contract.response_type.value)
         self.assertTrue(response.execution.agent_result.output_contract.validate().valid)
 
+    def test_simple_factual_question_is_answered_by_librarian_evidence_without_llm(self) -> None:
+        response = self.handle("¿Quién es Kuro?")
+        execution = response.execution
+        self.assertTrue(execution.searched)
+        self.assertIsNone(execution.provider_response)
+        self.assertEqual("Kuro protege Alpha.", response.text)
+        self.assertIn("Kuro protege Alpha.", execution.context.text)
+        self.assertTrue(execution.agent_result.output_contract.used_evidence)
+        self.assertTrue(execution.agent_result.output_contract.validate().valid)
+
     def test_factual_search_reaches_evidence_agent_and_contract(self) -> None:
         response = self.handle("¿Quién es Kuro?")
         execution = response.execution

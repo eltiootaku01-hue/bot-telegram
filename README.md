@@ -19,7 +19,7 @@ También, después de instalar el proyecto:
 bot-ia --mode console
 ```
 
-El proveedor por defecto es Gemini. Puede cambiarse con `BOT_IA_PROVIDER`.
+El proveedor por defecto es OpenAI. Puede cambiarse con `BOT_IA_PROVIDER`.
 
 ### Telegram
 
@@ -69,14 +69,16 @@ Variables relevantes:
 ```text
 BOT_IA_ONE_NEKO_PUNCH_ROOT   Ruta externa al conocimiento de One Neko Punch
 BOT_IA_UNIVERSE              Universo por defecto
-BOT_IA_PROVIDER              Provider por defecto: gemini
-GEMINI_API_KEY               Clave de Gemini
-OPENAI_API_KEY               Clave de OpenAI (si se habilita OpenAI)
-BOT_IA_API_TOKEN              Token Bearer de la API web
-BOT_IA_PUBLIC_BASE_URL        URL HTTPS pública usada en /openapi.json
+BOT_IA_PROVIDER              Provider por defecto: openai
+OPENAI_API_KEY               Clave de OpenAI
+GROQ_API_KEY                 Clave de Groq
+COZE_API_TOKEN               Token de Coze cuando se habilita Coze
+COZE_BOT_ID                  Bot/agente publicado de Coze
+BOT_IA_API_TOKEN             Token Bearer de la API web
+BOT_IA_PUBLIC_BASE_URL       URL HTTPS pública usada en /openapi.json
 BOT_IA_HOST                   Host de la API web
 BOT_IA_PORT                   Puerto de la API web
-TELEGRAM_BOT_TOKEN            Token del bot de Telegram
+TELEGRAM_BOT_TOKEN           Token del bot de Telegram
 ```
 
 BOT-IA carga automáticamente un `.env` local si existe. El archivo real está
@@ -92,14 +94,16 @@ una función interna de ChatGPT.
 
 Los providers se configuran en `config/runtime.toml`. Las credenciales se
 leen desde variables de entorno y nunca deben guardarse en el repositorio.
-Actualmente Gemini está habilitado por defecto y OpenAI está preparado pero
-desactivado hasta que decidas usarlo. Ollama también está desactivado por
-defecto para no consumir RAM/CPU; si se habilita, la configuración prevista es
-únicamente `qwen3:1b`.
+Actualmente OpenAI y Groq están habilitados por defecto. Coze está integrado
+pero desactivado hasta configurar `COZE_API_TOKEN` y `COZE_BOT_ID`. La cadena
+configurada es OpenAI → Groq → Coze; el manager puede seguir cadenas de fallback
+sin ciclos y admite múltiples cuentas/API keys por provider.
 
-El `ProviderManager` soporta múltiples providers/cuentas, fallback, cooldown,
-salud y control de errores. Añadir otro proveedor no requiere cambiar el
-cerebro, la memoria, el bibliotecario ni las interfaces.
+Ollama está desactivado por defecto para no consumir RAM/CPU; si se habilita,
+la configuración prevista es únicamente `qwen3:1b`.
+
+Añadir otro proveedor no requiere cambiar el cerebro, la memoria, el
+bibliotecario ni las interfaces.
 
 ## Conocimiento y seguridad
 

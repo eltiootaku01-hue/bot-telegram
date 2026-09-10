@@ -20,7 +20,7 @@ class ProviderOutcome:
 
 
 class ProviderManager:
-    """Selecciona cuentas por prioridad y aplica fallback entre providers.
+    """Selecciona cuentas por prioridad y aplica una cadena de fallback segura.
 
     El manager no contiene lógica de dominio: sólo decide qué adaptador puede
     ejecutar una solicitud y mantiene salud/cooldown por cuenta.
@@ -98,20 +98,31 @@ class ProviderManager:
 
     def _candidate_pairs(self, request: ProviderRequest, fallback_provider: str | None, fallback_accounts: tuple[str, ...]) -> list[tuple[str, str | None]]:
         result: list[tuple[str, str | None]] = []
+        visited: set[str] = set()
 
         def add_provider(provider_id: str, preferred_account: str | None = None) -> None:
+            if not provider_id or provider_id in visited:
+                return
+            visited.add(provider_id)
             if preferred_account is not None:
                 result.append((provider_id, preferred_account))
-                return
-            for account_id in self._account_providers:
-                if account_id[0] == provider_id:
-                    result.append((provider_id, account_id[1]))
+            else:
+                for key in self._account_providers:
+                    if key[0] == provider_id:
+                        result.append((provider_id, key[1]))
+                if not any(key[0] == provider_id for key in self._account_providers):
+                    result.append((provider_id, None))
+
+            config = self._provider_configs.get(provider_id)
+            next_fallback = getattr(config, "fallback_provider", None) if config is not None else None
+            if next_fallback:
+                add_provider(next_fallback)
 
         add_provider(request.provider, request.account_id)
         for account in fallback_accounts:
             if account and (request.provider, account) not in result:
                 result.append((request.provider, account))
-        if fallback_provider and fallback_provider != request.provider:
+        if fallback_provider:
             add_provider(fallback_provider)
         return list(dict.fromkeys(result))
 
@@ -154,9 +165,6 @@ class ProviderManager:
         except ProviderError:
             raise
         except Exception as error:
-            # A third-party/custom adapter must never crash the workflow or
-            # bypass fallback. Convert unexpected adapter failures to a typed
-            # provider error while keeping the original exception private.
             raise ProviderRemoteError("provider adapter failed unexpectedly") from error
         self._record_success(request, response)
         if len(attempts) > 1:

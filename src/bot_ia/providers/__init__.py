@@ -2,13 +2,13 @@
 
 from .adapters import (
     BaseProvider,
-    GeminiProvider,
     GroqProvider,
     OpenAICompatibleProvider,
     OpenAIProvider,
     OpenRouterProvider,
     OllamaProvider,
 )
+from .coze import CozeProvider
 from .factory import build_provider_manager
 
 from .health import ProviderHealthRecord
@@ -31,7 +31,7 @@ from .models import (
 
 __all__ = [
     "BaseProvider",
-    "GeminiProvider",
+    "CozeProvider",
     "GroqProvider",
     "OpenAICompatibleProvider",
     "OpenAIProvider",

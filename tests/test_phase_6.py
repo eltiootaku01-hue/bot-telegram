@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from bot_ia.core import Intent, Route, RouteDecision
-from bot_ia.providers import GeminiProvider, OpenAIProvider, ProviderManager, ProviderRequest, ProviderStatus
+from bot_ia.providers import CozeProvider, GroqProvider, OpenAIProvider, ProviderManager, ProviderRequest, ProviderStatus
 from bot_ia.providers.errors import InputTooLargeError, MissingApiKeyError, ProviderDisabledError, ProviderTimeoutError
 
 
@@ -15,6 +15,12 @@ def openai_transport(_: str, headers: dict[str, str], payload: dict[str, object]
     assert headers["Authorization"] == "Bearer test-key"
     assert payload["input"] == "prepared context only"
     return {"output_text": "ok", "usage": {"input_tokens": 3, "output_tokens": 2, "total_tokens": 5}}
+
+
+def coze_provider() -> CozeProvider:
+    provider = CozeProvider(key_loader=key)
+    provider._secret_loader = type("FakeSecrets", (), {"get": lambda self, _: "test-bot"})()
+    return provider
 
 
 class Phase6Tests(unittest.TestCase):
@@ -29,81 +35,39 @@ class Phase6Tests(unittest.TestCase):
         self.assertEqual(ProviderStatus.SUCCESS, response.status)
         self.assertEqual(5, response.usage.total_tokens)
 
-    def test_gemini_adapter_parses_fake_response(self) -> None:
-        provider = GeminiProvider(
-            key_loader=key,
-            transport=lambda *_: {
-                "steps": [
-                    {
-                        "type": "model_output",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "gemini ok",
-                            }
-                        ],
-                    }
-                ],
-                "usage": {
-                    "total_input_tokens": 3,
-                    "total_output_tokens": 2,
-                    "total_tokens": 5,
-                },
-            },
-        )
+    def test_groq_adapter_parses_chat_completion(self) -> None:
+        provider = GroqProvider(key_loader=key, transport=lambda *_: {"choices": [{"message": {"content": "groq ok"}}], "usage": {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5}})
+        self.assertEqual("groq ok", provider.generate(self.request("groq")).output_text)
 
-        self.assertEqual(
-            "gemini ok",
-            provider.generate(
-                self.request("gemini")
-            ).output_text,
-        )
+    def test_coze_provider_can_be_exercised_without_network(self) -> None:
+        provider = coze_provider()
+        provider._start_chat = lambda *_: {"conversation_id": "conversation", "id": "chat"}
+        provider._wait_for_answer = lambda *_: ("coze ok", __import__("bot_ia.providers.models", fromlist=["ProviderUsage"]).ProviderUsage())
+        self.assertEqual("coze ok", provider.generate(self.request("coze")).output_text)
+
     def test_provider_error_is_typed(self) -> None:
         with self.assertRaises(MissingApiKeyError):
             OpenAIProvider(key_loader=lambda _: None, transport=openai_transport).generate(self.request())
 
     def test_fallback_uses_configured_provider_after_failure(self) -> None:
-        primary = OpenAIProvider(
-            key_loader=key,
-            transport=lambda *_: (
-                _ for _ in ()
-            ).throw(
-                ProviderTimeoutError("timeout")
-            ),
-        )
+        primary = OpenAIProvider(key_loader=key, transport=lambda *_: (_ for _ in ()).throw(ProviderTimeoutError("timeout")))
+        fallback = GroqProvider(key_loader=key, transport=lambda *_: {"choices": [{"message": {"content": "fallback"}}]})
+        outcome = ProviderManager((primary, fallback)).execute(self.llm_decision(), self.request(), fallback_provider="groq")
+        self.assertEqual(("openai", "groq"), outcome.attempts)
+        self.assertTrue(outcome.response.fallback_used)
 
-        fallback = GeminiProvider(
-            key_loader=key,
-            transport=lambda *_: {
-                "steps": [
-                    {
-                        "type": "model_output",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "fallback",
-                            }
-                        ],
-                    }
-                ]
-            },
-        )
+    def test_fallback_chain_reaches_third_provider(self) -> None:
+        from bot_ia.config.models import ProviderConfig
+        primary = OpenAIProvider(key_loader=key, transport=lambda *_: (_ for _ in ()).throw(ProviderTimeoutError("timeout")))
+        groq = GroqProvider(key_loader=key, transport=lambda *_: (_ for _ in ()).throw(ProviderTimeoutError("timeout")))
+        coze = coze_provider()
+        coze._start_chat = lambda *_: {"conversation_id": "conversation", "id": "chat"}
+        coze._wait_for_answer = lambda *_: ("third", __import__("bot_ia.providers.models", fromlist=["ProviderUsage"]).ProviderUsage())
+        configs = {"openai": ProviderConfig("openai", "test", fallback_provider="groq"), "groq": ProviderConfig("groq", "test", fallback_provider="coze"), "coze": ProviderConfig("coze", "test")}
+        outcome = ProviderManager((primary, groq, coze), configs).execute(self.llm_decision(), self.request())
+        self.assertEqual(("openai", "groq", "coze"), outcome.attempts)
+        self.assertEqual("third", outcome.response.output_text)
 
-        outcome = ProviderManager(
-            (primary, fallback)
-        ).execute(
-            self.llm_decision(),
-            self.request(),
-            fallback_provider="gemini",
-        )
-
-        self.assertEqual(
-            ("openai", "gemini"),
-            outcome.attempts,
-        )
-        self.assertTrue(
-            outcome.response.fallback_used
-        )
     def test_timeout_returns_error_without_fallback(self) -> None:
         provider = OpenAIProvider(key_loader=key, transport=lambda *_: (_ for _ in ()).throw(ProviderTimeoutError("timeout")))
         outcome = ProviderManager((provider,)).execute(self.llm_decision(), self.request())
@@ -121,7 +85,7 @@ class Phase6Tests(unittest.TestCase):
 
     def test_missing_key_is_rejected_without_exposure(self) -> None:
         with self.assertRaises(MissingApiKeyError):
-            GeminiProvider(key_loader=lambda _: "", transport=lambda *_: {}).generate(self.request("gemini"))
+            GroqProvider(key_loader=lambda _: "", transport=lambda *_: {}).generate(self.request("groq"))
 
     def test_provider_request_has_no_universe_or_memory_fields(self) -> None:
         request = self.request()
@@ -137,7 +101,7 @@ class Phase6Tests(unittest.TestCase):
 
     def test_fallback_does_not_run_for_local_route(self) -> None:
         local = RouteDecision(Route.LOCAL, "help", __import__("bot_ia.contracts", fromlist=["Confidence"]).Confidence.HIGH, Intent.HELP, "one_neko_punch")
-        outcome = ProviderManager(()).execute(local, self.request(), fallback_provider="gemini")
+        outcome = ProviderManager(()).execute(local, self.request(), fallback_provider="groq")
         self.assertEqual(ProviderStatus.SKIPPED, outcome.response.status)
 
 

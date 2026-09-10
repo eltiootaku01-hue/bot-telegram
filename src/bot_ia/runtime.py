@@ -43,7 +43,7 @@ class RuntimeComponents:
         self,
         *,
         default_universe_id: str | None = None,
-        provider_id: str = "gemini",
+        provider_id: str = "openai",
     ) -> BotApplication:
         provider_config = self.registry.provider(provider_id)
 

@@ -24,7 +24,7 @@ def _parser() -> argparse.ArgumentParser:
 
 def _build_application(project_root: Path):
     universe_id = os.getenv("BOT_IA_UNIVERSE", "one_neko_punch")
-    provider_id = os.getenv("BOT_IA_PROVIDER", "gemini")
+    provider_id = os.getenv("BOT_IA_PROVIDER", "openai")
     runtime = build_runtime(project_root)
     runtime.registry.provider(provider_id)
     application = runtime.build_application(default_universe_id=universe_id, provider_id=provider_id)
