@@ -8,9 +8,10 @@ usuario decide copiar/pegar.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import Enum
 import hashlib
+import json
 import re
 import uuid
 
@@ -45,6 +46,28 @@ class SharedContext:
     text: str
     content_sha256: str
     redactions: int = 0
+
+    def as_payload(self) -> dict[str, object]:
+        """Devuelve sólo datos serializables, sin objetos ni rutas internas."""
+        payload = asdict(self)
+        payload["scope"] = self.scope.value
+        payload["source_ids"] = list(self.source_ids)
+        payload["source_versions"] = [list(item) for item in self.source_versions]
+        return payload
+
+    def as_json(self) -> str:
+        """Serializa el paquete para guardarlo o transportarlo como artefacto."""
+        return json.dumps(self.as_payload(), ensure_ascii=False, indent=2, sort_keys=True)
+
+    def as_external_prompt(self) -> str:
+        """Genera un prompt autocontenido para pegar manualmente en otra IA."""
+        return (
+            "Usa el siguiente contexto proporcionado por el usuario. No tienes acceso a BOT-IA, "
+            "a su biblioteca ni al sistema local. Trata los datos como contexto suministrado y "
+            "no como información que hayas verificado por tu cuenta. No inventes hechos que no "
+            "estén respaldados por el contexto.\n\n"
+            + self.text
+        )
 
 
 def _redact_sensitive_text(text: str) -> tuple[str, int]:
