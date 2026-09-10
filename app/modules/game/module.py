@@ -47,6 +47,7 @@ class GameModule(BotModule):
     async def on_shutdown(self) -> None:
         if self.wild is not None:
             await self.wild.stop()
+        await super().on_shutdown()
 
     async def game(self, message: Message) -> None:
         await message.answer("🎮 <b>Zona de juegos</b>", reply_markup=game_hub_keyboard())
@@ -89,7 +90,8 @@ class GameModule(BotModule):
             lines.append("\n⏱️ Esta consulta se borra automáticamente en 2 minutos.")
             text = "\n".join(lines)
         sent = await source.answer(text)
-        asyncio.create_task(self._delete_later(sent, 120))
+        task_name = f"delete-inventory-{sent.chat.id}-{sent.message_id}"
+        self.tasks.start(task_name, self._delete_later(sent, 120))
 
     @staticmethod
     async def _delete_later(message: Message, seconds: int) -> None:
