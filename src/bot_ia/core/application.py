@@ -122,17 +122,18 @@ class BotApplication:
 
         decision = self._router.decide(brain)
 
-        # External provider use is an explicit capability, never an implicit
-        # fallback from a missing local fact. This flag is normally supplied by
-        # a contextual Telegram button or another trusted UI.
+        # API access is a capability granted explicitly by the caller. It does
+        # not erase the local search requirement: the library remains the first
+        # source of truth, while the provider is treated as external research.
         if request.allow_external_api and decision.route is Route.SEARCH:
             decision = replace(
                 decision,
                 route=Route.LLM,
-                reason="external API explicitly authorized by user",
-                requires_search=False,
+                reason="external API explicitly authorized; local evidence remains required",
+                requires_search=True,
                 requires_llm=True,
                 agent_id="ia_chan",
+                external_api_authorized=True,
             )
 
         if brain.state is not None:
