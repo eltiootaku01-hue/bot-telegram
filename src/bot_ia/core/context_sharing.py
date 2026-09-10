@@ -1,7 +1,7 @@
 """Construcción segura de contexto para compartir con IA externas.
 
 Este módulo no realiza llamadas de red. Su responsabilidad es convertir la
- evidencia ya recuperada por BOT-IA en un paquete explícito y auditable.
+evidencia ya recuperada por BOT-IA en un paquete explícito y auditable.
 La biblioteca sigue siendo la fuente de verdad: el resultado se etiqueta como
 contexto compartido y nunca como canon nuevo.
 """
@@ -55,18 +55,28 @@ def build_shared_context(execution: LocalExecution, *, max_chars: int = 18000) -
 
     lines.append("")
     lines.append("EVIDENCIA RECUPERADA:")
-    remaining = max_chars - sum(len(line) + 1 for line in lines)
-    for fragment in evidence.fragments:
-        if remaining <= 0:
+    header = "\n".join(lines)
+    remaining = max_chars - len(header)
+    if remaining > 0:
+        for fragment in evidence.fragments:
+            if remaining <= 0:
+                break
+            block = (
+                f"\n[{fragment.source_id} | líneas {fragment.start_line}-{fragment.end_line}]\n"
+                f"{fragment.text.strip()}\n"
+            )
+            if len(block) <= remaining:
+                lines.append(block)
+                remaining -= len(block)
+                continue
+            marker = "\n[CONTEXTO RECORTADO POR LÍMITE DE SEGURIDAD]\n"
+            lines.append((block[: max(0, remaining - len(marker))] + marker)[:remaining])
+            remaining = 0
             break
-        block = (
-            f"\n[{fragment.source_id} | líneas {fragment.start_line}-{fragment.end_line}]\n"
-            f"{fragment.text.strip()}\n"
-        )
-        if len(block) > remaining:
-            block = block[:remaining].rstrip() + "\n[CONTEXTO RECORTADO POR LÍMITE DE SEGURIDAD]\n"
-        lines.append(block)
-        remaining -= len(block)
+
+    text = "\n".join(lines).strip()
+    if len(text) > max_chars:
+        text = text[:max_chars].rstrip()
 
     return SharedContext(
         universe_id=evidence.query.universe_id,
@@ -74,5 +84,5 @@ def build_shared_context(execution: LocalExecution, *, max_chars: int = 18000) -
         source_ids=source_ids,
         source_versions=evidence.source_versions,
         evidence_confidence=getattr(evidence.confidence, 'value', str(evidence.confidence)),
-        text="\n".join(lines).strip(),
+        text=text,
     )
