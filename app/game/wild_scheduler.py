@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import random
 from datetime import datetime
 
@@ -11,6 +12,8 @@ from app.game.catalog import wild_characters
 from app.game.encounters import new_encounter
 from app.ui.game_keyboards import encounter_keyboard
 
+logger = logging.getLogger(__name__)
+
 
 class WildWaifuScheduler:
     """Creates occasional public encounters, capped at classes D/C."""
@@ -19,32 +22,48 @@ class WildWaifuScheduler:
         self.bot = bot
         self.database = database
         self.task: asyncio.Task | None = None
-        self.expiry_tasks: set[asyncio.Task] = set()
+        self.spawn_tasks: set[asyncio.Task] = set()
         self.stopping = False
 
     def start(self) -> None:
-        if self.task is None:
+        if self.task is None or self.task.done():
             self.stopping = False
             self.task = asyncio.create_task(self._run(), name="wild-waifu-scheduler")
 
     async def stop(self) -> None:
         self.stopping = True
-        tasks = list(self.expiry_tasks)
+        tasks = list(self.spawn_tasks)
         if self.task is not None:
             self.task.cancel()
             tasks.append(self.task)
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
-        self.expiry_tasks.clear()
+        self.spawn_tasks.clear()
         self.task = None
 
     async def _run(self) -> None:
         while not self.stopping:
-            await asyncio.sleep(random.randint(60, 600))
-            for chat_id in await self._group_ids():
-                task = asyncio.create_task(self.spawn(chat_id), name=f"waifu-{chat_id}")
-                self.expiry_tasks.add(task)
-                task.add_done_callback(self.expiry_tasks.discard)
+            try:
+                await asyncio.sleep(random.randint(60, 600))
+                for chat_id in await self._group_ids():
+                    if self.stopping:
+                        break
+                    task = asyncio.create_task(self.spawn(chat_id), name=f"waifu-spawn-{chat_id}")
+                    self.spawn_tasks.add(task)
+                    task.add_done_callback(self._spawn_done)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Wild waifu scheduler cycle failed")
+
+    def _spawn_done(self, task: asyncio.Task) -> None:
+        self.spawn_tasks.discard(task)
+        if task.cancelled():
+            return
+        try:
+            task.result()
+        except Exception:
+            logger.exception("Wild waifu spawn task failed")
 
     async def _group_ids(self) -> list[int]:
         async with self.database.sessions() as session:
@@ -53,7 +72,26 @@ class WildWaifuScheduler:
             )
             return list(result)
 
+    async def _has_active_encounter(self, chat_id: int) -> bool:
+        now = datetime.utcnow()
+        async with self.database.sessions() as session:
+            encounter = await session.scalar(
+                select(GameEncounter.id)
+                .where(
+                    GameEncounter.chat_id == chat_id,
+                    GameEncounter.status == "active",
+                    GameEncounter.expires_at > now,
+                )
+                .limit(1)
+            )
+            return encounter is not None
+
     async def spawn(self, chat_id: int) -> None:
+        # The database is the source of truth, so a restart or duplicate scheduler
+        # cannot flood a chat with multiple active encounters.
+        if await self._has_active_encounter(chat_id):
+            return
+
         characters = wild_characters()
         if not characters:
             return
@@ -80,9 +118,19 @@ class WildWaifuScheduler:
             session.add(record)
             await session.commit()
 
-        sent = await self.bot.send_message(
-            chat_id, text, reply_markup=encounter_keyboard(encounter.id, options)
-        )
+        try:
+            sent = await self.bot.send_message(
+                chat_id, text, reply_markup=encounter_keyboard(encounter.id, options)
+            )
+        except Exception:
+            logger.exception("Failed to publish encounter %s in chat %s", encounter.id, chat_id)
+            async with self.database.sessions() as session:
+                saved = await session.get(GameEncounter, encounter.id)
+                if saved is not None:
+                    saved.status = "cancelled"
+                    await session.commit()
+            return
+
         async with self.database.sessions() as session:
             saved = await session.get(GameEncounter, encounter.id)
             if saved is not None:
@@ -107,4 +155,4 @@ class WildWaifuScheduler:
                 reply_markup=None,
             )
         except Exception:
-            pass
+            logger.debug("Could not edit expired encounter %s", encounter_id, exc_info=True)
