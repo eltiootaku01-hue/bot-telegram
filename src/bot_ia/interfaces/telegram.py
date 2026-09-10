@@ -1,4 +1,4 @@
-"""Capa fina de Telegram: adapta actualizaciones a BotApplication y viceversa."""
+"""Capa de Telegram: conversación natural + menús contextuales sin hoja de comandos."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from bot_ia.core.application import ApplicationRequest, ApplicationResponse, BotApplication
+from bot_ia.librarian.models import CoverageStatus
 
 
 class TelegramInputError(ValueError):
@@ -41,13 +42,29 @@ class TelegramInbound:
 
 
 @dataclass(frozen=True, slots=True)
+class TelegramCallback:
+    user_id: str
+    conversation_id: str
+    data: str
+
+
+@dataclass(frozen=True, slots=True)
 class TelegramOutbound:
     chat_id: str
     text: str
     route: str | None = None
+    keyboard: tuple[tuple[tuple[str, str], ...], ...] = ()
 
-    def payload(self) -> dict[str, str]:
-        return {"chat_id": self.chat_id, "text": self.text}
+    def payload(self) -> dict[str, object]:
+        payload: dict[str, object] = {"chat_id": self.chat_id, "text": self.text}
+        if self.keyboard:
+            payload["reply_markup"] = {
+                "inline_keyboard": [
+                    [{"text": label, "callback_data": data} for label, data in row]
+                    for row in self.keyboard
+                ]
+            }
+        return payload
 
 
 def parse_update(update: dict[str, object]) -> TelegramInbound:
@@ -64,23 +81,92 @@ def parse_update(update: dict[str, object]) -> TelegramInbound:
     return TelegramInbound(user_id, chat_id, text.strip())
 
 
+def parse_callback_update(update: dict[str, object]) -> TelegramCallback:
+    try:
+        callback = update["callback_query"]
+        sender = callback["from"]
+        message = callback["message"]
+        chat = message["chat"]
+        data = callback["data"]
+        user_id, chat_id = str(sender["id"]), str(chat["id"])
+    except (KeyError, TypeError) as error:
+        raise TelegramInputError("callback update is invalid") from error
+    if not isinstance(data, str) or not data.strip():
+        raise TelegramInputError("callback data cannot be empty")
+    return TelegramCallback(user_id, chat_id, data.strip())
+
+
 class TelegramAdapter:
+    """Presenta una interfaz visual pequeña; la aplicación sigue siendo agnóstica de Telegram."""
+
+    MAIN_MENU = (
+        (("✍️ Escribir novela", "menu:write"), ("📝 Editar texto", "menu:edit")),
+        (("📚 Biblioteca", "menu:library"), ("🧭 Continuidad", "menu:continuity")),
+        (("💡 Ideas", "menu:ideas"), ("❓ Ayuda", "menu:help")),
+    )
+
     def __init__(self, application: BotApplication) -> None:
         self._application = application
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
+        if "callback_query" in update:
+            return self.handle_callback(update)
         inbound = parse_update(update)
         command = inbound.text.casefold().split()[0]
-        if command == "/start":
-            return TelegramOutbound(inbound.conversation_id, "BOT-IA listo. Usa /help para ver la ayuda.", "local")
+        if command in {"/start", "/menu"}:
+            return TelegramOutbound(
+                inbound.conversation_id,
+                "¿Qué quieres hacer? Puedes escribir directamente o elegir una opción.",
+                "local",
+                self.MAIN_MENU,
+            )
         if command == "/help":
-            return TelegramOutbound(inbound.conversation_id, "Envía una consulta, una petición creativa o un cambio de universo.", "local")
+            return TelegramOutbound(
+                inbound.conversation_id,
+                "Puedes hablarme normalmente. También tienes el menú para escribir, editar, consultar la biblioteca, revisar continuidad o generar ideas.",
+                "local",
+                self.MAIN_MENU,
+            )
         response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, inbound.text))
         return self.from_response(inbound.conversation_id, response)
 
+    def handle_callback(self, update: dict[str, object]) -> TelegramOutbound:
+        callback = parse_callback_update(update)
+        actions = {
+            "menu:write": "Quiero escribir una escena o capítulo. Ayúdame usando los archivos locales del proyecto y la continuidad establecida.",
+            "menu:edit": "Quiero editar o revisar un texto usando los archivos locales relevantes como referencia.",
+            "menu:library": "¿Qué información y documentos tengo disponibles en la biblioteca local?",
+            "menu:continuity": "Quiero revisar la continuidad de lo que estamos escribiendo y saber dónde quedamos.",
+            "menu:ideas": "Quiero ideas para continuar la novela usando la continuidad y personajes establecidos.",
+        }
+        if callback.data == "menu:help":
+            return TelegramOutbound(callback.conversation_id, "Escribe lo que necesitas; BOT-IA decide si basta la información local, si necesita consultar archivos o si conviene pedir autorización antes de usar una API.", "local", self.MAIN_MENU)
+        if callback.data == "menu:main":
+            return TelegramOutbound(callback.conversation_id, "Menú principal:", "local", self.MAIN_MENU)
+        if callback.data == "fallback:prompt":
+            return TelegramOutbound(callback.conversation_id, "Puedo preparar un prompt para pegar en otra IA web sin enviar tu consulta a ninguna API desde BOT-IA.", "local", (("📋 Generar prompt", "prompt:generate"), ("⬅️ Menú", "menu:main")))
+        if callback.data == "fallback:api":
+            return TelegramOutbound(callback.conversation_id, "Autorización recibida para esta consulta. BOT-IA puede usar la API configurada sólo para esta petición.", "local", (("⬅️ Menú", "menu:main"),))
+        if callback.data == "prompt:generate":
+            return TelegramOutbound(callback.conversation_id, "Para generar el prompt exacto necesito que me envíes nuevamente la pregunta que quieres investigar. No se enviará a ninguna API desde este botón.", "local", (("⬅️ Menú", "menu:main"),))
+        text = actions.get(callback.data)
+        if text is None:
+            raise TelegramInputError("unknown Telegram callback")
+        response = self._application.handle(ApplicationRequest(callback.user_id, callback.conversation_id, text))
+        return self.from_response(callback.conversation_id, response)
+
     @staticmethod
     def from_response(chat_id: str, response: ApplicationResponse) -> TelegramOutbound:
-        return TelegramOutbound(chat_id, response.text, response.decision.route.value)
+        keyboard: tuple[tuple[tuple[str, str], ...], ...] = (("⬅️ Menú", "menu:main"),)
+        execution = response.execution
+        evidence = getattr(execution, "evidence", None)
+        if evidence is not None and getattr(evidence.coverage, "status", None) in {CoverageStatus.NO_ENCONTRADO, CoverageStatus.NO_ESTABLECIDO}:
+            keyboard = (
+                (("🔐 Usar API para esta consulta", "fallback:api"),),
+                (("📋 Preparar prompt para otra IA", "fallback:prompt"),),
+                (("⬅️ Menú", "menu:main"),),
+            )
+        return TelegramOutbound(chat_id, response.text, response.decision.route.value, keyboard)
 
 
 TelegramTransport = Callable[[str, dict[str, object], float], dict[str, object]]
@@ -143,8 +229,12 @@ class TelegramApiClient:
     def send(self, outbound: TelegramOutbound) -> dict[str, object]:
         chunks = _split_message(outbound.text)
         result: dict[str, object] | None = None
-        for chunk in chunks:
-            result = self._call("sendMessage", {"chat_id": outbound.chat_id, "text": chunk})
+        for index, chunk in enumerate(chunks):
+            payload = outbound.payload()
+            payload["text"] = chunk
+            if index < len(chunks) - 1:
+                payload.pop("reply_markup", None)
+            result = self._call("sendMessage", payload)
         return result or {"ok": True}
 
     def get_updates(self, *, offset: int | None = None, timeout_seconds: int = 25) -> tuple[dict[str, object], ...]:
@@ -245,8 +335,6 @@ class TelegramPoller:
                 try:
                     outbound = self._adapter.handle_update(update)
                 except TelegramInputError:
-                    # Poisoned/unsupported updates are acknowledged so they do not
-                    # block the queue forever.
                     self._offset = update_id + 1
                     skipped += 1
                     self._logger("telegram update rejected")
@@ -254,8 +342,6 @@ class TelegramPoller:
                 try:
                     self._client.send(outbound)
                 except (TelegramTransportError, TelegramApiError, TelegramInputError):
-                    # Do not advance the offset until delivery succeeds; Telegram
-                    # can redeliver the update after a transient failure.
                     self._logger("telegram response delivery failed")
                     continue
                 self._offset = update_id + 1
