@@ -1,3 +1,5 @@
+from html import escape
+
 from aiogram import Bot, F
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import Command
@@ -5,8 +7,11 @@ from aiogram.types import CallbackQuery, ChatMemberAdministrator, ChatMemberOwne
 from sqlalchemy import select
 
 from app.core.access import is_chat_staff
+from app.core.config import get_settings
+from app.core.events import EventBus
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
@@ -21,13 +26,16 @@ REQUIRED_ADMIN_PERMISSIONS = {
 
 
 class ChieModule(BotModule):
-    """Community coordinator: setup, permissions and a button-first command surface."""
+    """Community coordinator: setup, permissions and request notifications."""
 
     name = "chie"
 
     def __init__(self, database: Database) -> None:
         self.database = database
         self.topics = ForumTopicService(database)
+        self.settings = get_settings()
+        self.worker = DurableWorker(database, event_bus=EventBus(), poll_seconds=1.0)
+        self.bot: Bot | None = None
         super().__init__()
 
     def setup(self) -> None:
@@ -37,6 +45,47 @@ class ChieModule(BotModule):
         self.router.callback_query.register(self.command_hub, F.data.startswith("chie:hub:"))
         self.router.message.register(self.configure_group, Command("configurar"))
         self.router.message.register(self.command_hub_command, Command("comandos"))
+
+    async def on_startup(self, bot: Bot) -> None:
+        self.bot = bot
+        self.worker.register_event("fan_request.created", self._notify_new_request)
+        self.tasks.start("request-notifications", self.worker.run())
+
+    async def _notify_new_request(self, payload: dict) -> None:
+        if self.bot is None or not self.settings.admin_user_id:
+            return
+        request_id = int(payload["request_id"])
+        user_id = int(payload["user_id"])
+        chat_id = int(payload["chat_id"])
+        description = escape(str(payload.get("description") or ""))
+        special_details = escape(str(payload.get("special_details") or ""))
+        cost = int(payload.get("points_cost") or 0)
+        character = escape(str(payload.get("character_id") or "pendiente"))
+        try:
+            user = await self.bot.get_chat(user_id)
+            display_name = escape(user.full_name)
+            username = f" @{escape(user.username)}" if user.username else ""
+        except (TelegramBadRequest, TelegramForbiddenError):
+            display_name = f"usuario {user_id}"
+            username = ""
+        try:
+            chat = await self.bot.get_chat(chat_id)
+            group_title = escape(chat.title or "grupo")
+        except (TelegramBadRequest, TelegramForbiddenError):
+            group_title = "grupo"
+        text = (
+            "😰 <b>¡Chie tiene un pedido nuevo!</b>\n\n"
+            f"🧾 Pedido <b>#{request_id}</b>\n"
+            f"👤 <a href=\"tg://user?id={user_id}\">{display_name}</a>{username}\n"
+            f"🏠 {group_title}\n"
+            f"💰 Canje: <b>{cost} puntos</b>\n"
+            f"🎨 Personaje: <b>{character}</b>\n"
+            f"📝 <b>Pedido:</b> {description}"
+        )
+        if special_details:
+            text += f"\n📌 <b>Detalles:</b> {special_details}"
+        text += "\n\nCuando tengas la imagen, mandásela a Cami y ella la asociará con este pedido."
+        await self.bot.send_message(self.settings.admin_user_id, text)
 
     async def start_setup(self, callback: CallbackQuery) -> None:
         if not callback.message or callback.message.chat.type != "private":
