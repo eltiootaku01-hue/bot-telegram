@@ -14,12 +14,12 @@ def build_dispatcher(settings: Settings) -> tuple[Bot, Dispatcher, Database]:
     bot = Bot(token=settings.bot_token)
     dispatcher = Dispatcher()
     database = Database(settings.database_url)
-
     dispatcher.update.middleware(MemberSyncMiddleware(database))
 
     registry = ModuleRegistry(dispatcher)
     registry.register(SystemModule())
     registry.register(ChatModule())
     registry.register(MediaModule())
-    registry.register(GameModule())
+    registry.register(GameModule(database))
+    registry.attach_lifecycle(bot)
     return bot, dispatcher, database
