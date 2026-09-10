@@ -35,20 +35,23 @@ class JobQueue:
             run_at=run_at or datetime.utcnow(),
         )
         session.add(job)
-        if not commit:
-            await session.flush()
-            return job
         try:
-            await session.commit()
+            if commit:
+                await session.commit()
+            else:
+                async with session.begin_nested():
+                    await session.flush()
         except IntegrityError:
-            await session.rollback()
+            if commit:
+                await session.rollback()
             existing = await session.scalar(
                 select(DurableJob).where(DurableJob.dedupe_key == dedupe_key)
             )
             if existing is None:
                 raise
             return existing
-        await session.refresh(job)
+        if commit:
+            await session.refresh(job)
         return job
 
     async def recover_stale(
