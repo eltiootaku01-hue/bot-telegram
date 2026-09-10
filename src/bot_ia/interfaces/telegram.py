@@ -131,7 +131,7 @@ class TelegramAdapter:
         if command in {"/start", "/menu"}:
             return TelegramOutbound(inbound.conversation_id, "¡listo! ¿Qué quieres hacer?", "local", self.MAIN_MENU)
         if command == "/help":
-            return TelegramOutbound(inbound.conversation_id, "Puedes hablarme normalmente. También tienes el menú para escribir, editar, consultar la biblioteca, revisar continuidad o generar ideas.", "local", self.MAIN_MENU)
+            return TelegramOutbound(inbound.conversation_id, "Envía lo que necesitas o usa el menú. Puedes escribir, editar, consultar la biblioteca, revisar continuidad o generar ideas.", "local", self.MAIN_MENU)
         response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, inbound.text))
         return self.from_response(inbound.conversation_id, response)
 
