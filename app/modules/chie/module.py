@@ -115,7 +115,7 @@ class ChieModule(BotModule):
             await callback.answer("Todavía me faltan: " + ", ".join(missing), show_alert=True)
             return
 
-        topic_keys = ("noticias", "undiacomohoy", "recomendaciondiaria", "curiosidades", "estrenos", "memes", "material", "anime", "debates", "trivia", "waifumon", "puntos", "pedidos")
+        topic_keys = ("comandos", "noticias", "undiacomohoy", "recomendaciondiaria", "curiosidades", "estrenos", "memes", "material", "anime", "debates", "trivia", "waifumon", "puntos", "pedidos")
         created = 0
         failures: list[str] = []
         for key in topic_keys:
@@ -126,6 +126,19 @@ class ChieModule(BotModule):
             except (RuntimeError, TelegramBadRequest, TelegramForbiddenError) as exc:
                 failures.append(f"{key}: {exc}")
                 break
+
+        if not failures:
+            try:
+                commands_thread = await self.topics.get_thread_id(chat_id, "comandos")
+                if commands_thread is not None:
+                    await bot.send_message(
+                        chat_id,
+                        "🤖 <b>Panel de comandos</b>\nLos botones son el acceso rápido. Los comandos siguen disponibles como alternativa y para automatizaciones.",
+                        message_thread_id=commands_thread,
+                        reply_markup=command_hub_keyboard(),
+                    )
+            except (TelegramBadRequest, TelegramForbiddenError) as exc:
+                failures.append(f"publicar panel: {exc}")
 
         async with self.database.session() as session:
             setup = await session.scalar(
@@ -141,7 +154,7 @@ class ChieModule(BotModule):
         await callback.answer("Configuración terminada." if not failures else "Configuración parcial.", show_alert=False)
         text = f"🎉 <b>Chie ya está trabajando.</b>\nTemas creados en esta pasada: {created}."
         if failures:
-            text += "\n\n⚠️ Me detuve porque Telegram rechazó la creación de temas. Revisá que el grupo sea supergrupo y tenga Foro activado."
+            text += "\n\n⚠️ Me detuve porque Telegram rechazó una operación. Revisá permisos y que el grupo sea un supergrupo con Foro activado."
         await callback.message.edit_text(text, reply_markup=command_hub_keyboard())
 
     async def cancel_setup(self, callback: CallbackQuery) -> None:
