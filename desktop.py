@@ -15,6 +15,7 @@ if SRC.is_dir():
 
 from bot_ia.config.dotenv import load_dotenv
 from bot_ia.core.application import ApplicationRequest
+from bot_ia.core.context_sharing import build_shared_context
 from bot_ia.core.creative_assist import expand_scene_sketch
 from bot_ia.runtime import build_runtime
 
@@ -26,6 +27,7 @@ MENU_ACTIONS = {
     "💡 Ideas": "Quiero ideas para continuar la novela usando la continuidad y personajes establecidos.",
     "🔎 Investigar": "Quiero investigar una duda usando primero la biblioteca local.",
     "🧰 Destrabar escena": None,
+    "🔗 Compartir contexto": None,
     "📊 Estado API": None,
     "📈 Progreso": None,
     "❓ Ayuda": "¿Cómo funciona BOT-IA y qué puede hacer?",
@@ -42,6 +44,7 @@ class BotIADesktop:
         self.default_universe = default_universe
         self.provider = provider
         self.telegram_process: subprocess.Popen[str] | None = None
+        self.last_execution = None
 
         self.root = tk.Tk()
         self.root.title("BOT-IA")
@@ -130,6 +133,7 @@ class BotIADesktop:
     def _handle_message(self, message: str, allow_api: bool) -> None:
         try:
             response = self.application.handle(ApplicationRequest("desktop-user", "desktop-session", message, allow_external_api=allow_api))
+            self.last_execution = response.execution
             text = response.text
             if response.decision.external_api_authorized:
                 text = "🔎 PROPUESTA EXTERNA (sin convertir en canon):\n\n" + text
@@ -144,6 +148,9 @@ class BotIADesktop:
         if label == "🧰 Destrabar escena":
             self._append("BOT-IA", "🧰 Escribe un boceto corto y lo convertiré en preguntas de desarrollo sin consumir API.")
             return
+        if label == "🔗 Compartir contexto":
+            self.share_context()
+            return
         if label == "📊 Estado API":
             self.show_api_status()
             return
@@ -155,6 +162,49 @@ class BotIADesktop:
             self.input.delete("1.0", "end")
             self.input.insert("1.0", action)
             self.send()
+
+    def share_context(self) -> None:
+        """Prepara y copia sólo evidencia recuperada; nunca hace una llamada de red."""
+        if self.last_execution is None:
+            self._append("BOT-IA", "🔗 Todavía no hay una consulta procesada con evidencia para compartir. Primero realiza una consulta.")
+            return
+        try:
+            shared = build_shared_context(self.last_execution)
+        except Exception as error:
+            self._append("BOT-IA", f"No pude preparar el contexto de forma segura: {error}")
+            return
+
+        preview = tk.Toplevel(self.root)
+        preview.title("BOT-IA — Compartir contexto")
+        preview.geometry("820x620")
+        preview.transient(self.root)
+        preview.columnconfigure(0, weight=1)
+        preview.rowconfigure(1, weight=1)
+        ttk.Label(
+            preview,
+            text="🔗 CONTEXTO PARA IA EXTERNA",
+            font=("Segoe UI", 15, "bold"),
+        ).grid(row=0, column=0, sticky="w", padx=12, pady=10)
+        text = tk.Text(preview, wrap="word", font=("Consolas", 10))
+        text.grid(row=1, column=0, sticky="nsew", padx=12)
+        text.insert("1.0", shared.text)
+        text.configure(state="disabled")
+        buttons = ttk.Frame(preview, padding=12)
+        buttons.grid(row=2, column=0, sticky="ew")
+        ttk.Label(
+            buttons,
+            text="Esto sólo copia el contexto. BOT-IA no envía nada a Internet desde este botón.",
+        ).pack(side="left")
+
+        def copy_context() -> None:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(shared.text)
+            self.root.update()
+            self._append("BOT-IA", "🔗 Contexto copiado al portapapeles. Revísalo antes de pegarlo en una IA externa.")
+            preview.destroy()
+
+        ttk.Button(buttons, text="📋 Copiar contexto", command=copy_context).pack(side="right", padx=(8, 0))
+        ttk.Button(buttons, text="Cancelar", command=preview.destroy).pack(side="right")
 
     def show_api_status(self) -> None:
         health = getattr(self.runtime.provider_manager, "_health", {})
