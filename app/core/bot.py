@@ -1,6 +1,7 @@
 from aiogram import Bot, Dispatcher
 
 from app.core.config import Settings
+from app.core.errors import router as error_router
 from app.core.identity import BotIdentity
 from app.core.registry import ModuleRegistry
 from app.db.database import Database
@@ -24,6 +25,7 @@ def build_dispatcher(settings: Settings, identity: BotIdentity) -> tuple[Bot, Di
     dispatcher = Dispatcher()
     database = Database(settings.database_url)
     dispatcher.update.middleware(MemberSyncMiddleware(database))
+    dispatcher.include_router(error_router)
 
     registry = ModuleRegistry(dispatcher)
     registry.register(SystemModule(identity))
