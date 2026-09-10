@@ -18,6 +18,14 @@ def _ensure_compatibility(connection) -> None:
             "ALTER TABLE media_assets ADD COLUMN request_id BIGINT "
             "REFERENCES fan_requests(id) ON DELETE SET NULL"
         ))
+    if "published_group_message_id" not in media_columns:
+        connection.execute(text(
+            "ALTER TABLE media_assets ADD COLUMN published_group_message_id BIGINT"
+        ))
+    if "published_page_message_id" not in media_columns:
+        connection.execute(text(
+            "ALTER TABLE media_assets ADD COLUMN published_page_message_id BIGINT"
+        ))
 
 
 class Database:
