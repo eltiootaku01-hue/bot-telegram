@@ -1,4 +1,4 @@
-﻿"""Punto de construcción del runtime de BOT-IA."""
+"""Punto de construcción del runtime de BOT-IA."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ class RuntimeComponents:
         self,
         *,
         default_universe_id: str | None = None,
-        provider_id: str = "ollama",
+        provider_id: str = "gemini",
     ) -> BotApplication:
         provider_config = self.registry.provider(provider_id)
 
