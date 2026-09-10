@@ -50,3 +50,9 @@ def trivia_keyboard(round_id: int, options: tuple[str, ...]) -> InlineKeyboardMa
         ))
     builder.adjust(2)
     return builder.as_markup()
+
+
+def fusion_keyboard(character_id: str) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="✨ Evolucionar", callback_data=f"game:fusion:{character_id}"))
+    return builder.as_markup()
