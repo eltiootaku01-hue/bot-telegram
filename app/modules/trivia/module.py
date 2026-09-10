@@ -69,29 +69,38 @@ class TriviaModule(BotModule):
 
     async def answer(self, callback: CallbackQuery) -> None:
         parts = (callback.data or "").split(":")
-        if len(parts) != 4 or not parts[2].isdigit() or not parts[3].isdigit():
+        if len(parts) != 4 or not parts[2].isdigit() or not parts[3].isdigit() or callback.message is None:
             await callback.answer("Trivia inválida.", show_alert=True)
             return
         round_id, option_index = int(parts[2]), int(parts[3])
         async with self.database.session() as session:
-            result, balance = await self.service.answer(session, round_id, callback.from_user.id, option_index)
+            result, balance = await self.service.answer(
+                session,
+                round_id,
+                callback.from_user.id,
+                option_index,
+                chat_id=callback.message.chat.id,
+            )
             round_row = await session.get(TriviaRound, round_id)
         if round_row is None:
             await callback.answer("La trivia ya no existe.", show_alert=True)
             return
         if result == "correct":
             await callback.answer(f"¡Correcto! +{round_row.points} puntos", show_alert=True)
-            if callback.message is not None:
-                await callback.message.edit_text(
-                    f"🎉 <b>{callback.from_user.first_name}</b> ganó la trivia.\n"
-                    f"🏆 +{round_row.points} puntos · 💰 saldo: {balance}\n\n"
-                    f"💡 {round_row.explanation}"
-                )
+            await callback.message.edit_text(
+                f"🎉 <b>{callback.from_user.first_name}</b> ganó la trivia.\n"
+                f"🏆 +{round_row.points} puntos · 💰 saldo: {balance}\n\n"
+                f"💡 {round_row.explanation}"
+            )
             return
         if result == "wrong":
             await callback.answer("❌ Incorrecto. Probá suerte en la próxima.")
         elif result == "already_answered":
             await callback.answer("Ya respondiste esta trivia.")
+        elif result == "wrong_chat":
+            await callback.answer("Esta trivia pertenece a otra comunidad. 😰", show_alert=True)
+        elif result == "invalid":
+            await callback.answer("Respuesta inválida.", show_alert=True)
         else:
             await callback.answer("La trivia ya terminó. 😭")
 
