@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from sqlalchemy import event, inspect, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.models import Base
@@ -9,27 +10,51 @@ from app.db import community_models  # noqa: F401 - registers forum topic tables
 from app.db import trivia_models  # noqa: F401 - registers trivia tables
 
 
+def _add_column_if_missing(connection, table: str, column: str, definition: str, existing: set[str]) -> None:
+    """Apply one additive migration safely when several bot processes start together."""
+    if column in existing:
+        return
+    try:
+        connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
+    except OperationalError as exc:
+        # Another bot process may have completed the same additive migration between
+        # inspect() and ALTER TABLE. SQLite has no IF NOT EXISTS for ADD COLUMN.
+        if "duplicate column name" not in str(exc).lower():
+            raise
+
+
 def _ensure_compatibility(connection) -> None:
     """Apply small additive migrations that create_all cannot perform."""
     inspector = inspect(connection)
     media_columns = {column["name"] for column in inspector.get_columns("media_assets")}
-    if "request_id" not in media_columns:
-        connection.execute(text(
-            "ALTER TABLE media_assets ADD COLUMN request_id BIGINT "
-            "REFERENCES fan_requests(id) ON DELETE SET NULL"
-        ))
-    if "published_group_message_id" not in media_columns:
-        connection.execute(text(
-            "ALTER TABLE media_assets ADD COLUMN published_group_message_id BIGINT"
-        ))
-    if "published_page_message_id" not in media_columns:
-        connection.execute(text(
-            "ALTER TABLE media_assets ADD COLUMN published_page_message_id BIGINT"
-        ))
-    if "published_request_message_id" not in media_columns:
-        connection.execute(text(
-            "ALTER TABLE media_assets ADD COLUMN published_request_message_id BIGINT"
-        ))
+    _add_column_if_missing(
+        connection,
+        "media_assets",
+        "request_id",
+        "BIGINT REFERENCES fan_requests(id) ON DELETE SET NULL",
+        media_columns,
+    )
+    _add_column_if_missing(
+        connection,
+        "media_assets",
+        "published_group_message_id",
+        "BIGINT",
+        media_columns,
+    )
+    _add_column_if_missing(
+        connection,
+        "media_assets",
+        "published_page_message_id",
+        "BIGINT",
+        media_columns,
+    )
+    _add_column_if_missing(
+        connection,
+        "media_assets",
+        "published_request_message_id",
+        "BIGINT",
+        media_columns,
+    )
 
     connection.execute(text(
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_fan_request_source "
