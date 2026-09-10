@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from html import escape
 
 from aiogram import Bot
@@ -87,7 +88,7 @@ class CamiMediaPublisher(BotModule):
             asset = await session.get(MediaAsset, asset_id)
             if asset is not None and asset.status == "scheduled":
                 asset.status = "published"
-                asset.updated_at = __import__("datetime").datetime.utcnow()
+                asset.updated_at = datetime.utcnow()
                 await session.commit()
 
     @staticmethod
@@ -98,5 +99,8 @@ class CamiMediaPublisher(BotModule):
         if asset.anime:
             parts.append(f"📺 {escape(asset.anime)}")
         if asset.tags:
-            parts.append("🏷️ " + " ".join(f"#{escape(tag.strip())}" for tag in asset.tags.split(",") if tag.strip()))
+            tags = " ".join(
+                f"#{escape(tag.strip())}" for tag in asset.tags.split(",") if tag.strip()
+            )
+            parts.append(f"🏷️ {tags}")
         return "\n".join(parts) or "✨ Nuevo material de la comunidad"
