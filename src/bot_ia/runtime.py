@@ -7,11 +7,12 @@ from pathlib import Path
 
 from bot_ia.config import RuntimeConfig, RuntimeRegistry, load_default_runtime_config
 from bot_ia.contracts import UniverseDefinition, UniverseRegistry
-from bot_ia.core.application import BotApplication, InMemorySessionStore
+from bot_ia.core.application import BotApplication
 from bot_ia.core.brain import LocalBrain
 from bot_ia.core.local_workflow import LocalWorkflow
 from bot_ia.core.project_manager import ProjectManager, ProjectRecord
 from bot_ia.core.router import Router
+from bot_ia.core.session_store import PersistentSessionStore
 from bot_ia.librarian import EntityIndex, SourceInventory
 from bot_ia.librarian.models import CatalogEntry
 from bot_ia.memory import MemoryStore
@@ -34,6 +35,7 @@ class RuntimeComponents:
     provider_manager: ProviderManager
     memory_store: MemoryStore
     project_manager: ProjectManager | None = None
+    workspace_root: Path = Path(".")
     _universe_map: dict[str, UniverseRuntime] = field(default_factory=dict, repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -57,7 +59,8 @@ class RuntimeComponents:
             return self.universe(universe_id).entity_index.for_universe(universe_id)
 
         workflow = LocalWorkflow(entries_by_universe, entity_indexes=entity_indexes_by_universe, provider_manager=self.provider_manager, memory_store=self.memory_store, provider_config=provider_config)
-        return BotApplication(LocalBrain(self.universe_registry), Router(), InMemorySessionStore(), default_universe_id=default_universe_id, candidate_provider=candidate_provider, executor=workflow)
+        session_store = PersistentSessionStore(self.workspace_root / "work" / "bot_ia_sessions.sqlite3")
+        return BotApplication(LocalBrain(self.universe_registry), Router(), session_store, default_universe_id=default_universe_id, candidate_provider=candidate_provider, executor=workflow)
 
     def create_novel(self, display_name: str, *, application: BotApplication | None = None) -> ProjectRecord:
         if self.project_manager is None:
@@ -86,6 +89,7 @@ def _build_universe_runtime(config: RuntimeConfig) -> tuple[UniverseRegistry, tu
 
 
 def build_runtime(project_root: Path, *, key_loader=None, transports=None) -> RuntimeComponents:
+    project_root = project_root.resolve()
     config = load_default_runtime_config(project_root)
     registry = RuntimeRegistry(config)
     universe_registry, universes = _build_universe_runtime(config)
@@ -99,4 +103,4 @@ def build_runtime(project_root: Path, *, key_loader=None, transports=None) -> Ru
         universes = (*universes, UniverseRuntime(definition, entries, EntityIndex(entries)))
     provider_manager = build_provider_manager(config, key_loader=key_loader, transports=transports)
     memory_store = MemoryStore(project_root, universe_registry)
-    return RuntimeComponents(config, registry, universe_registry, universes, provider_manager, memory_store, project_manager)
+    return RuntimeComponents(config, registry, universe_registry, universes, provider_manager, memory_store, project_manager, project_root)
