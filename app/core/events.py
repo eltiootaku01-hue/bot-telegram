@@ -3,13 +3,17 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import DomainEvent
+
+
+DEFAULT_MAX_ATTEMPTS = 5
+DEFAULT_BACKOFF_SECONDS = (5, 30, 120, 600, 1800)
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,11 +24,7 @@ class EventEnvelope:
 
 
 class EventBus:
-    """Durable event inbox shared by Cari, Sunna, Cami and Chie.
-
-    Publishing is persisted before any consumer acts. Consumers can therefore
-    recover after a process restart instead of depending on in-memory callbacks.
-    """
+    """Durable event inbox shared by Cari, Sunna, Cami and Chie."""
 
     async def publish(
         self,
@@ -57,6 +57,39 @@ class EventBus:
             )
         return envelope
 
+    async def recover_stale(
+        self,
+        session: AsyncSession,
+        *,
+        timeout_seconds: int = 300,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    ) -> int:
+        """Recover events abandoned by a crashed worker."""
+        cutoff = datetime.utcnow() - timedelta(seconds=timeout_seconds)
+        now = datetime.utcnow()
+        result = await session.scalars(
+            select(DomainEvent).where(
+                DomainEvent.status == "processing",
+                DomainEvent.locked_at.is_not(None),
+                DomainEvent.locked_at < cutoff,
+            )
+        )
+        events = list(result)
+        for event in events:
+            if event.attempts >= max_attempts:
+                event.status = "failed"
+                event.last_error = "Event abandoned after maximum recovery attempts"
+            else:
+                delay = DEFAULT_BACKOFF_SECONDS[min(event.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
+                event.status = "pending"
+                event.available_at = now + timedelta(seconds=delay)
+                event.last_error = "Recovered stale processing event"
+            event.locked_at = None
+            event.updated_at = now
+        if events:
+            await session.commit()
+        return len(events)
+
     async def claim(
         self,
         session: AsyncSession,
@@ -64,11 +97,6 @@ class EventBus:
         event_type: str | None = None,
         now: datetime | None = None,
     ) -> DomainEvent | None:
-        """Atomically claim one pending event for a worker.
-
-        SQLite has no SELECT ... FOR UPDATE, so claiming uses a conditional UPDATE.
-        Only the worker whose UPDATE affects one row owns the event.
-        """
         now = now or datetime.utcnow()
         query = select(DomainEvent).where(
             DomainEvent.status == "pending",
@@ -113,13 +141,21 @@ class EventBus:
         error: str,
         *,
         retry_at: datetime | None = None,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     ) -> None:
         now = datetime.utcnow()
+        event = await session.scalar(select(DomainEvent).where(DomainEvent.event_id == event_id))
+        if event is None:
+            return
+        if retry_at is None and event.attempts < max_attempts:
+            delay = DEFAULT_BACKOFF_SECONDS[min(event.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
+            retry_at = now + timedelta(seconds=delay)
+        permanent = event.attempts >= max_attempts and retry_at is None
         await session.execute(
             update(DomainEvent)
             .where(DomainEvent.event_id == event_id)
             .values(
-                status="pending" if retry_at else "failed",
+                status="failed" if permanent else "pending",
                 available_at=retry_at or now,
                 locked_at=None,
                 last_error=error[:4000],
