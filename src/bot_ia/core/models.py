@@ -11,6 +11,7 @@ from bot_ia.contracts import Confidence, SessionState
 class Intent(str, Enum):
     GREETING = "greeting"
     HELP = "help"
+    KNOWLEDGE_OVERVIEW = "knowledge_overview"
     FACTUAL = "factual"
     CHARACTER = "character"
     CANON = "canon"
