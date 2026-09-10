@@ -12,6 +12,7 @@ from app.modules.chat.module import ChatModule
 from app.modules.chie.module import ChieModule
 from app.modules.game.module import GameModule
 from app.modules.media.module import MediaModule
+from app.modules.requests.module import RequestModule
 from app.modules.system.module import SystemModule
 from app.modules.trivia.module import TriviaModule
 
@@ -45,6 +46,7 @@ def build_dispatcher(settings: Settings, identity: BotIdentity) -> tuple[Bot, Di
         registry.register(AdminModule(database))
     elif identity is BotIdentity.CHIE:
         registry.register(ChieModule(database))
+        registry.register(RequestModule(database))
 
     registry.attach_lifecycle()
     return bot, dispatcher, database
