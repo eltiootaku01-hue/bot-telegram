@@ -40,7 +40,7 @@ def expand_scene_sketch(sketch: str, *, max_questions: int = 20) -> str:
         "17. ¿Kuro intenta quedarse para ayudar o busca marcharse cuanto antes? ¿Por qué?",
         "18. ¿Qué consecuencia deja el rescate para Kuro, para la persona salvada o para el capítulo?",
         "19. ¿El hueco funciona mejor como una escena completa o como varios mini-sketches de acciones encadenadas?",
-        "20. ¿La escena termina aquí o qué debería quedar preparado al final para enlazar naturalmente con la siguiente escena?",
+        "20. ¿Qué debería quedar preparado al final? ¿La escena termina aquí o qué debe quedar listo para enlazar naturalmente con la siguiente escena?",
     )
     return "\n".join(questions[:max_questions])
 
