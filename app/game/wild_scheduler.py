@@ -19,6 +19,7 @@ class WildWaifuScheduler:
         self.bot = bot
         self.database = database
         self.task: asyncio.Task | None = None
+        self.expiry_tasks: set[asyncio.Task] = set()
         self.stopping = False
 
     def start(self) -> None:
@@ -28,20 +29,23 @@ class WildWaifuScheduler:
 
     async def stop(self) -> None:
         self.stopping = True
+        tasks = [task for task in self.expiry_tasks]
         if self.task is not None:
             self.task.cancel()
-            try:
-                await self.task
-            except asyncio.CancelledError:
-                pass
-            self.task = None
+            tasks.append(self.task)
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        self.expiry_tasks.clear()
+        self.task = None
 
     async def _run(self) -> None:
         while not self.stopping:
             await asyncio.sleep(random.randint(60, 600))
             chats = await self._group_ids()
             for chat_id in chats:
-                await self.spawn(chat_id)
+                task = asyncio.create_task(self.spawn(chat_id), name=f"waifu-{chat_id}")
+                self.expiry_tasks.add(task)
+                task.add_done_callback(self.expiry_tasks.discard)
 
     async def _group_ids(self) -> list[int]:
         async with self.database.sessions() as session:
@@ -61,15 +65,14 @@ class WildWaifuScheduler:
             text = (
                 "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
                 f"👤 <b>{character.name}</b> · clase B\n"
-                f"⏳ {max(1, int((expires - datetime.utcnow()).total_seconds()))} s\n\n"
-                f"🧠 <b>Pregunta de nicho:</b> {question}\n"
+                "🧠 <b>Pregunta de nicho:</b> ¿Cómo se llama el protagonista masculino de Toradora!?\n"
                 "⚠️ Solo tenés <b>una oportunidad</b>."
             )
         else:
             options = ["🏃 Capturar"]
             text = (
                 "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
-                f"👤 <b>{character.name}</b>\n"
+                f"👤 <b>{character.name}</b> · clase C\n"
                 "⚡ ¡Capturala antes de que desaparezca!"
             )
 
@@ -114,5 +117,4 @@ class WildWaifuScheduler:
                 text="😭 La waifu se fue 😭",
             )
         except Exception:
-            # A deleted/edited Telegram message should not kill the scheduler.
             return
