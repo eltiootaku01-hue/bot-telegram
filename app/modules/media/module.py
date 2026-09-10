@@ -6,6 +6,7 @@ from aiogram.types import Message
 
 from app.core.config import get_settings
 from app.core.module import BotModule
+from app.db.database import Database
 from app.db.models import MediaAsset
 from app.media.library import MediaLibrary
 from app.services.requests import DEFAULT_REQUEST_COST, RequestService
