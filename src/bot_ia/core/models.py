@@ -104,3 +104,4 @@ class RouteDecision:
     requires_llm: bool = False
     clarification: str | None = None
     agent_id: str | None = None
+    external_api_authorized: bool = False
