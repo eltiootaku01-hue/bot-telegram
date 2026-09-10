@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import unittest
 from types import SimpleNamespace
 
@@ -41,6 +42,23 @@ class ContextSharingTests(unittest.TestCase):
         self.assertEqual(shared.content_sha256, hashlib.sha256(shared.text.encode("utf-8")).hexdigest())
         self.assertNotIn("LocalExecution", shared.text)
         self.assertNotIn("biblioteca/", shared.text)
+
+    def test_packet_can_be_serialized_without_runtime_objects(self):
+        shared = build_shared_context(self.make_execution())
+        payload = shared.as_payload()
+        self.assertEqual(payload["packet_id"], shared.packet_id)
+        self.assertEqual(payload["scope"], "relevant")
+        self.assertEqual(payload["universe_id"], "one_neko_punch")
+        self.assertEqual(payload["source_ids"], ["kuro.md"])
+        self.assertNotIn("runtime", json.dumps(payload, ensure_ascii=False).lower())
+        self.assertEqual(json.loads(shared.as_json())["content_sha256"], shared.content_sha256)
+
+    def test_external_prompt_is_self_contained_but_has_no_access_instruction(self):
+        shared = build_shared_context(self.make_execution())
+        prompt = shared.as_external_prompt()
+        self.assertIn("Kuro es la protagonista.", prompt)
+        self.assertIn("No tienes acceso a BOT-IA", prompt)
+        self.assertNotIn("LocalExecution", prompt)
 
     def test_context_is_capped(self):
         execution = self.make_execution()
