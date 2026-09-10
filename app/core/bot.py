@@ -8,6 +8,7 @@ from app.db.database import Database
 from app.middleware.member_sync import MemberSyncMiddleware
 from app.modules.admin.module import AdminModule
 from app.modules.chat.module import ChatModule
+from app.modules.chie.module import ChieModule
 from app.modules.game.module import GameModule
 from app.modules.media.module import MediaModule
 from app.modules.system.module import SystemModule
@@ -41,7 +42,7 @@ def build_dispatcher(settings: Settings, identity: BotIdentity) -> tuple[Bot, Di
     elif identity is BotIdentity.CAMI:
         registry.register(AdminModule(database))
     elif identity is BotIdentity.CHIE:
-        pass
+        registry.register(ChieModule(database))
 
     registry.attach_lifecycle()
     return bot, dispatcher, database
