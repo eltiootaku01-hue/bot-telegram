@@ -4,14 +4,14 @@ from datetime import datetime
 from aiogram import Bot, F
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import GameAttempt, GameCollection, PointTransaction
+from app.db.models import GameAttempt, GameCollection
 from app.db.repositories import MemberRepository
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterStore
@@ -208,7 +208,8 @@ class GameModule(BotModule):
             return
         async with self.database.session() as session:
             encounter = await self.encounters.get(session, encounter_id)
-            if encounter is None or datetime.utcnow() >= encounter.expires_at:
+            now = datetime.utcnow()
+            if encounter is None or now >= encounter.expires_at or encounter.status != "active":
                 await callback.answer("La waifu ya se fue. 😭", show_alert=True)
                 return
             # Callback data can be forwarded/replayed from another chat. The encounter
@@ -245,6 +246,23 @@ class GameModule(BotModule):
                 await session.commit()
                 await callback.answer("❌ Fallaste. Esta oportunidad era solo tuya.", show_alert=True)
                 return
+
+            # First correct answer wins. This conditional state transition is the
+            # authority: two simultaneous correct callbacks cannot both award rewards.
+            claimed = await session.execute(
+                update(GameEncounter)
+                .where(
+                    GameEncounter.id == encounter_id,
+                    GameEncounter.status == "active",
+                    GameEncounter.expires_at > now,
+                )
+                .values(status="captured")
+            )
+            if claimed.rowcount != 1:
+                await session.commit()
+                await callback.answer("Alguien llegó antes. 😭", show_alert=True)
+                return
+
             profile = await MemberRepository().get_or_create_game_profile(
                 session, callback.from_user.id, encounter.chat_id, commit=False
             )
@@ -257,16 +275,17 @@ class GameModule(BotModule):
             else:
                 owned.copies += 1
             progress = capture_reward(profile, owned)
-            profile.points = max(0, profile.points + progress.points_gained)
-            profile.updated_at = datetime.utcnow()
-            session.add(PointTransaction(
-                user_id=callback.from_user.id, chat_id=encounter.chat_id,
-                amount=progress.points_gained, reason="Captura de waifu",
-                reference_type="encounter", reference_id=encounter.id,
-            ))
-            encounter.status = "captured"
+            balance = await MemberRepository().add_points(
+                session,
+                user_id=callback.from_user.id,
+                chat_id=encounter.chat_id,
+                amount=progress.points_gained,
+                reason="Captura de waifu",
+                reference_type="encounter",
+                reference_id=encounter.id,
+                commit=False,
+            )
             await session.commit()
-            balance = profile.points
         await callback.message.edit_text(
             f"🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n"
             f"✨ Clase {encounter.rarity} · colección ×{owned.copies}\n⭐ +{progress.points_gained} puntos · saldo: {balance}"
