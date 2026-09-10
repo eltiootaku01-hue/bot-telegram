@@ -1,9 +1,11 @@
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 
 from app.core.module import BotModule
 
 
 class ModuleRegistry:
+    """Owns module composition and lifecycle registration for one bot process."""
+
     def __init__(self, dispatcher: Dispatcher) -> None:
         self.dispatcher = dispatcher
         self.modules: dict[str, BotModule] = {}
@@ -15,7 +17,7 @@ class ModuleRegistry:
         self.modules[module.name] = module
         self.dispatcher.include_router(module.router)
 
-    def attach_lifecycle(self, bot: Bot) -> None:
+    def attach_lifecycle(self) -> None:
         for module in self.modules.values():
             self.dispatcher.startup.register(module.on_startup)
             self.dispatcher.shutdown.register(module.on_shutdown)
