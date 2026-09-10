@@ -7,13 +7,13 @@ from sqlalchemy import select
 
 from app.db.database import Database
 from app.db.models import Chat, GameEncounter
-from app.game.catalog import CHARACTERS
+from app.game.catalog import wild_characters
 from app.game.encounters import new_encounter
 from app.ui.game_keyboards import encounter_keyboard
 
 
 class WildWaifuScheduler:
-    """Creates occasional group encounters and expires them without exposing answers."""
+    """Creates occasional group encounters, strictly capped at class B."""
 
     def __init__(self, bot: Bot, database: Database) -> None:
         self.bot = bot
@@ -48,52 +48,47 @@ class WildWaifuScheduler:
 
     async def _group_ids(self) -> list[int]:
         async with self.database.sessions() as session:
-            result = await session.scalars(
-                select(Chat.id).where(Chat.type.in_(["group", "supergroup"]))
-            )
+            result = await session.scalars(select(Chat.id).where(Chat.type.in_(["group", "supergroup"])))
             return list(result)
 
     async def spawn(self, chat_id: int) -> None:
-        character = random.choice(list(CHARACTERS.values()))
+        characters = wild_characters()
+        if not characters:
+            return
+        character = random.choice(characters)
         encounter = new_encounter(character)
         expires = encounter.expires_at
-        question = encounter.question
-        if question:
+
+        if encounter.question:
             options = ["Ryuuji", "Kitamura", "Ami"]
             text = (
                 "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
-                f"👤 <b>{character.name}</b> · clase B\n"
-                "🧠 <b>Pregunta de nicho:</b> ¿Cómo se llama el protagonista masculino de Toradora!?\n"
+                f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
+                f"🧠 <b>Pregunta de nicho:</b> {encounter.question}\n"
                 "⚠️ Solo tenés <b>una oportunidad</b>."
             )
-            answer = "ryuuji"
-            rarity = "B"
         else:
-            options = ["🏃 Capturar"]
+            options = [character.name]
             text = (
                 "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
-                f"👤 <b>{character.name}</b> · clase C\n"
-                "⚡ ¡Capturala antes de que desaparezca!"
+                f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
+                "⚡ ¡Elegí su nombre antes de que desaparezca!"
             )
-            answer = "capture"
-            rarity = "C"
 
         record = GameEncounter(
             id=encounter.id,
             chat_id=chat_id,
             character_id=character.id,
-            rarity=rarity,
-            question=question,
-            answer=answer,
+            rarity=character.rarity.value,
+            question=encounter.question,
+            answer=encounter.answer,
             expires_at=expires,
         )
         async with self.database.sessions() as session:
             session.add(record)
             await session.commit()
 
-        sent = await self.bot.send_message(
-            chat_id, text, reply_markup=encounter_keyboard(encounter.id, options)
-        )
+        sent = await self.bot.send_message(chat_id, text, reply_markup=encounter_keyboard(encounter.id, options))
         async with self.database.sessions() as session:
             saved = await session.get(GameEncounter, encounter.id)
             if saved is not None:
@@ -111,8 +106,6 @@ class WildWaifuScheduler:
             encounter.status = "expired"
             await session.commit()
         try:
-            await self.bot.edit_message_text(
-                chat_id=chat_id, message_id=message_id, text="😭 La waifu se fue 😭"
-            )
+            await self.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="😭 La waifu se fue")
         except Exception:
             return
