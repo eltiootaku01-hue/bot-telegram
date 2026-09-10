@@ -11,7 +11,6 @@ from bot_ia.librarian.models import CatalogEntry, SourceMetadata, SourceType
 class LibraryPipelineTests(unittest.TestCase):
     def test_inventory_discovers_docx_and_extracts_text(self):
         import tempfile
-
         with tempfile.TemporaryDirectory() as directory:
             tmp_path = Path(directory)
             docx = tmp_path / "personajes.docx"
@@ -23,7 +22,6 @@ class LibraryPipelineTests(unittest.TestCase):
             ).encode("utf-8")
             with ZipFile(docx, "w") as archive:
                 archive.writestr("word/document.xml", xml)
-
             entries = SourceInventory(tmp_path).discover("one_neko_punch")
             self.assertEqual(1, len(entries))
             self.assertIs(entries[0].metadata.source_type, SourceType.CHARACTER)
@@ -33,23 +31,8 @@ class LibraryPipelineTests(unittest.TestCase):
     def _character_entry(self):
         content = "# Personajes\n\n### Kuro\nProtagonista de One Neko Punch.\n\n### Anzu\nMentora.\n"
         version = sha256(content.encode("utf-8")).hexdigest()
-        metadata = SourceMetadata(
-            "personajes",
-            SourceType.CHARACTER,
-            AuthorityLevel.INTERNAL_CANON,
-            SourceStatus.VALIDATED,
-            CanonStatus.CANON,
-        )
-        record = SourceRecord(
-            "personajes",
-            "one_neko_punch",
-            metadata.source_type.value,
-            metadata.authority,
-            metadata.status,
-            Path("personajes.md"),
-            version,
-            metadata.canon_status,
-        )
+        metadata = SourceMetadata("personajes", SourceType.CHARACTER, AuthorityLevel.INTERNAL_CANON, SourceStatus.VALIDATED, CanonStatus.CANON)
+        record = SourceRecord("personajes", "one_neko_punch", metadata.source_type.value, metadata.authority, metadata.status, Path("personajes.md"), version, metadata.canon_status)
         return CatalogEntry(record, metadata, content, version)
 
     def test_flat_character_source_indexes_heading_entities(self):
