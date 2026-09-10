@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, String, UniqueConstraint
+from sqlalchemy import BigInteger, DateTime, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models import Base
@@ -19,5 +19,5 @@ class ForumTopic(Base):
     thread_id: Mapped[int] = mapped_column(BigInteger)
     bot_identity: Mapped[str] = mapped_column(String(32), default="")
     enabled: Mapped[bool] = mapped_column(default=True)
-    created_at: Mapped[datetime] = mapped_column(datetime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(datetime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
