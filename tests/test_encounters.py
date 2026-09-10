@@ -30,4 +30,4 @@ def test_common_wild_encounter_is_immediate_capture() -> None:
     assert encounter.character.rarity.value == "D"
     assert encounter.question is None
     assert encounter.answer == encounter.character.name
-    assert encounter_options(encounter) == ["Anya"]
+    assert encounter_options(encounter) == [encounter.character.name]
