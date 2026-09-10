@@ -71,10 +71,6 @@ def _build_universe_runtime(config: RuntimeConfig) -> tuple[UniverseRegistry, tu
     registry = UniverseRegistry()
     universes: list[UniverseRuntime] = []
     for universe in config.universes:
-        # Future novels may be declared in runtime.toml before their local
-        # folders exist. Do not let an unconfigured project block another one.
-        if not universe.root_path.is_dir():
-            continue
         definition = UniverseDefinition(
             universe_id=universe.universe_id,
             display_name=universe.display_name,
@@ -83,7 +79,12 @@ def _build_universe_runtime(config: RuntimeConfig) -> tuple[UniverseRegistry, tu
             language=universe.language,
         )
         registry.register(definition)
-        entries = SourceInventory(definition.root_path).discover(definition.universe_id)
+        # A declared project can be selectable before its canon folder exists.
+        # Missing folders have zero evidence, never invented evidence.
+        if universe.root_path.is_dir():
+            entries = SourceInventory(definition.root_path).discover(definition.universe_id)
+        else:
+            entries = ()
         universes.append(UniverseRuntime(definition, entries, EntityIndex(entries)))
     return registry, tuple(universes)
 
