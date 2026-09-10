@@ -16,6 +16,7 @@ from bot_ia.providers import ProviderManager, ProviderRequest, ProviderResponse,
 
 from .application import ApplicationRequest
 from .evidence_gate import EvidenceGate
+from .local_response import build_local_response
 from .models import BrainResult, RouteDecision
 from .ollie import OllieGuideBuilder
 
@@ -69,6 +70,8 @@ class LocalWorkflow:
             model=provider_model,
             fallback_provider=fallback_provider,
         )
+        self._response_cache: dict[tuple[str, str, str], ProviderResponse] = {}
+        self._response_cache_limit = 64
 
     def execute(self, request: ApplicationRequest, brain: BrainResult, decision: RouteDecision) -> LocalExecution:
         if brain.universe_id is None:
@@ -153,6 +156,23 @@ class LocalWorkflow:
                 agent = replace(agent, answer=provider_response.output_text, output_contract=contract)
             else:
                 agent = replace(agent, answer=provider_response.output_text)
+        else:
+            source_names = tuple(
+                entry.record.path.rsplit("/", 1)[-1]
+                for entry in self._entries.get(brain.universe_id, ())
+            )
+            local_text = build_local_response(
+                brain.intent,
+                brain.normalized.original,
+                self._universe_display_name(brain.universe_id),
+                source_names,
+            )
+            if local_text:
+                if contract is not None:
+                    contract = replace(contract, answer=local_text)
+                    agent = replace(agent, answer=local_text, output_contract=contract)
+                else:
+                    agent = replace(agent, answer=local_text)
 
         if contract is not None:
             validation = contract.validate()
@@ -182,22 +202,26 @@ class LocalWorkflow:
         return LocalExecution(text, searched, evidence, context, agent, resolution, provider_response)
 
     def _run_local_provider(self, decision: RouteDecision, brain: BrainResult, agent: AgentResult, context: ContextPack) -> ProviderResponse | None:
-        # SEARCH is deliberately provider-free: EvidenceGate is authoritative
-        # for factual answers. Calling an LLM here would waste quota/latency and
-        # could produce an output that is discarded immediately afterwards.
         if self._provider_manager is None or not decision.requires_llm:
             return None
 
         config = self._provider_config
+        context_key = context.text or "(no local context available)"
+        cache_key = (config.provider_id, brain.normalized.normalized, context_key)
+        cached = self._response_cache.get(cache_key)
+        if cached is not None:
+            return replace(cached, request_id=f"cache:{cached.request_id}")
+
         provider_input = (
+            "You are IA-chan, a warm Spanish-speaking coauthoring assistant.\n"
+            "Answer naturally and directly. Keep the conversation coherent with the user's wording.\n"
+            "Do not mention internal agents, routing, briefs, or provider mechanics unless asked.\n"
+            "Use the supplied project context as the source of truth.\n"
+            "Never invent established project facts; label inference, uncertainty, and new creative proposals clearly.\n"
+            "If the request is creative, you may create new material, but do not silently turn it into canon.\n\n"
             f"UNIVERSE: {brain.universe_id}\n"
             f"INTENT: {brain.intent.value}\n\n"
-            "RULES:\n"
-            "- Do not invent established facts.\n"
-            "- Distinguish established facts from inference and creative proposals.\n"
-            "- Treat the supplied context as the source of truth for the project.\n"
-            "- Never claim to have consulted a source that was not supplied.\n\n"
-            f"CONTEXT:\n{context.text or '(no local context available)'}\n\n"
+            f"CONTEXT:\n{context_key}\n\n"
             f"USER REQUEST:\n{brain.normalized.original}"
         )
         provider_request = ProviderRequest(
@@ -209,11 +233,19 @@ class LocalWorkflow:
             f"{config.provider_id}:{brain.normalized.normalized}",
             decision.reason,
         )
-        return self._provider_manager.execute(
+        response = self._provider_manager.execute(
             decision,
             provider_request,
             fallback_provider=config.fallback_provider,
         ).response
+        if response.status is ProviderStatus.SUCCESS and response.output_text:
+            if len(self._response_cache) >= self._response_cache_limit:
+                self._response_cache.pop(next(iter(self._response_cache)))
+            self._response_cache[cache_key] = response
+        return response
+
+    def _universe_display_name(self, universe_id: str) -> str | None:
+        return universe_id
 
     def _preferred_sources(self, brain: BrainResult) -> tuple[str, ...]:
         if brain.universe_id is None:
