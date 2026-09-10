@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
@@ -10,8 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import DurableJob
 
 
+DEFAULT_MAX_ATTEMPTS = 5
+DEFAULT_BACKOFF_SECONDS = (5, 30, 120, 600, 1800)
+
+
 class JobQueue:
-    """Persistent one-shot jobs with deduplication and retry state."""
+    """Persistent one-shot jobs with deduplication, recovery and bounded retries."""
 
     async def enqueue(
         self,
@@ -41,6 +45,39 @@ class JobQueue:
             return existing
         await session.refresh(job)
         return job
+
+    async def recover_stale(
+        self,
+        session: AsyncSession,
+        *,
+        timeout_seconds: int = 300,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    ) -> int:
+        """Return abandoned processing jobs to the queue or permanently fail them."""
+        cutoff = datetime.utcnow() - timedelta(seconds=timeout_seconds)
+        now = datetime.utcnow()
+        result = await session.scalars(
+            select(DurableJob).where(
+                DurableJob.status == "processing",
+                DurableJob.locked_at.is_not(None),
+                DurableJob.locked_at < cutoff,
+            )
+        )
+        jobs = list(result)
+        for job in jobs:
+            if job.attempts >= max_attempts:
+                job.status = "failed"
+                job.last_error = "Job abandoned after maximum recovery attempts"
+            else:
+                delay = DEFAULT_BACKOFF_SECONDS[min(job.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
+                job.status = "pending"
+                job.run_at = now + timedelta(seconds=delay)
+                job.last_error = "Recovered stale processing job"
+            job.locked_at = None
+            job.updated_at = now
+        if jobs:
+            await session.commit()
+        return len(jobs)
 
     async def claim(self, session: AsyncSession, *, job_type: str | None = None) -> DurableJob | None:
         now = datetime.utcnow()
@@ -87,13 +124,21 @@ class JobQueue:
         error: str,
         *,
         retry_at: datetime | None = None,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     ) -> None:
         now = datetime.utcnow()
+        job = await session.get(DurableJob, job_id)
+        if job is None:
+            return
+        if retry_at is None and job.attempts < max_attempts:
+            delay = DEFAULT_BACKOFF_SECONDS[min(job.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
+            retry_at = now + timedelta(seconds=delay)
+        permanent = job.attempts >= max_attempts and retry_at is None
         await session.execute(
             update(DurableJob)
             .where(DurableJob.id == job_id)
             .values(
-                status="pending" if retry_at else "failed",
+                status="failed" if permanent else "pending",
                 run_at=retry_at or now,
                 locked_at=None,
                 last_error=error[:4000],
