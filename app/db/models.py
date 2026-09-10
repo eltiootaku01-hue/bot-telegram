@@ -172,6 +172,7 @@ class RequestStatus(StrEnum):
 
 class FanRequest(Base):
     __tablename__ = "fan_requests"
+    __table_args__ = (UniqueConstraint("user_id", "chat_id", "source_message_id", name="uq_fan_request_source"),)
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(BigInteger)
@@ -196,7 +197,6 @@ class BotSetting(Base):
 
 
 class DomainEvent(Base):
-    """Durable event envelope shared by all bot identities."""
     __tablename__ = "domain_events"
     __table_args__ = (UniqueConstraint("event_id", name="uq_domain_event_id"),)
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -214,7 +214,6 @@ class DomainEvent(Base):
 
 
 class DurableJob(Base):
-    """Persistent one-shot work item; dedupe_key makes retries idempotent."""
     __tablename__ = "durable_jobs"
     __table_args__ = (UniqueConstraint("dedupe_key", name="uq_durable_job_dedupe"),)
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
