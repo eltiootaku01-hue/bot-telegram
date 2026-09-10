@@ -18,7 +18,7 @@ from app.game.encounter_store import EncounterStore
 from app.game.encounters import Encounter, encounter_options
 from app.game.engine import GameEngine
 from app.game.fusion import fuse_collection
-from app.game.progression import capture_reward, collection_status
+from app.game.progression import apply_capture_progression, collection_status
 from app.game.wild_scheduler import WildWaifuScheduler
 from app.ui.game_keyboards import combat_keyboard, fusion_keyboard, game_hub_keyboard, gacha_keyboard
 
@@ -264,15 +264,14 @@ class GameModule(BotModule):
             profile = await MemberRepository().get_or_create_game_profile(
                 session, callback.from_user.id, encounter.chat_id, commit=False
             )
-            owned = await session.scalar(select(GameCollection).where(
-                GameCollection.profile_id == profile.id, GameCollection.character_id == character.id,
-            ))
-            if owned is None:
-                owned = GameCollection(profile_id=profile.id, character_id=character.id, rarity=encounter.rarity)
-                session.add(owned)
-            else:
-                owned.copies += 1
-            progress = capture_reward(profile, owned)
+            owned, progress = await apply_capture_progression(
+                session,
+                profile_id=profile.id,
+                user_id=callback.from_user.id,
+                chat_id=encounter.chat_id,
+                character_id=character.id,
+                rarity=encounter.rarity,
+            )
             balance = await MemberRepository().add_points(
                 session,
                 user_id=callback.from_user.id,
