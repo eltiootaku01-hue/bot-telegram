@@ -26,7 +26,7 @@ def expand_scene_sketch(sketch: str, *, max_questions: int = 20) -> str:
         "3. ¿Qué acaba de ocurrir que rompe la normalidad?",
         "4. ¿A quién ayuda o salva Kuro, y qué sabemos de esa persona?",
         "5. ¿Quién es esa persona y qué sabemos de ella?",
-        "6. ¿Por qué Kuro decide intervenir en lugar de continuar caminando?",
+        "6. ¿Por qué Kuro decide actuar en lugar de continuar caminando?",
         "7. ¿Kuro actúa por instinto, curiosidad, miedo, empatía, hambre, obligación u otro motivo?",
         "8. ¿Kuro tiene algún sentimiento previo hacia esa persona?",
         "9. ¿La persona reconoce a Kuro, le teme, confía en ella o no sabe quién es?",
