@@ -6,7 +6,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    pass
+    __tablename__ = "base"
 
 
 class User(Base):
@@ -129,6 +129,7 @@ class MediaAsset(Base):
     source_chat_id: Mapped[int] = mapped_column(BigInteger)
     source_message_id: Mapped[int] = mapped_column(BigInteger)
     media_type: Mapped[str] = mapped_column(String(32), default="photo")
+    request_id: Mapped[int | None] = mapped_column(ForeignKey("fan_requests.id", ondelete="SET NULL"))
     character_id: Mapped[str | None] = mapped_column(String(100))
     anime: Mapped[str | None] = mapped_column(String(255))
     tags: Mapped[str] = mapped_column(String(2000), default="")
