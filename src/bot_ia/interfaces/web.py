@@ -64,7 +64,7 @@ class WebApi:
             "agent_id": response.decision.agent_id,
             "searched": bool(getattr(execution, "searched", False)),
             "provider": provider,
-            "external_api_authorized": response.decision.external_api_authorized,
+            "external_api_authorized": bool(getattr(response.decision, "external_api_authorized", False)),
         }
 
 
