@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from bot_ia.core.models import RouteDecision
 
 from .adapters import BaseProvider
-from .errors import ProviderError, ProviderDisabledError
+from .errors import ProviderError, ProviderDisabledError, ProviderRemoteError
 from .health import ProviderHealthRecord
 from .health_classifier import classify_provider_error
 from .models import FailureClass, ProviderRequest, ProviderResponse, ProviderStatus, ProviderUsage
@@ -75,7 +75,6 @@ class ProviderManager:
 
             if not getattr(provider, "enabled", True):
                 continue
-
             if not self._available(provider_id, account_id):
                 continue
 
@@ -101,13 +100,9 @@ class ProviderManager:
         result: list[tuple[str, str | None]] = []
 
         def add_provider(provider_id: str, preferred_account: str | None = None) -> None:
-            # An explicit account is a hard selection. Other accounts may only
-            # be considered when the caller explicitly supplies them through
-            # fallback_accounts.
             if preferred_account is not None:
                 result.append((provider_id, preferred_account))
                 return
-
             for account_id in self._account_providers:
                 if account_id[0] == provider_id:
                     result.append((provider_id, account_id[1]))
@@ -154,7 +149,15 @@ class ProviderManager:
 
     def _call(self, request: ProviderRequest, attempts: list[str], provider: BaseProvider) -> ProviderResponse:
         attempts.append(self._attempt_name(request.provider, request.account_id))
-        response = provider.generate(request)
+        try:
+            response = provider.generate(request)
+        except ProviderError:
+            raise
+        except Exception as error:
+            # A third-party/custom adapter must never crash the workflow or
+            # bypass fallback. Convert unexpected adapter failures to a typed
+            # provider error while keeping the original exception private.
+            raise ProviderRemoteError("provider adapter failed unexpectedly") from error
         self._record_success(request, response)
         if len(attempts) > 1:
             return ProviderResponse(

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
@@ -104,6 +104,20 @@ class BotApplication:
             )
         )
 
+        # A first-turn universe change can succeed before a session exists.
+        # Materialize the new session only after the Brain validates the target.
+        if (
+            state is None
+            and brain.state_status == "updated"
+            and brain.universe_id is not None
+        ):
+            state = SessionState(
+                f"telegram:{request.user_id}:{request.conversation_id}",
+                brain.universe_id,
+                datetime.now(timezone.utc) + timedelta(hours=8),
+            )
+            brain = replace(brain, state=state)
+
         decision = self._router.decide(brain)
 
         if brain.state is not None:
@@ -114,10 +128,6 @@ class BotApplication:
             )
 
         execution = None
-
-        # The current LocalWorkflow requires a resolved universe. Local and
-        # clarification routes can nevertheless be universe-independent, so
-        # skip the workflow only for those routes when no universe exists.
         workflow_required = (
             self._executor is not None
             and not (
@@ -127,11 +137,7 @@ class BotApplication:
         )
         if workflow_required:
             if hasattr(self._executor, "execute"):
-                execution = self._executor.execute(
-                    request,
-                    brain,
-                    decision,
-                )
+                execution = self._executor.execute(request, brain, decision)
             else:
                 execution = self._executor(brain, decision)
 
@@ -156,14 +162,10 @@ class BotApplication:
                 if decision.reason != "state change rejected"
                 else f"Cambio de estado rechazado: {decision.clarification}."
             )
-
         if decision.route is Route.CLARIFICATION:
             return decision.clarification or "Necesito una aclaración para continuar."
-
         if decision.route is Route.SEARCH:
             return "La búsqueda local está preparada para recuperar evidencia."
-
         if decision.route is Route.AGENT:
             return f"El expediente está preparado para el agente {decision.agent_id}."
-
         return f"La solicitud está preparada para el proveedor del agente {decision.agent_id}."

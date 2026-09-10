@@ -5,21 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from bot_ia.config import (
-    RuntimeConfig,
-    RuntimeRegistry,
-    load_default_runtime_config,
-)
+from bot_ia.config import RuntimeConfig, RuntimeRegistry, load_default_runtime_config
 from bot_ia.contracts import UniverseDefinition, UniverseRegistry
-from bot_ia.core.application import (
-    BotApplication,
-    InMemorySessionStore,
-)
+from bot_ia.core.application import BotApplication, InMemorySessionStore
 from bot_ia.core.brain import LocalBrain
 from bot_ia.core.local_workflow import LocalWorkflow
 from bot_ia.core.router import Router
 from bot_ia.librarian import EntityIndex, SourceInventory
 from bot_ia.librarian.models import CatalogEntry
+from bot_ia.memory import MemoryStore
 from bot_ia.providers import ProviderManager, build_provider_manager
 
 
@@ -37,12 +31,12 @@ class RuntimeComponents:
     universe_registry: UniverseRegistry
     universes: tuple[UniverseRuntime, ...]
     provider_manager: ProviderManager
+    memory_store: MemoryStore
 
     def universe(self, universe_id: str) -> UniverseRuntime:
         for universe in self.universes:
             if universe.definition.universe_id == universe_id:
                 return universe
-
         raise KeyError(f"universe not configured: {universe_id}")
 
     def build_application(
@@ -57,23 +51,19 @@ class RuntimeComponents:
             universe.definition.universe_id: universe.entries
             for universe in self.universes
         }
-
         entity_indexes_by_universe = {
             universe.definition.universe_id: universe.entity_index
             for universe in self.universes
         }
 
-        def candidate_provider(
-            universe_id: str,
-        ) -> tuple:
-            return self.universe(universe_id).entity_index.for_universe(
-                universe_id
-            )
+        def candidate_provider(universe_id: str) -> tuple:
+            return self.universe(universe_id).entity_index.for_universe(universe_id)
 
         workflow = LocalWorkflow(
             entries_by_universe,
             entity_indexes=entity_indexes_by_universe,
             provider_manager=self.provider_manager,
+            memory_store=self.memory_store,
             provider_config=provider_config,
         )
 
@@ -101,13 +91,11 @@ def _build_universe_runtime(
             spoiler_policy=universe.spoiler_policy,
             language=universe.language,
         )
-
         registry.register(definition)
 
         inventory = SourceInventory(definition.root_path)
         entries = inventory.discover(definition.universe_id)
         entity_index = EntityIndex(entries)
-
         universes.append(
             UniverseRuntime(
                 definition=definition,
@@ -126,7 +114,6 @@ def build_runtime(
     transports=None,
 ) -> RuntimeComponents:
     config = load_default_runtime_config(project_root)
-
     registry = RuntimeRegistry(config)
     universe_registry, universes = _build_universe_runtime(config)
 
@@ -135,6 +122,7 @@ def build_runtime(
         key_loader=key_loader,
         transports=transports,
     )
+    memory_store = MemoryStore(project_root, universe_registry)
 
     return RuntimeComponents(
         config=config,
@@ -142,6 +130,5 @@ def build_runtime(
         universe_registry=universe_registry,
         universes=universes,
         provider_manager=provider_manager,
+        memory_store=memory_store,
     )
-
-

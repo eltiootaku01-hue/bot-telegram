@@ -69,10 +69,13 @@ class Phase9IntegrationTests(unittest.TestCase):
         self.assertEqual("opinion", opinion.response_type.value)
         self.assertEqual("proposal", proposal.response_type.value)
 
-    def test_missing_evidence_remains_uncertain(self) -> None:
-        contract = self.handle("¿Quién es Nadie?").execution.agent_result.output_contract
+    def test_missing_evidence_fails_closed(self) -> None:
+        response = self.handle("¿Quién es Nadie?")
+        contract = response.execution.agent_result.output_contract
         self.assertFalse(contract.evidence_sufficient)
-        self.assertIn("factual_evidence_insufficient", contract.validate().issues)
+        self.assertEqual("contract_validation_failed", contract.uncertainty)
+        self.assertTrue(contract.needs_clarification)
+        self.assertEqual("Necesito una aclaración para continuar.", response.text)
 
     def test_authorized_memory_enters_context_and_unapproved_memory_does_not(self) -> None:
         approved = self.memory.propose(universe_id="alpha_world", user_id="u1", conversation_id="c1", memory_type=MemoryType.PREFERENCE, content="Kuro favorito", source="user", provenance="test")
