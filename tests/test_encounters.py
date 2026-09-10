@@ -29,5 +29,5 @@ def test_common_wild_encounter_is_immediate_capture() -> None:
     encounter = new_encounter(get_character("anya"), datetime(2026, 1, 1))
     assert encounter.character.rarity.value == "D"
     assert encounter.question is None
-    assert encounter.answer == "capture"
+    assert encounter.answer == encounter.character.name
     assert encounter_options(encounter) == ["Anya"]
