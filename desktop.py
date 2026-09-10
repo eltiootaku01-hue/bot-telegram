@@ -17,13 +17,12 @@ if SRC.is_dir():
 from bot_ia.config.dotenv import load_dotenv
 from bot_ia.core.application import ApplicationRequest
 from bot_ia.core.context_destinations import get_context_destination, list_context_destinations
+from bot_ia.core.context_selection import available_context_sources, select_context_sources
 from bot_ia.core.context_sharing import build_shared_context
-from bot_ia.core.creative_assist import expand_scene_sketch
 from bot_ia.runtime import build_runtime
 
-
 MENU_ACTIONS = {
-    "📖 Novela": "Quiero trabajar en One Neko Punch.",
+    "📖 Novela": "Quiero trabajar en la novela activa.",
     "📚 Biblioteca": "¿Qué información y documentos tengo disponibles en la biblioteca local?",
     "🧭 Continuidad": "Quiero revisar la continuidad de lo que estamos escribiendo y saber dónde quedamos.",
     "💡 Ideas": "Quiero ideas para continuar la novela usando la continuidad y personajes establecidos.",
@@ -60,12 +59,11 @@ class BotIADesktop:
     def _build_ui(self) -> None:
         self.root.columnconfigure(1, weight=1)
         self.root.rowconfigure(1, weight=1)
-
         header = ttk.Frame(self.root, padding=14)
         header.grid(row=0, column=0, columnspan=2, sticky="ew")
         header.columnconfigure(1, weight=1)
         ttk.Label(header, text="🤖 BOT-IA", font=("Segoe UI", 22, "bold")).grid(row=0, column=0, sticky="w")
-        self.active_label = ttk.Label(header, text="NOVELA ACTIVA: One Neko Punch", font=("Segoe UI", 11, "bold"))
+        self.active_label = ttk.Label(header, text="NOVELA ACTIVA", font=("Segoe UI", 11, "bold"))
         self.active_label.grid(row=0, column=1, sticky="w", padx=20)
         self.telegram_button = ttk.Button(header, text="▶ Iniciar en Telegram", command=self.start_telegram)
         self.telegram_button.grid(row=0, column=2, sticky="e")
@@ -82,13 +80,11 @@ class BotIADesktop:
         center.grid(row=1, column=1, sticky="nsew")
         center.columnconfigure(0, weight=1)
         center.rowconfigure(0, weight=1)
-
         self.chat = tk.Text(center, wrap="word", state="disabled", font=("Segoe UI", 11), padx=12, pady=12)
         self.chat.grid(row=0, column=0, sticky="nsew")
         scrollbar = ttk.Scrollbar(center, orient="vertical", command=self.chat.yview)
         scrollbar.grid(row=0, column=1, sticky="ns")
         self.chat.configure(yscrollcommand=scrollbar.set)
-
         composer = ttk.Frame(center, padding=(0, 10, 0, 0))
         composer.grid(row=1, column=0, columnspan=2, sticky="ew")
         composer.columnconfigure(0, weight=1)
@@ -96,11 +92,9 @@ class BotIADesktop:
         self.input.grid(row=0, column=0, sticky="ew")
         self.input.bind("<Control-Return>", lambda _event: self.send())
         ttk.Button(composer, text="Enviar", command=self.send).grid(row=0, column=1, sticky="ns", padx=(8, 0))
-
         self.api_authorized = tk.BooleanVar(value=False)
         ttk.Checkbutton(composer, text="🔐 Autorizar API sólo para esta consulta", variable=self.api_authorized).grid(row=1, column=0, sticky="w", pady=(6, 0))
         ttk.Label(composer, text="Ctrl+Enter = enviar | API desactivada por defecto", foreground="#666").grid(row=1, column=1, sticky="e", pady=(6, 0))
-
         dashboard = ttk.LabelFrame(center, text="Estado", padding=8)
         dashboard.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(10, 0))
         for col in range(3):
@@ -165,57 +159,109 @@ class BotIADesktop:
             self.input.insert("1.0", action)
             self.send()
 
+    def _context_source_label(self, execution, source_id: str) -> str:
+        for source in execution.evidence.sources:
+            if source.entry.metadata.source_id == source_id:
+                return f"{source_id} — {source.entry.record.path.name}"
+        return source_id
+
     def share_context(self) -> None:
-        """Prepara contexto local y ofrece destinos aprobados; nunca envía el contexto."""
+        """Permite seleccionar sólo evidencia ya recuperada; nunca descubre ni envía archivos."""
         if self.last_execution is None:
             self._append("BOT-IA", "🔗 Todavía no hay una consulta procesada con evidencia para compartir. Primero realiza una consulta.")
             return
-        try:
-            shared = build_shared_context(self.last_execution)
-        except Exception as error:
-            self._append("BOT-IA", f"No pude preparar el contexto de forma segura: {error}")
+        execution = self.last_execution
+        source_ids = available_context_sources(execution)
+        if not source_ids:
+            self._append("BOT-IA", "🔗 La última consulta no recuperó fuentes compartibles. No se puede fabricar contexto adicional.")
             return
 
         preview = tk.Toplevel(self.root)
         preview.title("BOT-IA — Compartir contexto")
-        preview.geometry("900x680")
+        preview.geometry("920x720")
         preview.transient(self.root)
         preview.columnconfigure(0, weight=1)
-        preview.rowconfigure(1, weight=1)
-        ttk.Label(preview, text="🔗 CONTEXTO PARA IA EXTERNA", font=("Segoe UI", 15, "bold")).grid(row=0, column=0, sticky="w", padx=12, pady=10)
+        preview.rowconfigure(2, weight=0)
+        ttk.Label(preview, text="🔗 CONTEXTO PARA IA EXTERNA", font=("Segoe UI", 15, "bold")).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
+        ttk.Label(preview, text=f"Universo activo: {execution.evidence.query.universe_id}  |  Sólo se puede compartir evidencia recuperada por esta consulta.").grid(row=1, column=0, sticky="w", padx=12, pady=(0, 8))
+
+        selector = ttk.LabelFrame(preview, text="Fuentes recuperadas — selecciona qué saldrá del paquete", padding=10)
+        selector.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 8))
+        variables: dict[str, tk.BooleanVar] = {}
+        for row, source_id in enumerate(source_ids):
+            variable = tk.BooleanVar(value=True)
+            variables[source_id] = variable
+            ttk.Checkbutton(selector, text=self._context_source_label(execution, source_id), variable=variable).grid(row=row, column=0, sticky="w", pady=2)
+
         text = tk.Text(preview, wrap="word", font=("Consolas", 10))
-        text.grid(row=1, column=0, sticky="nsew", padx=12)
-        text.insert("1.0", shared.text)
-        text.configure(state="disabled")
+        text.grid(row=3, column=0, sticky="nsew", padx=12)
+        preview.rowconfigure(3, weight=1)
         buttons = ttk.Frame(preview, padding=12)
-        buttons.grid(row=2, column=0, sticky="ew")
-        ttk.Label(buttons, text=f"Universo: {shared.universe_id} | Fuentes: {len(shared.source_ids)} | Confianza: {shared.evidence_confidence} | Redacciones: {shared.redactions}").pack(side="left")
+        buttons.grid(row=4, column=0, sticky="ew")
+        status = ttk.Label(buttons, text="")
+        status.pack(side="left")
+        state = {"shared": None}
+
+        def selected_execution():
+            selected = tuple(source_id for source_id, variable in variables.items() if variable.get())
+            if not selected:
+                raise ValueError("Selecciona al menos una fuente de evidencia.")
+            return select_context_sources(execution, selected)
+
+        def refresh_preview() -> None:
+            try:
+                selected = selected_execution()
+                shared = build_shared_context(selected)
+                state["shared"] = shared
+                text.configure(state="normal")
+                text.delete("1.0", "end")
+                text.insert("1.0", shared.text)
+                text.configure(state="disabled")
+                status.configure(text=f"Seleccionadas: {len(shared.source_ids)}/{len(source_ids)} | Confianza: {shared.evidence_confidence} | Redacciones: {shared.redactions}")
+            except ValueError as error:
+                state["shared"] = None
+                text.configure(state="normal")
+                text.delete("1.0", "end")
+                text.insert("1.0", str(error))
+                text.configure(state="disabled")
+                status.configure(text="No se puede compartir todavía.")
 
         def copy_context(destination_id: str | None = None) -> None:
+            shared = state["shared"]
+            if shared is None:
+                messagebox.showwarning("BOT-IA", "Selecciona al menos una fuente y revisa el paquete antes de copiarlo.", parent=preview)
+                return
             self.root.clipboard_clear()
             self.root.clipboard_append(shared.as_external_prompt())
             self.root.update()
             if destination_id is not None:
                 destination = get_context_destination(destination_id)
                 webbrowser.open_new_tab(destination.url)
-                self._append("BOT-IA", f"🔗 Contexto copiado. Abrí {destination.display_name}; pega el contenido cuando estés listo. BOT-IA no envió el contexto por red.")
+                self._append("BOT-IA", f"🔗 Contexto seleccionado copiado. Abrí {destination.display_name}; pega el contenido cuando estés listo. BOT-IA no envió el contexto por red.")
             else:
-                self._append("BOT-IA", "🔗 Contexto copiado al portapapeles. Revísalo antes de pegarlo en una IA externa.")
+                self._append("BOT-IA", "🔗 Contexto seleccionado copiado al portapapeles. Revísalo antes de pegarlo en una IA externa.")
             preview.destroy()
 
         def export_json() -> None:
+            shared = state["shared"]
+            if shared is None:
+                messagebox.showwarning("BOT-IA", "Selecciona al menos una fuente y revisa el paquete antes de exportarlo.", parent=preview)
+                return
             from tkinter import filedialog
             destination = filedialog.asksaveasfilename(parent=preview, title="Exportar paquete de contexto", defaultextension=".json", filetypes=(("JSON", "*.json"), ("Todos los archivos", "*.*")))
             if not destination:
                 return
             Path(destination).write_text(shared.as_json(), encoding="utf-8")
-            self._append("BOT-IA", f"📦 Paquete de contexto exportado: {Path(destination).name}")
+            self._append("BOT-IA", f"📦 Paquete de contexto seleccionado exportado: {Path(destination).name}")
 
+        for variable in variables.values():
+            variable.trace_add("write", lambda *_args: refresh_preview())
         ttk.Button(buttons, text="📋 Copiar contexto", command=copy_context).pack(side="right", padx=(8, 0))
         for destination in reversed(list_context_destinations()):
             ttk.Button(buttons, text=f"🚀 Copiar + abrir {destination.display_name}", command=lambda d=destination.destination_id: copy_context(d)).pack(side="right", padx=(8, 0))
         ttk.Button(buttons, text="📦 Exportar JSON", command=export_json).pack(side="right", padx=(8, 0))
         ttk.Button(buttons, text="Cancelar", command=preview.destroy).pack(side="right")
+        refresh_preview()
 
     def show_api_status(self) -> None:
         health = getattr(self.runtime.provider_manager, "_health", {})

@@ -96,7 +96,11 @@ def build_shared_context(
         raise ValueError("max_chars must be at least 1000")
 
     evidence = execution.evidence
-    source_ids = tuple(source.entry.metadata.source_id for source in evidence.sources)
+    source_ids_list = [source.entry.metadata.source_id for source in evidence.sources]
+    for fragment in evidence.fragments:
+        if fragment.source_id not in source_ids_list:
+            source_ids_list.append(fragment.source_id)
+    source_ids = tuple(source_ids_list)
     lines: list[str] = [
         "BOT-IA — CONTEXTO COMPARTIDO",
         "",
