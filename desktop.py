@@ -7,6 +7,7 @@ import sys
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
+import webbrowser
 
 ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 SRC = ROOT / "src"
@@ -164,7 +165,7 @@ class BotIADesktop:
             self.send()
 
     def share_context(self) -> None:
-        """Prepara y copia sólo evidencia recuperada; nunca hace una llamada de red."""
+        """Prepara contexto local y ofrece copiarlo o abrir ChatGPT; nunca hace una llamada de red."""
         if self.last_execution is None:
             self._append("BOT-IA", "🔗 Todavía no hay una consulta procesada con evidencia para compartir. Primero realiza una consulta.")
             return
@@ -176,7 +177,7 @@ class BotIADesktop:
 
         preview = tk.Toplevel(self.root)
         preview.title("BOT-IA — Compartir contexto")
-        preview.geometry("820x620")
+        preview.geometry("900x680")
         preview.transient(self.root)
         preview.columnconfigure(0, weight=1)
         preview.rowconfigure(1, weight=1)
@@ -193,17 +194,39 @@ class BotIADesktop:
         buttons.grid(row=2, column=0, sticky="ew")
         ttk.Label(
             buttons,
-            text="Esto sólo copia el contexto. BOT-IA no envía nada a Internet desde este botón.",
+            text=(
+                f"Universo: {shared.universe_id} | Fuentes: {len(shared.source_ids)} | "
+                f"Confianza: {shared.evidence_confidence} | Redacciones: {shared.redactions}"
+            ),
         ).pack(side="left")
 
-        def copy_context() -> None:
+        def copy_context(open_chatgpt: bool = False) -> None:
             self.root.clipboard_clear()
-            self.root.clipboard_append(shared.text)
+            self.root.clipboard_append(shared.as_external_prompt())
             self.root.update()
-            self._append("BOT-IA", "🔗 Contexto copiado al portapapeles. Revísalo antes de pegarlo en una IA externa.")
+            if open_chatgpt:
+                webbrowser.open_new_tab("https://chatgpt.com/")
+                self._append("BOT-IA", "🔗 Contexto copiado. Abrí ChatGPT en el navegador; pega el contenido cuando estés listo.")
+            else:
+                self._append("BOT-IA", "🔗 Contexto copiado al portapapeles. Revísalo antes de pegarlo en una IA externa.")
             preview.destroy()
 
+        def export_json() -> None:
+            from tkinter import filedialog
+            destination = filedialog.asksaveasfilename(
+                parent=preview,
+                title="Exportar paquete de contexto",
+                defaultextension=".json",
+                filetypes=(("JSON", "*.json"), ("Todos los archivos", "*.*")),
+            )
+            if not destination:
+                return
+            Path(destination).write_text(shared.as_json(), encoding="utf-8")
+            self._append("BOT-IA", f"📦 Paquete de contexto exportado: {Path(destination).name}")
+
         ttk.Button(buttons, text="📋 Copiar contexto", command=copy_context).pack(side="right", padx=(8, 0))
+        ttk.Button(buttons, text="🚀 Copiar + abrir ChatGPT", command=lambda: copy_context(True)).pack(side="right", padx=(8, 0))
+        ttk.Button(buttons, text="📦 Exportar JSON", command=export_json).pack(side="right", padx=(8, 0))
         ttk.Button(buttons, text="Cancelar", command=preview.destroy).pack(side="right")
 
     def show_api_status(self) -> None:
@@ -282,8 +305,4 @@ class BotIADesktop:
 
 
 if __name__ == "__main__":
-    if "--mode" in sys.argv:
-        from bot_ia.__main__ import main
-        main()
-    else:
-        BotIADesktop().run()
+    BotIADesktop().run()
