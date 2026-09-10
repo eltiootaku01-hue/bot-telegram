@@ -1,13 +1,16 @@
 [project]
 name = "bot-ia"
-version = "0.1.0"
-description = "Fundamentos locales y deterministas para BOT-IA"
+version = "1.0.0"
+description = "BOT-IA Knowledge Engine and multi-interface personal bot"
 requires-python = ">=3.14"
 dependencies = []
 
+[project.scripts]
+bot-ia = "bot_ia.__main__:main"
+
 [tool.bot_ia]
-phase = "1C"
-network = false
+phase = "production-runtime"
+network = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
