@@ -137,6 +137,8 @@ class MediaAsset(Base):
     status: Mapped[str] = mapped_column(String(32), default="inbox")
     publish_group: Mapped[bool] = mapped_column(default=False)
     publish_page: Mapped[bool] = mapped_column(default=False)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime)
+    publish_destination: Mapped[str | None] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
