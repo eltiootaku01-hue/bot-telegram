@@ -127,14 +127,25 @@ class EventBus:
         await session.refresh(candidate)
         return candidate
 
-    async def complete(self, session: AsyncSession, event_id: str) -> None:
+    async def complete(
+        self,
+        session: AsyncSession,
+        event_id: str,
+        *,
+        lock_time: datetime | None = None,
+    ) -> bool:
+        """Complete only the claim that currently owns the event lease."""
         now = datetime.utcnow()
-        await session.execute(
+        conditions = [DomainEvent.event_id == event_id, DomainEvent.status == "processing"]
+        if lock_time is not None:
+            conditions.append(DomainEvent.locked_at == lock_time)
+        result = await session.execute(
             update(DomainEvent)
-            .where(DomainEvent.event_id == event_id)
+            .where(*conditions)
             .values(status="completed", completed_at=now, updated_at=now)
         )
         await session.commit()
+        return result.rowcount == 1
 
     async def fail(
         self,
@@ -142,20 +153,26 @@ class EventBus:
         event_id: str,
         error: str,
         *,
+        lock_time: datetime | None = None,
         retry_at: datetime | None = None,
         max_attempts: int = DEFAULT_MAX_ATTEMPTS,
-    ) -> None:
+    ) -> bool:
         now = datetime.utcnow()
         event = await session.scalar(select(DomainEvent).where(DomainEvent.event_id == event_id))
         if event is None:
-            return
+            return False
+        if lock_time is not None and (event.status != "processing" or event.locked_at != lock_time):
+            return False
         if retry_at is None and event.attempts < max_attempts:
             delay = DEFAULT_BACKOFF_SECONDS[min(event.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
             retry_at = now + timedelta(seconds=delay)
         permanent = event.attempts >= max_attempts and retry_at is None
-        await session.execute(
+        conditions = [DomainEvent.event_id == event_id, DomainEvent.status == "processing"]
+        if lock_time is not None:
+            conditions.append(DomainEvent.locked_at == lock_time)
+        result = await session.execute(
             update(DomainEvent)
-            .where(DomainEvent.event_id == event_id)
+            .where(*conditions)
             .values(
                 status="failed" if permanent else "pending",
                 available_at=retry_at or now,
@@ -165,3 +182,4 @@ class EventBus:
             )
         )
         await session.commit()
+        return result.rowcount == 1
