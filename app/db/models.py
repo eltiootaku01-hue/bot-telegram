@@ -33,7 +33,7 @@ class Chat(Base):
 
 
 class UserChat(Base):
-    """Durable membership/activity relationship; game state is kept separate."""
+    """Durable membership/activity relationship; game state stays separate."""
 
     __tablename__ = "user_chats"
     __table_args__ = (UniqueConstraint("user_id", "chat_id", name="uq_user_chat"),)
@@ -63,6 +63,51 @@ class GameProfile(Base):
     coins: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class GameCollection(Base):
+    """A player's owned character; copies handle duplicate pulls."""
+
+    __tablename__ = "game_collection"
+    __table_args__ = (UniqueConstraint("profile_id", "character_id", name="uq_collection_character"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    profile_id: Mapped[int] = mapped_column(ForeignKey("game_profiles.id", ondelete="CASCADE"))
+    character_id: Mapped[str] = mapped_column(String(100))
+    rarity: Mapped[str] = mapped_column(String(32))
+    level: Mapped[int] = mapped_column(Integer, default=1)
+    copies: Mapped[int] = mapped_column(Integer, default=1)
+    obtained_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class GameEncounter(Base):
+    """A timed group encounter. The answer is only evaluated for the clicking user."""
+
+    __tablename__ = "game_encounters"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    character_id: Mapped[str] = mapped_column(String(100))
+    rarity: Mapped[str] = mapped_column(String(32))
+    question: Mapped[str | None] = mapped_column(String(1000))
+    answer: Mapped[str | None] = mapped_column(String(500))
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    message_id: Mapped[int | None] = mapped_column(BigInteger)
+    status: Mapped[str] = mapped_column(String(32), default="active")
+
+
+class GameAttempt(Base):
+    """One attempt per user and encounter, enforced by a DB uniqueness constraint."""
+
+    __tablename__ = "game_attempts"
+    __table_args__ = (UniqueConstraint("encounter_id", "user_id", name="uq_encounter_attempt"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    encounter_id: Mapped[str] = mapped_column(ForeignKey("game_encounters.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(BigInteger)
+    answer: Mapped[str] = mapped_column(String(500))
+    correct: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class BotSetting(Base):
