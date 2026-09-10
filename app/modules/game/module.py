@@ -1,6 +1,6 @@
 import asyncio
 
-from aiogram import F
+from aiogram import Bot, F
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
@@ -50,12 +50,12 @@ class GameModule(BotModule):
         await message.answer("🎮 <b>Zona de juegos</b>", reply_markup=game_hub_keyboard())
 
     async def gacha(self, message: Message) -> None:
-        await message.answer(
-            "🎰 <b>Gacha de personajes</b>\n\nLas ilustraciones y rarezas crecerán por niveles.",
-            reply_markup=gacha_keyboard(),
-        )
+        await message.answer("🎰 <b>Gacha de personajes</b>\n\nLas ilustraciones y rarezas crecerán por niveles.", reply_markup=gacha_keyboard())
 
     async def inventory_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None:
+            await callback.answer("Mensaje no disponible.", show_alert=True)
+            return
         await self._show_inventory(callback.message, callback.from_user.id, callback.message.chat.id)
         await callback.answer()
 
@@ -72,7 +72,7 @@ class GameModule(BotModule):
             lines = [f"🎒 <b>Inventario de {source.from_user.first_name}</b>"]
             for item in rows:
                 character = get_character(item.character_id)
-                lines.append(f"• {character.name} · clase {item.rarity} · Nv.{item.level} · ×{item.copies}")
+                lines.append(f"• {character.name} · clase {item.rarity} · Nv.{item.level} · EXP {item.experience} · ×{item.copies} · Evo.{item.evolution_stage}")
             lines.append("\n⏱️ Esta consulta se borra automáticamente en 2 minutos.")
             text = "\n".join(lines)
         sent = await source.answer(text)
@@ -87,23 +87,21 @@ class GameModule(BotModule):
             pass
 
     async def game_hub(self, callback: CallbackQuery) -> None:
-        await callback.message.edit_text("🎮 <b>Zona de juegos</b>", reply_markup=game_hub_keyboard())
+        if callback.message is not None:
+            await callback.message.edit_text("🎮 <b>Zona de juegos</b>", reply_markup=game_hub_keyboard())
         await callback.answer()
 
     async def combat(self, message: Message) -> None:
         await self._show_combat(message)
 
     async def combat_open(self, callback: CallbackQuery) -> None:
-        await self._show_combat(callback.message)
+        if callback.message is not None:
+            await self._show_combat(callback.message)
         await callback.answer()
 
     async def _show_combat(self, message: Message) -> None:
         taiga = get_character("taiga")
-        await message.answer(
-            f"⚔️ <b>{taiga.name}</b> — {taiga.anime}\n\n"
-            f"⚔️ {taiga.attack_name}\n🛡️ {taiga.defense_name}\n✨ {taiga.special_name}\n\nElegí una acción.",
-            reply_markup=combat_keyboard(),
-        )
+        await message.answer(f"⚔️ <b>{taiga.name}</b> — {taiga.anime}\n\n⚔️ {taiga.attack_name}\n🛡️ {taiga.defense_name}\n✨ {taiga.special_name}\n\nElegí una acción.", reply_markup=combat_keyboard())
 
     async def gacha_roll(self, callback: CallbackQuery) -> None:
         rarity = self.engine.roll_gacha(seed=str(callback.id))
@@ -133,7 +131,8 @@ class GameModule(BotModule):
             if encounter is None:
                 await callback.answer("La waifu ya se fue. 😭", show_alert=True)
                 return
-            options = ["ryuuji", "kitamura", "ami"] if encounter.question else ["capture"]
+            character = get_character(encounter.character_id)
+            options = ["ryuuji", "kitamura", "ami"] if encounter.question else [character.name.lower()]
             if int(index) >= len(options):
                 await callback.answer("Respuesta inválida.", show_alert=True)
                 return
@@ -145,7 +144,6 @@ class GameModule(BotModule):
                 await callback.answer("❌ Fallaste. Esta oportunidad era solo tuya.", show_alert=True)
                 return
             profile = await MemberRepository().get_or_create_game_profile(session, callback.from_user.id, encounter.chat_id)
-            character = get_character(encounter.character_id)
             owned = await session.scalar(select(GameCollection).where(GameCollection.profile_id == profile.id, GameCollection.character_id == character.id))
             if owned is None:
                 session.add(GameCollection(profile_id=profile.id, character_id=character.id, rarity=encounter.rarity))
@@ -153,8 +151,5 @@ class GameModule(BotModule):
                 owned.copies += 1
             encounter.status = "captured"
             await session.commit()
-        await callback.message.edit_text(
-            f"🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n"
-            f"✨ Clase {encounter.rarity} · ahora forma parte de su colección."
-        )
+        await callback.message.edit_text(f"🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n✨ Clase {encounter.rarity} · ahora forma parte de su colección.")
         await callback.answer("¡CAPTURADA! 🎉", show_alert=True)
