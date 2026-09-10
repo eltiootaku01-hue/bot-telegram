@@ -114,7 +114,6 @@ class CamiMediaModule(BotModule):
                 return
             asset.scheduled_at = scheduled_at
             asset.status = "scheduled"
-            await session.commit()
             await self.jobs.enqueue(
                 session,
                 "media.publish",
