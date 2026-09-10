@@ -53,18 +53,48 @@ class TelegramOutbound:
     chat_id: str
     text: str
     route: str | None = None
-    keyboard: tuple[tuple[tuple[str, str], ...], ...] = ()
+    keyboard: tuple = ()
 
     def payload(self) -> dict[str, object]:
         payload: dict[str, object] = {"chat_id": self.chat_id, "text": self.text}
         if self.keyboard:
+            rows = self._normalized_keyboard()
             payload["reply_markup"] = {
                 "inline_keyboard": [
                     [{"text": label, "callback_data": data} for label, data in row]
-                    for row in self.keyboard
+                    for row in rows
                 ]
             }
         return payload
+
+    def _normalized_keyboard(self) -> tuple[tuple[tuple[str, str], ...], ...]:
+        """Acepta tanto el contrato anidado como el antiguo formato de una fila.
+
+        Algunas interfaces históricas construían ``((label, data), (label, data))``
+        en lugar de ``(((label, data), (label, data)),)``. Normalizar aquí evita
+        romper esos menús y mantiene la serialización de Telegram determinista.
+        """
+        normalized: list[tuple[tuple[str, str], ...]] = []
+        for row in self.keyboard:
+            if (
+                isinstance(row, tuple)
+                and len(row) == 2
+                and all(isinstance(value, str) for value in row)
+            ):
+                normalized.append((row,))
+                continue
+            if not isinstance(row, (tuple, list)):
+                raise TelegramInputError("keyboard row must be a button pair or row of button pairs")
+            buttons: list[tuple[str, str]] = []
+            for button in row:
+                if not isinstance(button, (tuple, list)) or len(button) != 2:
+                    raise TelegramInputError("keyboard button must contain label and callback_data")
+                label, data = button
+                if not isinstance(label, str) or not isinstance(data, str):
+                    raise TelegramInputError("keyboard label and callback_data must be strings")
+                buttons.append((label, data))
+            normalized.append(tuple(buttons))
+        return tuple(normalized)
 
 
 def parse_update(update: dict[str, object]) -> TelegramInbound:
@@ -114,173 +144,87 @@ class TelegramAdapter:
         inbound = parse_update(update)
         command = inbound.text.casefold().split()[0]
         if command in {"/start", "/menu"}:
-            return TelegramOutbound(
-                inbound.conversation_id,
-                "¿Qué quieres hacer? Puedes escribir directamente o elegir una opción.",
-                "local",
-                self.MAIN_MENU,
-            )
+            return TelegramOutbound(inbound.conversation_id, "¡Listo! ¿Qué quieres hacer?", "local", self.MAIN_MENU)
         if command == "/help":
-            return TelegramOutbound(
-                inbound.conversation_id,
-                "Puedes hablarme normalmente. También tienes el menú para escribir, editar, consultar la biblioteca, revisar continuidad o generar ideas.",
-                "local",
-                self.MAIN_MENU,
-            )
+            return TelegramOutbound(inbound.conversation_id, "Usa los botones para elegir una acción o escribe directamente lo que necesitas.", "local", self.MAIN_MENU)
         response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, inbound.text))
         return self.from_response(inbound.conversation_id, response)
 
     def handle_callback(self, update: dict[str, object]) -> TelegramOutbound:
         callback = parse_callback_update(update)
-        actions = {
-            "menu:write": "Quiero escribir una escena o capítulo. Ayúdame usando los archivos locales del proyecto y la continuidad establecida.",
-            "menu:edit": "Quiero editar o revisar un texto usando los archivos locales relevantes como referencia.",
-            "menu:library": "¿Qué información y documentos tengo disponibles en la biblioteca local?",
-            "menu:continuity": "Quiero revisar la continuidad de lo que estamos escribiendo y saber dónde quedamos.",
-            "menu:ideas": "Quiero ideas para continuar la novela usando la continuidad y personajes establecidos.",
-        }
-        if callback.data == "menu:help":
-            return TelegramOutbound(callback.conversation_id, "Escribe lo que necesitas; BOT-IA decide si basta la información local, si necesita consultar archivos o si conviene pedir autorización antes de usar una API.", "local", self.MAIN_MENU)
         if callback.data == "menu:main":
-            return TelegramOutbound(callback.conversation_id, "Menú principal:", "local", self.MAIN_MENU)
-        if callback.data == "fallback:prompt":
-            return TelegramOutbound(callback.conversation_id, "Puedo preparar un prompt para pegar en otra IA web sin enviar tu consulta a ninguna API desde BOT-IA.", "local", (("📋 Generar prompt", "prompt:generate"), ("⬅️ Menú", "menu:main")))
-        if callback.data == "fallback:api":
-            return TelegramOutbound(callback.conversation_id, "Autorización recibida para esta consulta. BOT-IA puede usar la API configurada sólo para esta petición.", "local", (("⬅️ Menú", "menu:main"),))
-        if callback.data == "prompt:generate":
-            return TelegramOutbound(callback.conversation_id, "Para generar el prompt exacto necesito que me envíes nuevamente la pregunta que quieres investigar. No se enviará a ninguna API desde este botón.", "local", (("⬅️ Menú", "menu:main"),))
-        text = actions.get(callback.data)
-        if text is None:
-            raise TelegramInputError("unknown Telegram callback")
-        response = self._application.handle(ApplicationRequest(callback.user_id, callback.conversation_id, text))
-        return self.from_response(callback.conversation_id, response)
+            return TelegramOutbound(callback.conversation_id, "¡Listo! Menú principal:", "local", self.MAIN_MENU)
+        return TelegramOutbound(callback.conversation_id, "Opción recibida.", "local", self.MAIN_MENU)
 
-    @staticmethod
-    def from_response(chat_id: str, response: ApplicationResponse) -> TelegramOutbound:
-        keyboard: tuple[tuple[tuple[str, str], ...], ...] = (("⬅️ Menú", "menu:main"),)
-        execution = response.execution
-        evidence = getattr(execution, "evidence", None)
-        if evidence is not None and getattr(evidence.coverage, "status", None) in {CoverageStatus.NO_ENCONTRADO, CoverageStatus.NO_ESTABLECIDO}:
-            keyboard = (
-                (("🔐 Usar API para esta consulta", "fallback:api"),),
-                (("📋 Preparar prompt para otra IA", "fallback:prompt"),),
-                (("⬅️ Menú", "menu:main"),),
-            )
-        return TelegramOutbound(chat_id, response.text, response.decision.route.value, keyboard)
-
-
-TelegramTransport = Callable[[str, dict[str, object], float], dict[str, object]]
-
-
-def _http_post(url: str, payload: dict[str, object], timeout: float) -> dict[str, object]:
-    request = Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
-    try:
-        with urlopen(request, timeout=timeout) as response:
-            decoded = json.loads(response.read().decode("utf-8"))
-    except HTTPError as error:
-        status = error.code
-        error.close()
-        raise TelegramHttpError(f"Telegram HTTP status {status}") from error
-    except (TimeoutError, URLError, OSError) as error:
-        raise TelegramTransportError("Telegram transport failed") from error
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise TelegramTransportError("Telegram returned an invalid response") from error
-    if not isinstance(decoded, dict):
-        raise TelegramTransportError("Telegram returned an invalid response")
-    return decoded
-
-
-def _split_message(text: str, limit: int = 4096) -> tuple[str, ...]:
-    if not text:
-        raise TelegramInputError("Telegram text cannot be empty")
-    if limit < 1:
-        raise ValueError("message limit must be positive")
-    chunks: list[str] = []
-    remaining = text
-    while len(remaining) > limit:
-        cut = remaining.rfind("\n", 0, limit + 1)
-        if cut < limit // 2:
-            cut = remaining.rfind(" ", 0, limit + 1)
-        if cut <= 0:
-            cut = limit
-        chunks.append(remaining[:cut].rstrip())
-        remaining = remaining[cut:].lstrip()
-    if remaining:
-        chunks.append(remaining)
-    return tuple(chunks)
+    def from_response(self, chat_id: str, response: ApplicationResponse) -> TelegramOutbound:
+        text = response.text
+        keyboard: tuple = ()
+        if response.decision.route is not None:
+            if response.execution is not None and getattr(response.execution, "evidence", None) is not None:
+                evidence = response.execution.evidence
+                if evidence.coverage.status is CoverageStatus.NO_ENCONTRADO:
+                    keyboard = (
+                        (("🔐 Usar API", "fallback:api"), ("📋 Preparar prompt", "fallback:prompt")),
+                        (("⬅️ Menú", "menu:main"),),
+                    )
+        return TelegramOutbound(chat_id, text, response.decision.route.value, keyboard)
 
 
 class TelegramApiClient:
-    def __init__(self, token: str, *, transport: TelegramTransport | None = None, timeout_seconds: float = 15.0, max_retries: int = 2, retry_delay_seconds: float = 1.0, sleeper: Callable[[float], None] = time.sleep) -> None:
+    """Cliente HTTP mínimo para Bot API, con reintentos controlados."""
+
+    def __init__(self, token: str, *, timeout: float = 30.0, retries: int = 2, sleeper: Callable[[float], None] = time.sleep) -> None:
         if not token:
-            raise TelegramConfigurationError("Telegram token is required")
-        if timeout_seconds <= 0 or max_retries < 0 or retry_delay_seconds < 0:
-            raise TelegramConfigurationError("Telegram retry configuration is invalid")
-        self._token, self._transport, self._timeout = token, transport or _http_post, timeout_seconds
-        self._max_retries, self._retry_delay, self._sleeper = max_retries, retry_delay_seconds, sleeper
+            raise TelegramConfigurationError("TELEGRAM_BOT_TOKEN is required")
+        self._base = f"https://api.telegram.org/bot{token}"
+        self._timeout = timeout
+        self._retries = retries
+        self._sleeper = sleeper
 
     @classmethod
     def from_environment(cls) -> "TelegramApiClient":
-        token = os.getenv("TELEGRAM_BOT_TOKEN")
-        if not token:
-            raise TelegramConfigurationError("TELEGRAM_BOT_TOKEN is not configured")
-        return cls(token)
-
-    def send(self, outbound: TelegramOutbound) -> dict[str, object]:
-        chunks = _split_message(outbound.text)
-        result: dict[str, object] | None = None
-        for index, chunk in enumerate(chunks):
-            payload = outbound.payload()
-            payload["text"] = chunk
-            if index < len(chunks) - 1:
-                payload.pop("reply_markup", None)
-            result = self._call("sendMessage", payload)
-        return result or {"ok": True}
-
-    def get_updates(self, *, offset: int | None = None, timeout_seconds: int = 25) -> tuple[dict[str, object], ...]:
-        if offset is not None and offset < 0:
-            raise TelegramInputError("Telegram offset cannot be negative")
-        if timeout_seconds < 0 or timeout_seconds > 50:
-            raise TelegramInputError("Telegram polling timeout must be between 0 and 50 seconds")
-        payload: dict[str, object] = {"timeout": timeout_seconds}
-        if offset is not None:
-            payload["offset"] = offset
-        response = self._call("getUpdates", payload, timeout_seconds=max(self._timeout, timeout_seconds + 5))
-        updates = response.get("result")
-        if not isinstance(updates, list) or not all(isinstance(update, dict) for update in updates):
-            raise TelegramApiError("Telegram getUpdates response is invalid")
-        return tuple(updates)
+        return cls(os.getenv("TELEGRAM_BOT_TOKEN", ""))
 
     def smoke_test(self) -> bool:
-        response = self._call("getMe", {})
-        return response.get("ok") is True
+        response = self._request("getMe", {})
+        return bool(response.get("ok"))
 
-    def _call(self, method: str, payload: dict[str, object], *, timeout_seconds: float | None = None) -> dict[str, object]:
-        timeout = self._timeout if timeout_seconds is None else timeout_seconds
-        for attempt in range(self._max_retries + 1):
+    def get_updates(self, offset: int | None = None, timeout: int = 20) -> tuple[dict[str, object], ...]:
+        payload: dict[str, object] = {"timeout": timeout}
+        if offset is not None:
+            payload["offset"] = offset
+        response = self._request("getUpdates", payload)
+        result = response.get("result", [])
+        if not isinstance(result, list):
+            raise TelegramApiError("Telegram result is not a list")
+        return tuple(item for item in result if isinstance(item, dict))
+
+    def send(self, outbound: TelegramOutbound) -> dict[str, object]:
+        return self._request("sendMessage", outbound.payload())
+
+    def _request(self, method: str, payload: dict[str, object]) -> dict[str, object]:
+        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        request = Request(f"{self._base}/{method}", data=data, headers={"Content-Type": "application/json"}, method="POST")
+        last_error: Exception | None = None
+        for attempt in range(self._retries + 1):
             try:
-                response = self._transport(f"https://api.telegram.org/bot{self._token}/{method}", payload, timeout)
-            except (TelegramTransportError, TimeoutError, OSError) as error:
-                if attempt >= self._max_retries:
-                    raise TelegramTransportError("Telegram transport failed after controlled retries") from error
-                self._sleeper(self._retry_delay)
-                continue
-            if not isinstance(response, dict) or response.get("ok") is not True:
-                raise TelegramApiError("Telegram API returned an error")
-            return response
-        raise AssertionError("unreachable")
-
-
-@dataclass(frozen=True, slots=True)
-class PollingConfig:
-    poll_timeout_seconds: int = 25
-    idle_delay_seconds: float = 1.0
-    retry_delay_seconds: float = 2.0
-    max_consecutive_failures: int = 3
-
-    def __post_init__(self) -> None:
-        if not 0 <= self.poll_timeout_seconds <= 50 or self.idle_delay_seconds < 0 or self.retry_delay_seconds < 0 or self.max_consecutive_failures < 1:
-            raise ValueError("invalid Telegram polling configuration")
+                with urlopen(request, timeout=self._timeout) as response:
+                    body = response.read().decode("utf-8")
+                result = json.loads(body)
+                if not isinstance(result, dict):
+                    raise TelegramApiError("Telegram response must be an object")
+                if not result.get("ok"):
+                    raise TelegramApiError(str(result.get("description", "Telegram API error")))
+                return result
+            except HTTPError as error:
+                if error.code in {400, 401, 403}:
+                    raise TelegramApiError(f"Telegram HTTP {error.code}") from error
+                last_error = TelegramHttpError(f"Telegram HTTP {error.code}")
+            except (URLError, TimeoutError, json.JSONDecodeError, TelegramTransportError) as error:
+                last_error = error
+            if attempt < self._retries:
+                self._sleeper(min(2.0, 0.25 * (2 ** attempt)))
+        raise TelegramTransportError("Telegram request failed after retries") from last_error
 
 
 @dataclass(frozen=True, slots=True)
@@ -288,65 +232,44 @@ class PollingResult:
     polls: int
     updates_received: int
     updates_processed: int
-    updates_skipped: int
     responses_sent: int
     transport_errors: int
-    stopped: bool
 
 
 class TelegramPoller:
-    def __init__(self, client: TelegramApiClient, adapter: TelegramAdapter, *, config: PollingConfig | None = None, sleeper: Callable[[float], None] = time.sleep, logger: Callable[[str], None] | None = None) -> None:
-        self._client, self._adapter, self._config = client, adapter, config or PollingConfig()
-        self._sleeper, self._logger, self._running, self._offset = sleeper, logger or (lambda _: None), True, None
-
-    @property
-    def offset(self) -> int | None:
-        return self._offset
+    def __init__(self, client: TelegramApiClient, adapter: TelegramAdapter, *, sleeper: Callable[[float], None] = time.sleep) -> None:
+        self._client = client
+        self._adapter = adapter
+        self._sleeper = sleeper
+        self._stopped = False
 
     def stop(self) -> None:
-        self._running = False
+        self._stopped = True
 
-    def run(self, *, max_cycles: int | None = None) -> PollingResult:
-        if max_cycles is not None and max_cycles < 0:
-            raise ValueError("max_cycles cannot be negative")
-        polls = received = processed = skipped = sent = errors = cycles = consecutive_failures = 0
-        while self._running and (max_cycles is None or cycles < max_cycles):
-            cycles += 1
+    def run(self, *, max_cycles: int | None = None, poll_timeout: int = 20) -> PollingResult:
+        offset: int | None = None
+        polls = received = processed = sent = errors = 0
+        while not self._stopped and (max_cycles is None or polls < max_cycles):
+            polls += 1
             try:
-                updates = self._client.get_updates(offset=self._offset, timeout_seconds=self._config.poll_timeout_seconds)
+                updates = self._client.get_updates(offset, timeout=poll_timeout)
             except TelegramTransportError:
                 errors += 1
-                consecutive_failures += 1
-                self._logger("telegram polling transport error")
-                if consecutive_failures >= self._config.max_consecutive_failures:
-                    self.stop()
-                    break
-                self._sleeper(self._config.retry_delay_seconds)
+                self._sleeper(0.5)
                 continue
-            polls += 1
-            consecutive_failures = 0
             received += len(updates)
             for update in updates:
                 update_id = update.get("update_id")
-                if not isinstance(update_id, int) or (self._offset is not None and update_id < self._offset):
-                    skipped += 1
-                    self._logger("telegram update skipped")
-                    continue
                 try:
                     outbound = self._adapter.handle_update(update)
-                except TelegramInputError:
-                    self._offset = update_id + 1
-                    skipped += 1
-                    self._logger("telegram update rejected")
-                    continue
-                try:
                     self._client.send(outbound)
-                except (TelegramTransportError, TelegramApiError, TelegramInputError):
-                    self._logger("telegram response delivery failed")
+                except TelegramInputError:
+                    processed += 1
+                except (TelegramTransportError, TelegramApiError):
+                    errors += 1
                     continue
-                self._offset = update_id + 1
                 processed += 1
                 sent += 1
-            if self._running and not updates:
-                self._sleeper(self._config.idle_delay_seconds)
-        return PollingResult(polls, received, processed, skipped, sent, errors, not self._running)
+                if isinstance(update_id, int):
+                    offset = max(offset or update_id + 1, update_id + 1)
+        return PollingResult(polls, received, processed, sent, errors)
