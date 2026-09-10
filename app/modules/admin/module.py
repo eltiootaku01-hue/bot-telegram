@@ -1,6 +1,5 @@
 from aiogram import F
 from aiogram.types import CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.module import BotModule
