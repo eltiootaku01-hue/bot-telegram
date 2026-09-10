@@ -114,12 +114,14 @@ class TriviaModule(BotModule):
 
     async def ranking_command(self, message: Message) -> None:
         async with self.database.session() as session:
-            rows = list(await session.scalars(
-                select(GameProfile, User).join(User, User.id == GameProfile.user_id)
+            result = await session.execute(
+                select(GameProfile, User)
+                .join(User, User.id == GameProfile.user_id)
                 .where(GameProfile.chat_id == message.chat.id)
                 .order_by(GameProfile.points.desc())
                 .limit(10)
-            ))
+            )
+            rows = result.all()
         if not rows:
             await message.answer("🏆 Todavía no hay puntos registrados en este grupo.")
             return
