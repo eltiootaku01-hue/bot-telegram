@@ -8,7 +8,15 @@ def cami_media_actions(asset_id: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🏷️ Ponerle tag", callback_data=f"cami:media:tag:{asset_id}"),
         InlineKeyboardButton(text="🗓️ Programar envío", callback_data=f"cami:media:schedule:{asset_id}"),
     )
+    builder.row(InlineKeyboardButton(text="📨 Asociar a pedido", callback_data=f"cami:media:request:{asset_id}"))
     builder.row(InlineKeyboardButton(text="📦 Archivar", callback_data=f"cami:media:archive:{asset_id}"))
+    return builder.as_markup()
+
+
+def cami_pending_requests(requests: list[tuple[int, str]]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for request_id, label in requests:
+        builder.row(InlineKeyboardButton(text=label[:40], callback_data=f"cami:req:link:{request_id}"))
     return builder.as_markup()
 
 
