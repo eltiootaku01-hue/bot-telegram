@@ -11,6 +11,7 @@ from app.modules.chat.module import ChatModule
 from app.modules.game.module import GameModule
 from app.modules.media.module import MediaModule
 from app.modules.system.module import SystemModule
+from app.modules.trivia.module import TriviaModule
 
 
 def build_dispatcher(settings: Settings, identity: BotIdentity) -> tuple[Bot, Dispatcher, Database]:
@@ -30,18 +31,16 @@ def build_dispatcher(settings: Settings, identity: BotIdentity) -> tuple[Bot, Di
     registry = ModuleRegistry(dispatcher)
     registry.register(SystemModule(identity))
 
-    # Keep the first split conservative: each identity only loads the routers it owns.
     if identity is BotIdentity.CARI:
         registry.register(ChatModule())
     elif identity is BotIdentity.SUNNA:
         registry.register(GameModule(database))
+        registry.register(TriviaModule(database))
         registry.register(MediaModule(database))
         registry.register(AdminModule(database))
     elif identity is BotIdentity.CAMI:
         registry.register(AdminModule(database))
     elif identity is BotIdentity.CHIE:
-        # Chie starts as a lightweight coordination surface. Its services will grow
-        # without forcing it to consume every group update handled by Cari/Sunna.
         pass
 
     registry.attach_lifecycle()
