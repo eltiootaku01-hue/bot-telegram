@@ -10,7 +10,7 @@ from .models import EntityCandidate, ReferenceResolution
 
 # "el" sin tilde se excluye deliberadamente: normalmente es artículo y
 # provocaría referencias falsas en frases como "el capítulo" o "el problema".
-_PRONOUNS = frozenset({"ella", "él", "ellas", "ellos", "esa", "eso", "esa", "esta", "este"})
+_PRONOUNS = frozenset({"ella", "él", "ellas", "ellos", "esa", "eso", "esta", "este"})
 
 
 class ReferenceResolver:
