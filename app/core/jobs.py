@@ -25,7 +25,9 @@ class JobQueue:
         *,
         dedupe_key: str,
         run_at: datetime | None = None,
+        commit: bool = True,
     ) -> DurableJob:
+        """Add a job, optionally leaving the transaction to the caller."""
         job = DurableJob(
             job_type=job_type,
             dedupe_key=dedupe_key,
@@ -33,6 +35,9 @@ class JobQueue:
             run_at=run_at or datetime.utcnow(),
         )
         session.add(job)
+        if not commit:
+            await session.flush()
+            return job
         try:
             await session.commit()
         except IntegrityError:
