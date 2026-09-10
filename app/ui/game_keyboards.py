@@ -9,6 +9,7 @@ def game_hub_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🎒 Inventario", callback_data="game:inventory:open"),
     )
     builder.row(InlineKeyboardButton(text="⚔️ Combate", callback_data="game:combat:open"))
+    builder.row(InlineKeyboardButton(text="🧠 Trivia", callback_data="game:trivia:start"))
     return builder.as_markup()
 
 
@@ -32,11 +33,20 @@ def gacha_keyboard() -> InlineKeyboardMarkup:
 def encounter_keyboard(encounter_id: str, options: list[str]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for index, option in enumerate(options):
-        builder.add(
-            InlineKeyboardButton(
-                text=option,
-                callback_data=f"game:encounter:{encounter_id}:answer:{index}",
-            )
-        )
+        builder.add(InlineKeyboardButton(
+            text=option,
+            callback_data=f"game:encounter:{encounter_id}:answer:{index}",
+        ))
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def trivia_keyboard(round_id: int, options: tuple[str, ...]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for index, option in enumerate(options):
+        builder.add(InlineKeyboardButton(
+            text=option,
+            callback_data=f"game:trivia:{round_id}:{index}",
+        ))
     builder.adjust(2)
     return builder.as_markup()
