@@ -43,13 +43,15 @@ class EventBus:
             payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
         )
         session.add(event)
-        if not commit:
-            await session.flush()
-            return envelope
         try:
-            await session.commit()
+            if commit:
+                await session.commit()
+            else:
+                async with session.begin_nested():
+                    await session.flush()
         except IntegrityError:
-            await session.rollback()
+            if commit:
+                await session.rollback()
             existing = await session.scalar(
                 select(DomainEvent).where(DomainEvent.event_id == envelope.event_id)
             )
