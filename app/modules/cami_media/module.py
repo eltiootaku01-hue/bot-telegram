@@ -1,8 +1,6 @@
 from datetime import datetime
-from html import escape
 
 from aiogram import Bot, F
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
 
@@ -12,7 +10,7 @@ from app.core.jobs import JobQueue
 from app.core.module import BotModule
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import FanRequest, MediaAsset, RequestStatus, User
+from app.db.models import FanRequest, MediaAsset, RequestStatus
 from app.services.forum_topics import ForumTopicService
 from app.ui.media_keyboards import (
     cami_media_actions,
@@ -288,67 +286,15 @@ class CamiMediaModule(BotModule):
 
             asset.request_id = request_id
             asset.status = "request_ready"
-            request = await session.get(FanRequest, request_id)
-            if request is None:
-                await session.rollback()
-                await callback.answer("Pedido inválido.", show_alert=True)
-                return
-            request_user = await session.get(User, request.user_id)
-            user_name = escape((request_user.first_name if request_user else "integrante") or "integrante")
-            user_tag = f'<a href="tg://user?id={request.user_id}">{user_name}</a>'
-            group_id = setup.chat_id
-            file_id = asset.telegram_file_id
-            description = request.description
-            await session.commit()
-
-        thread_id = await self.topics.get_thread_id(group_id, "pedidos")
-        if thread_id is None:
-            async with self.database.session() as session:
-                fresh = await session.get(FanRequest, request_id)
-                if fresh and fresh.status == RequestStatus.PROCESSING.value:
-                    fresh.status = RequestStatus.PENDING_ADMIN.value
-                fresh_asset = await session.get(MediaAsset, asset_id)
-                if fresh_asset and fresh_asset.request_id == request_id:
-                    fresh_asset.request_id = None
-                    fresh_asset.status = "cami_inbox"
-                await session.commit()
-            await callback.answer("No encuentro el tema #pedidos.", show_alert=True)
-            return
-        try:
-            await bot.send_photo(
-                group_id,
-                file_id,
-                message_thread_id=thread_id,
-                caption=(
-                    f"🎨 <b>Pedido #{request_id} completado</b>\n"
-                    f"👤 {user_tag}\n"
-                    f"📝 {escape(description)}"
-                ),
+            await self.jobs.enqueue(
+                session,
+                "media.request_publish",
+                {"asset_id": asset_id, "request_id": request_id},
+                dedupe_key=f"media-request:{request_id}",
             )
-        except (TelegramBadRequest, TelegramForbiddenError):
-            async with self.database.session() as session:
-                fresh = await session.get(FanRequest, request_id)
-                if fresh and fresh.status == RequestStatus.PROCESSING.value:
-                    fresh.status = RequestStatus.PENDING_ADMIN.value
-                fresh_asset = await session.get(MediaAsset, asset_id)
-                if fresh_asset and fresh_asset.request_id == request_id:
-                    fresh_asset.request_id = None
-                    fresh_asset.status = "cami_inbox"
-                await session.commit()
-            await callback.answer("Telegram rechazó la publicación; el pedido volvió a pendientes.", show_alert=True)
-            return
 
-        async with self.database.session() as session:
-            fresh = await session.get(FanRequest, request_id)
-            if fresh and fresh.status == RequestStatus.PROCESSING.value:
-                fresh.status = RequestStatus.COMPLETED.value
-                fresh.updated_at = datetime.utcnow()
-            fresh_asset = await session.get(MediaAsset, asset_id)
-            if fresh_asset and fresh_asset.request_id == request_id:
-                fresh_asset.status = "published_request"
-            await session.commit()
         await callback.message.edit_text(
-            f"✅ <b>Pedido #{request_id} enviado a #pedidos.</b>\n"
-            "El integrante quedó etiquetado y el pedido pasó a completado."
+            f"🕒 <b>Pedido #{request_id} puesto en cola.</b>\n"
+            "Cami lo publicará en #pedidos y marcará el pedido como completado cuando Telegram confirme el envío."
         )
-        await callback.answer("Pedido publicado.")
+        await callback.answer("Pedido en cola.")
