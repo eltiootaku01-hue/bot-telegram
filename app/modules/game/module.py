@@ -178,11 +178,21 @@ class GameModule(BotModule):
                 session.add(owned)
             else:
                 owned.copies += 1
-            capture_reward(profile, owned)
+            progress = capture_reward(profile, owned)
+            points = await MemberRepository().add_points(
+                session,
+                user_id=callback.from_user.id,
+                chat_id=encounter.chat_id,
+                amount=progress.points_gained,
+                reason="Captura de waifu",
+                reference_type="encounter",
+                reference_id=encounter.id,
+            )
             encounter.status = "captured"
             await session.commit()
         await callback.message.edit_text(
             f"🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n"
-            f"✨ Clase {encounter.rarity} · ahora forma parte de su colección."
+            f"✨ Clase {encounter.rarity} · colección ×{owned.copies}\n"
+            f"⭐ +{progress.points_gained} puntos · saldo: {points}"
         )
         await callback.answer("¡CAPTURADA! 🎉", show_alert=True)
