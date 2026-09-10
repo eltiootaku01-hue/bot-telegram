@@ -46,7 +46,7 @@ language = "es"
 
         self.assertEqual(data_root.resolve(), config.universe("one_neko_punch").root_path)
 
-    def test_missing_universe_environment_fails_closed(self) -> None:
+    def test_missing_universe_environment_uses_explicit_unconfigured_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             config_dir = root / "config"
@@ -65,8 +65,12 @@ language = "es"
                 encoding="utf-8",
             )
             os.environ.pop("BOT_IA_TEST_MISSING_ROOT", None)
-            with self.assertRaisesRegex(ValueError, "BOT_IA_TEST_MISSING_ROOT"):
-                load_runtime_config(config_dir / "runtime.toml")
+            config = load_runtime_config(config_dir / "runtime.toml")
+
+        path = config.universe("one_neko_punch").root_path
+        self.assertEqual(".unconfigured", path.parent.name)
+        self.assertEqual("BOT_IA_TEST_MISSING_ROOT", path.name)
+        self.assertFalse(path.is_dir())
 
     def test_first_turn_universe_change_creates_session(self) -> None:
         registry = UniverseRegistry()
