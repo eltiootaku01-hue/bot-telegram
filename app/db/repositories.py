@@ -111,23 +111,37 @@ class MemberRepository:
         reason: str, reference_type: str | None = None, reference_id: str | None = None,
         commit: bool = True,
     ) -> int:
-        """Atomically add points and record the ledger entry in the same transaction."""
+        """Atomically add points and make reference-keyed rewards idempotent."""
         if amount < 0:
             raise ValueError("Point amount must not be negative")
         profile = await self.get_or_create_game_profile(session, user_id, chat_id, commit=False)
+        has_reference = reference_type is not None and reference_id is not None
         if amount:
-            await session.execute(
-                update(GameProfile)
-                .where(GameProfile.id == profile.id)
-                .values(points=GameProfile.points + amount, updated_at=datetime.utcnow())
-            )
-            await session.refresh(profile)
-            session.add(PointTransaction(
-                user_id=user_id, chat_id=chat_id, amount=amount, reason=reason,
-                reference_type=reference_type, reference_id=reference_id,
-            ))
-        if commit:
-            await session.commit()
+            try:
+                async with session.begin_nested():
+                    await session.execute(
+                        update(GameProfile)
+                        .where(GameProfile.id == profile.id)
+                        .values(points=GameProfile.points + amount, updated_at=datetime.utcnow())
+                    )
+                    session.add(PointTransaction(
+                        user_id=user_id, chat_id=chat_id, amount=amount, reason=reason,
+                        reference_type=reference_type, reference_id=reference_id,
+                    ))
+                    await session.flush()
+            except IntegrityError:
+                if not has_reference:
+                    raise
+                existing = await session.scalar(select(PointTransaction).where(
+                    PointTransaction.user_id == user_id,
+                    PointTransaction.chat_id == chat_id,
+                    PointTransaction.reference_type == reference_type,
+                    PointTransaction.reference_id == reference_id,
+                ))
+                if existing is None:
+                    raise
+            if commit:
+                await session.commit()
             await session.refresh(profile)
         return profile.points
 
@@ -136,27 +150,43 @@ class MemberRepository:
         reason: str, reference_type: str | None = None, reference_id: str | None = None,
         commit: bool = True,
     ) -> int | None:
-        """Atomically spend points, preventing negative balances under concurrent requests."""
+        """Atomically spend points and make reference-keyed charges idempotent."""
         if amount <= 0:
             raise ValueError("Point cost must be positive")
         profile = await self.get_or_create_game_profile(session, user_id, chat_id, commit=False)
-        result = await session.execute(
-            update(GameProfile)
-            .where(GameProfile.id == profile.id, GameProfile.points >= amount)
-            .values(points=GameProfile.points - amount, updated_at=datetime.utcnow())
-        )
-        if result.rowcount != 1:
+        has_reference = reference_type is not None and reference_id is not None
+        try:
+            async with session.begin_nested():
+                result = await session.execute(
+                    update(GameProfile)
+                    .where(GameProfile.id == profile.id, GameProfile.points >= amount)
+                    .values(points=GameProfile.points - amount, updated_at=datetime.utcnow())
+                )
+                if result.rowcount != 1:
+                    raise _InsufficientPoints
+                session.add(PointTransaction(
+                    user_id=user_id, chat_id=chat_id, amount=-amount, reason=reason,
+                    reference_type=reference_type, reference_id=reference_id,
+                ))
+                await session.flush()
+        except _InsufficientPoints:
             if commit:
                 await session.rollback()
             return None
-        await session.refresh(profile)
-        session.add(PointTransaction(
-            user_id=user_id, chat_id=chat_id, amount=-amount, reason=reason,
-            reference_type=reference_type, reference_id=reference_id,
-        ))
+        except IntegrityError:
+            if not has_reference:
+                raise
+            existing = await session.scalar(select(PointTransaction).where(
+                PointTransaction.user_id == user_id,
+                PointTransaction.chat_id == chat_id,
+                PointTransaction.reference_type == reference_type,
+                PointTransaction.reference_id == reference_id,
+            ))
+            if existing is None:
+                raise
         if commit:
             await session.commit()
-            await session.refresh(profile)
+        await session.refresh(profile)
         return profile.points
 
     @staticmethod
@@ -175,3 +205,7 @@ class MemberRepository:
                 id=chat.id, type=chat.type, title=chat.title, username=chat.username,
                 created_at=now, last_seen_at=now,
             ))
+
+
+class _InsufficientPoints(Exception):
+    pass
