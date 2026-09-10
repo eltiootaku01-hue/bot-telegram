@@ -29,7 +29,7 @@ class WildWaifuScheduler:
 
     async def stop(self) -> None:
         self.stopping = True
-        tasks = [task for task in self.expiry_tasks]
+        tasks = list(self.expiry_tasks)
         if self.task is not None:
             self.task.cancel()
             tasks.append(self.task)
@@ -41,8 +41,7 @@ class WildWaifuScheduler:
     async def _run(self) -> None:
         while not self.stopping:
             await asyncio.sleep(random.randint(60, 600))
-            chats = await self._group_ids()
-            for chat_id in chats:
+            for chat_id in await self._group_ids():
                 task = asyncio.create_task(self.spawn(chat_id), name=f"waifu-{chat_id}")
                 self.expiry_tasks.add(task)
                 task.add_done_callback(self.expiry_tasks.discard)
@@ -55,7 +54,6 @@ class WildWaifuScheduler:
             return list(result)
 
     async def spawn(self, chat_id: int) -> None:
-        # Wild encounters currently cap at class B: rare characters or below.
         character = random.choice(list(CHARACTERS.values()))
         encounter = new_encounter(character)
         expires = encounter.expires_at
@@ -68,6 +66,8 @@ class WildWaifuScheduler:
                 "🧠 <b>Pregunta de nicho:</b> ¿Cómo se llama el protagonista masculino de Toradora!?\n"
                 "⚠️ Solo tenés <b>una oportunidad</b>."
             )
+            answer = "ryuuji"
+            rarity = "B"
         else:
             options = ["🏃 Capturar"]
             text = (
@@ -75,14 +75,16 @@ class WildWaifuScheduler:
                 f"👤 <b>{character.name}</b> · clase C\n"
                 "⚡ ¡Capturala antes de que desaparezca!"
             )
+            answer = "capture"
+            rarity = "C"
 
         record = GameEncounter(
             id=encounter.id,
             chat_id=chat_id,
             character_id=character.id,
-            rarity="B" if question else "C",
+            rarity=rarity,
             question=question,
-            answer="ryuuji" if question else None,
+            answer=answer,
             expires_at=expires,
         )
         async with self.database.sessions() as session:
@@ -90,9 +92,7 @@ class WildWaifuScheduler:
             await session.commit()
 
         sent = await self.bot.send_message(
-            chat_id,
-            text,
-            reply_markup=encounter_keyboard(encounter.id, options),
+            chat_id, text, reply_markup=encounter_keyboard(encounter.id, options)
         )
         async with self.database.sessions() as session:
             saved = await session.get(GameEncounter, encounter.id)
@@ -112,9 +112,7 @@ class WildWaifuScheduler:
             await session.commit()
         try:
             await self.bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=message_id,
-                text="😭 La waifu se fue 😭",
+                chat_id=chat_id, message_id=message_id, text="😭 La waifu se fue 😭"
             )
         except Exception:
             return
