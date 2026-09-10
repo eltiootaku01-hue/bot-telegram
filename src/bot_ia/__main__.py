@@ -7,10 +7,9 @@ from pathlib import Path
 from bot_ia.config.dotenv import load_dotenv
 from bot_ia.core.application import ApplicationRequest
 from bot_ia.interfaces.telegram import TelegramApiClient, TelegramPoller
-from bot_ia.interfaces.telegram_novel_v2 import TelegramNovelV2Adapter
+from bot_ia.interfaces.telegram_projects import TelegramProjectsAdapter
 from bot_ia.interfaces.web import run_web_server
 from bot_ia.runtime import build_runtime
-
 
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
@@ -51,19 +50,12 @@ def _run_console(application, universe_id: str, provider_id: str) -> None:
         print()
 
 
-def _run_telegram(application) -> None:
+def _run_telegram(application, runtime) -> None:
     client = TelegramApiClient.from_environment()
     if not client.smoke_test():
         raise RuntimeError("Telegram getMe check failed")
-    result = TelegramPoller(client, TelegramNovelV2Adapter(application)).run()
-    print(
-        "Telegram detenido:",
-        f"polls={result.polls}",
-        f"received={result.updates_received}",
-        f"processed={result.updates_processed}",
-        f"sent={result.responses_sent}",
-        f"errors={result.transport_errors}",
-    )
+    result = TelegramPoller(client, TelegramProjectsAdapter(application, runtime)).run()
+    print("Telegram detenido:", f"polls={result.polls}", f"received={result.updates_received}", f"processed={result.updates_processed}", f"sent={result.responses_sent}", f"errors={result.transport_errors}")
 
 
 def _run_web(application, host: str, port: int) -> None:
@@ -90,7 +82,7 @@ def main() -> None:
         if args.mode == "console":
             _run_console(application, universe_id, provider_id)
         elif args.mode == "telegram":
-            _run_telegram(application)
+            _run_telegram(application, runtime)
         else:
             _run_web(application, args.host, args.port)
     finally:
