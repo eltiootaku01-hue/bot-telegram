@@ -21,15 +21,14 @@ class IntentRule:
 
 RULES: tuple[IntentRule, ...] = (
     IntentRule(Intent.UNIVERSE_CHANGE, (r"\bcambiar?\b", r"\btrabajar\b.*\buniverso\b", r"\botro universo\b")),
-    IntentRule(Intent.CREATIVE_WRITING, (r"\bescribe\b", r"\bescribir\b", r"\bescena\b", r"\brelato\b", r"\bnarracion\b")),
-    IntentRule(Intent.EDITORIAL_REVIEW, (r"\brevisa\b", r"\brevisar\b", r"\bedita\b", r"\beditar\b", r"\bcorreccion\b")),
-    IntentRule(Intent.EXTERNAL_RESEARCH, (r"\binvestiga\b", r"\binvestigar\b", r"\bbusca en web\b", r"\bfuente externa\b")),
+    IntentRule(Intent.CREATIVE_WRITING, (r"\bescribe\b", r"\bescribir\b", r"\bescena\b", r"\brelato\b", r"\bnarracion\b", r"\bredacta\b", r"\bredactar\b")),
+    IntentRule(Intent.EDITORIAL_REVIEW, (r"\brevisa\b", r"\brevisar\b", r"\bedita\b", r"\beditar\b", r"\bcorreccion\b", r"\bmejor(a|ar)\b.*\btexto\b")),
+    IntentRule(Intent.EXTERNAL_RESEARCH, (r"\binvestiga\b", r"\binvestigar\b", r"\bbusca en web\b", r"\bfuente externa\b", r"\bbusca en internet\b")),
     IntentRule(Intent.CANON, (r"\bcanon\b",)),
-    IntentRule(Intent.CONTINUITY, (r"\bcontinuidad\b", r"\bconsistenc\w*\b")),
-    IntentRule(Intent.CHARACTER, (r"\bquien es\b", r"\bquien es\b", r"\bpersonaje\b", r"\balias\b")),
-    IntentRule(Intent.HELP, (r"^ayuda\b", r"^help\b", r"\bcomo funciona\b", r"\bque puedes hacer\b")),
-    IntentRule(Intent.GREETING, (r"^(hola|buenas|hey|buen dia|buenas tardes|buenas noches)\b",)),
-    # Consultas sobre la biblioteca son metadatos locales: no necesitan LLM ni búsqueda externa.
+    IntentRule(Intent.CONTINUITY, (r"\bcontinuidad\b", r"\bconsistenc\w*\b", r"\bcontinuemos\b", r"\bseguimos\b", r"\bseguir\b.*\bdonde\s+(?:quedamos|estabamos)\b", r"\bdonde\s+(?:quedamos|estabamos)\b")),
+    IntentRule(Intent.CHARACTER, (r"\bquien es\b", r"\bpersonaje\b", r"\balias\b")),
+    IntentRule(Intent.HELP, (r"^ayuda\b", r"^help\b", r"\bcomo funciona\b", r"\bque puedes hacer\b", r"\bme puedes ayudar\b", r"\bme ayudas\b")),
+    IntentRule(Intent.GREETING, (r"^(hola|buenas|hey|buen dia|buenas tardes|buenas noches)\b", r"^(gracias|muchas gracias|genial|perfecto|ok|okay|dale|jaja|jeje|que tal|como estas)\b")),
     IntentRule(Intent.KNOWLEDGE_OVERVIEW, (
         r"\bque (?:informacion|datos|documentacion) tienes\b",
         r"\bque (?:informacion|datos|documentacion) hay\b",
@@ -42,10 +41,9 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule(Intent.IDEA, (
         r"\bque\s+se\s+te\s+ocurre\b", r"\bque\s+ideas\b", r"\bideas\s+para\b",
         r"\bidea\s+para\b", r"\bque\s+podriamos\s+hacer\b", r"\bque\s+podria\s+pasar\b",
-        r"\blluvia\s+de\s+ideas\b", r"\bidea\b",
+        r"\bque\s+podemos\s+hacer\b", r"\blluvia\s+de\s+ideas\b", r"\bidea\b",
     )),
-    IntentRule(Intent.ORGANIZATION, (r"\borganiza\b", r"\borganizar\b", r"\bplanifica\b", r"\bplanificar\b", r"\bordena\b")),
-    # Factual queda al final para que expresiones conversacionales más específicas ganen prioridad.
+    IntentRule(Intent.ORGANIZATION, (r"\borganiza\b", r"\borganizar\b", r"\bplanifica\b", r"\bplanificar\b", r"\bordena\b", r"\bacomoda\b")),
     IntentRule(Intent.FACTUAL, (r"\bque\b", r"\bquien\b", r"\bcuando\b", r"\bdonde\b")),
 )
 
