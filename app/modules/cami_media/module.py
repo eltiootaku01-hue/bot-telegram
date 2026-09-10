@@ -4,8 +4,9 @@ from html import escape
 from aiogram import Bot, F
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import CallbackQuery, Message
-from sqlalchemy import select
+from sqlalchemy import select, update
 
+from app.core.config import get_settings
 from app.core.identity import BotIdentity
 from app.core.jobs import JobQueue
 from app.core.module import BotModule
@@ -13,7 +14,11 @@ from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import FanRequest, MediaAsset, RequestStatus, User
 from app.services.forum_topics import ForumTopicService
-from app.ui.media_keyboards import cami_media_actions, cami_pending_requests, cami_publish_destination
+from app.ui.media_keyboards import (
+    cami_media_actions,
+    cami_pending_requests,
+    cami_publish_destination,
+)
 
 
 class CamiMediaModule(BotModule):
@@ -26,6 +31,7 @@ class CamiMediaModule(BotModule):
         self.database = database
         self.jobs = JobQueue()
         self.topics = ForumTopicService(database)
+        self.settings = get_settings()
 
     def setup(self) -> None:
         self.router.message.register(self.receive_photo, F.photo)
@@ -33,8 +39,14 @@ class CamiMediaModule(BotModule):
         self.router.callback_query.register(self.media_action, F.data.startswith("cami:media:"))
         self.router.callback_query.register(self.link_request, F.data.startswith("cami:req:link:"))
 
+    def _is_media_staff(self, message: Message) -> bool:
+        return bool(
+            message.from_user
+            and (not self.settings.admin_user_id or message.from_user.id == self.settings.admin_user_id)
+        )
+
     async def receive_photo(self, message: Message) -> None:
-        if message.chat.type != "private" or not message.photo:
+        if message.chat.type != "private" or not message.photo or not self._is_media_staff(message):
             return
         photo = message.photo[-1]
         async with self.database.session() as session:
@@ -58,14 +70,21 @@ class CamiMediaModule(BotModule):
         )
 
     async def receive_schedule_or_tags(self, message: Message) -> None:
-        if message.chat.type != "private" or message.from_user is None or not message.text:
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or not message.text
+            or not self._is_media_staff(message)
+        ):
             return
         async with self.database.session() as session:
             asset = await session.scalar(
-                select(MediaAsset).where(
+                select(MediaAsset)
+                .where(
                     MediaAsset.source_chat_id == message.chat.id,
                     MediaAsset.status.in_(["needs_tag", "waiting_schedule"]),
-                ).order_by(MediaAsset.id.desc())
+                )
+                .order_by(MediaAsset.id.desc())
             )
             if asset is None:
                 return
@@ -76,11 +95,15 @@ class CamiMediaModule(BotModule):
                     return
                 asset.character_id = parts[0].lower().replace(" ", "-")
                 asset.anime = parts[1]
-                asset.tags = ",".join(tag.strip().lower() for tag in (parts[2].split(",") if len(parts) > 2 else []))
+                asset.tags = ",".join(
+                    tag.strip().lower() for tag in (parts[2].split(",") if len(parts) > 2 else [])
+                )
                 asset.category = parts[3] if len(parts) > 3 else "waifu"
                 asset.status = "tagged"
                 await session.commit()
-                await message.answer("🏷️ Etiquetas guardadas. El material queda en la biblioteca para decidir su publicación.")
+                await message.answer(
+                    "🏷️ Etiquetas guardadas. El material queda en la biblioteca para decidir su publicación."
+                )
                 return
 
             try:
@@ -106,6 +129,9 @@ class CamiMediaModule(BotModule):
     async def media_action(self, callback: CallbackQuery, bot: Bot) -> None:
         if callback.message is None or callback.data is None:
             await callback.answer("Acción inválida.", show_alert=True)
+            return
+        if not self._is_media_staff(callback.message):
+            await callback.answer("Esta bandeja es privada.", show_alert=True)
             return
         parts = callback.data.split(":")
         if len(parts) < 4:
@@ -150,9 +176,10 @@ class CamiMediaModule(BotModule):
 
             if action == "request":
                 requests = await session.scalars(
-                    select(FanRequest).where(
-                        FanRequest.status.in_([RequestStatus.PENDING_ADMIN.value, RequestStatus.PROCESSING.value])
-                    ).order_by(FanRequest.created_at.asc()).limit(8)
+                    select(FanRequest)
+                    .where(FanRequest.status == RequestStatus.PENDING_ADMIN.value)
+                    .order_by(FanRequest.created_at.asc())
+                    .limit(8)
                 )
                 pending = list(requests)
                 if not pending:
@@ -205,7 +232,12 @@ class CamiMediaModule(BotModule):
         await callback.answer("Acción no implementada.", show_alert=True)
 
     async def link_request(self, callback: CallbackQuery, bot: Bot) -> None:
-        if callback.message is None or callback.data is None or callback.message.chat.type != "private":
+        if (
+            callback.message is None
+            or callback.data is None
+            or callback.message.chat.type != "private"
+            or not self._is_media_staff(callback.message)
+        ):
             await callback.answer("Acción inválida.", show_alert=True)
             return
         parts = callback.data.split(":")
@@ -221,40 +253,63 @@ class CamiMediaModule(BotModule):
 
         async with self.database.session() as session:
             asset = await session.get(MediaAsset, asset_id)
-            request = await session.get(FanRequest, request_id)
-            setup = await session.scalar(select(SetupSession).where(
-                SetupSession.bot_identity == BotIdentity.CHIE.value,
-                SetupSession.status == "configured",
-            ).order_by(SetupSession.id.desc()))
             if asset is None or asset.source_chat_id != callback.message.chat.id:
                 await callback.answer("No encuentro ese material.", show_alert=True)
                 return
-            if request is None or request.status not in {
-                RequestStatus.PENDING_ADMIN.value,
-                RequestStatus.PROCESSING.value,
-            }:
-                await callback.answer("Ese pedido ya no está pendiente.", show_alert=True)
+            if asset.request_id is not None:
+                await callback.answer("Este material ya está asociado a un pedido.", show_alert=True)
                 return
+
+            claimed = await session.execute(
+                update(FanRequest)
+                .where(
+                    FanRequest.id == request_id,
+                    FanRequest.status == RequestStatus.PENDING_ADMIN.value,
+                )
+                .values(status=RequestStatus.PROCESSING.value)
+            )
+            if claimed.rowcount != 1:
+                await session.rollback()
+                await callback.answer("Ese pedido ya fue tomado o completado.", show_alert=True)
+                return
+
+            setup = await session.scalar(
+                select(SetupSession)
+                .where(
+                    SetupSession.bot_identity == BotIdentity.CHIE.value,
+                    SetupSession.status == "configured",
+                )
+                .order_by(SetupSession.id.desc())
+            )
             if setup is None:
+                await session.rollback()
                 await callback.answer("Chie todavía no tiene un grupo configurado.", show_alert=True)
                 return
-            asset.request_id = request.id
+
+            asset.request_id = request_id
             asset.status = "request_ready"
-            request.status = RequestStatus.PROCESSING.value
+            request = await session.get(FanRequest, request_id)
+            if request is None:
+                await session.rollback()
+                await callback.answer("Pedido inválido.", show_alert=True)
+                return
             request_user = await session.get(User, request.user_id)
             user_name = escape((request_user.first_name if request_user else "integrante") or "integrante")
             user_tag = f'<a href="tg://user?id={request.user_id}">{user_name}</a>'
             group_id = setup.chat_id
             file_id = asset.telegram_file_id
             description = request.description
+            await session.commit()
+
         thread_id = await self.topics.get_thread_id(group_id, "pedidos")
         if thread_id is None:
             async with self.database.session() as session:
                 fresh = await session.get(FanRequest, request_id)
-                if fresh:
+                if fresh and fresh.status == RequestStatus.PROCESSING.value:
                     fresh.status = RequestStatus.PENDING_ADMIN.value
                 fresh_asset = await session.get(MediaAsset, asset_id)
-                if fresh_asset:
+                if fresh_asset and fresh_asset.request_id == request_id:
+                    fresh_asset.request_id = None
                     fresh_asset.status = "cami_inbox"
                 await session.commit()
             await callback.answer("No encuentro el tema #pedidos.", show_alert=True)
@@ -273,10 +328,11 @@ class CamiMediaModule(BotModule):
         except (TelegramBadRequest, TelegramForbiddenError):
             async with self.database.session() as session:
                 fresh = await session.get(FanRequest, request_id)
-                if fresh:
+                if fresh and fresh.status == RequestStatus.PROCESSING.value:
                     fresh.status = RequestStatus.PENDING_ADMIN.value
                 fresh_asset = await session.get(MediaAsset, asset_id)
-                if fresh_asset:
+                if fresh_asset and fresh_asset.request_id == request_id:
+                    fresh_asset.request_id = None
                     fresh_asset.status = "cami_inbox"
                 await session.commit()
             await callback.answer("Telegram rechazó la publicación; el pedido volvió a pendientes.", show_alert=True)
@@ -284,11 +340,11 @@ class CamiMediaModule(BotModule):
 
         async with self.database.session() as session:
             fresh = await session.get(FanRequest, request_id)
-            if fresh:
+            if fresh and fresh.status == RequestStatus.PROCESSING.value:
                 fresh.status = RequestStatus.COMPLETED.value
                 fresh.updated_at = datetime.utcnow()
             fresh_asset = await session.get(MediaAsset, asset_id)
-            if fresh_asset:
+            if fresh_asset and fresh_asset.request_id == request_id:
                 fresh_asset.status = "published_request"
             await session.commit()
         await callback.message.edit_text(
