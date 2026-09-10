@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.models import Base
+from app.db import trivia_models  # noqa: F401 - registers trivia tables in metadata
 
 
 class Database:
