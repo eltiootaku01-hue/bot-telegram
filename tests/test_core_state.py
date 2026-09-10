@@ -1,9 +1,12 @@
+from datetime import datetime, timedelta
+
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.events import EventBus
 from app.core.jobs import JobQueue
-from app.db.models import Base
+from app.db.models import Base, DomainEvent, DurableJob
 
 
 @pytest.fixture
@@ -49,3 +52,74 @@ async def test_job_enqueue_is_idempotent(session):
     job = await queue.claim(session)
     assert job is not None
     assert job.attempts == 1
+
+
+@pytest.mark.asyncio
+async def test_transactional_event_dedupe_does_not_force_commit(session):
+    bus = EventBus()
+    first = await bus.publish(
+        session,
+        "fan_request.created",
+        {"request_id": 9},
+        event_id="evt-tx-1",
+        commit=False,
+    )
+    second = await bus.publish(
+        session,
+        "fan_request.created",
+        {"request_id": 9},
+        event_id="evt-tx-1",
+        commit=False,
+    )
+    assert first.event_id == second.event_id == "evt-tx-1"
+
+    await session.rollback()
+    assert await session.scalar(
+        select(DomainEvent).where(DomainEvent.event_id == "evt-tx-1")
+    ) is None
+
+
+@pytest.mark.asyncio
+async def test_transactional_job_dedupe_does_not_force_commit(session):
+    queue = JobQueue()
+    first = await queue.enqueue(
+        session,
+        "media.publish",
+        {"asset_id": 9},
+        dedupe_key="media:9",
+        commit=False,
+    )
+    second = await queue.enqueue(
+        session,
+        "media.publish",
+        {"asset_id": 9},
+        dedupe_key="media:9",
+        commit=False,
+    )
+    assert first.id == second.id
+
+    await session.rollback()
+    assert await session.scalar(
+        select(DurableJob).where(DurableJob.dedupe_key == "media:9")
+    ) is None
+
+
+@pytest.mark.asyncio
+async def test_job_completion_is_fenced_by_lease(session):
+    queue = JobQueue()
+    job = await queue.enqueue(
+        session,
+        "telegram.publish",
+        {"chat_id": 10},
+        dedupe_key="fenced-job",
+    )
+    claimed = await queue.claim(session)
+    assert claimed is not None
+
+    wrong_lock = claimed.locked_at + timedelta(seconds=1)
+    assert await queue.complete(session, job.id, lock_time=wrong_lock) is False
+
+    assert await queue.complete(session, job.id, lock_time=claimed.locked_at) is True
+    refreshed = await session.get(DurableJob, job.id)
+    assert refreshed is not None
+    assert refreshed.status == "completed"
