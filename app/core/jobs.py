@@ -110,14 +110,25 @@ class JobQueue:
         await session.refresh(candidate)
         return candidate
 
-    async def complete(self, session: AsyncSession, job_id: int) -> None:
+    async def complete(
+        self,
+        session: AsyncSession,
+        job_id: int,
+        *,
+        lock_time: datetime | None = None,
+    ) -> bool:
+        """Complete only the claim that currently owns the job lease."""
         now = datetime.utcnow()
-        await session.execute(
+        conditions = [DurableJob.id == job_id, DurableJob.status == "processing"]
+        if lock_time is not None:
+            conditions.append(DurableJob.locked_at == lock_time)
+        result = await session.execute(
             update(DurableJob)
-            .where(DurableJob.id == job_id)
+            .where(*conditions)
             .values(status="completed", completed_at=now, updated_at=now)
         )
         await session.commit()
+        return result.rowcount == 1
 
     async def fail(
         self,
@@ -125,20 +136,26 @@ class JobQueue:
         job_id: int,
         error: str,
         *,
+        lock_time: datetime | None = None,
         retry_at: datetime | None = None,
         max_attempts: int = DEFAULT_MAX_ATTEMPTS,
-    ) -> None:
+    ) -> bool:
         now = datetime.utcnow()
         job = await session.get(DurableJob, job_id)
         if job is None:
-            return
+            return False
+        if lock_time is not None and (job.status != "processing" or job.locked_at != lock_time):
+            return False
         if retry_at is None and job.attempts < max_attempts:
             delay = DEFAULT_BACKOFF_SECONDS[min(job.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
             retry_at = now + timedelta(seconds=delay)
         permanent = job.attempts >= max_attempts and retry_at is None
-        await session.execute(
+        conditions = [DurableJob.id == job_id, DurableJob.status == "processing"]
+        if lock_time is not None:
+            conditions.append(DurableJob.locked_at == lock_time)
+        result = await session.execute(
             update(DurableJob)
-            .where(DurableJob.id == job_id)
+            .where(*conditions)
             .values(
                 status="failed" if permanent else "pending",
                 run_at=retry_at or now,
@@ -148,3 +165,4 @@ class JobQueue:
             )
         )
         await session.commit()
+        return result.rowcount == 1
