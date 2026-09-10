@@ -26,6 +26,10 @@ def _ensure_compatibility(connection) -> None:
         connection.execute(text(
             "ALTER TABLE media_assets ADD COLUMN published_page_message_id BIGINT"
         ))
+    if "published_request_message_id" not in media_columns:
+        connection.execute(text(
+            "ALTER TABLE media_assets ADD COLUMN published_request_message_id BIGINT"
+        ))
 
 
 class Database:
