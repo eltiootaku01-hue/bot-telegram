@@ -38,13 +38,21 @@ class WebApi:
 
         user_id = payload.get("user_id", "web-user")
         conversation_id = payload.get("conversation_id", "web-session")
+        allow_external_api = payload.get("allow_external_api", False)
         if not isinstance(user_id, str) or not user_id.strip():
             raise WebApiError("user_id must be a non-empty string")
         if not isinstance(conversation_id, str) or not conversation_id.strip():
             raise WebApiError("conversation_id must be a non-empty string")
+        if not isinstance(allow_external_api, bool):
+            raise WebApiError("allow_external_api must be a boolean")
 
         response = self._application.handle(
-            ApplicationRequest(user_id.strip(), conversation_id.strip(), message.strip())
+            ApplicationRequest(
+                user_id.strip(),
+                conversation_id.strip(),
+                message.strip(),
+                allow_external_api=allow_external_api,
+            )
         )
         execution = response.execution
         provider_response = getattr(execution, "provider_response", None)
@@ -56,6 +64,7 @@ class WebApi:
             "agent_id": response.decision.agent_id,
             "searched": bool(getattr(execution, "searched", False)),
             "provider": provider,
+            "external_api_authorized": response.decision.external_api_authorized,
         }
 
 
@@ -112,6 +121,7 @@ def openapi_document(base_url: str) -> dict[str, object]:
                         "message": {"type": "string", "description": "User request."},
                         "user_id": {"type": "string", "default": "chatgpt-user"},
                         "conversation_id": {"type": "string", "default": "chatgpt-session"},
+                        "allow_external_api": {"type": "boolean", "default": False, "description": "Explicitly authorize external API research for this request. False keeps BOT-IA local-only."},
                     },
                 },
                 "QueryResponse": {
@@ -124,6 +134,7 @@ def openapi_document(base_url: str) -> dict[str, object]:
                         "agent_id": {"type": ["string", "null"]},
                         "searched": {"type": "boolean"},
                         "provider": {"type": ["string", "null"]},
+                        "external_api_authorized": {"type": "boolean"},
                     },
                 },
             },
