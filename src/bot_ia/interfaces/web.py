@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import hmac
 import json
-import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable
+from typing import Any
 
 from bot_ia.core.application import ApplicationRequest, BotApplication
 
@@ -25,7 +25,9 @@ class WebApi:
     def authorize(self, authorization: str | None) -> bool:
         if self._api_token is None:
             return True
-        return authorization == f"Bearer {self._api_token}"
+        expected = f"Bearer {self._api_token}".encode("utf-8")
+        supplied = (authorization or "").encode("utf-8")
+        return hmac.compare_digest(supplied, expected)
 
     def query(self, payload: object) -> dict[str, object]:
         if not isinstance(payload, dict):
@@ -42,11 +44,7 @@ class WebApi:
             raise WebApiError("conversation_id must be a non-empty string")
 
         response = self._application.handle(
-            ApplicationRequest(
-                user_id.strip(),
-                conversation_id.strip(),
-                message.strip(),
-            )
+            ApplicationRequest(user_id.strip(), conversation_id.strip(), message.strip())
         )
         execution = response.execution
         provider_response = getattr(execution, "provider_response", None)
@@ -87,22 +85,14 @@ def openapi_document(base_url: str) -> dict[str, object]:
                         "required": True,
                         "content": {
                             "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/QueryRequest"
-                                }
+                                "schema": {"$ref": "#/components/schemas/QueryRequest"}
                             }
                         },
                     },
                     "responses": {
                         "200": {
                             "description": "BOT-IA response.",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "$ref": "#/components/schemas/QueryResponse"
-                                    }
-                                }
-                            },
+                            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/QueryResponse"}}},
                         },
                         "400": {"description": "Invalid request."},
                         "401": {"description": "Authentication required."},
@@ -113,12 +103,7 @@ def openapi_document(base_url: str) -> dict[str, object]:
             },
         },
         "components": {
-            "securitySchemes": {
-                "bearerAuth": {
-                    "type": "http",
-                    "scheme": "bearer",
-                }
-            },
+            "securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}},
             "schemas": {
                 "QueryRequest": {
                     "type": "object",
@@ -223,12 +208,7 @@ def run_web_server(
     api_token: str | None = None,
     public_base_url: str | None = None,
 ) -> None:
-    server = create_web_server(
-        WebApi(application, api_token=api_token),
-        host=host,
-        port=port,
-        public_base_url=public_base_url,
-    )
+    server = create_web_server(WebApi(application, api_token=api_token), host=host, port=port, public_base_url=public_base_url)
     print(f"BOT-IA API escuchando en http://{host}:{port}")
     try:
         server.serve_forever()
