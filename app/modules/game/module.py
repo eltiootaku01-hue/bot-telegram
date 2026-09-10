@@ -13,6 +13,7 @@ from app.db.models import GameAttempt, GameCollection, PointTransaction
 from app.db.repositories import MemberRepository
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterStore
+from app.game.encounters import Encounter, encounter_options
 from app.game.engine import GameEngine
 from app.game.fusion import fuse_collection
 from app.game.progression import capture_reward, collection_status
@@ -183,7 +184,14 @@ class GameModule(BotModule):
                 await callback.answer("La waifu ya se fue. 😭", show_alert=True)
                 return
             character = get_character(encounter.character_id)
-            options = ["ryuuji", "kitamura", "ami"] if encounter.question else [character.name.lower()]
+            plan = Encounter(
+                id=encounter.id,
+                character=character,
+                expires_at=encounter.expires_at,
+                question=encounter.question,
+                answer=encounter.answer,
+            )
+            options = encounter_options(plan)
             if int(index) >= len(options):
                 await callback.answer("Respuesta inválida.", show_alert=True)
                 return
