@@ -50,19 +50,21 @@ class JobQueue:
         self,
         session: AsyncSession,
         *,
+        job_type: str | None = None,
         timeout_seconds: int = 300,
         max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     ) -> int:
         """Return abandoned processing jobs to the queue or permanently fail them."""
         cutoff = datetime.utcnow() - timedelta(seconds=timeout_seconds)
         now = datetime.utcnow()
-        result = await session.scalars(
-            select(DurableJob).where(
-                DurableJob.status == "processing",
-                DurableJob.locked_at.is_not(None),
-                DurableJob.locked_at < cutoff,
-            )
+        query = select(DurableJob).where(
+            DurableJob.status == "processing",
+            DurableJob.locked_at.is_not(None),
+            DurableJob.locked_at < cutoff,
         )
+        if job_type is not None:
+            query = query.where(DurableJob.job_type == job_type)
+        result = await session.scalars(query)
         jobs = list(result)
         for job in jobs:
             if job.attempts >= max_attempts:
