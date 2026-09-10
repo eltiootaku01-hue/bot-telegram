@@ -52,9 +52,23 @@ class GameProfile(Base):
     chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
     level: Mapped[int] = mapped_column(Integer, default=1)
     experience: Mapped[int] = mapped_column(Integer, default=0)
+    points: Mapped[int] = mapped_column(Integer, default=0)
     coins: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class PointTransaction(Base):
+    """Auditable point ledger shared by the game and future sibling bots."""
+    __tablename__ = "point_transactions"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    amount: Mapped[int] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(255))
+    reference_type: Mapped[str | None] = mapped_column(String(64))
+    reference_id: Mapped[str | None] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class GameCollection(Base):
@@ -128,7 +142,6 @@ class MediaAsset(Base):
 
 
 class GameCharacterArt(Base):
-    """Maps a Telegram-hosted asset to a character's visual progression stage."""
     __tablename__ = "game_character_art"
     __table_args__ = (UniqueConstraint("character_id", "evolution_stage", name="uq_character_art_stage"),)
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
