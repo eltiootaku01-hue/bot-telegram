@@ -9,7 +9,7 @@ from sqlalchemy import select
 from app.db.database import Database
 from app.db.models import Chat, GameEncounter
 from app.game.catalog import wild_characters
-from app.game.encounters import new_encounter
+from app.game.encounters import encounter_options, new_encounter
 from app.ui.game_keyboards import encounter_keyboard
 
 logger = logging.getLogger(__name__)
@@ -98,12 +98,19 @@ class WildWaifuScheduler:
         character = random.choice(characters)
         encounter = new_encounter(character)
         expires = encounter.expires_at
-        options = [character.name]
-        text = (
-            "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
-            f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
-            "⚡ ¡Elegí su nombre antes de que desaparezca!"
-        )
+        options = encounter_options(encounter)
+        if encounter.question:
+            text = (
+                "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
+                f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
+                f"❓ {encounter.question}"
+            )
+        else:
+            text = (
+                "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
+                f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
+                "⚡ ¡Elegí su nombre antes de que desaparezca!"
+            )
 
         record = GameEncounter(
             id=encounter.id,
