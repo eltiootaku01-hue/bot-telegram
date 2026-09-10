@@ -20,17 +20,22 @@ class GameEngine:
     }
 
     def roll_gacha(self, seed: str | None = None) -> Rarity:
+        """Roll the game's rarity ladder. B+ is only a candidate until owner approval."""
         rng = random.Random(seed)
         roll = rng.random()
-        if roll < 0.005:
-            return Rarity.MYTHIC
-        if roll < 0.03:
-            return Rarity.LEGENDARY
-        if roll < 0.12:
-            return Rarity.EPIC
-        if roll < 0.32:
-            return Rarity.RARE
-        return Rarity.COMMON
+        if roll < 0.0005:
+            return Rarity.SSS
+        if roll < 0.002:
+            return Rarity.SS
+        if roll < 0.007:
+            return Rarity.S
+        if roll < 0.02:
+            return Rarity.A
+        if roll < 0.06:
+            return Rarity.B
+        if roll < 0.30:
+            return Rarity.C
+        return Rarity.D
 
     def combat(
         self,
