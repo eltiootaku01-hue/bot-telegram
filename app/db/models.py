@@ -61,6 +61,12 @@ class GameProfile(Base):
 
 class PointTransaction(Base):
     __tablename__ = "point_transactions"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "chat_id", "reference_type", "reference_id",
+            name="uq_point_transaction_reference",
+        ),
+    )
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(BigInteger)
