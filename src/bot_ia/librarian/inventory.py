@@ -35,6 +35,7 @@ def classify_source_type(path: Path) -> SourceType:
         if directory in parts:
             return source_type
     rules = (
+        (("revisado", "revision", "draft", "borrador"), SourceType.PLANNING),
         (("chapter", "capitulo", "cap "), SourceType.CHAPTER),
         (("character", "personaje"), SourceType.CHARACTER),
         (("one neko punch",), SourceType.CHAPTER),
@@ -57,6 +58,8 @@ def classify_source_metadata(relative: str, path: Path) -> tuple[AuthorityLevel,
     """Clasifica autoridad/estado/canon también para bibliotecas planas."""
     parts = tuple(part.casefold() for part in Path(relative).parts)
     label = path.stem.casefold().replace("_", " ").replace("-", " ")
+    if any(term in label for term in ("revisado", "revision", "draft", "borrador")):
+        return AuthorityLevel.PLAN, SourceStatus.VALIDATED, CanonStatus.NON_CANON
     if "chapters" in parts or "capitulos" in parts or "one neko punch" in label:
         return AuthorityLevel.PRIMARY, SourceStatus.VALIDATED, CanonStatus.CANON
     if "characters" in parts or "personajes" in parts or "world" in parts or "mundo" in parts:
