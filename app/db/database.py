@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -85,9 +86,21 @@ class Database:
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
 
     async def create_schema(self) -> None:
-        async with self.engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-            await connection.run_sync(_ensure_compatibility)
+        """Initialize the shared schema safely when multiple bots start together."""
+        for attempt in range(3):
+            try:
+                async with self.engine.begin() as connection:
+                    await connection.run_sync(Base.metadata.create_all)
+                    await connection.run_sync(_ensure_compatibility)
+                return
+            except OperationalError as exc:
+                message = str(exc).lower()
+                concurrent_schema_race = (
+                    "already exists" in message and "table" in message
+                ) or "database is locked" in message or "database table is locked" in message
+                if not concurrent_schema_race or attempt == 2:
+                    raise
+                await asyncio.sleep(0.1 * (2**attempt))
 
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
