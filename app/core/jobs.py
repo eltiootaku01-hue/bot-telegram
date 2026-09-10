@@ -34,24 +34,32 @@ class JobQueue:
             payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
             run_at=run_at or datetime.utcnow(),
         )
-        session.add(job)
-        try:
-            if commit:
+        if commit:
+            session.add(job)
+            try:
                 await session.commit()
-            else:
-                async with session.begin_nested():
-                    await session.flush()
-        except IntegrityError:
-            if commit:
+            except IntegrityError:
                 await session.rollback()
+                existing = await session.scalar(
+                    select(DurableJob).where(DurableJob.dedupe_key == dedupe_key)
+                )
+                if existing is None:
+                    raise
+                return existing
+            await session.refresh(job)
+            return job
+
+        try:
+            async with session.begin_nested():
+                session.add(job)
+                await session.flush()
+        except IntegrityError:
             existing = await session.scalar(
                 select(DurableJob).where(DurableJob.dedupe_key == dedupe_key)
             )
             if existing is None:
                 raise
             return existing
-        if commit:
-            await session.refresh(job)
         return job
 
     async def recover_stale(
