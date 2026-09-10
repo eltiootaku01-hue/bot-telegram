@@ -19,18 +19,21 @@ También, después de instalar el proyecto:
 bot-ia --mode console
 ```
 
+El proveedor por defecto es Gemini. Puede cambiarse con `BOT_IA_PROVIDER`.
+
 ### Telegram
 
-Configura `TELEGRAM_BOT_TOKEN` como variable de entorno y ejecuta:
+Configura `TELEGRAM_BOT_TOKEN` en `.env` o como variable de entorno y ejecuta:
 
 ```powershell
 $env:PYTHONPATH = "src"
 python -m bot_ia --mode telegram
 ```
 
-El cliente usa long polling, controla offsets, reintentos y errores de
-transporte, y pasa cada mensaje por el mismo `BotApplication` que usa la
-consola y la API web.
+El cliente usa long polling, controla offsets y reintentos, evita perder un
+update cuando falla la entrega de su respuesta y divide respuestas largas para
+respetar el límite de Telegram. Cada mensaje pasa por el mismo `BotApplication`
+que usa la consola y la API web.
 
 ### API web / ChatGPT
 
@@ -66,13 +69,19 @@ Variables relevantes:
 ```text
 BOT_IA_ONE_NEKO_PUNCH_ROOT   Ruta externa al conocimiento de One Neko Punch
 BOT_IA_UNIVERSE              Universo por defecto
-BOT_IA_PROVIDER              Provider por defecto (ollama, gemini, openai...)
+BOT_IA_PROVIDER              Provider por defecto: gemini
+GEMINI_API_KEY               Clave de Gemini
+OPENAI_API_KEY               Clave de OpenAI (si se habilita OpenAI)
 BOT_IA_API_TOKEN              Token Bearer de la API web
 BOT_IA_PUBLIC_BASE_URL        URL HTTPS pública usada en /openapi.json
 BOT_IA_HOST                   Host de la API web
 BOT_IA_PORT                   Puerto de la API web
 TELEGRAM_BOT_TOKEN            Token del bot de Telegram
 ```
+
+BOT-IA carga automáticamente un `.env` local si existe. El archivo real está
+ignorado por Git; usa `.env.example` como plantilla y nunca pongas claves reales
+en el repositorio.
 
 `GET /openapi.json` genera el esquema OpenAPI que puede importarse en una
 acción de un GPT. ChatGPT requiere que la API sea accesible mediante una URL
@@ -82,9 +91,15 @@ una función interna de ChatGPT.
 ## Providers
 
 Los providers se configuran en `config/runtime.toml`. Las credenciales se
-leen exclusivamente desde variables de entorno y nunca deben guardarse en el
-repositorio. Se soportan providers locales y remotos mediante el
-`ProviderManager`, con cuentas, fallback, cooldown y control de errores.
+leen desde variables de entorno y nunca deben guardarse en el repositorio.
+Actualmente Gemini está habilitado por defecto y OpenAI está preparado pero
+desactivado hasta que decidas usarlo. Ollama también está desactivado por
+defecto para no consumir RAM/CPU; si se habilita, la configuración prevista es
+únicamente `qwen3:1b`.
+
+El `ProviderManager` soporta múltiples providers/cuentas, fallback, cooldown,
+salud y control de errores. Añadir otro proveedor no requiere cambiar el
+cerebro, la memoria, el bibliotecario ni las interfaces.
 
 ## Conocimiento y seguridad
 
