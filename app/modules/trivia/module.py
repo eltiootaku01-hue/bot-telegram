@@ -12,7 +12,7 @@ from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import Chat, GameProfile
+from app.db.models import GameProfile
 from app.db.trivia_models import TriviaRound
 from app.game.trivia import TriviaService
 from app.ui.game_keyboards import trivia_keyboard
