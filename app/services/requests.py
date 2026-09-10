@@ -70,6 +70,9 @@ class RequestService:
             commit=False,
         )
         if remaining is None:
+            # The request and any staged ledger mutation belong to the same
+            # business operation: never leave an unpaid request in the session.
+            await session.rollback()
             return None
 
         session.add(
