@@ -14,7 +14,7 @@ from app.core.module import BotModule
 from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import MediaAsset
+from app.db.models import FanRequest, MediaAsset, RequestStatus, User
 from app.services.forum_topics import ForumTopicService
 
 
@@ -37,6 +37,7 @@ class CamiMediaPublisher(BotModule):
     async def on_startup(self, bot: Bot) -> None:
         worker = DurableWorker(self.database, job_queue=self.jobs)
         worker.register_job("media.publish", lambda payload: self.publish(bot, payload))
+        worker.register_job("media.request_publish", lambda payload: self.publish_request(bot, payload))
         self.worker = worker
         self.tasks.start("media-publish-worker", worker.run())
 
@@ -122,6 +123,76 @@ class CamiMediaPublisher(BotModule):
                 current.status = "published"
                 current.updated_at = datetime.utcnow()
                 await session.commit()
+
+    async def publish_request(self, bot: Bot, payload: dict) -> None:
+        asset_id = int(payload["asset_id"])
+        request_id = int(payload["request_id"])
+        async with self.database.session() as session:
+            asset = await session.get(MediaAsset, asset_id)
+            request = await session.get(FanRequest, request_id)
+            if (
+                asset is None
+                or request is None
+                or asset.request_id != request_id
+                or request.status != RequestStatus.PROCESSING.value
+            ):
+                return
+            if asset.published_request_message_id is not None:
+                request.status = RequestStatus.COMPLETED.value
+                asset.status = "published_request"
+                request.updated_at = datetime.utcnow()
+                asset.updated_at = datetime.utcnow()
+                await session.commit()
+                return
+
+            setup = await session.scalar(
+                select(SetupSession)
+                .where(
+                    SetupSession.bot_identity == BotIdentity.CHIE.value,
+                    SetupSession.status == "configured",
+                )
+                .order_by(SetupSession.id.desc())
+            )
+            if setup is None:
+                raise RuntimeError("No configured Chie community")
+            thread_id = await self.topics.get_thread_id(setup.chat_id, "pedidos")
+            if thread_id is None:
+                raise RuntimeError("Configured community has no #pedidos topic")
+            request_user = await session.get(User, request.user_id)
+            user_name = escape((request_user.first_name if request_user else "integrante") or "integrante")
+            user_tag = f'<a href="tg://user?id={request.user_id}">{user_name}</a>'
+            file_id = asset.telegram_file_id
+            description = request.description
+            group_id = setup.chat_id
+
+        try:
+            sent = await bot.send_photo(
+                group_id,
+                file_id,
+                message_thread_id=thread_id,
+                caption=(
+                    f"🎨 <b>Pedido #{request_id} completado</b>\n"
+                    f"👤 {user_tag}\n"
+                    f"📝 {escape(description)}"
+                ),
+            )
+        except (TelegramBadRequest, TelegramForbiddenError) as exc:
+            raise RuntimeError(f"Telegram rejected request publication: {exc}") from exc
+
+        async with self.database.session() as session:
+            asset = await session.get(MediaAsset, asset_id)
+            request = await session.get(FanRequest, request_id)
+            if asset is None or request is None:
+                return
+            if asset.published_request_message_id is None:
+                asset.published_request_message_id = sent.message_id
+            if request.status == RequestStatus.PROCESSING.value:
+                request.status = RequestStatus.COMPLETED.value
+            if asset.request_id == request_id:
+                asset.status = "published_request"
+            request.updated_at = datetime.utcnow()
+            asset.updated_at = datetime.utcnow()
+            await session.commit()
 
     @staticmethod
     def _caption(asset: MediaAsset) -> str:
