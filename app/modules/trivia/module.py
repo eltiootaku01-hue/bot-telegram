@@ -132,14 +132,9 @@ class TriviaModule(BotModule):
         await asyncio.sleep(random.randint(60, 180))
         while True:
             try:
-                async with self.database.session() as session:
-                    chats = list(
-                        await session.scalars(
-                            select(Chat.id).where(Chat.type.in_(["group", "supergroup"]))
-                        )
-                    )
-                if chats:
-                    await self._publish(random.choice(chats))
+                community_chat_id = await self._community_chat_id()
+                if community_chat_id is not None:
+                    await self._publish(community_chat_id)
             except Exception:
                 pass
             await asyncio.sleep(random.randint(1200, 2400))
