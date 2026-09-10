@@ -1,11 +1,14 @@
 """Chie: nervous coordinator and cross-system health identity."""
 
+import asyncio
+
 from app.core.bot import build_dispatcher
 from app.core.config import get_settings
+from app.core.identity import BotIdentity
 
 
 async def run() -> None:
-    bot, dispatcher, database = build_dispatcher(get_settings())
+    bot, dispatcher, database = build_dispatcher(get_settings(), BotIdentity.CHIE)
     await database.create_schema()
     try:
         await dispatcher.start_polling(bot)
@@ -15,5 +18,4 @@ async def run() -> None:
 
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(run())
