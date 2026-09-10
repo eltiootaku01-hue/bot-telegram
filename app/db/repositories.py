@@ -50,21 +50,12 @@ class MemberRepository:
             db_chat.username = chat.username
             db_chat.last_seen_at = now
 
-        link = await session.scalar(
-            select(UserChat).where(UserChat.user_id == user.id, UserChat.chat_id == chat.id)
-        )
+        link = await session.scalar(select(UserChat).where(UserChat.user_id == user.id, UserChat.chat_id == chat.id))
         if link is None:
-            session.add(
-                UserChat(
-                    user_id=user.id,
-                    chat_id=chat.id,
-                    status="member",
-                    message_count=1,
-                    first_seen_at=now,
-                    joined_at=now,
-                    last_seen_at=now,
-                )
-            )
+            session.add(UserChat(
+                user_id=user.id, chat_id=chat.id, status="member", message_count=1,
+                first_seen_at=now, joined_at=now, last_seen_at=now,
+            ))
         else:
             link.message_count += 1
             link.last_seen_at = now
@@ -72,22 +63,13 @@ class MemberRepository:
                 link.status = "member"
                 link.joined_at = link.joined_at or now
                 link.left_at = None
-
         await session.commit()
 
-    async def set_membership(
-        self,
-        session: AsyncSession,
-        user: TgUser,
-        chat: TgChat,
-        status: str,
-    ) -> None:
+    async def set_membership(self, session: AsyncSession, user: TgUser, chat: TgChat, status: str) -> None:
         now = datetime.utcnow()
         await self._ensure_user(session, user, now)
         await self._ensure_chat(session, chat, now)
-        link = await session.scalar(
-            select(UserChat).where(UserChat.user_id == user.id, UserChat.chat_id == chat.id)
-        )
+        link = await session.scalar(select(UserChat).where(UserChat.user_id == user.id, UserChat.chat_id == chat.id))
         if link is None:
             link = UserChat(user_id=user.id, chat_id=chat.id, first_seen_at=now)
             session.add(link)
@@ -101,31 +83,23 @@ class MemberRepository:
         await session.commit()
 
     async def get_or_create_game_profile(
-        self, session: AsyncSession, user_id: int, chat_id: int
+        self, session: AsyncSession, user_id: int, chat_id: int, *, commit: bool = True
     ) -> GameProfile:
-        profile = await session.scalar(
-            select(GameProfile).where(
-                GameProfile.user_id == user_id,
-                GameProfile.chat_id == chat_id,
-            )
-        )
+        profile = await session.scalar(select(GameProfile).where(
+            GameProfile.user_id == user_id, GameProfile.chat_id == chat_id,
+        ))
         if profile is None:
             profile = GameProfile(user_id=user_id, chat_id=chat_id)
             session.add(profile)
-            await session.commit()
-            await session.refresh(profile)
+            await session.flush()
+            if commit:
+                await session.commit()
+                await session.refresh(profile)
         return profile
 
     async def add_points(
-        self,
-        session: AsyncSession,
-        *,
-        user_id: int,
-        chat_id: int,
-        amount: int,
-        reason: str,
-        reference_type: str | None = None,
-        reference_id: str | None = None,
+        self, session: AsyncSession, *, user_id: int, chat_id: int, amount: int,
+        reason: str, reference_type: str | None = None, reference_id: str | None = None,
     ) -> int:
         """Add spendable community points and record an immutable ledger entry."""
         if amount == 0:
@@ -133,29 +107,16 @@ class MemberRepository:
         profile = await self.get_or_create_game_profile(session, user_id, chat_id)
         profile.points = max(0, profile.points + amount)
         profile.updated_at = datetime.utcnow()
-        session.add(
-            PointTransaction(
-                user_id=user_id,
-                chat_id=chat_id,
-                amount=amount,
-                reason=reason,
-                reference_type=reference_type,
-                reference_id=reference_id,
-            )
-        )
+        session.add(PointTransaction(
+            user_id=user_id, chat_id=chat_id, amount=amount, reason=reason,
+            reference_type=reference_type, reference_id=reference_id,
+        ))
         await session.commit()
         return profile.points
 
     async def spend_points(
-        self,
-        session: AsyncSession,
-        *,
-        user_id: int,
-        chat_id: int,
-        amount: int,
-        reason: str,
-        reference_type: str | None = None,
-        reference_id: str | None = None,
+        self, session: AsyncSession, *, user_id: int, chat_id: int, amount: int,
+        reason: str, reference_type: str | None = None, reference_id: str | None = None,
     ) -> int | None:
         if amount <= 0:
             raise ValueError("Point cost must be positive")
@@ -164,45 +125,26 @@ class MemberRepository:
             return None
         profile.points -= amount
         profile.updated_at = datetime.utcnow()
-        session.add(
-            PointTransaction(
-                user_id=user_id,
-                chat_id=chat_id,
-                amount=-amount,
-                reason=reason,
-                reference_type=reference_type,
-                reference_id=reference_id,
-            )
-        )
+        session.add(PointTransaction(
+            user_id=user_id, chat_id=chat_id, amount=-amount, reason=reason,
+            reference_type=reference_type, reference_id=reference_id,
+        ))
         await session.commit()
         return profile.points
 
     @staticmethod
     async def _ensure_user(session: AsyncSession, user: TgUser, now: datetime) -> None:
         if await session.get(User, user.id) is None:
-            session.add(
-                User(
-                    id=user.id,
-                    username=user.username,
-                    first_name=user.first_name,
-                    last_name=user.last_name,
-                    language_code=user.language_code,
-                    is_bot=user.is_bot,
-                    created_at=now,
-                    last_seen_at=now,
-                )
-            )
+            session.add(User(
+                id=user.id, username=user.username, first_name=user.first_name,
+                last_name=user.last_name, language_code=user.language_code,
+                is_bot=user.is_bot, created_at=now, last_seen_at=now,
+            ))
 
     @staticmethod
     async def _ensure_chat(session: AsyncSession, chat: TgChat, now: datetime) -> None:
         if await session.get(Chat, chat.id) is None:
-            session.add(
-                Chat(
-                    id=chat.id,
-                    type=chat.type,
-                    title=chat.title,
-                    username=chat.username,
-                    created_at=now,
-                    last_seen_at=now,
-                )
-            )
+            session.add(Chat(
+                id=chat.id, type=chat.type, title=chat.title, username=chat.username,
+                created_at=now, last_seen_at=now,
+            ))
