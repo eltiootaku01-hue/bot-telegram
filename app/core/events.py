@@ -61,19 +61,21 @@ class EventBus:
         self,
         session: AsyncSession,
         *,
+        event_type: str | None = None,
         timeout_seconds: int = 300,
         max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     ) -> int:
         """Recover events abandoned by a crashed worker."""
         cutoff = datetime.utcnow() - timedelta(seconds=timeout_seconds)
         now = datetime.utcnow()
-        result = await session.scalars(
-            select(DomainEvent).where(
-                DomainEvent.status == "processing",
-                DomainEvent.locked_at.is_not(None),
-                DomainEvent.locked_at < cutoff,
-            )
+        query = select(DomainEvent).where(
+            DomainEvent.status == "processing",
+            DomainEvent.locked_at.is_not(None),
+            DomainEvent.locked_at < cutoff,
         )
+        if event_type is not None:
+            query = query.where(DomainEvent.event_type == event_type)
+        result = await session.scalars(query)
         events = list(result)
         for event in events:
             if event.attempts >= max_attempts:
