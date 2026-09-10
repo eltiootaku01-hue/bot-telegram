@@ -7,7 +7,9 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import GameAttempt, GameCollection, PointTransaction
 from app.db.repositories import MemberRepository
@@ -53,6 +55,18 @@ class GameModule(BotModule):
             await self.wild.stop()
         await super().on_shutdown()
 
+    async def _community_chat_id(self) -> int | None:
+        async with self.database.session() as session:
+            setup = await session.scalar(
+                select(SetupSession.chat_id)
+                .where(
+                    SetupSession.bot_identity == BotIdentity.CHIE.value,
+                    SetupSession.status == "configured",
+                )
+                .order_by(SetupSession.id.desc())
+            )
+            return setup
+
     async def game(self, message: Message) -> None:
         if message.chat.type != "private":
             return
@@ -67,13 +81,21 @@ class GameModule(BotModule):
         if callback.message is None:
             await callback.answer("Mensaje no disponible.", show_alert=True)
             return
-        await self._show_inventory(callback.message, callback.from_user.id, callback.message.chat.id)
+        chat_id = await self._community_chat_id()
+        if chat_id is None:
+            await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
+            return
+        await self._show_inventory(callback.message, callback.from_user.id, chat_id)
         await callback.answer()
 
     async def inventory(self, message: Message) -> None:
         if message.chat.type != "private" or message.from_user is None:
             return
-        await self._show_inventory(message, message.from_user.id, message.chat.id)
+        chat_id = await self._community_chat_id()
+        if chat_id is None:
+            await message.answer("😰 Chie todavía no configuró la comunidad para el juego.")
+            return
+        await self._show_inventory(message, message.from_user.id, chat_id)
 
     async def _show_inventory(self, source: Message, user_id: int, chat_id: int) -> None:
         async with self.database.session() as session:
@@ -117,8 +139,14 @@ class GameModule(BotModule):
         if not character_id or callback.message is None:
             await callback.answer("Fusión inválida.", show_alert=True)
             return
+        chat_id = await self._community_chat_id()
+        if chat_id is None:
+            await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
+            return
         async with self.database.session() as session:
-            profile = await MemberRepository().get_or_create_game_profile(session, callback.from_user.id, callback.message.chat.id)
+            profile = await MemberRepository().get_or_create_game_profile(
+                session, callback.from_user.id, chat_id
+            )
             try:
                 result = await fuse_collection(session, profile_id=profile.id, character_id=character_id)
             except ValueError as exc:
