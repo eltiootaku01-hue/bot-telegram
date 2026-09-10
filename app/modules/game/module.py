@@ -11,7 +11,7 @@ from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import GameAttempt, GameCollection
+from app.db.models import GameAttempt, GameCollection, GameEncounter
 from app.db.repositories import MemberRepository
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterStore
@@ -212,8 +212,6 @@ class GameModule(BotModule):
             if encounter is None or now >= encounter.expires_at or encounter.status != "active":
                 await callback.answer("La waifu ya se fue. 😭", show_alert=True)
                 return
-            # Callback data can be forwarded/replayed from another chat. The encounter
-            # is community-scoped, so never let a foreign message award points here.
             if callback.message.chat.id != encounter.chat_id:
                 await callback.answer("Este encuentro pertenece a otra comunidad. 😰", show_alert=True)
                 return
