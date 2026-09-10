@@ -17,8 +17,8 @@ class Router:
             return RouteDecision(Route.LOCAL, "deterministic local request", result.confidence, result.intent, result.universe_id)
         if result.intent is Intent.EDITORIAL_REVIEW:
             return RouteDecision(
-                Route.LLM,
-                "editorial review uses supplied local context and an explicit writing provider",
+                Route.AGENT,
+                "editorial review uses the editor agent and an explicit writing provider",
                 result.confidence,
                 result.intent,
                 result.universe_id,
