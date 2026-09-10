@@ -8,28 +8,39 @@ Modular Telegram bot built around one rule: **local code first, AI second**.
 2. **Pedidos + imágenes** — request queue, image inbox, metadata/tags and publication ordering. Full administration belongs to the private web panel.
 3. **Juegos** — gacha, collection, progression and Pokémon-like deterministic battles. Interactive buttons live only inside game surfaces.
 
-## Image library / inbox
+## Telegram as a storage vault
 
-A private Telegram channel or group can be configured as the bot's **media inbox** with `MEDIA_STORAGE_CHAT_ID`. Drop or forward images there and the bot records their Telegram `file_id`, source message and initial hashtag tags. The same asset can later be tagged with character/anime/category/rarity and routed to:
+A private Telegram group or channel can be configured as the bot's **media vault/inbox** with `MEDIA_STORAGE_CHAT_ID`. The intended workflow is:
 
-- the game illustration library;
-- the community group;
-- the future private web page/site publisher.
+```text
+Telegram vault
+   ↓
+file_id + message_id + metadata
+   ↓
+local database catalog
+   ↓
+web approval/tagging
+   ├─ game art
+   ├─ community publication
+   └─ future website
+```
 
-The database is the catalog; Telegram stores the original media reference, so the bot does not need to download every image locally.
+Images do not need to be downloaded to the bot's disk just to reuse them. Telegram `file_id` values are designed to be persistent, so the bot can reference the original Telegram media later. This avoids adding an external object-storage service just for the game library.
+
+The vault should be a **dedicated private group/channel**, not the normal community group. The bot can be made administrator there so it receives the full stream of messages needed for the inbox. Telegram documents that bots that are administrators in groups receive all group messages (except messages from other bots). citeturn0search0turn0search1
+
+The normal community chat remains the community chat: Telegram itself keeps the conversation and media there. Our database stores the structured information the bot needs (members, activity counters, game state, media catalog, etc.) instead of duplicating every Telegram message unnecessarily.
 
 ## Wild waifu loop
 
-Groups can receive a random **waifu suelta** alert after a random delay. Public wild encounters are deliberately capped at **B**:
+Groups can receive a random **waifu suelta** alert after a random delay. Public wild encounters are deliberately capped at **C**:
 
 - Class D: common/default encounter; click the character name.
 - Class C: easy encounter; click the character name.
-- Class B: niche anime question with one attempt per user.
-- A wrong answer is shown privately to the clicker through the callback response.
+- B/A/S/SS/SSS: **never appear as normal public wild encounters**.
+- A B+ candidate is routed to a private owner approval request. Most can simply be rejected.
 - A successful capture ends the encounter for the group.
 - After the encounter expires, the buttons disappear and the message becomes `😭 La waifu se fue`.
-
-Classes **A, S, SS and SSS never spawn as normal wild encounters**. They are exceptional drops that first become a private approval request for the owner. Without approval, they cannot enter a player's collection.
 
 ## Character combat identity
 
@@ -54,7 +65,7 @@ Telegram identity/activity is persisted independently from AI. Game profiles, co
 2. Data layer and member persistence.
 3. Three Telegram domains.
 4. Wild waifu encounters + collection safety.
-5. Media inbox and authoritative image catalog.
+5. Media vault and authoritative image catalog.
 6. Full character catalog, copies → EXP → levels → evolution and Pokémon-like battles.
 7. Brain: intent, context, memory, decision policy and tool routing.
 8. Private web administration + publication pipeline.
@@ -62,4 +73,4 @@ Telegram identity/activity is persisted independently from AI. Game profiles, co
 
 ## Run
 
-Copy `.env.example` to `.env`, add the Telegram bot token and private media chat ID, install dependencies and run `python -m app.main`.
+Copy `.env.example` to `.env`, add the Telegram bot token and private media vault chat ID, install dependencies and run `python -m app.main`.
