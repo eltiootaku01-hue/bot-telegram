@@ -50,3 +50,29 @@ def test_supervisor_rejects_parallel_start_requests() -> None:
     result = wait_result(supervisor)
     assert result.error is None
     manager.stop_all()
+
+
+def test_supervisor_preserves_fail_fast_startup_result() -> None:
+    manager = ProcessManager(
+        lambda identity: [
+            sys.executable,
+            "-c",
+            "import sys; print('startup failed', flush=True); sys.exit(9)"
+            if identity == "cari"
+            else "import time; time.sleep(10)",
+        ],
+        grace_seconds=0.05,
+        stop_timeout=0.5,
+    )
+    supervisor = LauncherSupervisor(manager)
+
+    assert supervisor.start_all(("cari", "sunna"))
+    result = wait_result(supervisor)
+
+    assert result.error is None
+    assert result.result is not None
+    assert result.result.started == ()
+    assert result.result.failure is not None
+    assert result.result.failure.identity == "cari"
+    assert result.result.failure.returncode == 9
+    assert "sunna" not in manager.processes
