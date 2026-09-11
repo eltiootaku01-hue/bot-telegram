@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     media_storage_chat_id: int = 0
     publish_page_chat_id: int = 0
 
+    # Global/per-bot AI gates. Features must check these before invoking any LLM.
+    ai_enabled: bool = False
+    ai_enabled_cari: bool | None = None
+    ai_enabled_sunna: bool | None = None
+    ai_enabled_cami: bool | None = None
+    ai_enabled_chie: bool | None = None
+
     # AI provider settings are optional until the Brain actually needs an LLM.
     llm_provider: str = ""
     llm_model: str = ""
@@ -58,6 +65,16 @@ class Settings(BaseSettings):
             "cami": self.bot_link_cami,
             "chie": self.bot_link_chie,
         }.get(identity.lower(), "")
+
+    def ai_for(self, identity: str | BotIdentity) -> bool:
+        name = identity.value if isinstance(identity, BotIdentity) else identity.lower()
+        override = {
+            "cari": self.ai_enabled_cari,
+            "sunna": self.ai_enabled_sunna,
+            "cami": self.ai_enabled_cami,
+            "chie": self.ai_enabled_chie,
+        }.get(name)
+        return self.ai_enabled if override is None else override
 
 
 @lru_cache
