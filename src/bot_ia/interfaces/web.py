@@ -12,16 +12,31 @@ from typing import Any
 from bot_ia.core.application import ApplicationRequest, BotApplication
 
 
+MAX_MESSAGE_CHARS = 24_000
+MAX_ID_CHARS = 128
+
+
 class WebApiError(ValueError):
     """Invalid request sent to the BOT-IA HTTP API."""
+
+
+class ExternalApiAuthorizationError(PermissionError):
+    """The HTTP surface is not configured to authorize external API use."""
 
 
 class WebApi:
     """Small dependency-free JSON API around :class:`BotApplication`."""
 
-    def __init__(self, application: BotApplication, *, api_token: str | None = None) -> None:
+    def __init__(
+        self,
+        application: BotApplication,
+        *,
+        api_token: str | None = None,
+        allow_external_api: bool = False,
+    ) -> None:
         self._application = application
         self._api_token = api_token
+        self._allow_external_api = allow_external_api
 
     def authorize(self, authorization: str | None) -> bool:
         if self._api_token is None:
@@ -36,6 +51,9 @@ class WebApi:
         message = payload.get("message")
         if not isinstance(message, str) or not message.strip():
             raise WebApiError("message is required")
+        message = message.strip()
+        if len(message) > MAX_MESSAGE_CHARS:
+            raise WebApiError(f"message exceeds {MAX_MESSAGE_CHARS} characters")
 
         user_id = payload.get("user_id", "web-user")
         conversation_id = payload.get("conversation_id", "web-session")
@@ -44,14 +62,22 @@ class WebApi:
             raise WebApiError("user_id must be a non-empty string")
         if not isinstance(conversation_id, str) or not conversation_id.strip():
             raise WebApiError("conversation_id must be a non-empty string")
+        user_id = user_id.strip()
+        conversation_id = conversation_id.strip()
+        if len(user_id) > MAX_ID_CHARS:
+            raise WebApiError(f"user_id exceeds {MAX_ID_CHARS} characters")
+        if len(conversation_id) > MAX_ID_CHARS:
+            raise WebApiError(f"conversation_id exceeds {MAX_ID_CHARS} characters")
         if not isinstance(allow_external_api, bool):
             raise WebApiError("allow_external_api must be a boolean")
+        if allow_external_api and not self._allow_external_api:
+            raise ExternalApiAuthorizationError("external API authorization is disabled for this HTTP surface")
 
         response = self._application.handle(
             ApplicationRequest(
-                user_id.strip(),
-                conversation_id.strip(),
-                message.strip(),
+                user_id,
+                conversation_id,
+                message,
                 allow_external_api=allow_external_api,
             )
         )
@@ -69,8 +95,11 @@ class WebApi:
         }
 
 
-def openapi_document(base_url: str) -> dict[str, object]:
+def openapi_document(base_url: str, *, allow_external_api: bool = False) -> dict[str, object]:
     """Return the OpenAPI document used by ChatGPT GPT Actions."""
+    description = "False keeps BOT-IA local-only."
+    if not allow_external_api:
+        description += " The HTTP surface is not configured to authorize external API use."
     return {
         "openapi": "3.1.0",
         "info": {
@@ -106,6 +135,7 @@ def openapi_document(base_url: str) -> dict[str, object]:
                         },
                         "400": {"description": "Invalid request."},
                         "401": {"description": "Authentication required."},
+                        "403": {"description": "External API authorization is disabled."},
                         "500": {"description": "Internal server error."},
                     },
                     "security": [{"bearerAuth": []}],
@@ -119,10 +149,10 @@ def openapi_document(base_url: str) -> dict[str, object]:
                     "type": "object",
                     "required": ["message"],
                     "properties": {
-                        "message": {"type": "string", "description": "User request."},
-                        "user_id": {"type": "string", "default": "chatgpt-user"},
-                        "conversation_id": {"type": "string", "default": "chatgpt-session"},
-                        "allow_external_api": {"type": "boolean", "default": False, "description": "Explicitly authorize external API research for this request. False keeps BOT-IA local-only."},
+                        "message": {"type": "string", "maxLength": MAX_MESSAGE_CHARS, "description": "User request."},
+                        "user_id": {"type": "string", "maxLength": MAX_ID_CHARS, "default": "chatgpt-user"},
+                        "conversation_id": {"type": "string", "maxLength": MAX_ID_CHARS, "default": "chatgpt-session"},
+                        "allow_external_api": {"type": "boolean", "default": False, "description": description},
                     },
                 },
                 "QueryResponse": {
@@ -191,7 +221,7 @@ def create_web_server(
                 self._send(HTTPStatus.OK, {"ok": True, "service": "bot-ia"})
                 return
             if self.path == "/openapi.json":
-                self._send(HTTPStatus.OK, openapi_document(base_url))
+                self._send(HTTPStatus.OK, openapi_document(base_url, allow_external_api=api._allow_external_api))
                 return
             self._send(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
@@ -209,6 +239,9 @@ def create_web_server(
                 raw = self.rfile.read(content_length)
                 payload = json.loads(raw.decode("utf-8"))
                 result = api.query(payload)
+            except ExternalApiAuthorizationError as error:
+                self._send(HTTPStatus.FORBIDDEN, {"error": str(error)})
+                return
             except (ValueError, UnicodeDecodeError, json.JSONDecodeError, WebApiError) as error:
                 self._send(HTTPStatus.BAD_REQUEST, {"error": str(error)})
                 return
@@ -229,9 +262,15 @@ def run_web_server(
     host: str = "127.0.0.1",
     port: int = 8787,
     api_token: str | None = None,
+    allow_external_api: bool = False,
     public_base_url: str | None = None,
 ) -> None:
-    server = create_web_server(WebApi(application, api_token=api_token), host=host, port=port, public_base_url=public_base_url)
+    server = create_web_server(
+        WebApi(application, api_token=api_token, allow_external_api=allow_external_api),
+        host=host,
+        port=port,
+        public_base_url=public_base_url,
+    )
     print(f"BOT-IA API escuchando en http://{host}:{port}")
     try:
         server.serve_forever()

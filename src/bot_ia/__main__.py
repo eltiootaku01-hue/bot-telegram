@@ -14,6 +14,13 @@ from bot_ia.runtime import build_runtime
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="BOT-IA Knowledge Engine")
     parser.add_argument("--mode", choices=("console", "telegram", "web"), default="console")
@@ -60,6 +67,7 @@ def _run_telegram(application, runtime) -> None:
 
 def _run_web(application, host: str, port: int) -> None:
     token = os.getenv("BOT_IA_API_TOKEN")
+    allow_external_api = _env_bool("BOT_IA_ALLOW_REMOTE_EXTERNAL_API", False)
     if host not in _LOCAL_HOSTS:
         if not token:
             raise RuntimeError("BOT_IA_API_TOKEN is required when the web API is not bound to localhost")
@@ -70,7 +78,14 @@ def _run_web(application, host: str, port: int) -> None:
             raise RuntimeError("BOT_IA_PUBLIC_BASE_URL must be an HTTPS URL for non-local web API")
     else:
         public_base_url = os.getenv("BOT_IA_PUBLIC_BASE_URL")
-    run_web_server(application, host=host, port=port, api_token=token, public_base_url=public_base_url)
+    run_web_server(
+        application,
+        host=host,
+        port=port,
+        api_token=token,
+        allow_external_api=allow_external_api,
+        public_base_url=public_base_url,
+    )
 
 
 def main() -> None:
