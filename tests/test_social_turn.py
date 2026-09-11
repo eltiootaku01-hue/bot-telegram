@@ -49,7 +49,7 @@ async def test_abandoned_social_turn_can_be_reclaimed(database):
             identity=BotIdentity.CARI,
         )
         assert first is not None
-        assert await arbiter.abandon(first_session, first)
+        assert await arbiter.abandon(first_session, first, "bot process abandoned turn")
 
         second = await arbiter.acquire(
             second_session,
