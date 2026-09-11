@@ -145,7 +145,9 @@ class JobQueue:
         if retry_at is None and job.attempts < max_attempts:
             delay = DEFAULT_BACKOFF_SECONDS[min(job.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
             retry_at = now + timedelta(seconds=delay)
-        permanent = job.attempts >= max_attempts and retry_at is None
+        # An explicit retry time may request an immediate retry, but it must
+        # never override the queue's maximum-attempt safety boundary.
+        permanent = job.attempts >= max_attempts
         conditions = [DurableJob.id == job_id, DurableJob.status == "processing"]
         if lock_time is not None:
             conditions.append(DurableJob.locked_at == lock_time)
