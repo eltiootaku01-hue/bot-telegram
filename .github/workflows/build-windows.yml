@@ -33,6 +33,43 @@ jobs:
         shell: pwsh
         run: .\build_desktop.ps1
 
+      - name: Smoke test BOT-IA-Core
+        shell: pwsh
+        run: |
+          $core = Start-Process -FilePath "$PWD\release\BOT-IA-Core.exe" -WorkingDirectory "$PWD\release" -PassThru
+          try {
+            Start-Sleep -Seconds 5
+            $core.Refresh()
+            if ($core.HasExited) {
+              throw "BOT-IA-Core.exe exited during the 5-second startup smoke test (code $($core.ExitCode))."
+            }
+            Write-Host "OK: BOT-IA-Core.exe remained running for the startup smoke test (PID $($core.Id))."
+          }
+          finally {
+            $core.Refresh()
+            if (-not $core.HasExited) {
+              Stop-Process -Id $core.Id -Force -ErrorAction SilentlyContinue
+              $core.WaitForExit()
+            }
+          }
+
+      - name: Smoke test BOT-IA launcher
+        shell: pwsh
+        run: |
+          $launcher = Start-Process -FilePath "$PWD\release\BOT-IA.exe" -WorkingDirectory "$PWD\release" -PassThru
+          Start-Sleep -Seconds 3
+          $launcher.Refresh()
+          if (-not $launcher.HasExited) {
+            Stop-Process -Id $launcher.Id -Force -ErrorAction SilentlyContinue
+            throw "BOT-IA.exe did not hand off control to the Core/Setup flow within 3 seconds."
+          }
+          $coreProcesses = Get-Process -Name "BOT-IA-Core" -ErrorAction SilentlyContinue
+          if (-not $coreProcesses) {
+            throw "BOT-IA.exe exited but did not start BOT-IA-Core.exe during the launcher smoke test."
+          }
+          Write-Host "OK: BOT-IA.exe started BOT-IA-Core.exe."
+          $coreProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+
       - name: Build Windows installer
         shell: pwsh
         run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss'
