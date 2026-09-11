@@ -6,6 +6,7 @@ import queue
 import subprocess
 import sys
 import traceback
+import webbrowser
 
 ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 SRC = ROOT / "src"
@@ -51,16 +52,45 @@ def _run_telegram_worker() -> int:
         return 1
 
 
+def _run_web_chat_worker() -> int:
+    from bot_ia.interfaces.web_chat import run_web_chat_server
+    from bot_ia.runtime import build_runtime
+
+    load_dotenv(ROOT / ".env")
+    try:
+        host = os.getenv("BOT_IA_HOST", "127.0.0.1")
+        port = int(os.getenv("BOT_IA_PORT", "8787"))
+        token = os.getenv("BOT_IA_API_TOKEN", "").strip() or None
+        if host not in {"127.0.0.1", "localhost", "::1"} and len(token or "") < 32:
+            raise RuntimeError("BOT_IA_API_TOKEN must contain at least 32 characters for LAN web chat")
+        allow_external_api = os.getenv("BOT_IA_ALLOW_REMOTE_EXTERNAL_API", "").strip().lower() in {"1", "true", "yes", "on"}
+        runtime = build_runtime(ROOT)
+        universe_id = os.getenv("BOT_IA_UNIVERSE", "one_neko_punch")
+        provider_id = os.getenv("BOT_IA_PROVIDER", "openai")
+        application = runtime.build_application(default_universe_id=universe_id, provider_id=provider_id)
+        print(f"BOT-IA Web Chat worker: http://{host}:{port}/")
+        run_web_chat_server(application, host=host, port=port, api_token=token, allow_external_api=allow_external_api)
+        runtime.memory_store.close()
+        return 0
+    except Exception:
+        traceback.print_exc()
+        return 1
+
+
 def _install_threadsafe_desktop():
     import desktop
+    import tkinter.ttk as ttk
 
     original_init = desktop.BotIADesktop.__init__
     original_close = desktop.BotIADesktop.close
 
     def init(self):
         self._ui_queue = queue.Queue()
+        self.web_chat_process = None
         original_init(self)
         self._drain_ui_queue()
+        self.web_chat_button = ttk.Button(self.root, text="🌐 Chat web", command=self.start_web_chat)
+        self.web_chat_button.grid(row=0, column=2, sticky="e", padx=(0, 14), pady=12)
 
     def drain(self):
         while True:
@@ -120,6 +150,28 @@ def _install_threadsafe_desktop():
         except Exception as error:
             self._append("BOT-IA", f"No se pudo iniciar Telegram: {type(error).__name__}: {error}")
 
+    def start_web_chat(self):
+        process = getattr(self, "web_chat_process", None)
+        if process is not None and process.poll() is None:
+            self._append("BOT-IA", "El chat web ya está iniciado.")
+            return
+        host = os.getenv("BOT_IA_HOST", "127.0.0.1")
+        port = os.getenv("BOT_IA_PORT", "8787")
+        try:
+            env = os.environ.copy()
+            env["PYTHONPATH"] = str(SRC)
+            if getattr(sys, "frozen", False):
+                command = [sys.executable, "--web-chat-worker"]
+            else:
+                command = [sys.executable, "-m", "desktop_entry", "--web-chat-worker"]
+            self.web_chat_process = subprocess.Popen(command, cwd=str(ROOT), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.web_chat_button.configure(text="● Chat web activo")
+            browser_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
+            webbrowser.open(f"http://{browser_host}:{port}/")
+            self._append("BOT-IA", f"Chat web iniciado en http://{browser_host}:{port}/")
+        except Exception as error:
+            self._append("BOT-IA", f"No se pudo iniciar el chat web: {type(error).__name__}: {error}")
+
     def watch_telegram(self):
         process = getattr(self, "telegram_process", None)
         if process is None:
@@ -137,7 +189,22 @@ def _install_threadsafe_desktop():
         else:
             self._append("BOT-IA", "Telegram se detuvo correctamente.")
 
+    def watch_web_chat(self):
+        process = getattr(self, "web_chat_process", None)
+        if process is None:
+            return
+        if process.poll() is None:
+            self.web_chat_button.configure(text="● Chat web activo")
+            self.root.after(1000, self._watch_web_chat)
+            return
+        self.web_chat_button.configure(text="🌐 Chat web")
+        if process.returncode != 0:
+            self._append("BOT-IA", "El chat web se detuvo con error. Comprueba que el puerto no esté ocupado y que el token LAN sea válido.")
+
     def close(self):
+        process = getattr(self, "web_chat_process", None)
+        if process is not None and process.poll() is None:
+            process.terminate()
         process = getattr(self, "telegram_process", None)
         if process is not None and process.poll() is None:
             process.terminate()
@@ -148,6 +215,8 @@ def _install_threadsafe_desktop():
     desktop.BotIADesktop._handle_message = handle_message
     desktop.BotIADesktop.start_telegram = start_telegram
     desktop.BotIADesktop._watch_telegram = watch_telegram
+    desktop.BotIADesktop.start_web_chat = start_web_chat
+    desktop.BotIADesktop._watch_web_chat = watch_web_chat
     desktop.BotIADesktop.close = close
     return desktop
 
@@ -155,6 +224,8 @@ def _install_threadsafe_desktop():
 def main() -> None:
     if "--telegram-worker" in sys.argv:
         raise SystemExit(_run_telegram_worker())
+    if "--web-chat-worker" in sys.argv:
+        raise SystemExit(_run_web_chat_worker())
     desktop = _install_threadsafe_desktop()
     app = desktop.BotIADesktop()
     app.root.mainloop()
