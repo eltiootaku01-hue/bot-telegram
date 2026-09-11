@@ -89,9 +89,9 @@ Para usarla desde un teléfono en una LAN de confianza, configura un token de al
 
 OpenAI, Groq y OpenRouter siguen disponibles para las rutas remotas. Ollama está habilitado como capacidad local ligera, pero **no es un servicio residente**: solo se utiliza cuando `BOT_IA_PROVIDER=ollama` y Ollama está disponible.
 
-El modelo experimental recomendado es `qwen3:1.7b-q4_K_M`. Ollama publica esa variante oficial en torno a 1.4 GB; el rendimiento real en el Ryzen 5 5600G debe medirse en el equipo objetivo antes de promoverlo como cerebro único. citeturn1search4turn1search0
+El modelo experimental recomendado es `qwen3:1.7b-q4_K_M`. Ollama publica esa variante oficial en torno a 1.4 GB; el rendimiento real en el Ryzen 5 5600G debe medirse en el equipo objetivo antes de promoverlo como cerebro único.
 
-No existe una puerta trasera legítima que permita saltarse autenticación de proveedores remotos. La ruta API-free que estamos adoptando es inferencia local mediante Ollama en localhost; el endpoint local no requiere una clave remota. Ollama documenta además tool calling para modelos compatibles como Qwen3. citeturn3search9turn3search6
+No existe una puerta trasera legítima que permita saltarse autenticación de proveedores remotos. La ruta API-free que estamos adoptando es inferencia local mediante Ollama en localhost; el endpoint local no requiere una clave remota. Ollama documenta además tool calling para modelos compatibles como Qwen3.
 
 ## Biblioteca, evidencia y memoria
 
