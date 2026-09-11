@@ -73,18 +73,28 @@ class DurableWorker:
     async def _heartbeat_event(self, event_id: str, lock_time) -> None:
         while True:
             await asyncio.sleep(self.heartbeat_seconds)
-            async with self.database.session() as session:
-                if not await self.events.renew(session, event_id, lock_time=lock_time):
-                    logger.warning("Event lease lost during heartbeat: %s", event_id)
-                    return
+            try:
+                async with self.database.session() as session:
+                    renewed = await self.events.renew(session, event_id, lock_time=lock_time)
+            except Exception:
+                logger.exception("Event heartbeat failed; will retry: %s", event_id)
+                continue
+            if not renewed:
+                logger.warning("Event lease lost during heartbeat: %s", event_id)
+                return
 
     async def _heartbeat_job(self, job_id: int, lock_time) -> None:
         while True:
             await asyncio.sleep(self.heartbeat_seconds)
-            async with self.database.session() as session:
-                if not await self.jobs.renew(session, job_id, lock_time=lock_time):
-                    logger.warning("Job lease lost during heartbeat: %s", job_id)
-                    return
+            try:
+                async with self.database.session() as session:
+                    renewed = await self.jobs.renew(session, job_id, lock_time=lock_time)
+            except Exception:
+                logger.exception("Job heartbeat failed; will retry: %s", job_id)
+                continue
+            if not renewed:
+                logger.warning("Job lease lost during heartbeat: %s", job_id)
+                return
 
     async def _process_one_event(self) -> bool:
         if not self.event_handlers:
