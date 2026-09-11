@@ -56,6 +56,15 @@ jobs:
       - name: Smoke test BOT-IA launcher
         shell: pwsh
         run: |
+          @"
+          BOT_IA_UNIVERSE=one_neko_punch
+          BOT_IA_PROVIDER=openai
+          BOT_IA_ONE_NEKO_PUNCH_ROOT=$PWD\release\biblioteca
+          OPENAI_API_KEY=
+          GROQ_API_KEY=
+          OPENROUTER_API_KEY=
+          TELEGRAM_BOT_TOKEN=
+          "@ | Set-Content -Path "$PWD\release\.env" -Encoding utf8
           $launcher = Start-Process -FilePath "$PWD\release\BOT-IA.exe" -WorkingDirectory "$PWD\release" -PassThru
           Start-Sleep -Seconds 3
           $launcher.Refresh()
@@ -69,6 +78,7 @@ jobs:
           }
           Write-Host "OK: BOT-IA.exe started BOT-IA-Core.exe."
           $coreProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+          Remove-Item "$PWD\release\.env" -Force -ErrorAction SilentlyContinue
 
       - name: Build Windows installer
         shell: pwsh
