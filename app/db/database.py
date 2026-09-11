@@ -58,6 +58,10 @@ def _ensure_compatibility(connection) -> None:
 
 def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None:
     """Tune SQLite for the four bot processes sharing one local database."""
+    # aiosqlite inherits sqlite3's legacy transaction mode. Explicit BEGIN is
+    # required so SAVEPOINTs remain part of the enclosing transaction instead
+    # of becoming independently committed work.
+    dbapi_connection.isolation_level = None
     cursor = dbapi_connection.cursor()
     try:
         cursor.execute("PRAGMA foreign_keys=ON")
@@ -68,6 +72,11 @@ def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None:
         cursor.close()
 
 
+def _begin_sqlite_transaction(connection) -> None:
+    """Emit an explicit BEGIN for every SQLAlchemy transaction on SQLite."""
+    connection.exec_driver_sql("BEGIN")
+
+
 class Database:
     """Async SQLAlchemy gateway shared by Telegram, games and future web admin."""
 
@@ -75,6 +84,7 @@ class Database:
         self.engine = create_async_engine(url, future=True)
         if url.startswith("sqlite"):
             event.listen(self.engine.sync_engine, "connect", _configure_sqlite_connection)
+            event.listen(self.engine.sync_engine, "begin", _begin_sqlite_transaction)
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
 
     async def create_schema(self) -> None:
