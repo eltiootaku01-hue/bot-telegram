@@ -50,7 +50,7 @@ class GameProfile(Base):
     __table_args__ = (UniqueConstraint("user_id", "chat_id", name="uq_game_profile"),)
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    chat_id: Mapped[int] = mapped_column(BigInteger)
+    chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
     level: Mapped[int] = mapped_column(Integer, default=1)
     experience: Mapped[int] = mapped_column(Integer, default=0)
     points: Mapped[int] = mapped_column(Integer, default=0)
@@ -61,12 +61,7 @@ class GameProfile(Base):
 
 class PointTransaction(Base):
     __tablename__ = "point_transactions"
-    __table_args__ = (
-        UniqueConstraint(
-            "user_id", "chat_id", "reference_type", "reference_id",
-            name="uq_point_transaction_reference",
-        ),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "chat_id", "reference_type", "reference_id", name="uq_point_transaction_reference"),)
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(BigInteger)
