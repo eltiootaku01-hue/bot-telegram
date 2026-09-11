@@ -80,6 +80,15 @@ jobs:
           $coreProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
           Remove-Item "$PWD\release\.env" -Force -ErrorAction SilentlyContinue
 
+      - name: Clean generated runtime state
+        shell: pwsh
+        run: |
+          Remove-Item "$PWD\release\.env" -Force -ErrorAction SilentlyContinue
+          Remove-Item "$PWD\release\work" -Recurse -Force -ErrorAction SilentlyContinue
+          if (Test-Path "$PWD\release\work") {
+            throw "Generated runtime state was not removed from the release package."
+          }
+
       - name: Build Windows installer
         shell: pwsh
         run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss'
@@ -104,6 +113,12 @@ jobs:
           }
           if (-not (Test-Path "release\config" -PathType Container)) {
             throw "Missing required package directory: release\config"
+          }
+          if (Test-Path "release\work") {
+            throw "Release package must not contain generated runtime state: release\work"
+          }
+          if (Test-Path "release\.env") {
+            throw "Release package must not contain local secrets/config: release\.env"
           }
           $core = Get-Item "release\BOT-IA-Core.exe"
           $launcher = Get-Item "release\BOT-IA.exe"
