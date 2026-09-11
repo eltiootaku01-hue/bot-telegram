@@ -59,8 +59,7 @@ class CamiMediaPublisher(BotModule):
             if asset is None or asset.status != "scheduled":
                 # 'publishing' is intentionally terminal for automatic retries: a
                 # Telegram send can succeed immediately before a process crashes and
-                # records its message_id. Retrying automatically would duplicate it.
-                # A future reconciliation action can explicitly reset this state.
+                # the message id is never recorded. Automatic retry would duplicate it.
                 return
             setup = await session.scalar(
                 select(SetupSession)
@@ -77,11 +76,6 @@ class CamiMediaPublisher(BotModule):
             caption = self._caption(asset)
             group_message_id = asset.published_group_message_id
             page_message_id = asset.published_page_message_id
-
-            # Fence the asset before any external Telegram side effect. If the
-            # process dies after sendPhoto but before storing the message id, the
-            # durable job may retry, but the asset will no longer be eligible for
-            # automatic publication and can be reconciled instead of duplicated.
             asset.status = "publishing"
             asset.updated_at = datetime.utcnow()
             await session.commit()
@@ -109,6 +103,14 @@ class CamiMediaPublisher(BotModule):
                         current.updated_at = datetime.utcnow()
                         await session.commit()
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
+            # Telegram explicitly rejected the request, so this is not the ambiguous
+            # send-then-crash window. Returning to scheduled is safe and allows retry.
+            async with self.database.session() as session:
+                current = await session.get(MediaAsset, asset_id)
+                if current is not None and current.status == "publishing":
+                    current.status = "scheduled"
+                    current.updated_at = datetime.utcnow()
+                    await session.commit()
             raise RuntimeError(f"Telegram rejected scheduled publication: {exc}") from exc
 
         async with self.database.session() as session:
@@ -169,6 +171,12 @@ class CamiMediaPublisher(BotModule):
                 caption=(f"🎨 <b>Pedido #{request_id} completado</b>\n👤 {user_tag}\n📝 {escape(description)}"),
             )
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
+            async with self.database.session() as session:
+                current = await session.get(MediaAsset, asset_id)
+                if current is not None and current.status == "publishing_request":
+                    current.status = "cami_inbox"
+                    current.updated_at = datetime.utcnow()
+                    await session.commit()
             raise RuntimeError(f"Telegram rejected request publication: {exc}") from exc
 
         async with self.database.session() as session:
