@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from aiogram.types import Chat as TgChat, User as TgUser
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.social_activity import SocialActivityService
@@ -66,7 +67,9 @@ async def test_member_touch_does_not_count_non_message_events(session: AsyncSess
     await repository.touch(session, user, chat, is_message=False)
     await repository.touch(session, user, chat, is_message=False)
 
-    link = await session.get(UserChat, (user.id, chat.id))
+    link = await session.scalar(select(UserChat).where(
+        UserChat.user_id == user.id, UserChat.chat_id == chat.id,
+    ))
     stored_chat = await session.get(Chat, chat.id)
     assert link is not None
     assert link.message_count == 0
@@ -85,7 +88,9 @@ async def test_member_touch_records_real_human_messages(session: AsyncSession) -
 
     await repository.touch(session, user, chat, is_message=True)
 
-    link = await session.get(UserChat, (user.id, chat.id))
+    link = await session.scalar(select(UserChat).where(
+        UserChat.user_id == user.id, UserChat.chat_id == chat.id,
+    ))
     stored_chat = await session.get(Chat, chat.id)
     assert link is not None
     assert link.message_count == 1
