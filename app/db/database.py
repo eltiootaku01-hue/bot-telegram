@@ -18,8 +18,6 @@ def _add_column_if_missing(connection, table: str, column: str, definition: str,
     try:
         connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
     except OperationalError as exc:
-        # Another bot process may have completed the same additive migration between
-        # inspect() and ALTER TABLE. SQLite has no IF NOT EXISTS for ADD COLUMN.
         if "duplicate column name" not in str(exc).lower():
             raise
 
@@ -28,34 +26,15 @@ def _ensure_compatibility(connection) -> None:
     """Apply small additive migrations that create_all cannot perform."""
     inspector = inspect(connection)
     media_columns = {column["name"] for column in inspector.get_columns("media_assets")}
-    _add_column_if_missing(
-        connection,
-        "media_assets",
-        "request_id",
-        "BIGINT REFERENCES fan_requests(id) ON DELETE SET NULL",
-        media_columns,
-    )
-    _add_column_if_missing(
-        connection,
-        "media_assets",
-        "published_group_message_id",
-        "BIGINT",
-        media_columns,
-    )
-    _add_column_if_missing(
-        connection,
-        "media_assets",
-        "published_page_message_id",
-        "BIGINT",
-        media_columns,
-    )
-    _add_column_if_missing(
-        connection,
-        "media_assets",
-        "published_request_message_id",
-        "BIGINT",
-        media_columns,
-    )
+    _add_column_if_missing(connection, "media_assets", "request_id", "BIGINT REFERENCES fan_requests(id) ON DELETE SET NULL", media_columns)
+    _add_column_if_missing(connection, "media_assets", "published_group_message_id", "BIGINT", media_columns)
+    _add_column_if_missing(connection, "media_assets", "published_page_message_id", "BIGINT", media_columns)
+    _add_column_if_missing(connection, "media_assets", "published_request_message_id", "BIGINT", media_columns)
+
+    event_columns = {column["name"] for column in inspector.get_columns("domain_events")}
+    _add_column_if_missing(connection, "domain_events", "heartbeat_at", "DATETIME", event_columns)
+    job_columns = {column["name"] for column in inspect(connection).get_columns("durable_jobs")}
+    _add_column_if_missing(connection, "durable_jobs", "heartbeat_at", "DATETIME", job_columns)
 
     connection.execute(text(
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_fan_request_source "
@@ -70,10 +49,6 @@ def _ensure_compatibility(connection) -> None:
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_active_trivia_round_chat "
         "ON trivia_rounds(chat_id) WHERE status = 'active'"
     ))
-
-    # PointTransaction's ORM constraint protects new databases. This partial index
-    # brings older SQLite databases up to the same invariant while preserving the
-    # intended ability to record ordinary transactions with NULL references.
     connection.execute(text(
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_point_transaction_reference "
         "ON point_transactions(user_id, chat_id, reference_type, reference_id) "
