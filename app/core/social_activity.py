@@ -26,13 +26,14 @@ class SocialActivity:
     def to_snapshot(self, memory: SocialMemory) -> SocialSnapshot:
         now = self.observed_at
         last_human = self.last_human_message_at or now
+        human_recent = self.active_users >= 2 and (now - last_human).total_seconds() <= 10 * 60
         return SocialSnapshot(
             recent_messages=self.recent_messages,
             active_users=self.active_users,
             minutes_since_last_message=max(0, int((now - last_human).total_seconds() // 60)),
             minutes_since_last_bot_message=memory.minutes_since_last_bot_message(now),
             minutes_since_last_event=memory.minutes_since_last_event(now),
-            conversation_active=memory.human_activity_recent(now),
+            conversation_active=human_recent,
         )
 
 
@@ -46,7 +47,6 @@ class SocialActivityService:
         session: AsyncSession,
         chat_id: int,
         *,
-        memory: SocialMemory | None = None,
         now: datetime | None = None,
     ) -> SocialActivity:
         observed_at = now or utc_now()
@@ -79,7 +79,6 @@ class SocialActivityService:
         )
 
 
-# Keep identity imported here intentionally: callers can type-check maps that
-# pair this observation with per-bot presence without coupling the DB layer.
 def fatigue_map_from_presence(values: dict[BotIdentity, int]) -> dict[BotIdentity, int]:
+    """Copy a presence-derived fatigue map before passing it to the director."""
     return dict(values)
