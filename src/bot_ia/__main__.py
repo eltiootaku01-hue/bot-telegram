@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import os
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from bot_ia.core.application import ApplicationRequest
 from bot_ia.interfaces.telegram import TelegramApiClient, TelegramPoller
 from bot_ia.interfaces.telegram_projects import TelegramProjectsAdapter
 from bot_ia.interfaces.web import run_web_server
+from bot_ia.interfaces.web_chat import run_web_chat_server
 from bot_ia.runtime import build_runtime
 
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -21,9 +23,19 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _is_private_or_loopback_host(host: str) -> bool:
+    if host in _LOCAL_HOSTS:
+        return True
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return address.is_private or address.is_loopback
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="BOT-IA Knowledge Engine")
-    parser.add_argument("--mode", choices=("console", "telegram", "web"), default="console")
+    parser.add_argument("--mode", choices=("console", "telegram", "web", "web-chat"), default="console")
     parser.add_argument("--host", default=os.getenv("BOT_IA_HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.getenv("BOT_IA_PORT", "8787")))
     return parser
@@ -65,7 +77,7 @@ def _run_telegram(application, runtime) -> None:
     print("Telegram detenido:", f"polls={result.polls}", f"received={result.updates_received}", f"processed={result.updates_processed}", f"sent={result.responses_sent}", f"errors={result.transport_errors}")
 
 
-def _run_web(application, host: str, port: int) -> None:
+def _web_security(project_root: Path, host: str) -> tuple[str | None, bool]:
     token = os.getenv("BOT_IA_API_TOKEN")
     allow_external_api = _env_bool("BOT_IA_ALLOW_REMOTE_EXTERNAL_API", False)
     if host not in _LOCAL_HOSTS:
@@ -74,17 +86,34 @@ def _run_web(application, host: str, port: int) -> None:
         if len(token) < 32:
             raise RuntimeError("BOT_IA_API_TOKEN must contain at least 32 characters for non-local web API")
         public_base_url = os.getenv("BOT_IA_PUBLIC_BASE_URL", "")
-        if not public_base_url.lower().startswith("https://"):
-            raise RuntimeError("BOT_IA_PUBLIC_BASE_URL must be an HTTPS URL for non-local web API")
+        allow_insecure_lan = _env_bool("BOT_IA_ALLOW_INSECURE_LAN", False)
+        if not public_base_url.lower().startswith("https://") and not (allow_insecure_lan and _is_private_or_loopback_host(host)):
+            raise RuntimeError("BOT_IA_PUBLIC_BASE_URL must be HTTPS for remote web API; for a trusted private LAN you may explicitly set BOT_IA_ALLOW_INSECURE_LAN=true")
     else:
         public_base_url = os.getenv("BOT_IA_PUBLIC_BASE_URL")
+    return public_base_url, allow_external_api
+
+
+def _run_web(application, host: str, port: int) -> None:
+    public_base_url, allow_external_api = _web_security(Path.cwd(), host)
     run_web_server(
         application,
         host=host,
         port=port,
-        api_token=token,
+        api_token=os.getenv("BOT_IA_API_TOKEN"),
         allow_external_api=allow_external_api,
         public_base_url=public_base_url,
+    )
+
+
+def _run_web_chat(application, host: str, port: int) -> None:
+    _public_base_url, allow_external_api = _web_security(Path.cwd(), host)
+    run_web_chat_server(
+        application,
+        host=host,
+        port=port,
+        api_token=os.getenv("BOT_IA_API_TOKEN"),
+        allow_external_api=allow_external_api,
     )
 
 
@@ -98,8 +127,10 @@ def main() -> None:
             _run_console(application, universe_id, provider_id)
         elif args.mode == "telegram":
             _run_telegram(application, runtime)
-        else:
+        elif args.mode == "web":
             _run_web(application, args.host, args.port)
+        else:
+            _run_web_chat(application, args.host, args.port)
     finally:
         runtime.memory_store.close()
 
