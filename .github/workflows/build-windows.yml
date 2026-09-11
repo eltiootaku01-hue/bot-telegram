@@ -27,7 +27,7 @@ jobs:
 
       - name: Compile source
         shell: pwsh
-        run: python -m compileall -q src launcher.py desktop.py
+        run: python -m compileall -q src launcher.py desktop.py desktop_entry.py
 
       - name: Build BOT-IA executables
         shell: pwsh
