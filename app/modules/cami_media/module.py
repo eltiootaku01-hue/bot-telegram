@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from aiogram import Bot, F
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
 
@@ -10,12 +11,13 @@ from app.core.jobs import JobQueue
 from app.core.module import BotModule
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import FanRequest, MediaAsset, RequestStatus
+from app.db.models import DurableJob, FanRequest, MediaAsset, RequestStatus
 from app.services.forum_topics import ForumTopicService
 from app.ui.media_keyboards import (
     cami_media_actions,
     cami_pending_requests,
     cami_publish_destination,
+    cami_publication_recovery,
 )
 
 
@@ -34,8 +36,10 @@ class CamiMediaModule(BotModule):
     def setup(self) -> None:
         self.router.message.register(self.receive_photo, F.photo)
         self.router.message.register(self.receive_schedule_or_tags, F.text)
+        self.router.message.register(self.recovery_command, Command("recuperar_publicaciones"))
         self.router.callback_query.register(self.media_action, F.data.startswith("cami:media:"))
         self.router.callback_query.register(self.link_request, F.data.startswith("cami:req:link:"))
+        self.router.callback_query.register(self.recover_publication, F.data.startswith("cami:recovery:"))
 
     def _is_media_staff(self, message: Message) -> bool:
         """Only the explicitly configured owner may operate Cami's private media desk."""
@@ -71,10 +75,7 @@ class CamiMediaModule(BotModule):
         )
 
     async def receive_schedule_or_tags(self, message: Message) -> None:
-        if (
-            not self._is_media_staff(message)
-            or not message.text
-        ):
+        if not self._is_media_staff(message) or not message.text:
             return
         async with self.database.session() as session:
             asset = await session.scalar(
@@ -123,6 +124,103 @@ class CamiMediaModule(BotModule):
                 run_at=scheduled_at,
             )
         await message.answer("🗓️ <b>Programado.</b> La orden quedó persistida para que sobreviva a un reinicio.")
+
+    async def recovery_command(self, message: Message) -> None:
+        if not self._is_media_staff(message):
+            return
+        async with self.database.session() as session:
+            assets = list(await session.scalars(
+                select(MediaAsset)
+                .where(MediaAsset.status == "delivery_unknown")
+                .order_by(MediaAsset.id.asc())
+                .limit(20)
+            ))
+        if not assets:
+            await message.answer("✅ No hay publicaciones con entrega ambigua.")
+            return
+        for asset in assets:
+            kind = f"pedido #{asset.request_id}" if asset.request_id else "publicación programada"
+            await message.answer(
+                f"⚠️ <b>Material #{asset.id}</b> · {kind}\n"
+                "Telegram pudo haber recibido el envío antes de que se guardara el ID.",
+                reply_markup=cami_publication_recovery(asset.id),
+            )
+
+    async def recover_publication(self, callback: CallbackQuery) -> None:
+        if callback.message is None or callback.data is None or not self._is_media_staff(callback.message):
+            await callback.answer("Esta recuperación es privada.", show_alert=True)
+            return
+        parts = callback.data.split(":")
+        if len(parts) != 4:
+            await callback.answer("Recuperación inválida.", show_alert=True)
+            return
+        action = parts[2]
+        try:
+            asset_id = int(parts[3])
+        except ValueError:
+            await callback.answer("Material inválido.", show_alert=True)
+            return
+
+        async with self.database.session() as session:
+            asset = await session.get(MediaAsset, asset_id)
+            if asset is None or asset.status != "delivery_unknown":
+                await callback.answer("Ese material ya fue resuelto.", show_alert=True)
+                return
+
+            if action == "confirm":
+                request = await session.get(FanRequest, asset.request_id) if asset.request_id else None
+                if request is not None and request.status == RequestStatus.PROCESSING.value:
+                    request.status = RequestStatus.COMPLETED.value
+                    request.updated_at = datetime.utcnow()
+                    asset.status = "published_request"
+                else:
+                    asset.status = "published"
+                asset.updated_at = datetime.utcnow()
+                await session.commit()
+                await callback.message.edit_text(f"✅ Material #{asset_id} marcado como publicado.")
+                await callback.answer("Confirmado.")
+                return
+
+            if action == "discard":
+                request = await session.get(FanRequest, asset.request_id) if asset.request_id else None
+                if request is not None and request.status == RequestStatus.PROCESSING.value:
+                    request.status = RequestStatus.REJECTED.value
+                    request.updated_at = datetime.utcnow()
+                asset.status = "archived"
+                asset.updated_at = datetime.utcnow()
+                await session.commit()
+                await callback.message.edit_text(f"📦 Material #{asset_id} descartado.")
+                await callback.answer("Descartado.")
+                return
+
+            if action == "retry":
+                request = await session.get(FanRequest, asset.request_id) if asset.request_id else None
+                if request is not None:
+                    request.status = RequestStatus.PROCESSING.value
+                    request.updated_at = datetime.utcnow()
+                    asset.status = "request_ready"
+                    dedupe_key = f"media-request:{request.id}:recovery:{datetime.utcnow().isoformat()}"
+                    await self.jobs.enqueue(
+                        session,
+                        "media.request_publish",
+                        {"asset_id": asset.id, "request_id": request.id},
+                        dedupe_key=dedupe_key,
+                    )
+                else:
+                    asset.status = "scheduled"
+                    asset.updated_at = datetime.utcnow()
+                    dedupe_key = f"media-publish:{asset.id}:recovery:{datetime.utcnow().isoformat()}"
+                    await self.jobs.enqueue(
+                        session,
+                        "media.publish",
+                        {"asset_id": asset.id, "destination": asset.publish_destination or "both"},
+                        dedupe_key=dedupe_key,
+                    )
+                await callback.message.edit_text(f"🔁 Material #{asset_id} puesto nuevamente en cola.")
+                await callback.answer("Reintentando.")
+                return
+
+        await callback.answer("Acción no implementada.", show_alert=True)
 
     async def media_action(self, callback: CallbackQuery, bot: Bot) -> None:
         if callback.message is None or callback.data is None:
@@ -230,11 +328,7 @@ class CamiMediaModule(BotModule):
         await callback.answer("Acción no implementada.", show_alert=True)
 
     async def link_request(self, callback: CallbackQuery, bot: Bot) -> None:
-        if (
-            callback.message is None
-            or callback.data is None
-            or not self._is_media_staff(callback.message)
-        ):
+        if callback.message is None or callback.data is None or not self._is_media_staff(callback.message):
             await callback.answer("Acción inválida.", show_alert=True)
             return
         parts = callback.data.split(":")
