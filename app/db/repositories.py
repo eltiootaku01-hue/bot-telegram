@@ -17,8 +17,6 @@ class MemberRepository:
         await self._ensure_user(session, user, now)
         await self._ensure_chat(session, chat, now)
 
-        # A callback/message can be processed concurrently by multiple bot processes.
-        # Do not read-modify-write message_count: that loses increments under contention.
         link = await session.scalar(select(UserChat).where(
             UserChat.user_id == user.id, UserChat.chat_id == chat.id,
         ))
@@ -112,6 +110,16 @@ class MemberRepository:
             raise ValueError("Point amount must not be negative")
         profile = await self.get_or_create_game_profile(session, user_id, chat_id, commit=False)
         has_reference = reference_type is not None and reference_id is not None
+        if has_reference:
+            existing = await session.scalar(select(PointTransaction).where(
+                PointTransaction.user_id == user_id,
+                PointTransaction.chat_id == chat_id,
+                PointTransaction.reference_type == reference_type,
+                PointTransaction.reference_id == reference_id,
+            ))
+            if existing is not None:
+                await session.refresh(profile)
+                return profile.points
         if amount:
             try:
                 async with session.begin_nested():
@@ -151,6 +159,16 @@ class MemberRepository:
             raise ValueError("Point cost must be positive")
         profile = await self.get_or_create_game_profile(session, user_id, chat_id, commit=False)
         has_reference = reference_type is not None and reference_id is not None
+        if has_reference:
+            existing = await session.scalar(select(PointTransaction).where(
+                PointTransaction.user_id == user_id,
+                PointTransaction.chat_id == chat_id,
+                PointTransaction.reference_type == reference_type,
+                PointTransaction.reference_id == reference_id,
+            ))
+            if existing is not None:
+                await session.refresh(profile)
+                return profile.points
         try:
             async with session.begin_nested():
                 result = await session.execute(
