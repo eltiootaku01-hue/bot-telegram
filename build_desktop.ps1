@@ -11,7 +11,10 @@ $env:PYTHONPATH = Join-Path $root "src"
 Remove-Item -Recurse -Force "build", "dist", "release" -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path "release" | Out-Null
 
-pyinstaller --noconfirm --clean --onefile --windowed --name BOT-IA-Core desktop.py
+# The wrapper owns the desktop event loop. It keeps Tk calls on the main thread
+# and starts Telegram as an explicit worker process instead of passing arguments
+# to a GUI-only executable.
+pyinstaller --noconfirm --clean --onefile --windowed --name BOT-IA-Core desktop_entry.py
 pyinstaller --noconfirm --clean --onefile --windowed --name BOT-IA launcher.py
 
 Copy-Item "dist\BOT-IA-Core.exe" "release\BOT-IA-Core.exe" -Force
