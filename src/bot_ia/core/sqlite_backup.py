@@ -46,6 +46,16 @@ class SQLiteBackupManager:
             raise SQLiteBackupError("SQLite database is newer than this BOT-IA version")
         return application_id, version
 
+    def data_version(self, database_path: Path) -> int:
+        """Return SQLite's change counter as observed by a fresh connection."""
+        if not database_path.is_file():
+            raise SQLiteBackupError("SQLite database does not exist")
+        try:
+            with closing(sqlite3.connect(database_path, timeout=10.0)) as connection:
+                return int(connection.execute("PRAGMA data_version").fetchone()[0])
+        except sqlite3.DatabaseError as error:
+            raise SQLiteBackupError("SQLite database version could not be read") from error
+
     def create_backup(self, source_path: Path, backup_path: Path) -> Path:
         """Create an atomic, integrity-checked snapshot of a live SQLite DB."""
         if source_path.resolve() == backup_path.resolve():

@@ -2,6 +2,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from bot_ia.core.backup_service import BackupService
 from bot_ia.core.sqlite_backup import SQLiteBackupError
@@ -50,7 +51,38 @@ class BackupServiceTests(unittest.TestCase):
                 service.create_snapshot(root / "backups", label="snapshot-1")
 
             snapshot_root = root / "backups" / "snapshot-1"
-            self.assertFalse((snapshot_root / "bot_ia_memory.sqlite3").exists())
+            self.assertFalse(snapshot_root.exists())
+
+    def test_rejects_existing_snapshot_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            work = root / "work"
+            work.mkdir()
+            self._database(work, "bot_ia_memory.sqlite3", MemoryStore.APPLICATION_ID)
+            self._database(work, "bot_ia_sessions.sqlite3", PersistentSessionStore.APPLICATION_ID)
+            backups = root / "backups"
+            (backups / "snapshot-1").mkdir(parents=True)
+
+            with self.assertRaises(ValueError):
+                BackupService(root).create_snapshot(backups, label="snapshot-1")
+
+    def test_retries_when_sources_drift_during_pair_creation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            work = root / "work"
+            work.mkdir()
+            self._database(work, "bot_ia_memory.sqlite3", MemoryStore.APPLICATION_ID)
+            self._database(work, "bot_ia_sessions.sqlite3", PersistentSessionStore.APPLICATION_ID)
+
+            service = BackupService(root)
+            with (
+                patch.object(service._memory, "data_version", side_effect=[1, 1, 2, 2, 3, 3]),
+                patch.object(service._sessions, "data_version", side_effect=[1, 2, 3, 4, 5, 6]),
+                self.assertRaisesRegex(SQLiteBackupError, "changed during coordinated snapshot"),
+            ):
+                service.create_snapshot(root / "backups", label="snapshot-1")
+
+            self.assertFalse((root / "backups" / "snapshot-1").exists())
 
     def test_rejects_path_traversal_label(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
