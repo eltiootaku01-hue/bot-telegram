@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.social_wake import SocialWakeState, WakeReason
 from app.core.time import utc_now
-from app.db.social_models import SocialWake, SocialWakeReason
+from app.db.social_models import SocialWake
 
 
 class SocialWakeStore:
