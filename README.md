@@ -78,10 +78,11 @@ The GitHub Actions Windows workflow builds the five executables, verifies every 
 
 1. Open **Bot Manager**.
 2. Enter the Telegram link/username and token for **Cari, Sunna, Cami and Chie**.
-3. Enter at least one external AI API key (Gemini, Groq, Cerebras or OpenRouter). This is required by the desktop setup so Cari/Cami are not started with an incomplete AI configuration.
-4. Optionally choose the preferred provider and model, then add the admin Telegram ID and media-vault chat ID.
-5. Press **Guardar configuración** and then **Comenzar**.
-6. BotManager starts the four bot processes and gives each one its own start/stop control.
+3. AI is **optional**. You can leave all AI controls disabled and run the deterministic bot features without an LLM.
+4. If AI is enabled, choose Ollama for the local-first path or configure one or more external providers (Gemini, Groq, Cerebras or OpenRouter). Cloud credentials are only needed for the providers you actually enable/configure.
+5. Optionally choose the preferred provider and model, then add the admin Telegram ID and media-vault chat ID.
+6. Press **Guardar configuración** and then **Comenzar**.
+7. BotManager starts the four bot processes and gives each one its own start/stop control.
 
 Secrets are saved only in the local `.env` file. `.env` and runtime data are ignored by Git.
 
@@ -90,17 +91,17 @@ Secrets are saved only in the local `.env` file. `.env` and runtime data are ign
 From Windows with Python 3.12 installed:
 
 ```bat
-tools\build_launcher.bat
+tools\\build_launcher.bat
 ```
 
 The executable build creates:
 
 ```text
-dist\BotManager.exe
-dist\bots\Cari.exe
-dist\bots\Sunna.exe
-dist\bots\Cami.exe
-dist\bots\Chie.exe
+dist\\BotManager.exe
+dist\\bots\\Cari.exe
+dist\\bots\\Sunna.exe
+dist\\bots\\Cami.exe
+dist\\bots\\Chie.exe
 ```
 
 The installer definition lives at `installer/bot-telegram.iss` and packages those executables into a normal Windows setup program. GitHub Actions installs Inno Setup, compiles the installer, verifies it, and publishes the resulting artifact/release asset.
@@ -127,7 +128,9 @@ Public wild encounters are capped at class C. Higher-rarity candidates are route
 - User data and stats come from the database/services.
 - Games use deterministic local rules.
 - AI is an escalation path rather than the default handler.
-- Provider settings are configurable so Gemini, Groq, Cerebras or OpenRouter can be wired behind the Brain layer.
+- Ollama can provide a local-only LLM path when enabled.
+- Provider settings are configurable so Gemini, Groq, Cerebras or OpenRouter can be wired behind the Brain layer when credentials are available.
+- No cloud model is bundled into the Windows executable.
 
 ## Architecture
 
@@ -140,7 +143,7 @@ Events / Modules / Services
    ↓
 Brain policy
    ↓
-Optional LLM provider
+Optional local/cloud LLM provider
    ↓
 SQLite WAL
 ```
