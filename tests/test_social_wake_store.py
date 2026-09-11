@@ -33,6 +33,24 @@ async def test_social_wake_survives_store_round_trip(database):
 
 
 @pytest.mark.asyncio
+async def test_event_wake_creates_chat_state_on_first_event(database):
+    now = datetime(2026, 9, 11, 12, 0)
+    store = SocialWakeStore()
+
+    async with database.session() as session:
+        created = await store.request_wake(
+            session,
+            456,
+            now,
+            reason=WakeReason.EVENT,
+        )
+
+    assert created.next_wake_at == now
+    assert created.pending_reason == WakeReason.EVENT
+    assert created.consecutive_silences == 0
+
+
+@pytest.mark.asyncio
 async def test_event_wake_coalesces_into_existing_future_wake(database):
     controller = SocialWakeController()
     now = datetime(2026, 9, 11, 12, 0)
@@ -46,7 +64,6 @@ async def test_event_wake_coalesces_into_existing_future_wake(database):
             now + timedelta(minutes=5),
             reason=WakeReason.EVENT,
         )
-        assert updated is not None
         assert updated.next_wake_at == now + timedelta(minutes=5)
         assert updated.pending_reason == WakeReason.EVENT
 
@@ -66,6 +83,5 @@ async def test_event_wake_respects_persisted_cooldown(database):
             now + timedelta(minutes=1),
             reason=WakeReason.EVENT,
         )
-        assert before is not None
         assert before.next_wake_at == state.next_wake_at
         assert before.pending_reason is None
