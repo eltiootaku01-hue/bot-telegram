@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+import sys
+import time
+
+from app.services.process_manager import ProcessManager
+
+
+def test_process_manager_captures_failed_startup_output() -> None:
+    manager = ProcessManager(
+        lambda _: [
+            sys.executable,
+            "-c",
+            "import sys; print('boot stdout'); print('boot stderr', file=sys.stderr); sys.exit(7)",
+        ],
+        grace_seconds=0.2,
+    )
+
+    result = manager.start_sequential(("cari", "sunna"))
+
+    assert result.started == ()
+    assert result.failure is not None
+    assert result.failure.identity == "cari"
+    assert result.failure.returncode is None or result.failure.returncode == 7
+    output = manager.last_output["cari"]
+    assert any(item.stream == "stdout" and item.line == "boot stdout" for item in output)
+    assert any(item.stream == "stderr" and item.line == "boot stderr" for item in output)
+    assert "sunna" not in manager.processes
+
+
+def test_process_manager_keeps_healthy_process_running() -> None:
+    manager = ProcessManager(
+        lambda _: [sys.executable, "-c", "import time; print('ready', flush=True); time.sleep(1)"],
+        grace_seconds=0.05,
+    )
+
+    result = manager.start_sequential(("cari",))
+
+    assert result.failure is None
+    assert result.started == ("cari",)
+    assert manager.processes["cari"].poll() is None
+    time.sleep(0.01)
+    manager.stop_all()
+    assert not manager.processes
