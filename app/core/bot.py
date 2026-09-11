@@ -1,5 +1,6 @@
 from aiogram import Bot, Dispatcher
 
+from app.brain.chat import BrainChatModule
 from app.core.config import Settings
 from app.core.errors import router as error_router
 from app.core.identity import BotIdentity
@@ -35,6 +36,7 @@ def build_dispatcher(settings: Settings, identity: BotIdentity) -> tuple[Bot, Di
 
     registry = ModuleRegistry(dispatcher)
     registry.register(SystemModule(identity))
+    registry.register(BrainChatModule(identity))
     registry.register(SocialRuntimeModule(database, identity))
 
     if identity is BotIdentity.CARI:
