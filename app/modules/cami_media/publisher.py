@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from datetime import datetime, timedelta
 from html import escape
@@ -16,7 +17,7 @@ from app.core.module import BotModule
 from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import FanRequest, MediaAsset, RequestStatus, User
+from app.db.models import DurableJob, FanRequest, MediaAsset, RequestStatus, User
 from app.services.forum_topics import ForumTopicService
 from app.ui.media_keyboards import cami_publication_recovery
 
@@ -54,13 +55,7 @@ class CamiMediaPublisher(BotModule):
         await super().on_shutdown()
 
     async def _reconcile_unknown_deliveries(self, bot: Bot) -> None:
-        """Turn abandoned in-flight sends into an explicit human decision.
-
-        Telegram's Bot API returns a Message on success, but a process can die
-        between Telegram accepting the send and our DB commit. Retrying blindly
-        would risk duplicates, so after a bounded window we fence the asset into
-        delivery_unknown and ask the configured owner to decide.
-        """
+        """Fence abandoned sends only after the corresponding job is no longer alive."""
         while True:
             try:
                 cutoff = datetime.utcnow() - timedelta(seconds=self.UNKNOWN_DELIVERY_AFTER_SECONDS)
@@ -74,14 +69,35 @@ class CamiMediaPublisher(BotModule):
                         .order_by(MediaAsset.id.asc())
                         .limit(20)
                     ))
+                    processing_jobs = list(await session.scalars(
+                        select(DurableJob).where(DurableJob.status == "processing")
+                    ))
+
+                    candidates = []
                     for asset in assets:
+                        expected_type = "media.request_publish" if asset.request_id is not None else "media.publish"
+                        live_job = False
+                        for job in processing_jobs:
+                            if job.job_type != expected_type or job.heartbeat_at is None or job.heartbeat_at < cutoff:
+                                continue
+                            try:
+                                payload = json.loads(job.payload)
+                            except (TypeError, ValueError):
+                                continue
+                            if int(payload.get("asset_id", -1)) == asset.id:
+                                live_job = True
+                                break
+                        if not live_job:
+                            candidates.append(asset)
+
+                    for asset in candidates:
                         asset.status = "delivery_unknown"
                         asset.updated_at = datetime.utcnow()
-                    if assets:
+                    if candidates:
                         await session.commit()
 
-                if assets and self.settings.admin_user_id:
-                    for asset in assets:
+                if candidates and self.settings.admin_user_id:
+                    for asset in candidates:
                         try:
                             kind = "pedido" if asset.request_id is not None else "publicación"
                             await bot.send_message(
