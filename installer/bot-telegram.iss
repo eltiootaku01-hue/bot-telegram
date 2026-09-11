@@ -1,5 +1,7 @@
 #define MyAppName "Bot Telegram"
-#define MyAppVersion "0.1.0"
+#ifndef MyAppVersion
+  #define MyAppVersion "0.1.0"
+#endif
 #define MyAppPublisher "eltiootaku01-hue"
 #define MyAppExeName "BotManager.exe"
 
@@ -8,7 +10,7 @@ AppId={{D7E4A1A8-9E0C-4A5D-9E4D-4E8A7B1D0F31}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={autopf}\Bot Telegram
+DefaultDirName={localappdata}\Bot Telegram
 DefaultGroupName={#MyAppName}
 OutputDir=..\dist-installer
 OutputBaseFilename=BotTelegram-Setup-{#MyAppVersion}
