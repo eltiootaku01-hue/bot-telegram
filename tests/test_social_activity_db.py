@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.social_activity import SocialActivityService
+from app.core.social_memory import SocialMemory
 from app.db.models import Chat, User, UserChat
 
 
@@ -24,4 +25,4 @@ async def test_observe_ignores_recent_bot_activity_for_human_recency(session: As
 
     assert activity.active_users == 0
     assert activity.last_human_message_at == now - timedelta(minutes=20)
-    assert activity.to_snapshot(__import__("app.core.social_memory", fromlist=["SocialMemory"]).SocialMemory()).minutes_since_last_message == 20
+    assert activity.to_snapshot(SocialMemory()).minutes_since_last_message == 20
