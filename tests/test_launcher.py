@@ -56,6 +56,7 @@ class LauncherOllamaTests(unittest.TestCase):
                 launcher.ENV_PATH = old_env_path
 
         self.assertEqual("ollama", values["BOT_IA_PROVIDER"])
+        self.assertEqual("true", values["BOT_IA_ENABLE_LOCAL_OLLAMA"])
         self.assertEqual(launcher.OLLAMA_BASE_URL, values["OLLAMA_BASE_URL"])
         self.assertEqual("", values["OPENAI_API_KEY"])
         self.assertEqual("", values["GROQ_API_KEY"])
