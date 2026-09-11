@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import sqlite3
@@ -75,6 +75,19 @@ class PersistentSessionStore:
                 )
             except (TypeError, ValueError, json.JSONDecodeError) as error:
                 raise SessionStorageError("invalid persisted session") from error
+
+    def get_or_create(self, user_id: str, conversation_id: str, universe_id: str | None) -> SessionState | None:
+        """Satisfy the application session-store contract using only local persistence."""
+        state = self.get(user_id, conversation_id)
+        if state is not None or universe_id is None:
+            return state
+        state = SessionState(
+            f"local:{user_id}:{conversation_id}",
+            universe_id,
+            datetime.now(timezone.utc) + timedelta(hours=8),
+        )
+        self.put(user_id, conversation_id, state)
+        return state
 
     def put(self, user_id: str, conversation_id: str, state: SessionState) -> None:
         if not user_id or not conversation_id:
