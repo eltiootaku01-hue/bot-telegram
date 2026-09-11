@@ -5,6 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.db.models import Chat, GameProfile, PointTransaction, User, UserChat
 
 
@@ -13,7 +14,7 @@ class MemberRepository:
 
     async def touch(self, session: AsyncSession, user: TgUser, chat: TgChat) -> None:
         """Refresh activity using race-safe inserts and atomic message counting."""
-        now = datetime.utcnow()
+        now = utc_now()
         await self._ensure_user(session, user, now)
         await self._ensure_chat(session, chat, now)
 
@@ -52,7 +53,7 @@ class MemberRepository:
         await session.commit()
 
     async def set_membership(self, session: AsyncSession, user: TgUser, chat: TgChat, status: str) -> None:
-        now = datetime.utcnow()
+        now = utc_now()
         await self._ensure_user(session, user, now)
         await self._ensure_chat(session, chat, now)
         link = await session.scalar(select(UserChat).where(
@@ -126,7 +127,7 @@ class MemberRepository:
                     await session.execute(
                         update(GameProfile)
                         .where(GameProfile.id == profile.id)
-                        .values(points=GameProfile.points + amount, updated_at=datetime.utcnow())
+                        .values(points=GameProfile.points + amount, updated_at=utc_now())
                     )
                     session.add(PointTransaction(
                         user_id=user_id, chat_id=chat_id, amount=amount, reason=reason,
@@ -174,7 +175,7 @@ class MemberRepository:
                 result = await session.execute(
                     update(GameProfile)
                     .where(GameProfile.id == profile.id, GameProfile.points >= amount)
-                    .values(points=GameProfile.points - amount, updated_at=datetime.utcnow())
+                    .values(points=GameProfile.points - amount, updated_at=utc_now())
                 )
                 if result.rowcount != 1:
                     raise _InsufficientPoints
