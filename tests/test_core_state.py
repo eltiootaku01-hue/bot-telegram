@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import EventBus
-from app.core.jobs import JobQueue
+from app.core.jobs import DEFAULT_BACKOFF_SECONDS, DEFAULT_MAX_ATTEMPTS, JobQueue
 from app.core.time import utc_now
 from app.db.database import Database
 from app.db.models import DomainEvent, DurableJob
@@ -111,3 +111,27 @@ async def test_event_heartbeat_extends_liveness_without_changing_claim(session: 
     assert refreshed.locked_at == original_lock
     assert refreshed.heartbeat_at is not None
     assert await bus.complete(session, claimed.event_id, lock_time=original_lock) is True
+
+
+@pytest.mark.asyncio
+async def test_job_failure_uses_bounded_backoff_and_max_attempts(session: AsyncSession):
+    queue = JobQueue()
+    job = await queue.enqueue(session, "telegram.publish", {"chat_id": 10}, dedupe_key="retry-policy")
+
+    for attempt in range(1, DEFAULT_MAX_ATTEMPTS + 1):
+        claimed = await queue.claim(session)
+        assert claimed is not None
+        assert claimed.attempts == attempt
+        assert await queue.fail(session, job.id, "temporary failure", lock_time=claimed.locked_at) is True
+        refreshed = await session.get(DurableJob, job.id)
+        assert refreshed is not None
+        if attempt < DEFAULT_MAX_ATTEMPTS:
+            assert refreshed.status == "pending"
+            assert refreshed.run_at is not None
+            assert refreshed.run_at >= utc_now()
+            expected_delay = DEFAULT_BACKOFF_SECONDS[min(attempt, len(DEFAULT_BACKOFF_SECONDS) - 1)]
+            assert refreshed.run_at <= utc_now() + timedelta(seconds=expected_delay + 1)
+            refreshed.run_at = utc_now()
+            await session.commit()
+        else:
+            assert refreshed.status == "failed"
