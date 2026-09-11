@@ -80,6 +80,7 @@ class JobQueue:
             query = query.where(DurableJob.job_type == job_type)
         candidate = await session.scalar(query.order_by(DurableJob.id.asc()).limit(1))
         if candidate is None:
+            await session.rollback()
             return None
         return await self._claim_id(session, candidate.id, now)
 
@@ -94,6 +95,7 @@ class JobQueue:
             )
         )
         if candidate is None:
+            await session.rollback()
             return None
         return await self._claim_id(session, candidate.id, now)
 
