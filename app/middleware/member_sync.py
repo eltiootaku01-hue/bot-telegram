@@ -37,10 +37,11 @@ class MemberSyncMiddleware(BaseMiddleware):
             chat = event.chat
 
         if user is not None and chat is not None:
+            is_message = isinstance(event, Message)
             async with self.database.session() as session:
-                await self.repository.touch(session, user, chat)
+                await self.repository.touch(session, user, chat, is_message=is_message)
                 if (
-                    isinstance(event, Message)
+                    is_message
                     and not user.is_bot
                     and chat.type in {"group", "supergroup"}
                 ):
