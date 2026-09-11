@@ -29,6 +29,7 @@ class Chat(Base):
     username: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_human_message_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class UserChat(Base):
