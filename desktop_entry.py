@@ -57,12 +57,18 @@ def _run_web_chat_worker() -> int:
     from bot_ia.runtime import build_runtime
 
     load_dotenv(ROOT / ".env")
+    runtime = None
     try:
         host = os.getenv("BOT_IA_HOST", "127.0.0.1")
         port = int(os.getenv("BOT_IA_PORT", "8787"))
         token = os.getenv("BOT_IA_API_TOKEN", "").strip() or None
-        if host not in {"127.0.0.1", "localhost", "::1"} and len(token or "") < 32:
-            raise RuntimeError("BOT_IA_API_TOKEN must contain at least 32 characters for LAN web chat")
+        insecure_lan = os.getenv("BOT_IA_ALLOW_INSECURE_LAN", "").strip().lower() in {"1", "true", "yes", "on"}
+        public_base_url = os.getenv("BOT_IA_PUBLIC_BASE_URL", "").strip()
+        if host not in {"127.0.0.1", "localhost", "::1"}:
+            if len(token or "") < 32:
+                raise RuntimeError("BOT_IA_API_TOKEN must contain at least 32 characters for LAN web chat")
+            if not insecure_lan and not public_base_url.lower().startswith("https://"):
+                raise RuntimeError("non-local web chat requires HTTPS unless BOT_IA_ALLOW_INSECURE_LAN=true is explicitly enabled")
         allow_external_api = os.getenv("BOT_IA_ALLOW_REMOTE_EXTERNAL_API", "").strip().lower() in {"1", "true", "yes", "on"}
         runtime = build_runtime(ROOT)
         universe_id = os.getenv("BOT_IA_UNIVERSE", "one_neko_punch")
@@ -70,11 +76,13 @@ def _run_web_chat_worker() -> int:
         application = runtime.build_application(default_universe_id=universe_id, provider_id=provider_id)
         print(f"BOT-IA Web Chat worker: http://{host}:{port}/")
         run_web_chat_server(application, host=host, port=port, api_token=token, allow_external_api=allow_external_api)
-        runtime.memory_store.close()
         return 0
     except Exception:
         traceback.print_exc()
         return 1
+    finally:
+        if runtime is not None:
+            runtime.memory_store.close()
 
 
 def _install_threadsafe_desktop():
@@ -169,6 +177,7 @@ def _install_threadsafe_desktop():
             browser_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
             webbrowser.open(f"http://{browser_host}:{port}/")
             self._append("BOT-IA", f"Chat web iniciado en http://{browser_host}:{port}/")
+            self._watch_web_chat()
         except Exception as error:
             self._append("BOT-IA", f"No se pudo iniciar el chat web: {type(error).__name__}: {error}")
 
