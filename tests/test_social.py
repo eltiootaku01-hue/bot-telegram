@@ -2,6 +2,7 @@ from app.core.identity import BotIdentity
 from app.core.social import (
     ACTIVITY_COSTS,
     PERSONALITY_POLICIES,
+    rank_interveners,
     should_intervene,
 )
 
@@ -22,8 +23,36 @@ def test_all_bots_have_activity_costs():
 def test_busy_chat_is_not_interrupted():
     assert not should_intervene(recent_messages=8, minutes_since_last_message=60)
     assert not should_intervene(recent_messages=12, minutes_since_last_message=120)
+    assert rank_interveners(
+        recent_messages=10,
+        minutes_since_last_message=120,
+        fatigue_by_bot={identity: 0 for identity in BotIdentity},
+    ) == ()
 
 
 def test_quiet_chat_can_be_nudged_after_cooldown():
     assert not should_intervene(recent_messages=2, minutes_since_last_message=29)
     assert should_intervene(recent_messages=2, minutes_since_last_message=30)
+
+
+def test_intervener_selection_prefers_low_fatigue_and_personality_fit():
+    ranked = rank_interveners(
+        recent_messages=2,
+        minutes_since_last_message=35,
+        fatigue_by_bot={
+            BotIdentity.CARI: 10,
+            BotIdentity.SUNNA: 0,
+            BotIdentity.CAMI: 10,
+            BotIdentity.CHIE: 10,
+        },
+    )
+    assert ranked[0] == BotIdentity.CARI
+
+
+def test_exhausted_bots_are_excluded_from_social_nudges():
+    ranked = rank_interveners(
+        recent_messages=1,
+        minutes_since_last_message=40,
+        fatigue_by_bot={identity: 0 for identity in BotIdentity} | {BotIdentity.CARI: 100},
+    )
+    assert BotIdentity.CARI not in ranked
