@@ -97,3 +97,36 @@ def should_intervene(*, recent_messages: int, minutes_since_last_message: int) -
     if recent_messages >= HIGH_ACTIVITY_MESSAGES:
         return False
     return minutes_since_last_message >= MIN_EVENT_INTERVAL_MINUTES
+
+
+def rank_interveners(
+    *,
+    recent_messages: int,
+    minutes_since_last_message: int,
+    fatigue_by_bot: dict[BotIdentity, int],
+) -> tuple[BotIdentity, ...]:
+    """Return bots in preferred order for one optional social nudge.
+
+    This is intentionally deterministic and local. A full LLM decision is not
+    needed just to decide whether the group should be left alone.
+    """
+    if not should_intervene(
+        recent_messages=recent_messages,
+        minutes_since_last_message=minutes_since_last_message,
+    ):
+        return ()
+
+    candidates = [
+        identity
+        for identity in BotIdentity
+        if fatigue_by_bot.get(identity, 0) < 100
+    ]
+    candidates.sort(
+        key=lambda identity: (
+            PERSONALITY_POLICIES[identity].intervention_weight
+            - fatigue_by_bot.get(identity, 0) // 20,
+            -fatigue_by_bot.get(identity, 0),
+        ),
+        reverse=True,
+    )
+    return tuple(candidates)
