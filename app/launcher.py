@@ -14,6 +14,8 @@ except ImportError:  # pragma: no cover - packaged build installs python-dotenv
     set_key = None
     dotenv_values = None
 
+from app.services.process_manager import ProcessManager
+
 
 SOURCE_ROOT = Path(__file__).resolve().parent.parent
 FROZEN_ROOT = Path(sys.executable).resolve().parent
@@ -34,6 +36,7 @@ ENV_DEFAULTS = {
     "ADMIN_USER_ID": "0",
     "MEDIA_STORAGE_CHAT_ID": "0",
     "PUBLISH_PAGE_CHAT_ID": "0",
+    "AI_ENABLED": "false",
 }
 
 AI_FIELDS = (
@@ -48,14 +51,21 @@ class BotLauncher(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Bot Manager")
-        self.geometry("760x680")
-        self.minsize(760, 680)
+        self.geometry("900x760")
+        self.minsize(900, 700)
         self.protocol("WM_DELETE_WINDOW", self.close)
-        self.processes: dict[str, subprocess.Popen[str]] = {}
+        self.manager = ProcessManager(self._command, cwd=str(ROOT), grace_seconds=1.5)
+        self.ai_global_var = tk.BooleanVar(value=False)
+        self.ai_bot_vars: dict[str, tk.BooleanVar] = {}
         self.bot_vars: dict[str, dict[str, tk.StringVar]] = {}
         self.ai_vars: dict[str, tk.StringVar] = {}
         self.status = tk.StringVar(value="Configurá los bots y tocá Comenzar")
+        self._dashboard_cards: dict[str, ttk.LabelFrame] = {}
         self._build_setup()
+
+    @property
+    def processes(self) -> dict[str, subprocess.Popen[str]]:
+        return self.manager.processes
 
     def _build_setup(self) -> None:
         for widget in self.winfo_children():
@@ -63,11 +73,10 @@ class BotLauncher(tk.Tk):
 
         outer = ttk.Frame(self, padding=24)
         outer.pack(fill="both", expand=True)
-
         ttk.Label(outer, text="BOT MANAGER", font=("Segoe UI", 22, "bold")).pack(anchor="w")
         ttk.Label(
             outer,
-            text="Primera configuración: guardá los enlaces, tokens y APIs una sola vez.",
+            text="Configuración local. La IA y las APIs son opcionales; los bots no dependen de ellas para iniciar.",
         ).pack(anchor="w", pady=(2, 18))
 
         bots_box = ttk.LabelFrame(outer, text="Bots de Telegram", padding=14)
@@ -89,14 +98,30 @@ class BotLauncher(tk.Tk):
             ttk.Entry(bots_box, textvariable=link).grid(row=row, column=1, sticky="ew", padx=5, pady=6)
             ttk.Entry(bots_box, textvariable=token, show="•").grid(row=row, column=2, sticky="ew", padx=5, pady=6)
 
-        ai_box = ttk.LabelFrame(outer, text="APIs de IA", padding=14)
+        ai_box = ttk.LabelFrame(outer, text="IA opcional", padding=14)
         ai_box.pack(fill="x", pady=(16, 0))
         ai_box.columnconfigure(1, weight=1)
-        for row, (env_name, label) in enumerate(AI_FIELDS):
-            ttk.Label(ai_box, text=label).grid(row=row, column=0, sticky="w", padx=5, pady=5)
+        ttk.Checkbutton(
+            ai_box,
+            text="IA general disponible",
+            variable=self.ai_global_var,
+            command=self._sync_ai_controls,
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=5, pady=(0, 8))
+        for row, (env_name, label) in enumerate(AI_FIELDS, start=1):
+            ttk.Label(ai_box, text=label).grid(row=row, column=0, sticky="w", padx=5, pady=4)
             value = tk.StringVar(value=values.get(env_name, "") or "")
             self.ai_vars[env_name] = value
-            ttk.Entry(ai_box, textvariable=value, show="•").grid(row=row, column=1, sticky="ew", padx=5, pady=5)
+            ttk.Entry(ai_box, textvariable=value, show="•").grid(row=row, column=1, sticky="ew", padx=5, pady=4)
+
+        per_bot = ttk.Frame(ai_box)
+        per_bot.grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=(8, 0))
+        for index, key in enumerate(BOTS):
+            self.ai_bot_vars[key] = tk.BooleanVar(value=False)
+            ttk.Checkbutton(per_bot, text=f"IA {BOTS[key][0]}", variable=self.ai_bot_vars[key]).grid(
+                row=0, column=index, padx=(0, 14)
+            )
+        self.ai_global_var.set(values.get("AI_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"})
+        self._sync_ai_controls()
 
         options = ttk.Frame(outer)
         options.pack(fill="x", pady=(16, 0))
@@ -105,12 +130,12 @@ class BotLauncher(tk.Tk):
         ttk.Combobox(
             options,
             textvariable=self.provider_var,
-            values=("", "gemini", "groq", "cerebras", "openrouter"),
+            values=("", "ollama", "gemini", "groq", "cerebras", "openrouter"),
             state="readonly",
             width=18,
         ).grid(row=0, column=1, sticky="w", padx=10)
         ttk.Label(options, text="Modelo").grid(row=0, column=2, sticky="w", padx=(20, 0))
-        self.model_var = tk.StringVar(value=values.get("LLM_MODEL", "") or "")
+        self.model_var = tk.StringVar(value=values.get("LLM_MODEL", "") or values.get("OLLAMA_MODEL", "llama3.2:1b") or "")
         ttk.Entry(options, textvariable=self.model_var, width=28).grid(row=0, column=3, sticky="ew", padx=10)
         options.columnconfigure(3, weight=1)
 
@@ -126,7 +151,7 @@ class BotLauncher(tk.Tk):
         note = ttk.Label(
             outer,
             text="Los tokens y claves se guardan solamente en .env local (no se sube a Git).\n"
-            "Para Cari y Cami se recomienda configurar al menos una API antes de comenzar.",
+            "Si la IA está apagada, ningún bot debe invocar un LLM.",
         )
         note.pack(anchor="w", pady=(16, 8))
 
@@ -135,6 +160,12 @@ class BotLauncher(tk.Tk):
         ttk.Button(actions, text="Guardar configuración", command=self.save_config).pack(side="left")
         ttk.Button(actions, text="Comenzar", command=self.start_all).pack(side="right")
         ttk.Label(outer, textvariable=self.status, anchor="w").pack(fill="x", pady=(12, 0))
+
+    def _sync_ai_controls(self) -> None:
+        enabled = self.ai_global_var.get()
+        for variable in self.ai_bot_vars.values():
+            if not enabled:
+                variable.set(False)
 
     def _load_env(self) -> dict[str, str]:
         if dotenv_values is not None and ENV_PATH.exists():
@@ -165,10 +196,14 @@ class BotLauncher(tk.Tk):
         values.update({
             "LLM_PROVIDER": self.provider_var.get().strip(),
             "LLM_MODEL": self.model_var.get().strip(),
+            "OLLAMA_MODEL": self.model_var.get().strip() or "llama3.2:1b",
             "ADMIN_USER_ID": self.admin_var.get().strip() or "0",
             "MEDIA_STORAGE_CHAT_ID": self.media_var.get().strip() or "0",
             "BOT_IDENTITY": "cari",
+            "AI_ENABLED": "true" if self.ai_global_var.get() else "false",
         })
+        for key, variable in self.ai_bot_vars.items():
+            values[f"AI_ENABLED_{key.upper()}"] = "true" if variable.get() else "false"
         for env_name, value in self.ai_vars.items():
             values[env_name] = value.get().strip()
 
@@ -184,8 +219,6 @@ class BotLauncher(tk.Tk):
                 missing.append(f"Enlace de {key.title()}")
             if not fields["token"].get().strip():
                 missing.append(f"Token de {key.title()}")
-        if not any(var.get().strip() for var in self.ai_vars.values()):
-            missing.append("Al menos una API de IA")
         return missing
 
     def start_all(self) -> None:
@@ -200,17 +233,20 @@ class BotLauncher(tk.Tk):
             return
 
         self.stop_all(silent=True)
-        failures: list[str] = []
-        for key in BOTS:
-            try:
-                self._launch(key)
-            except (OSError, FileNotFoundError) as exc:
-                failures.append(f"{key.title()}: {exc}")
-        if failures:
-            self.status.set("Algunos bots no pudieron iniciar")
-            messagebox.showerror("Inicio incompleto", "\n".join(failures))
-        else:
-            self._build_dashboard()
+        self.status.set("Iniciando bots en secuencia y comprobando salud...")
+        self.update_idletasks()
+        result = self.manager.start_sequential(tuple(BOTS))
+        if result.failure is not None:
+            failure = result.failure
+            details = self.manager.last_output.get(failure.identity, ())
+            lines = [f"Bot: {failure.identity.title()}", f"Código de salida: {failure.returncode}", "", "Salida original:"]
+            lines.extend(f"[{event.stream}] {event.line}" for event in details)
+            if len(lines) == 5:
+                lines.append("(El proceso terminó sin producir salida capturada.)")
+            self.status.set(f"Inicio detenido por fallo en {failure.identity.title()}")
+            messagebox.showerror("Error de inicio", "\n".join(lines))
+            return
+        self._build_dashboard()
 
     def _command(self, key: str) -> list[str]:
         _, _, module, executable = BOTS[key]
@@ -224,18 +260,7 @@ class BotLauncher(tk.Tk):
         return [sys.executable, "-m", module]
 
     def _launch(self, key: str) -> None:
-        process = self.processes.get(key)
-        if process is not None and process.poll() is None:
-            return
-        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        process = subprocess.Popen(
-            self._command(key),
-            cwd=ROOT,
-            env=os.environ.copy(),
-            text=True,
-            creationflags=creationflags,
-        )
-        self.processes[key] = process
+        self.manager.launch(key)
 
     def _build_dashboard(self) -> None:
         for widget in self.winfo_children():
@@ -244,10 +269,18 @@ class BotLauncher(tk.Tk):
         outer = ttk.Frame(self, padding=24)
         outer.pack(fill="both", expand=True)
         ttk.Label(outer, text="BOT MANAGER", font=("Segoe UI", 22, "bold")).pack(anchor="w")
-        ttk.Label(outer, text="Panel de control").pack(anchor="w", pady=(2, 18))
+        ttk.Label(outer, text="Panel de control · supervisión de procesos activa").pack(anchor="w", pady=(2, 18))
+
+        ai_panel = ttk.LabelFrame(outer, text="IA", padding=12)
+        ai_panel.pack(fill="x", pady=(0, 10))
+        ttk.Checkbutton(ai_panel, text="IA GENERAL", variable=self.ai_global_var, command=self._toggle_global_ai).pack(side="left")
+        self.ai_state_label = ttk.Label(ai_panel, text="🔒 OFF")
+        self.ai_state_label.pack(side="left", padx=14)
+        ttk.Label(ai_panel, text="La IA no participa en el arranque ni en diagnósticos deterministas.").pack(side="right")
 
         grid = ttk.Frame(outer)
-        grid.pack(fill="x")
+        grid.pack(fill="both", expand=True)
+        self._dashboard_cards = {}
         for index, key in enumerate(BOTS):
             label, role, _, _ = BOTS[key]
             card = ttk.LabelFrame(grid, text=label, padding=14)
@@ -255,8 +288,12 @@ class BotLauncher(tk.Tk):
             ttk.Label(card, text=role).pack(anchor="w")
             state = tk.StringVar()
             setattr(card, "_state", state)
-            ttk.Label(card, textvariable=state).pack(anchor="w", pady=(8, 10))
+            ai_state = tk.StringVar()
+            setattr(card, "_ai_state", ai_state)
+            ttk.Label(card, textvariable=state).pack(anchor="w", pady=(8, 2))
+            ttk.Label(card, textvariable=ai_state).pack(anchor="w", pady=(0, 10))
             ttk.Button(card, text="Iniciar / detener", command=lambda name=key: self.toggle(name)).pack(fill="x")
+            self._dashboard_cards[key] = card
             grid.columnconfigure(index % 2, weight=1)
         grid.rowconfigure(0, weight=1)
         grid.rowconfigure(1, weight=1)
@@ -266,48 +303,71 @@ class BotLauncher(tk.Tk):
         ttk.Button(actions, text="Configuración", command=self._build_setup).pack(side="left")
         ttk.Button(actions, text="Detener todos", command=self.stop_all).pack(side="right")
         ttk.Label(outer, textvariable=self.status, anchor="w").pack(fill="x", pady=(12, 0))
-        self._dashboard_cards = {key: child for key, child in self._card_widgets(grid)}
-        self.after(500, self.refresh_status)
+        self._refresh_ai_label()
+        self.after(300, self.refresh_status)
 
-    @staticmethod
-    def _card_widgets(grid: ttk.Frame):
-        for child in grid.winfo_children():
-            if isinstance(child, ttk.LabelFrame):
-                title = child.cget("text")
-                yield title.lower(), child
+    def _toggle_global_ai(self) -> None:
+        if not self.ai_global_var.get():
+            for variable in self.ai_bot_vars.values():
+                variable.set(False)
+        self._refresh_ai_label()
+
+    def _refresh_ai_label(self) -> None:
+        if hasattr(self, "ai_state_label"):
+            self.ai_state_label.configure(text="🟢 ON" if self.ai_global_var.get() else "🔒 OFF")
+        for key, card in self._dashboard_cards.items():
+            state = getattr(card, "_ai_state", None)
+            if state is not None:
+                enabled = self.ai_global_var.get() and self.ai_bot_vars.get(key, tk.BooleanVar()).get()
+                state.set("🟢 IA disponible" if enabled else "🔒 IA desactivada")
 
     def toggle(self, key: str) -> None:
         process = self.processes.get(key)
         if process is not None and process.poll() is None:
-            process.terminate()
+            self.manager.stop(key, process)
             self.status.set(f"{key.title()} detenido")
         else:
             try:
-                self._launch(key)
-                self.status.set(f"{key.title()} iniciado")
+                self.manager.launch(key)
+                self.status.set(f"{key.title()} iniciado; comprobando salud...")
+                self.after(0, lambda name=key: self._check_single_start(name))
             except (OSError, FileNotFoundError) as exc:
                 self.status.set(f"Error al iniciar {key.title()}")
                 messagebox.showerror("Inicio", str(exc))
         self.refresh_status()
 
+    def _check_single_start(self, key: str) -> None:
+        process = self.processes.get(key)
+        if process is None:
+            return
+        if not self.manager.check_health(key, process):
+            details = self.manager.last_output.get(key, ())
+            lines = [f"Bot: {key.title()}", f"Código de salida: {process.poll()}", "", "Salida original:"]
+            lines.extend(f"[{event.stream}] {event.line}" for event in details)
+            self.manager.stop(key, process)
+            self.status.set(f"Inicio detenido por fallo en {key.title()}")
+            messagebox.showerror("Error de inicio", "\n".join(lines))
+        else:
+            self.status.set(f"{key.title()} activo")
+        self.refresh_status()
+
     def refresh_status(self) -> None:
+        self.manager.drain_output()
         for key, process in list(self.processes.items()):
             if process.poll() is not None:
                 self.processes.pop(key, None)
                 self.status.set(f"{key.title()} terminó · código {process.returncode}")
-        for key, card in getattr(self, "_dashboard_cards", {}).items():
+        for key, card in self._dashboard_cards.items():
             process = self.processes.get(key)
             state = getattr(card, "_state", None)
             if state is not None:
                 state.set("● Ejecutándose" if process and process.poll() is None else "○ Detenido")
+        self._refresh_ai_label()
         if self.winfo_exists():
             self.after(1000, self.refresh_status)
 
     def stop_all(self, *, silent: bool = False) -> None:
-        for process in self.processes.values():
-            if process.poll() is None:
-                process.terminate()
-        self.processes.clear()
+        self.manager.stop_all()
         if not silent:
             self.status.set("Todos los bots están detenidos")
 
