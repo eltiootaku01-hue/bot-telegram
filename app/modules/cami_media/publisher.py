@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+import asyncio
+import logging
+from datetime import datetime, timedelta
 from html import escape
 
 from aiogram import Bot
@@ -16,12 +18,16 @@ from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import FanRequest, MediaAsset, RequestStatus, User
 from app.services.forum_topics import ForumTopicService
+from app.ui.media_keyboards import cami_publication_recovery
+
+logger = logging.getLogger(__name__)
 
 
 class CamiMediaPublisher(BotModule):
     """Durable publisher for Cami's scheduled media jobs."""
 
     name = "cami-media-publisher"
+    UNKNOWN_DELIVERY_AFTER_SECONDS = 600
 
     def __init__(self, database: Database) -> None:
         super().__init__()
@@ -40,11 +46,59 @@ class CamiMediaPublisher(BotModule):
         worker.register_job("media.request_publish", lambda payload: self.publish_request(bot, payload))
         self.worker = worker
         self.tasks.start("media-publish-worker", worker.run())
+        self.tasks.start("media-publication-reconciler", self._reconcile_unknown_deliveries(bot))
 
     async def on_shutdown(self) -> None:
         if self.worker is not None:
             self.worker.stop()
         await super().on_shutdown()
+
+    async def _reconcile_unknown_deliveries(self, bot: Bot) -> None:
+        """Turn abandoned in-flight sends into an explicit human decision.
+
+        Telegram's Bot API returns a Message on success, but a process can die
+        between Telegram accepting the send and our DB commit. Retrying blindly
+        would risk duplicates, so after a bounded window we fence the asset into
+        delivery_unknown and ask the configured owner to decide.
+        """
+        while True:
+            try:
+                cutoff = datetime.utcnow() - timedelta(seconds=self.UNKNOWN_DELIVERY_AFTER_SECONDS)
+                async with self.database.session() as session:
+                    assets = list(await session.scalars(
+                        select(MediaAsset)
+                        .where(
+                            MediaAsset.status.in_(["publishing", "publishing_request"]),
+                            MediaAsset.updated_at < cutoff,
+                        )
+                        .order_by(MediaAsset.id.asc())
+                        .limit(20)
+                    ))
+                    for asset in assets:
+                        asset.status = "delivery_unknown"
+                        asset.updated_at = datetime.utcnow()
+                    if assets:
+                        await session.commit()
+
+                if assets and self.settings.admin_user_id:
+                    for asset in assets:
+                        try:
+                            kind = "pedido" if asset.request_id is not None else "publicación"
+                            await bot.send_message(
+                                self.settings.admin_user_id,
+                                f"⚠️ <b>Entrega ambigua de Cami</b>\n\n"
+                                f"Material #{asset.id} ({kind}) quedó en <code>delivery_unknown</code>.\n"
+                                "Telegram pudo haber recibido el envío antes de que Cami guardara el ID. "
+                                "Elegí una acción manual:",
+                                reply_markup=cami_publication_recovery(asset.id),
+                            )
+                        except Exception:
+                            logger.exception("Could not notify admin about unknown delivery asset=%s", asset.id)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Publication reconciliation cycle failed")
+            await asyncio.sleep(60)
 
     async def publish(self, bot: Bot, payload: dict) -> None:
         asset_id = int(payload["asset_id"])
@@ -57,9 +111,6 @@ class CamiMediaPublisher(BotModule):
         async with self.database.session() as session:
             asset = await session.get(MediaAsset, asset_id)
             if asset is None or asset.status != "scheduled":
-                # 'publishing' is intentionally terminal for automatic retries: a
-                # Telegram send can succeed immediately before a process crashes and
-                # the message id is never recorded. Automatic retry would duplicate it.
                 return
             setup = await session.scalar(
                 select(SetupSession)
@@ -103,8 +154,6 @@ class CamiMediaPublisher(BotModule):
                         current.updated_at = datetime.utcnow()
                         await session.commit()
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
-            # Telegram explicitly rejected the request, so this is not the ambiguous
-            # send-then-crash window. Returning to scheduled is safe and allows retry.
             async with self.database.session() as session:
                 current = await session.get(MediaAsset, asset_id)
                 if current is not None and current.status == "publishing":
