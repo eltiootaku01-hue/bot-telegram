@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Protocol
 
 from sqlalchemy import case, cast, Integer, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.db.models import GameCollection, GameProfile
 from app.game.evolution import next_fusion
 
@@ -125,7 +125,7 @@ async def apply_capture_progression(
         .values(
             experience=GameProfile.experience + gained,
             level=cast((GameProfile.experience + gained) / 500, Integer) + 1,
-            updated_at=datetime.utcnow(),
+            updated_at=utc_now(),
         )
     )
     await session.refresh(profile)
