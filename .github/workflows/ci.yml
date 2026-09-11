@@ -23,8 +23,8 @@ jobs:
         with:
           python-version: "3.14"
       - name: Compile source and tests
-        run: python -m compileall -q src tests
+        run: python -m compileall -q src tests launcher.py desktop.py
       - name: Import runtime surface
-        run: python -c "import bot_ia; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2"
+        run: python -c "import bot_ia; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher"
       - name: Run test suite
         run: python -m unittest discover -s tests -v
