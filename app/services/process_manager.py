@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from subprocess import PIPE, Popen
+from subprocess import PIPE, Popen, TimeoutExpired
 from typing import Callable, Sequence
 
 from app.services.process_health import HealthResult, ProcessHealth
@@ -56,9 +56,12 @@ class ProcessManager:
             target.terminate()
             try:
                 target.wait(timeout=self.stop_timeout)
-            except TimeoutError:
+            except TimeoutExpired:
                 target.kill()
-                target.wait(timeout=self.stop_timeout)
+                try:
+                    target.wait(timeout=self.stop_timeout)
+                except TimeoutExpired:
+                    pass
         self.processes.pop(identity, None)
 
     def start_sequential(self, identities: Sequence[str]) -> StartupResult:
