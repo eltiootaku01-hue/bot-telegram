@@ -50,7 +50,7 @@ class GameProfile(Base):
     __table_args__ = (UniqueConstraint("user_id", "chat_id", name="uq_game_profile"),)
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
     level: Mapped[int] = mapped_column(Integer, default=1)
     experience: Mapped[int] = mapped_column(Integer, default=0)
     points: Mapped[int] = mapped_column(Integer, default=0)
@@ -200,6 +200,26 @@ class BotSetting(Base):
     chat_id: Mapped[int | None] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
     key: Mapped[str] = mapped_column(String(100))
     value: Mapped[str] = mapped_column(String(4000), default="")
+
+
+class BotPresence(StrEnum):
+    ACTIVE = "active"
+    RESTING = "resting"
+    MANUAL_OFF = "manual_off"
+
+
+class BotPresenceState(Base):
+    __tablename__ = "bot_presence_states"
+    __table_args__ = (UniqueConstraint("bot_identity", name="uq_bot_presence_identity"),)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    bot_identity: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32), default=BotPresence.ACTIVE.value)
+    energy: Mapped[int] = mapped_column(Integer, default=0)
+    rest_until: Mapped[datetime | None] = mapped_column(DateTime)
+    auto_resume: Mapped[bool] = mapped_column(default=True)
+    pc_idle_required: Mapped[bool] = mapped_column(default=False)
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class DomainEvent(Base):
