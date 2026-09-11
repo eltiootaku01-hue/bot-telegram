@@ -92,7 +92,8 @@ class ProcessManager:
             return []
         with self._lock:
             for event in events:
-                self.last_output[event.identity] = self.last_output.get(identity, ()) + (event,)
+                existing = self.last_output.get(event.identity, ())
+                self.last_output[event.identity] = existing + (event,)
         return events
 
     def active_processes(self) -> dict[str, Popen[str]]:
