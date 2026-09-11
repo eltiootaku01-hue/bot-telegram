@@ -26,6 +26,21 @@ jobs:
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
+      - name: Resolve build version
+        id: version
+        shell: pwsh
+        run: |
+          $line = Select-String -Path pyproject.toml -Pattern '^version = "([^"]+)"$' | Select-Object -First 1
+          if (-not $line) { throw "Could not resolve project version from pyproject.toml" }
+          $version = $line.Matches[0].Groups[1].Value
+          if ($env:GITHUB_REF_NAME -match '^v(.+)$') {
+            $tagVersion = $Matches[1]
+            if ($tagVersion -ne $version) {
+              throw "Tag version $tagVersion does not match pyproject.toml version $version"
+            }
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Build version: $version"
       - name: Build executables
         shell: cmd
         run: tools\build_launcher.bat
@@ -45,35 +60,60 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          $version = if ($env:GITHUB_REF_NAME -match '^v(.+)$') { $Matches[1] } else { '0.1.0' }
           New-Item -ItemType Directory -Force -Path dist-installer | Out-Null
+          $version = "${{ steps.version.outputs.version }}"
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" installer\bot-telegram.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Verify installer
+      - name: Verify installer and create manifest
         shell: pwsh
         run: |
           $installer = Get-ChildItem dist-installer -Filter "BotTelegram-Setup-*.exe" | Select-Object -First 1
           if (-not $installer) { throw "Installer was not generated" }
           if ($installer.Length -lt 1MB) { throw "Installer looks unexpectedly small: $($installer.Length) bytes" }
+          $version = "${{ steps.version.outputs.version }}"
+          if ($installer.BaseName -ne "BotTelegram-Setup-$version") {
+            throw "Installer version mismatch: $($installer.Name) vs $version"
+          }
           Write-Host "Installer: $($installer.FullName)"
       - name: Package portable build
         shell: pwsh
-        run: Compress-Archive -Path dist\* -DestinationPath bot-telegram-windows-portable.zip -Force
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          Compress-Archive -Path dist\* -DestinationPath "BotTelegram-Windows-v$version-portable.zip" -Force
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $installer = Get-ChildItem dist-installer -Filter "BotTelegram-Setup-$version.exe" | Select-Object -First 1
+          $portable = Get-Item "BotTelegram-Windows-v$version-portable.zip"
+          $lines = @(
+            "SHA256 checksums for Bot Telegram $version",
+            "",
+            "$(Get-FileHash $installer.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $($installer.Name)",
+            "$(Get-FileHash $portable.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $($portable.Name)"
+          )
+          $lines | Set-Content -Path "SHA256SUMS.txt" -Encoding utf8
       - uses: actions/upload-artifact@v4
         with:
           name: bot-telegram-windows-installer
-          path: dist-installer\BotTelegram-Setup-*.exe
+          path: |
+            dist-installer\BotTelegram-Setup-*.exe
+            SHA256SUMS.txt
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: bot-telegram-windows-portable
-          path: bot-telegram-windows-portable.zip
+          path: |
+            BotTelegram-Windows-v*-portable.zip
+            SHA256SUMS.txt
           if-no-files-found: error
       - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
-          $installer = (Get-ChildItem dist-installer -Filter "BotTelegram-Setup-*.exe" | Select-Object -First 1).FullName
-          gh release create "$env:GITHUB_REF_NAME" $installer bot-telegram-windows-portable.zip --generate-notes --title "Bot Telegram $env:GITHUB_REF_NAME"
+          $version = "${{ steps.version.outputs.version }}"
+          $installer = (Get-ChildItem dist-installer -Filter "BotTelegram-Setup-$version.exe" | Select-Object -First 1).FullName
+          $portable = (Get-Item "BotTelegram-Windows-v$version-portable.zip").FullName
+          gh release create "$env:GITHUB_REF_NAME" $installer $portable SHA256SUMS.txt --generate-notes --title "Bot Telegram $env:GITHUB_REF_NAME"
         env:
           GH_TOKEN: ${{ github.token }}
