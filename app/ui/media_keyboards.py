@@ -33,3 +33,16 @@ def cami_publish_destination(asset_id: int) -> InlineKeyboardMarkup:
     builder.row(InlineKeyboardButton(text="💬 Solo tema del grupo", callback_data=f"cami:media:dest:group:{asset_id}"))
     builder.row(InlineKeyboardButton(text="↩️ Cancelar", callback_data=f"cami:media:cancel:{asset_id}"))
     return builder.as_markup()
+
+
+def cami_publication_recovery(asset_id: int) -> InlineKeyboardMarkup:
+    """Explicit human decision for a Telegram send whose result is unknown."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="✅ Confirmar publicado", callback_data=f"cami:recovery:confirm:{asset_id}"),
+    )
+    builder.row(
+        InlineKeyboardButton(text="🔁 Reintentar envío", callback_data=f"cami:recovery:retry:{asset_id}"),
+        InlineKeyboardButton(text="📦 Descartar", callback_data=f"cami:recovery:discard:{asset_id}"),
+    )
+    return builder.as_markup()
