@@ -37,6 +37,22 @@ class SQLiteBackupTests(unittest.TestCase):
             finally:
                 connection.close()
 
+    def test_observer_detects_commit_from_another_connection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = self._database(root, "source.sqlite3")
+            manager = SQLiteBackupManager(self.APPLICATION_ID, 1)
+            writer = sqlite3.connect(source)
+            try:
+                with manager.observe_data_version(source) as observer:
+                    before = manager._data_version(observer)
+                    writer.execute("INSERT INTO data(value) VALUES ('changed')")
+                    writer.commit()
+                    after = manager._data_version(observer)
+                self.assertNotEqual(before, after)
+            finally:
+                writer.close()
+
     def test_restore_replaces_destination_atomically(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

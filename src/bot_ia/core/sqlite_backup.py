@@ -5,11 +5,12 @@ source of truth; no network transfer is performed here.
 """
 from __future__ import annotations
 
-from contextlib import closing
+from contextlib import closing, contextmanager
 from pathlib import Path
 import os
 import sqlite3
 import tempfile
+from collections.abc import Iterator
 
 
 class SQLiteBackupError(RuntimeError):
@@ -46,15 +47,31 @@ class SQLiteBackupManager:
             raise SQLiteBackupError("SQLite database is newer than this BOT-IA version")
         return application_id, version
 
-    def data_version(self, database_path: Path) -> int:
-        """Return SQLite's change counter as observed by a fresh connection."""
+    @staticmethod
+    def _data_version(connection: sqlite3.Connection) -> int:
+        return int(connection.execute("PRAGMA data_version").fetchone()[0])
+
+    @contextmanager
+    def observe_data_version(self, database_path: Path) -> Iterator[sqlite3.Connection]:
+        """Keep one connection open so PRAGMA data_version can observe other commits.
+
+        SQLite's data_version is meaningful across repeated reads on the same
+        connection. Opening a fresh connection for both reads would reset the
+        observer baseline and could miss writes made by another connection.
+        """
         if not database_path.is_file():
             raise SQLiteBackupError("SQLite database does not exist")
         try:
             with closing(sqlite3.connect(database_path, timeout=10.0)) as connection:
-                return int(connection.execute("PRAGMA data_version").fetchone()[0])
+                connection.execute("PRAGMA busy_timeout=10000")
+                yield connection
         except sqlite3.DatabaseError as error:
-            raise SQLiteBackupError("SQLite database version could not be read") from error
+            raise SQLiteBackupError("SQLite database version could not be observed") from error
+
+    def data_version(self, database_path: Path) -> int:
+        """Return a one-shot data-version observation for diagnostics/tests."""
+        with self.observe_data_version(database_path) as connection:
+            return self._data_version(connection)
 
     def create_backup(self, source_path: Path, backup_path: Path) -> Path:
         """Create an atomic, integrity-checked snapshot of a live SQLite DB."""

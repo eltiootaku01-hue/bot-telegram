@@ -61,18 +61,19 @@ class BackupService:
 
         try:
             for _attempt in range(self.MAX_COHERENCE_ATTEMPTS):
-                before_memory = self._memory.data_version(memory_source)
-                before_sessions = self._sessions.data_version(sessions_source)
-                memory_target.unlink(missing_ok=True)
-                sessions_target.unlink(missing_ok=True)
+                with self._memory.observe_data_version(memory_source) as memory_observer, self._sessions.observe_data_version(sessions_source) as sessions_observer:
+                    before_memory = self._memory._data_version(memory_observer)
+                    before_sessions = self._sessions._data_version(sessions_observer)
+                    memory_target.unlink(missing_ok=True)
+                    sessions_target.unlink(missing_ok=True)
 
-                self._memory.create_backup(memory_source, memory_target)
-                self._sessions.create_backup(sessions_source, sessions_target)
+                    self._memory.create_backup(memory_source, memory_target)
+                    self._sessions.create_backup(sessions_source, sessions_target)
 
-                after_memory = self._memory.data_version(memory_source)
-                after_sessions = self._sessions.data_version(sessions_source)
-                if before_memory == after_memory and before_sessions == after_sessions:
-                    return BackupSnapshot(memory_target, sessions_target)
+                    after_memory = self._memory._data_version(memory_observer)
+                    after_sessions = self._sessions._data_version(sessions_observer)
+                    if before_memory == after_memory and before_sessions == after_sessions:
+                        return BackupSnapshot(memory_target, sessions_target)
 
             raise SQLiteBackupError("source databases changed during coordinated snapshot")
         except Exception:

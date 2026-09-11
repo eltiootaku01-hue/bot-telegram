@@ -85,8 +85,8 @@ class BackupServiceTests(unittest.TestCase):
 
             service = BackupService(root)
             with (
-                patch.object(service._memory, "data_version", side_effect=[1, 1, 2, 2, 3, 3]),
-                patch.object(service._sessions, "data_version", side_effect=[1, 2, 3, 4, 5, 6]),
+                patch.object(service._memory, "_data_version", side_effect=[1, 2, 3, 4, 5, 6]),
+                patch.object(service._sessions, "_data_version", side_effect=[1, 2, 3, 4, 5, 6]),
                 self.assertRaisesRegex(SQLiteBackupError, "changed during coordinated snapshot"),
             ):
                 service.create_snapshot(root / "backups", label="snapshot-1")
