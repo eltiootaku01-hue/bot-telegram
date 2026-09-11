@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.social_wake import SocialWakeState, WakeReason
@@ -36,8 +37,16 @@ class SocialWakeStore:
                 consecutive_silences=default.consecutive_silences,
                 updated_at=utc_now(),
             )
-            session.add(row)
-            await session.flush()
+            try:
+                async with session.begin_nested():
+                    session.add(row)
+                    await session.flush()
+            except IntegrityError:
+                row = await session.scalar(
+                    select(SocialWake).where(SocialWake.chat_id == chat_id)
+                )
+                if row is None:
+                    raise
         if commit:
             await session.commit()
         return self._state(row)
@@ -71,16 +80,38 @@ class SocialWakeStore:
         *,
         reason: WakeReason = WakeReason.EVENT,
         commit: bool = True,
-    ) -> SocialWakeState | None:
+    ) -> SocialWakeState:
         row = await session.scalar(select(SocialWake).where(SocialWake.chat_id == chat_id))
         if row is None:
-            return None
-        if row.cooldown_until and now < row.cooldown_until:
+            row = SocialWake(
+                chat_id=chat_id,
+                next_wake_at=now,
+                pending_reason=reason.value,
+                consecutive_silences=0,
+                updated_at=now,
+            )
+            try:
+                async with session.begin_nested():
+                    session.add(row)
+                    await session.flush()
+            except IntegrityError:
+                row = await session.scalar(
+                    select(SocialWake).where(SocialWake.chat_id == chat_id)
+                )
+                if row is None:
+                    raise
+                if row.cooldown_until and now < row.cooldown_until:
+                    result = self._state(row)
+                    if commit:
+                        await session.commit()
+                    return result
+        elif row.cooldown_until and now < row.cooldown_until:
             return self._state(row)
-        if now < row.next_wake_at:
-            row.next_wake_at = now
-        row.pending_reason = reason.value
-        row.updated_at = now
+        else:
+            if now < row.next_wake_at:
+                row.next_wake_at = now
+            row.pending_reason = reason.value
+            row.updated_at = now
         if commit:
             await session.commit()
         return self._state(row)
