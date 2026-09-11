@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from aiogram import Bot, F
+from aiogram import F
 from aiogram.types import Message
 
 from app.brain.provider import BrainClient, LLMProviderError, LLMRequest
@@ -27,24 +27,19 @@ class BrainChatModule(BotModule):
         self.router.message.register(self.chat, F.text)
 
     @staticmethod
-    def _directly_addressed(message: Message, bot: Bot) -> bool:
+    def _directly_addressed(message: Message) -> bool:
         if message.chat.type == "private":
             return True
         if message.reply_to_message and message.reply_to_message.from_user:
             return message.reply_to_message.from_user.is_bot
-        text = message.text or ""
-        username = getattr(bot, "_username", "")
-        if username and f"@{username.casefold()}" in text.casefold():
-            return True
-        return text.casefold().strip() in {"bot", "cari", "sunna", "cami", "chie"}
+        text = (message.text or "").casefold().strip()
+        return text in {"bot", "cari", "sunna", "cami", "chie"}
 
-    async def chat(self, message: Message, bot: Bot) -> None:
-        if not message.text or not self._directly_addressed(message, bot):
+    async def chat(self, message: Message) -> None:
+        if not message.text or not self._directly_addressed(message):
             return
         prompt = message.text.strip()
-        if "@" in prompt and prompt.startswith("@"):
-            prompt = prompt.split(maxsplit=1)[1] if " " in prompt else ""
-        if not prompt:
+        if prompt.casefold() in {"bot", "cari", "sunna", "cami", "chie"}:
             prompt = "Decime algo breve y natural para iniciar la conversación."
         try:
             reply = await self.brain.generate(
