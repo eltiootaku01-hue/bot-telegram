@@ -2,6 +2,7 @@ from app.core.identity import BotIdentity
 from app.core.social import (
     ACTIVITY_COSTS,
     PERSONALITY_POLICIES,
+    choose_followup,
     rank_interveners,
     should_intervene,
 )
@@ -11,6 +12,8 @@ def test_all_bots_have_distinct_social_personality_policy():
     assert set(PERSONALITY_POLICIES) == set(BotIdentity)
     assert PERSONALITY_POLICIES[BotIdentity.SUNNA].max_reply_sentences == 1
     assert PERSONALITY_POLICIES[BotIdentity.SUNNA].can_finish_another_bot
+    assert PERSONALITY_POLICIES[BotIdentity.CARI].can_finish_another_bot
+    assert PERSONALITY_POLICIES[BotIdentity.CHIE].can_finish_another_bot
     assert PERSONALITY_POLICIES[BotIdentity.CARI].intervention_weight > PERSONALITY_POLICIES[BotIdentity.SUNNA].intervention_weight
 
 
@@ -56,3 +59,12 @@ def test_exhausted_bots_are_excluded_from_social_nudges():
         fatigue_by_bot={identity: 0 for identity in BotIdentity} | {BotIdentity.CARI: 100},
     )
     assert BotIdentity.CARI not in ranked
+
+
+def test_sunna_can_have_cari_or_chie_as_delayed_helper():
+    helpers = {choose_followup(speaker=BotIdentity.SUNNA, rng_value=value) for value in (0, 1)}
+    assert helpers == {BotIdentity.CARI, BotIdentity.CHIE}
+
+
+def test_followup_can_intentionally_remain_silent():
+    assert choose_followup(speaker=BotIdentity.SUNNA, rng_value=-1) is None
