@@ -2,6 +2,8 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.identity import BotIdentity
+
 
 class Settings(BaseSettings):
     # Legacy single-token mode remains available while the four identities are wired up.
@@ -10,6 +12,7 @@ class Settings(BaseSettings):
     bot_token_sunna: str = ""
     bot_token_cami: str = ""
     bot_token_chie: str = ""
+    bot_identity: BotIdentity = BotIdentity.CARI
     log_level: str = "INFO"
     database_url: str = "sqlite+aiosqlite:///./data/bot.db"
     admin_user_id: int = 0
