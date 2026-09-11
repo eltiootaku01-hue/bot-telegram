@@ -37,6 +37,31 @@ jobs:
         shell: pwsh
         run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss'
 
+      - name: Verify Windows package
+        shell: pwsh
+        run: |
+          $required = @(
+            "release\BOT-IA.exe",
+            "release\BOT-IA-Core.exe",
+            "release\BOT-IA-Setup.exe"
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path $path -PathType Leaf)) {
+              throw "Missing required package file: $path"
+            }
+            $size = (Get-Item $path).Length
+            if ($size -le 100KB) {
+              throw "Package file is unexpectedly small: $path ($size bytes)"
+            }
+            Write-Host "OK: $path ($size bytes)"
+          }
+          if (-not (Test-Path "release\config" -PathType Container)) {
+            throw "Missing required package directory: release\config"
+          }
+          $core = Get-Item "release\BOT-IA-Core.exe"
+          $launcher = Get-Item "release\BOT-IA.exe"
+          Write-Host "Launcher/Core package pair verified: $($launcher.Length) / $($core.Length) bytes"
+
       - name: Upload desktop package
         uses: actions/upload-artifact@v6
         with:
