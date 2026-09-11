@@ -4,6 +4,7 @@ from app.core.config import Settings
 from app.core.errors import router as error_router
 from app.core.identity import BotIdentity
 from app.core.registry import ModuleRegistry
+from app.core.social_runtime import SocialRuntimeModule
 from app.db.database import Database
 from app.middleware.member_sync import MemberSyncMiddleware
 from app.modules.admin.module import AdminModule
@@ -34,6 +35,7 @@ def build_dispatcher(settings: Settings, identity: BotIdentity) -> tuple[Bot, Di
 
     registry = ModuleRegistry(dispatcher)
     registry.register(SystemModule(identity))
+    registry.register(SocialRuntimeModule(database, identity))
 
     if identity is BotIdentity.CARI:
         registry.register(ChatModule())

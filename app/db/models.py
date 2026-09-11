@@ -4,6 +4,8 @@ from enum import StrEnum
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from app.core.time import utc_now
+
 
 class Base(DeclarativeBase):
     pass
@@ -17,8 +19,8 @@ class User(Base):
     last_name: Mapped[str | None] = mapped_column(String(255))
     language_code: Mapped[str | None] = mapped_column(String(16))
     is_bot: Mapped[bool] = mapped_column(default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class Chat(Base):
@@ -27,8 +29,9 @@ class Chat(Base):
     type: Mapped[str] = mapped_column(String(32), default="unknown")
     title: Mapped[str | None] = mapped_column(String(255))
     username: Mapped[str | None] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    last_human_message_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class UserChat(Base):
@@ -39,10 +42,10 @@ class UserChat(Base):
     chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
     status: Mapped[str] = mapped_column(String(32), default="member")
     message_count: Mapped[int] = mapped_column(Integer, default=0)
-    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     joined_at: Mapped[datetime | None] = mapped_column(DateTime)
     left_at: Mapped[datetime | None] = mapped_column(DateTime)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class GameProfile(Base):
@@ -55,18 +58,13 @@ class GameProfile(Base):
     experience: Mapped[int] = mapped_column(Integer, default=0)
     points: Mapped[int] = mapped_column(Integer, default=0)
     coins: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class PointTransaction(Base):
     __tablename__ = "point_transactions"
-    __table_args__ = (
-        UniqueConstraint(
-            "user_id", "chat_id", "reference_type", "reference_id",
-            name="uq_point_transaction_reference",
-        ),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "chat_id", "reference_type", "reference_id", name="uq_point_transaction_reference"),)
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(BigInteger)
@@ -74,7 +72,7 @@ class PointTransaction(Base):
     reason: Mapped[str] = mapped_column(String(255))
     reference_type: Mapped[str | None] = mapped_column(String(64))
     reference_id: Mapped[str | None] = mapped_column(String(128))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class GameCollection(Base):
@@ -88,7 +86,7 @@ class GameCollection(Base):
     copies: Mapped[int] = mapped_column(Integer, default=1)
     experience: Mapped[int] = mapped_column(Integer, default=0)
     evolution_stage: Mapped[int] = mapped_column(Integer, default=1)
-    obtained_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    obtained_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class GameEncounter(Base):
@@ -112,7 +110,7 @@ class GameAttempt(Base):
     user_id: Mapped[int] = mapped_column(BigInteger)
     answer: Mapped[str] = mapped_column(String(500))
     correct: Mapped[bool] = mapped_column(default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class RareDropApproval(Base):
@@ -123,7 +121,7 @@ class RareDropApproval(Base):
     target_user_id: Mapped[int] = mapped_column(BigInteger)
     target_chat_id: Mapped[int] = mapped_column(BigInteger)
     status: Mapped[str] = mapped_column(String(32), default="pending")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
@@ -149,8 +147,8 @@ class MediaAsset(Base):
     published_group_message_id: Mapped[int | None] = mapped_column(BigInteger)
     published_page_message_id: Mapped[int | None] = mapped_column(BigInteger)
     published_request_message_id: Mapped[int | None] = mapped_column(BigInteger)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class GameCharacterArt(Base):
@@ -161,7 +159,7 @@ class GameCharacterArt(Base):
     evolution_stage: Mapped[int] = mapped_column(Integer, default=1)
     asset_id: Mapped[int] = mapped_column(ForeignKey("media_assets.id", ondelete="CASCADE"))
     is_primary: Mapped[bool] = mapped_column(default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class RequestStatus(StrEnum):
@@ -190,8 +188,8 @@ class FanRequest(Base):
     source_message_id: Mapped[int | None] = mapped_column(BigInteger)
     admin_note: Mapped[str | None] = mapped_column(String(4000))
     due_at: Mapped[datetime | None] = mapped_column(DateTime)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class BotSetting(Base):
@@ -200,6 +198,26 @@ class BotSetting(Base):
     chat_id: Mapped[int | None] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
     key: Mapped[str] = mapped_column(String(100))
     value: Mapped[str] = mapped_column(String(4000), default="")
+
+
+class BotPresence(StrEnum):
+    ACTIVE = "active"
+    RESTING = "resting"
+    MANUAL_OFF = "manual_off"
+
+
+class BotPresenceState(Base):
+    __tablename__ = "bot_presence_states"
+    __table_args__ = (UniqueConstraint("bot_identity", name="uq_bot_presence_identity"),)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    bot_identity: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32), default=BotPresence.ACTIVE.value)
+    energy: Mapped[int] = mapped_column(Integer, default=0)
+    rest_until: Mapped[datetime | None] = mapped_column(DateTime)
+    auto_resume: Mapped[bool] = mapped_column(default=True)
+    pc_idle_required: Mapped[bool] = mapped_column(default=False)
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class DomainEvent(Base):
@@ -211,13 +229,13 @@ class DomainEvent(Base):
     payload: Mapped[str] = mapped_column(String(10000), default="{}")
     status: Mapped[str] = mapped_column(String(32), default="pending")
     attempts: Mapped[int] = mapped_column(Integer, default=0)
-    available_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    available_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     locked_at: Mapped[datetime | None] = mapped_column(DateTime)
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)
     last_error: Mapped[str | None] = mapped_column(String(4000))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class DurableJob(Base):
@@ -229,10 +247,10 @@ class DurableJob(Base):
     payload: Mapped[str] = mapped_column(String(10000), default="{}")
     status: Mapped[str] = mapped_column(String(32), default="pending")
     attempts: Mapped[int] = mapped_column(Integer, default=0)
-    run_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    run_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     locked_at: Mapped[datetime | None] = mapped_column(DateTime)
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)
     last_error: Mapped[str | None] = mapped_column(String(4000))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)

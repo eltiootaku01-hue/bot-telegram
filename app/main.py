@@ -9,7 +9,8 @@ from app.core.logging import configure_logging
 async def run() -> None:
     settings = get_settings()
     configure_logging(settings.log_level)
-    bot, dispatcher, database = build_dispatcher(settings)
+    identity = settings.bot_identity
+    bot, dispatcher, database = build_dispatcher(settings, identity)
     await database.create_schema()
 
     try:
@@ -20,5 +21,5 @@ async def run() -> None:
 
 
 if __name__ == "__main__":
-    logging.getLogger(__name__).info("Starting community bot")
+    logging.getLogger(__name__).info("Starting %s community bot", get_settings().bot_identity.value)
     asyncio.run(run())
