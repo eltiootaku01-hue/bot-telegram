@@ -52,20 +52,19 @@ class CamiMediaPublisher(BotModule):
         if destination not in {"both", "group"}:
             raise ValueError(f"Unsupported media destination: {destination}")
         if destination == "both" and not self.settings.publish_page_chat_id:
-            raise RuntimeError(
-                "Media destination 'both' requires PUBLISH_PAGE_CHAT_ID to be configured"
-            )
+            raise RuntimeError("Media destination 'both' requires PUBLISH_PAGE_CHAT_ID to be configured")
 
         async with self.database.session() as session:
             asset = await session.get(MediaAsset, asset_id)
             if asset is None or asset.status != "scheduled":
+                # 'publishing' is intentionally terminal for automatic retries: a
+                # Telegram send can succeed immediately before a process crashes and
+                # records its message_id. Retrying automatically would duplicate it.
+                # A future reconciliation action can explicitly reset this state.
                 return
             setup = await session.scalar(
                 select(SetupSession)
-                .where(
-                    SetupSession.bot_identity == BotIdentity.CHIE.value,
-                    SetupSession.status == "configured",
-                )
+                .where(SetupSession.bot_identity == BotIdentity.CHIE.value, SetupSession.status == "configured")
                 .order_by(SetupSession.id.desc())
             )
             if setup is None:
@@ -79,17 +78,20 @@ class CamiMediaPublisher(BotModule):
             group_message_id = asset.published_group_message_id
             page_message_id = asset.published_page_message_id
 
+            # Fence the asset before any external Telegram side effect. If the
+            # process dies after sendPhoto but before storing the message id, the
+            # durable job may retry, but the asset will no longer be eligible for
+            # automatic publication and can be reconciled instead of duplicated.
+            asset.status = "publishing"
+            asset.updated_at = datetime.utcnow()
+            await session.commit()
+
         try:
             if group_message_id is None:
-                sent = await bot.send_photo(
-                    group_id,
-                    file_id,
-                    message_thread_id=thread_id,
-                    caption=caption,
-                )
+                sent = await bot.send_photo(group_id, file_id, message_thread_id=thread_id, caption=caption)
                 async with self.database.session() as session:
                     current = await session.get(MediaAsset, asset_id)
-                    if current is None or current.status != "scheduled":
+                    if current is None:
                         return
                     if current.published_group_message_id is None:
                         current.published_group_message_id = sent.message_id
@@ -97,14 +99,10 @@ class CamiMediaPublisher(BotModule):
                         await session.commit()
 
             if destination == "both" and page_message_id is None:
-                sent = await bot.send_photo(
-                    self.settings.publish_page_chat_id,
-                    file_id,
-                    caption=caption,
-                )
+                sent = await bot.send_photo(self.settings.publish_page_chat_id, file_id, caption=caption)
                 async with self.database.session() as session:
                     current = await session.get(MediaAsset, asset_id)
-                    if current is None or current.status != "scheduled":
+                    if current is None:
                         return
                     if current.published_page_message_id is None:
                         current.published_page_message_id = sent.message_id
@@ -115,7 +113,7 @@ class CamiMediaPublisher(BotModule):
 
         async with self.database.session() as session:
             current = await session.get(MediaAsset, asset_id)
-            if current is None or current.status != "scheduled":
+            if current is None or current.status != "publishing":
                 return
             group_done = current.published_group_message_id is not None
             page_done = destination != "both" or current.published_page_message_id is not None
@@ -130,27 +128,22 @@ class CamiMediaPublisher(BotModule):
         async with self.database.session() as session:
             asset = await session.get(MediaAsset, asset_id)
             request = await session.get(FanRequest, request_id)
-            if (
-                asset is None
-                or request is None
-                or asset.request_id != request_id
-                or request.status != RequestStatus.PROCESSING.value
-            ):
+            if asset is None or request is None or asset.request_id != request_id:
                 return
             if asset.published_request_message_id is not None:
-                request.status = RequestStatus.COMPLETED.value
+                if request.status == RequestStatus.PROCESSING.value:
+                    request.status = RequestStatus.COMPLETED.value
                 asset.status = "published_request"
                 request.updated_at = datetime.utcnow()
                 asset.updated_at = datetime.utcnow()
                 await session.commit()
                 return
+            if request.status != RequestStatus.PROCESSING.value or asset.status == "publishing_request":
+                return
 
             setup = await session.scalar(
                 select(SetupSession)
-                .where(
-                    SetupSession.bot_identity == BotIdentity.CHIE.value,
-                    SetupSession.status == "configured",
-                )
+                .where(SetupSession.bot_identity == BotIdentity.CHIE.value, SetupSession.status == "configured")
                 .order_by(SetupSession.id.desc())
             )
             if setup is None:
@@ -164,17 +157,16 @@ class CamiMediaPublisher(BotModule):
             file_id = asset.telegram_file_id
             description = request.description
             group_id = setup.chat_id
+            asset.status = "publishing_request"
+            asset.updated_at = datetime.utcnow()
+            await session.commit()
 
         try:
             sent = await bot.send_photo(
                 group_id,
                 file_id,
                 message_thread_id=thread_id,
-                caption=(
-                    f"🎨 <b>Pedido #{request_id} completado</b>\n"
-                    f"👤 {user_tag}\n"
-                    f"📝 {escape(description)}"
-                ),
+                caption=(f"🎨 <b>Pedido #{request_id} completado</b>\n👤 {user_tag}\n📝 {escape(description)}"),
             )
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
             raise RuntimeError(f"Telegram rejected request publication: {exc}") from exc
@@ -202,8 +194,6 @@ class CamiMediaPublisher(BotModule):
         if asset.anime:
             parts.append(f"📺 {escape(asset.anime)}")
         if asset.tags:
-            tags = " ".join(
-                f"#{escape(tag.strip())}" for tag in asset.tags.split(",") if tag.strip()
-            )
+            tags = " ".join(f"#{escape(tag.strip())}" for tag in asset.tags.split(",") if tag.strip())
             parts.append(f"🏷️ {tags}")
         return "\n".join(parts) or "✨ Nuevo material de la comunidad"
