@@ -1,20 +1,26 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+from urllib.error import URLError, HTTPError
+from urllib.request import Request, urlopen
 
 ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 ENV_PATH = ROOT / ".env"
 CORE_EXE = ROOT / "BOT-IA-Core.exe"
+OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+OLLAMA_MODEL = "qwen3:1.7b-q4_K_M"
 
 PROVIDERS = {
     "OpenAI": ("openai", "OPENAI_API_KEY"),
     "Groq": ("groq", "GROQ_API_KEY"),
     "OpenRouter": ("openrouter", "OPENROUTER_API_KEY"),
+    "Ollama local": ("ollama", None),
 }
 
 
@@ -32,34 +38,61 @@ def _read_env() -> dict[str, str]:
 
 
 def _write_env(*, universe: str, library: Path, provider: str, api_key: str, telegram_token: str) -> None:
-    key_name = PROVIDERS[provider][1]
+    provider_id, key_name = PROVIDERS[provider]
     lines = [
         "# BOT-IA generated configuration. This file is local and must never be committed.",
         f"BOT_IA_UNIVERSE={universe}",
-        f"BOT_IA_PROVIDER={PROVIDERS[provider][0]}",
+        f"BOT_IA_PROVIDER={provider_id}",
         f"BOT_IA_ONE_NEKO_PUNCH_ROOT={library}",
         "",
-        f"{key_name}={api_key}",
-        "GROQ_API_KEY=" if key_name != "GROQ_API_KEY" else "",
-        "OPENAI_API_KEY=" if key_name != "OPENAI_API_KEY" else "",
-        "OPENROUTER_API_KEY=" if key_name != "OPENROUTER_API_KEY" else "",
-        f"TELEGRAM_BOT_TOKEN={telegram_token}",
     ]
-    # Remove empty duplicate provider lines while preserving the selected secret.
-    deduped: list[str] = []
-    seen = set()
-    for line in lines:
-        name = line.split("=", 1)[0] if "=" in line else line
-        if name in {"OPENAI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY"}:
-            if name in seen:
-                continue
-            seen.add(name)
-        deduped.append(line)
-    ENV_PATH.write_text("\n".join(deduped) + "\n", encoding="utf-8")
+
+    for name in ("OPENAI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY"):
+        lines.append(f"{name}={api_key if name == key_name else ''}")
+
+    lines.extend(
+        [
+            f"OLLAMA_BASE_URL={OLLAMA_BASE_URL}",
+            f"TELEGRAM_BOT_TOKEN={telegram_token}",
+        ]
+    )
+    ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _library_ok(path: Path) -> bool:
     return path.is_dir() and any(path.rglob("*.md"))
+
+
+def _ollama_probe(*, base_url: str = OLLAMA_BASE_URL, timeout: float = 2.5) -> tuple[bool, bool]:
+    """Return (reachable, recommended_model_present) without requiring a key."""
+    request = Request(base_url.rstrip("/") + "/api/tags", method="GET")
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (OSError, URLError, HTTPError, json.JSONDecodeError):
+        return False, False
+
+    models = data.get("models", [])
+    names = {
+        item.get("name")
+        for item in models
+        if isinstance(item, dict) and isinstance(item.get("name"), str)
+    }
+    return True, OLLAMA_MODEL in names
+
+
+def _ollama_status_text(*, reachable: bool, model_present: bool) -> str:
+    if not reachable:
+        return (
+            "Ollama local seleccionado. No necesita una clave API remota. "
+            "No detecté Ollama en 127.0.0.1:11434; puedes instalarlo/iniciarlo después."
+        )
+    if not model_present:
+        return (
+            "Ollama responde, pero no está instalado el modelo recomendado "
+            f"{OLLAMA_MODEL}. Puedes guardarlo y descargar el modelo después."
+        )
+    return f"✓ Ollama local disponible con {OLLAMA_MODEL}. No se usará una API remota."
 
 
 def launch_core() -> None:
@@ -87,7 +120,8 @@ class SetupWindow:
         default_library = Path(old.get("BOT_IA_ONE_NEKO_PUNCH_ROOT", str(ROOT / "biblioteca")))
         self.library = tk.StringVar(value=str(default_library))
         self.provider = tk.StringVar(value=next((name for name, (pid, _) in PROVIDERS.items() if pid == old.get("BOT_IA_PROVIDER")), "OpenAI"))
-        self.api_key = tk.StringVar(value=old.get(PROVIDERS[self.provider.get()][1], ""))
+        selected_key_name = PROVIDERS[self.provider.get()][1]
+        self.api_key = tk.StringVar(value=old.get(selected_key_name, "") if selected_key_name else "")
         self.telegram = tk.StringVar(value=old.get("TELEGRAM_BOT_TOKEN", ""))
 
         outer = ttk.Frame(self.root, padding=24)
@@ -106,7 +140,8 @@ class SetupWindow:
         combo.grid(row=3, column=1, sticky="ew", pady=7, padx=10)
         combo.bind("<<ComboboxSelected>>", self.provider_changed)
 
-        ttk.Label(outer, text="Clave API").grid(row=4, column=0, sticky="w", pady=7)
+        self.key_label = ttk.Label(outer, text="Clave API")
+        self.key_label.grid(row=4, column=0, sticky="w", pady=7)
         self.key_entry = ttk.Entry(outer, textvariable=self.api_key, show="•")
         self.key_entry.grid(row=4, column=1, sticky="ew", pady=7, padx=10)
 
@@ -134,18 +169,24 @@ class SetupWindow:
     def provider_changed(self, _event=None) -> None:
         provider = self.provider.get()
         old = _read_env()
-        self.api_key.set(old.get(PROVIDERS[provider][1], ""))
+        key_name = PROVIDERS[provider][1]
+        self.api_key.set(old.get(key_name, "") if key_name else "")
+        self.key_entry.configure(state="normal" if key_name else "disabled")
+        self.key_label.configure(text="Clave API" if key_name else "Clave API (no requerida)")
         self.check_state()
 
     def check_state(self) -> None:
         library = Path(self.library.get().strip())
         ok_library = _library_ok(library)
         provider = self.provider.get()
-        key_required = bool(self.api_key.get().strip())
-        if ok_library and key_required:
-            self.status.configure(text="✓ Biblioteca válida y proveedor configurado. Listo para guardar.")
-        elif not ok_library:
+        key_required = bool(PROVIDERS[provider][1])
+        key_present = bool(self.api_key.get().strip())
+        if not ok_library:
             self.status.configure(text="⚠ Selecciona una carpeta de biblioteca que contenga documentos .md.")
+        elif not key_required:
+            self.status.configure(text="Ollama local: no requiere clave API remota. Se comprobará al guardar.")
+        elif key_present:
+            self.status.configure(text="✓ Biblioteca válida y proveedor configurado. Listo para guardar.")
         else:
             self.status.configure(text="⚠ Falta la clave API del proveedor seleccionado.")
 
@@ -154,14 +195,30 @@ class SetupWindow:
         if not _library_ok(library):
             messagebox.showwarning("BOT-IA", "La biblioteca indicada no parece contener documentos .md.", parent=self.root)
             return
-        if not self.api_key.get().strip():
+
+        provider = self.provider.get()
+        key_name = PROVIDERS[provider][1]
+        if key_name and not self.api_key.get().strip():
             messagebox.showwarning("BOT-IA", "Introduce la clave API del proveedor seleccionado.", parent=self.root)
             return
+
+        if provider == "Ollama local":
+            reachable, model_present = _ollama_probe()
+            if not reachable or not model_present:
+                detail = _ollama_status_text(reachable=reachable, model_present=model_present)
+                proceed = messagebox.askyesno(
+                    "BOT-IA — Ollama local",
+                    detail + "\n\n¿Quieres guardar igualmente el modo local?",
+                    parent=self.root,
+                )
+                if not proceed:
+                    return
+
         try:
             _write_env(
                 universe="one_neko_punch",
                 library=library.resolve(),
-                provider=self.provider.get(),
+                provider=provider,
                 api_key=self.api_key.get().strip(),
                 telegram_token=self.telegram.get().strip(),
             )
@@ -172,7 +229,8 @@ class SetupWindow:
 
 
 def main() -> None:
-    if ENV_PATH.is_file() and _library_ok(Path(_read_env().get("BOT_IA_ONE_NEKO_PUNCH_ROOT", str(ROOT / "biblioteca")))) and _read_env().get("BOT_IA_PROVIDER") in {pid for pid, _ in PROVIDERS.values()}:
+    env = _read_env()
+    if ENV_PATH.is_file() and _library_ok(Path(env.get("BOT_IA_ONE_NEKO_PUNCH_ROOT", str(ROOT / "biblioteca")))) and env.get("BOT_IA_PROVIDER") in {pid for pid, _ in PROVIDERS.values()}:
         try:
             launch_core()
         except SystemExit:
