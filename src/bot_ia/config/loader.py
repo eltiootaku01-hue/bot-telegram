@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from pathlib import Path
 import re
 import tomllib
@@ -72,6 +73,18 @@ def _parse_universe(universe_id: str, raw: object, *, config_dir: Path) -> Unive
     )
 
 
+def _activate_explicit_local_ollama(providers: tuple[ProviderConfig, ...]) -> tuple[ProviderConfig, ...]:
+    """Keep Ollama off by default; enable it only after explicit launcher selection."""
+    if os.getenv("BOT_IA_PROVIDER", "").strip().lower() != "ollama":
+        return providers
+    if os.getenv("BOT_IA_ENABLE_LOCAL_OLLAMA", "").strip().lower() not in {"1", "true", "yes", "on"}:
+        return providers
+    return tuple(
+        replace(provider, enabled=True) if provider.provider_id == "ollama" else provider
+        for provider in providers
+    )
+
+
 def load_runtime_config(path: Path) -> RuntimeConfig:
     if not path.is_file():
         raise FileNotFoundError(f"configuration file not found: {path}")
@@ -83,6 +96,7 @@ def load_runtime_config(path: Path) -> RuntimeConfig:
     if not isinstance(providers_raw, dict) or not isinstance(services_raw, dict) or not isinstance(universes_raw, dict):
         raise ValueError("runtime configuration sections are invalid")
     providers = tuple(_parse_provider(provider_id, raw) for provider_id, raw in providers_raw.items())
+    providers = _activate_explicit_local_ollama(providers)
     services = tuple(_parse_service(service_id, raw) for service_id, raw in services_raw.items())
     universes = tuple(_parse_universe(universe_id, raw, config_dir=path.parent) for universe_id, raw in universes_raw.items())
     if not providers:
