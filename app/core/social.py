@@ -33,7 +33,7 @@ class ActivityCost:
 
 
 PERSONALITY_POLICIES: dict[BotIdentity, PersonalityPolicy] = {
-    BotIdentity.CARI: PersonalityPolicy(BotIdentity.CARI, SocialMode.ACTIVE, "Animada, expresiva y espontánea; intenta mantener viva la conversación.", 3, 7),
+    BotIdentity.CARI: PersonalityPolicy(BotIdentity.CARI, SocialMode.ACTIVE, "Animada, expresiva y espontánea; intenta mantener viva la conversación.", 3, 7, True),
     BotIdentity.SUNNA: PersonalityPolicy(BotIdentity.SUNNA, SocialMode.QUIET, "Kuudere: habla poco, con frases cortas, tono sereno y aparentemente indiferente.", 1, 2, True),
     BotIdentity.CAMI: PersonalityPolicy(BotIdentity.CAMI, SocialMode.OBSERVE, "Elocuente y fría; explica con precisión sin buscar protagonismo social.", 4, 4),
     BotIdentity.CHIE: PersonalityPolicy(BotIdentity.CHIE, SocialMode.ACTIVE, "Miedosa y nerviosa; duda, se corrige y aun así intenta ayudar.", 3, 5, True),
