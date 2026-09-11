@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import sqlite3
 
+from .retrieval_policy import candidate_budget
+
 
 class FTS5Unavailable(RuntimeError):
     """SQLite fue compilado sin soporte FTS5."""
@@ -67,8 +69,9 @@ class MemoryFTS:
         user_id: str,
         conversation_id: str | None,
         terms: tuple[str, ...],
+        budget: int | None = None,
     ) -> tuple[str, ...]:
-        """Return scoped candidates using OR semantics; ranking stays deterministic in MemoryStore."""
+        """Return scoped, bounded candidates; deterministic ranking remains above this layer."""
         if not terms:
             return ()
         match = " OR ".join(
@@ -77,7 +80,8 @@ class MemoryFTS:
         rows = connection.execute(
             "SELECT memory_id FROM memories_fts WHERE memories_fts MATCH ? "
             "AND universe_id=? AND user_id=? "
-            "AND (conversation_id IS NULL OR conversation_id=?)",
-            (match, universe_id, user_id, conversation_id),
+            "AND (conversation_id IS NULL OR conversation_id=?) "
+            "ORDER BY bm25(memories_fts), rowid LIMIT ?",
+            (match, universe_id, user_id, conversation_id, candidate_budget(budget)),
         ).fetchall()
         return tuple(row[0] for row in rows)
