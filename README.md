@@ -65,19 +65,27 @@ The Brain client truncates recent context and user input before sending it upstr
 
 Secrets are saved locally in `.env`; runtime data and `.env` are ignored by Git. Do not paste real tokens or API keys into source files, tests, issues or commits. If a credential is exposed, revoke/rotate it at the provider immediately.
 
-## Windows: the simple way
+## Windows: installer and portable package
 
-The recommended entry point is **BotManager.exe**. It opens a small desktop setup screen before the bots are started.
+The project now has two distinct Windows distribution forms:
 
-1. Enter the Telegram link/username and token for **Cari, Sunna, Cami and Chie**.
-2. Enter at least one external AI API key (Gemini, Groq, Cerebras or OpenRouter). This is required by the desktop setup so Cari/Cami are not started with an incomplete AI configuration.
-3. Optionally choose the preferred provider and model, then add the admin Telegram ID and media-vault chat ID.
-4. Press **Guardar configuración** and then **Comenzar**.
-5. BotManager starts the four bot processes and gives each one its own start/stop control.
+- **Installer (`BotTelegram-Setup-<version>.exe`)** — the recommended download for a normal Windows installation. It installs `BotManager.exe` plus the four bot executables, creates Start Menu/Desktop shortcuts, creates writable `data` and `logs` directories, and can launch Bot Manager after installation.
+- **Portable ZIP (`bot-telegram-windows-portable.zip`)** — the raw executable bundle for users who prefer to extract and run it without an installer.
+
+The GitHub Actions Windows workflow builds the five executables, verifies every expected file, builds the Inno Setup installer, verifies that the installer exists and is non-trivially sized, and uploads both distribution forms as Actions artifacts. The workflow runs on `main`, can be started manually, and runs for `v*` tags. For a `v*` tag it also creates a GitHub Release containing the installer and portable ZIP, making the installer directly downloadable from the release page.
+
+### First launch after installation
+
+1. Open **Bot Manager**.
+2. Enter the Telegram link/username and token for **Cari, Sunna, Cami and Chie**.
+3. Enter at least one external AI API key (Gemini, Groq, Cerebras or OpenRouter). This is required by the desktop setup so Cari/Cami are not started with an incomplete AI configuration.
+4. Optionally choose the preferred provider and model, then add the admin Telegram ID and media-vault chat ID.
+5. Press **Guardar configuración** and then **Comenzar**.
+6. BotManager starts the four bot processes and gives each one its own start/stop control.
 
 Secrets are saved only in the local `.env` file. `.env` and runtime data are ignored by Git.
 
-### Build the Windows package
+### Build locally
 
 From Windows with Python 3.12 installed:
 
@@ -85,7 +93,7 @@ From Windows with Python 3.12 installed:
 tools\build_launcher.bat
 ```
 
-The build creates:
+The executable build creates:
 
 ```text
 dist\BotManager.exe
@@ -95,7 +103,7 @@ dist\bots\Cami.exe
 dist\bots\Chie.exe
 ```
 
-GitHub Actions also contains a Windows packaging workflow that can be run manually or from a `v*` tag and publishes the same package as a build artifact.
+The installer definition lives at `installer/bot-telegram.iss` and packages those executables into a normal Windows setup program. GitHub Actions installs Inno Setup, compiles the installer, verifies it, and publishes the resulting artifact/release asset.
 
 ## Shared points
 
