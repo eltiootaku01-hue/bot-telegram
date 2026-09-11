@@ -36,7 +36,6 @@ def build_dispatcher(settings: Settings, identity: BotIdentity) -> tuple[Bot, Di
 
     registry = ModuleRegistry(dispatcher)
     registry.register(SystemModule(identity))
-    registry.register(BrainChatModule(identity))
     registry.register(SocialRuntimeModule(database, identity))
 
     if identity is BotIdentity.CARI:
@@ -54,5 +53,7 @@ def build_dispatcher(settings: Settings, identity: BotIdentity) -> tuple[Bot, Di
         registry.register(ChieModule(database))
         registry.register(RequestModule(database))
 
+    # Keep specific feature/command routers ahead of the broad natural-language handler.
+    registry.register(BrainChatModule(identity))
     registry.attach_lifecycle()
     return bot, dispatcher, database
