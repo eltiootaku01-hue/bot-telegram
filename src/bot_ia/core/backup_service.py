@@ -8,6 +8,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from bot_ia.core.session_store import PersistentSessionStore
+from bot_ia.memory.store import MemoryStore
+
 from .sqlite_backup import SQLiteBackupManager
 
 
@@ -18,16 +21,12 @@ class BackupSnapshot:
 
 
 class BackupService:
-    """Back up BOT-IA's memory and session stores with the same snapshot label."""
-
-    MEMORY_APPLICATION_ID = 0x4249414D  # BIAM
-    SESSION_APPLICATION_ID = 0x42494153  # BIAS
-    SCHEMA_VERSION = 1
+    """Back up BOT-IA's memory and session stores with the live schema contracts."""
 
     def __init__(self, workspace_root: Path) -> None:
         self.workspace_root = workspace_root.resolve()
-        self._memory = SQLiteBackupManager(self.MEMORY_APPLICATION_ID, self.SCHEMA_VERSION)
-        self._sessions = SQLiteBackupManager(self.SESSION_APPLICATION_ID, self.SCHEMA_VERSION)
+        self._memory = SQLiteBackupManager(MemoryStore.APPLICATION_ID, MemoryStore.SCHEMA_VERSION)
+        self._sessions = SQLiteBackupManager(PersistentSessionStore.APPLICATION_ID, PersistentSessionStore.SCHEMA_VERSION)
 
     def create_snapshot(self, destination_root: Path, *, label: str) -> BackupSnapshot:
         """Create and validate both SQLite backups under one local snapshot directory."""

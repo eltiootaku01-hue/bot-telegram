@@ -1,10 +1,12 @@
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
-import sqlite3
 
 from bot_ia.core.backup_service import BackupService
 from bot_ia.core.sqlite_backup import SQLiteBackupError
+from bot_ia.core.session_store import PersistentSessionStore
+from bot_ia.memory.store import MemoryStore
 
 
 class BackupServiceTests(unittest.TestCase):
@@ -26,8 +28,8 @@ class BackupServiceTests(unittest.TestCase):
             root = Path(directory)
             work = root / "work"
             work.mkdir()
-            self._database(work, "bot_ia_memory.sqlite3", BackupService.MEMORY_APPLICATION_ID)
-            self._database(work, "bot_ia_sessions.sqlite3", BackupService.SESSION_APPLICATION_ID)
+            self._database(work, "bot_ia_memory.sqlite3", MemoryStore.APPLICATION_ID)
+            self._database(work, "bot_ia_sessions.sqlite3", PersistentSessionStore.APPLICATION_ID)
 
             snapshot = BackupService(root).create_snapshot(root / "backups", label="snapshot-1")
 
@@ -40,7 +42,7 @@ class BackupServiceTests(unittest.TestCase):
             root = Path(directory)
             work = root / "work"
             work.mkdir()
-            self._database(work, "bot_ia_memory.sqlite3", BackupService.MEMORY_APPLICATION_ID)
+            self._database(work, "bot_ia_memory.sqlite3", MemoryStore.APPLICATION_ID)
             self._database(work, "bot_ia_sessions.sqlite3", 1234)
 
             service = BackupService(root)

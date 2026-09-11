@@ -8,6 +8,7 @@ from pathlib import Path
 from bot_ia.config import RuntimeConfig, RuntimeRegistry, load_default_runtime_config
 from bot_ia.contracts import UniverseDefinition, UniverseRegistry
 from bot_ia.core.application import BotApplication
+from bot_ia.core.backup_service import BackupService, BackupSnapshot
 from bot_ia.core.brain import LocalBrain
 from bot_ia.core.local_workflow import LocalWorkflow
 from bot_ia.core.project_manager import ProjectManager, ProjectRecord
@@ -49,6 +50,15 @@ class RuntimeComponents:
 
     def configured_universe_ids(self) -> tuple[str, ...]:
         return tuple(self._universe_map)
+
+    @property
+    def backup_service(self) -> BackupService:
+        """Return the local-only backup service for this runtime workspace."""
+        return BackupService(self.workspace_root)
+
+    def create_backup_snapshot(self, destination_root: Path, *, label: str) -> BackupSnapshot:
+        """Create a validated snapshot of persistent memory and session state."""
+        return self.backup_service.create_snapshot(destination_root, label=label)
 
     def build_application(self, *, default_universe_id: str | None = None, provider_id: str = "openai") -> BotApplication:
         provider_config = self.registry.provider(provider_id)
