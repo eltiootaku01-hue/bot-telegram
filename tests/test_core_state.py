@@ -2,26 +2,25 @@ from datetime import timedelta
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import EventBus
 from app.core.jobs import JobQueue
-from app.db.models import Base, DomainEvent, DurableJob
+from app.db.database import Database
+from app.db.models import DomainEvent, DurableJob
 
 
 @pytest.fixture
 async def session():
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-    factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with factory() as db:
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    async with database.session() as db:
         yield db
-    await engine.dispose()
+    await database.close()
 
 
 @pytest.mark.asyncio
-async def test_event_publish_is_idempotent(session):
+async def test_event_publish_is_idempotent(session: AsyncSession):
     bus = EventBus()
     first = await bus.publish(session, "waifu.captured", {"user_id": 7}, event_id="evt-1")
     second = await bus.publish(session, "waifu.captured", {"user_id": 7}, event_id="evt-1")
@@ -32,7 +31,7 @@ async def test_event_publish_is_idempotent(session):
 
 
 @pytest.mark.asyncio
-async def test_job_enqueue_is_idempotent(session):
+async def test_job_enqueue_is_idempotent(session: AsyncSession):
     queue = JobQueue()
     first = await queue.enqueue(session, "telegram.publish", {"chat_id": 10}, dedupe_key="publish:10:asset:5")
     second = await queue.enqueue(session, "telegram.publish", {"chat_id": 10}, dedupe_key="publish:10:asset:5")
@@ -43,7 +42,7 @@ async def test_job_enqueue_is_idempotent(session):
 
 
 @pytest.mark.asyncio
-async def test_transactional_event_dedupe_does_not_force_commit(session):
+async def test_transactional_event_dedupe_does_not_force_commit(session: AsyncSession):
     bus = EventBus()
     first = await bus.publish(session, "fan_request.created", {"request_id": 9}, event_id="evt-tx-1", commit=False)
     second = await bus.publish(session, "fan_request.created", {"request_id": 9}, event_id="evt-tx-1", commit=False)
@@ -53,7 +52,7 @@ async def test_transactional_event_dedupe_does_not_force_commit(session):
 
 
 @pytest.mark.asyncio
-async def test_transactional_job_dedupe_does_not_force_commit(session):
+async def test_transactional_job_dedupe_does_not_force_commit(session: AsyncSession):
     queue = JobQueue()
     first = await queue.enqueue(session, "media.publish", {"asset_id": 9}, dedupe_key="media:9", commit=False)
     second = await queue.enqueue(session, "media.publish", {"asset_id": 9}, dedupe_key="media:9", commit=False)
@@ -63,7 +62,7 @@ async def test_transactional_job_dedupe_does_not_force_commit(session):
 
 
 @pytest.mark.asyncio
-async def test_job_completion_is_fenced_by_lease(session):
+async def test_job_completion_is_fenced_by_lease(session: AsyncSession):
     queue = JobQueue()
     job = await queue.enqueue(session, "telegram.publish", {"chat_id": 10}, dedupe_key="fenced-job")
     claimed = await queue.claim(session)
@@ -77,7 +76,7 @@ async def test_job_completion_is_fenced_by_lease(session):
 
 
 @pytest.mark.asyncio
-async def test_job_heartbeat_extends_liveness_without_changing_claim(session):
+async def test_job_heartbeat_extends_liveness_without_changing_claim(session: AsyncSession):
     queue = JobQueue()
     job = await queue.enqueue(session, "telegram.publish", {"chat_id": 10}, dedupe_key="heartbeat-job")
     claimed = await queue.claim(session)
@@ -92,7 +91,7 @@ async def test_job_heartbeat_extends_liveness_without_changing_claim(session):
 
 
 @pytest.mark.asyncio
-async def test_event_heartbeat_extends_liveness_without_changing_claim(session):
+async def test_event_heartbeat_extends_liveness_without_changing_claim(session: AsyncSession):
     bus = EventBus()
     await bus.publish(session, "telegram.publish", {"chat_id": 10}, event_id="heartbeat-event")
     claimed = await bus.claim(session)
