@@ -67,7 +67,7 @@ class LocalWorkflow:
         self._ollie = OllieGuideBuilder()
         self._evidence_gate = EvidenceGate()
         self._provider_config = provider_config or ProviderConfig(provider_id=provider_id, model=provider_model, fallback_provider=fallback_provider)
-        self._response_cache: dict[tuple[str, str, str], ProviderResponse] = {}
+        self._response_cache: dict[tuple[str, str, str, str, str, str], ProviderResponse] = {}
         self._response_cache_limit = 64
 
     def register_universe(self, definition: UniverseDefinition, entries: tuple[CatalogEntry, ...]) -> None:
@@ -144,13 +144,35 @@ class LocalWorkflow:
             return None
         config = self._provider_config
         context_key = context.text or "(no local context available)"
-        cache_key = (config.provider_id, brain.normalized.normalized, context_key)
+        agent_policy_key = f"{agent.recommendation}|{agent.uncertainty or ''}|{';'.join(agent.conflicts)}"
+        cache_key = (
+            config.provider_id,
+            agent.agent_id,
+            brain.intent.value,
+            str(decision.external_api_authorized),
+            brain.normalized.normalized,
+            f"{context_key}\nPOLICY:{agent_policy_key}",
+        )
         cached = self._response_cache.get(cache_key)
         if cached is not None:
             return replace(cached, request_id=f"cache:{cached.request_id}")
         external_instructions = ("This is an explicitly authorized external research call. Treat your output as unverified research material, not as project canon or library truth. Do not claim that your answer has been incorporated into the project. Clearly flag uncertainty or disputed facts.\n" if decision.external_api_authorized else "")
-        provider_input = ("You are IA-chan, a warm Spanish-speaking coauthoring assistant.\nAnswer naturally and directly. Keep the conversation coherent with the user's wording.\nDo not mention internal agents, routing, briefs, or provider mechanics unless asked.\nUse the supplied project context as the source of truth.\nNever invent established project facts; label inference, uncertainty, and new creative proposals clearly.\nIf the request is creative, you may create new material, but do not silently turn it into canon.\n" + external_instructions + "\n" + f"UNIVERSE: {brain.universe_id}\n" + f"INTENT: {brain.intent.value}\n\n" + f"CONTEXT:\n{context_key}\n\n" + f"USER REQUEST:\n{brain.normalized.original}")
-        provider_request = ProviderRequest(config.provider_id, config.model, provider_input, config.max_output_tokens, config.timeout_seconds, f"{config.provider_id}:{brain.normalized.normalized}", decision.reason)
+        provider_input = (
+            f"You are acting as the {agent.agent_id} agent inside BOT-IA.\n"
+            f"Agent guidance: {agent.recommendation}\n"
+            "Answer naturally and directly in Spanish unless the user requests otherwise.\n"
+            "Do not mention internal routing or provider mechanics unless asked.\n"
+            "Use the supplied project context as the source of truth.\n"
+            "Never invent established project facts; label inference, uncertainty, and new creative proposals clearly.\n"
+            "If the request is creative, you may create new material, but do not silently turn it into canon.\n"
+            + external_instructions
+            + "\n"
+            + f"UNIVERSE: {brain.universe_id}\n"
+            + f"INTENT: {brain.intent.value}\n\n"
+            + f"CONTEXT:\n{context_key}\n\n"
+            + f"USER REQUEST:\n{brain.normalized.original}"
+        )
+        provider_request = ProviderRequest(config.provider_id, config.model, provider_input, config.max_output_tokens, config.timeout_seconds, f"{config.provider_id}:{agent.agent_id}:{brain.normalized.normalized}", decision.reason)
         response = self._provider_manager.execute(decision, provider_request, fallback_provider=config.fallback_provider).response
         if response.status is ProviderStatus.SUCCESS and response.output_text:
             if len(self._response_cache) >= self._response_cache_limit:
