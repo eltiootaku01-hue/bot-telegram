@@ -63,7 +63,7 @@ class SocialActivityService:
         ) or 0
 
         chat = await session.get(Chat, chat_id)
-        last_human_message_at = chat.last_seen_at if chat is not None else None
+        last_human_message_at = chat.last_human_message_at if chat is not None else None
 
         # UserChat does not retain a per-message timestamp history. Until a
         # dedicated rolling counter exists, active human users are the safe
