@@ -152,6 +152,27 @@ class EventBus:
         await session.refresh(candidate)
         return candidate
 
+    async def renew(
+        self,
+        session: AsyncSession,
+        event_id: str,
+        *,
+        lock_time: datetime,
+    ) -> bool:
+        """Extend a live lease without changing its ownership token."""
+        now = datetime.utcnow()
+        result = await session.execute(
+            update(DomainEvent)
+            .where(
+                DomainEvent.event_id == event_id,
+                DomainEvent.status == "processing",
+                DomainEvent.locked_at == lock_time,
+            )
+            .values(locked_at=now, updated_at=now)
+        )
+        await session.commit()
+        return result.rowcount == 1
+
     async def complete(
         self,
         session: AsyncSession,
