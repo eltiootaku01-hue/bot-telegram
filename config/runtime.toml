@@ -51,12 +51,13 @@ secret_env = "COZE_API_TOKEN"
 priority = 10
 cooldown_seconds = 60.0
 
-# Local provider is enabled as a lightweight capability, not as a resident service.
-# Selecting Ollama in the launcher only changes BOT_IA_PROVIDER; it does not start
-# Ollama automatically. The adapter sends keep_alive=0 so the model is released
-# after each request. Pin the compact Q4_K_M build for the 16 GB / integrated-GPU PC.
+# Ollama remains disabled in the base profile so installing/configuring BOT-IA
+# never starts or constructs a local model implicitly. The Windows launcher
+# sets BOT_IA_ENABLE_LOCAL_OLLAMA=true only after the user explicitly selects
+# "Ollama local". That activation is still on-demand; the adapter sends
+# keep_alive=0 and never starts the Ollama service itself.
 [providers.ollama]
-enabled = true
+enabled = false
 model = "qwen3:1.7b-q4_K_M"
 max_output_tokens = 256
 timeout_seconds = 90.0
@@ -69,8 +70,6 @@ url = ""
 [services.telegram]
 enabled = false
 
-# Each novel has its own canonical root. The reference universe is metadata
-# only: it never becomes canon automatically.
 [universes.one_neko_punch]
 display_name = "One Neko Punch"
 root_path = "env:BOT_IA_ONE_NEKO_PUNCH_ROOT"
