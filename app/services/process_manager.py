@@ -16,9 +16,13 @@ class ProcessManager:
         command: Callable[[str], Sequence[str]],
         cwd: str | None = None,
         grace_seconds: float = 2.0,
+        stop_timeout: float = 2.0,
     ) -> None:
+        if stop_timeout < 0:
+            raise ValueError("stop_timeout must be >= 0")
         self.command = command
         self.cwd = cwd
+        self.stop_timeout = stop_timeout
         self.reader = ProcessReader()
         self.health = ProcessHealth(self.reader, grace_seconds=grace_seconds)
         self.processes: dict[str, Popen[str]] = {}
@@ -40,22 +44,33 @@ class ProcessManager:
         self.processes[identity] = process
         return process
 
-    def check_health(self, identity: str, process: object) -> bool:
-        result = self.health.check(identity, process)  # type: ignore[arg-type]
+    def check_health(self, identity: str, process: Popen[str]) -> bool:
+        result = self.health.check(identity, process)
         self.last_output[identity] = result.output
         return result.healthy
 
-    def stop(self, identity: str, process: object) -> None:
-        managed = process if isinstance(process, Popen) else self.processes.get(identity)
-        if managed is not None and managed.poll() is None:
-            managed.terminate()
+    def stop(self, identity: str, process: Popen[str]) -> None:
+        managed = self.processes.get(identity)
+        target = managed if managed is not None else process
+        if target.poll() is None:
+            target.terminate()
+            try:
+                target.wait(timeout=self.stop_timeout)
+            except TimeoutError:
+                target.kill()
+                target.wait(timeout=self.stop_timeout)
         self.processes.pop(identity, None)
 
     def start_sequential(self, identities: Sequence[str]) -> StartupResult:
         sequence = StartupSequence(identities, self.launch, self.check_health, self.stop)
         result = sequence.run()
         if result.failure is not None:
-            self.last_output[result.failure.identity] = tuple(self.reader.drain())
+            events = self.reader.drain()
+            if events:
+                existing = self.last_output.get(result.failure.identity, ())
+                self.last_output[result.failure.identity] = existing + tuple(
+                    event for event in events if event.identity == result.failure.identity
+                )
         return result
 
     def drain_output(self) -> list[ProcessOutput]:
