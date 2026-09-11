@@ -49,7 +49,28 @@ async def test_capture_progression_keeps_copies_and_xp_across_repeated_captures(
     refreshed = await session.scalar(select(GameProfile).where(GameProfile.id == profile.id))
     assert refreshed is not None
     assert refreshed.experience == 65
+    assert refreshed.level == 1
 
     rows = list(await session.scalars(select(GameCollection)))
     assert len(rows) == 1
     assert rows[0].copies == 2
+
+
+@pytest.mark.asyncio
+async def test_capture_progression_derives_profile_level_from_atomic_experience_update(session):
+    profile = GameProfile(user_id=8, chat_id=-100, experience=490, level=1)
+    session.add(profile)
+    await session.flush()
+
+    await apply_capture_progression(
+        session,
+        profile_id=profile.id,
+        character_id="anya",
+        rarity="D",
+    )
+    await session.commit()
+
+    refreshed = await session.scalar(select(GameProfile).where(GameProfile.id == profile.id))
+    assert refreshed is not None
+    assert refreshed.experience == 515
+    assert refreshed.level == 2
