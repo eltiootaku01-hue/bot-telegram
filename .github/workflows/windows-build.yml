@@ -14,15 +14,16 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: pip
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-          pip install pyinstaller
+          pip install pyinstaller==6.22.2 pyinstaller-hooks-contrib==2026.7
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
@@ -56,6 +57,20 @@ jobs:
           )
           foreach ($file in $files) {
             if (-not (Test-Path $file)) { throw "Missing executable: $file" }
+            if ((Get-Item $file).Length -lt 100KB) { throw "Executable looks unexpectedly small: $file" }
+          }
+      - name: Smoke test BotManager
+        shell: pwsh
+        run: |
+          $process = Start-Process -FilePath (Resolve-Path "dist\BotManager.exe") -WorkingDirectory (Resolve-Path "dist") -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            if ($process.HasExited -and $process.ExitCode -ne 0) {
+              throw "BotManager exited with code $($process.ExitCode)"
+            }
+          }
+          finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
           }
       - name: Build installer
         shell: pwsh
@@ -93,14 +108,14 @@ jobs:
             "$(Get-FileHash $portable.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $($portable.Name)"
           )
           $lines | Set-Content -Path "SHA256SUMS.txt" -Encoding utf8
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: bot-telegram-windows-installer
           path: |
             dist-installer\BotTelegram-Setup-*.exe
             SHA256SUMS.txt
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: bot-telegram-windows-portable
           path: |
