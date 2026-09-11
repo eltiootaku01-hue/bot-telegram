@@ -28,12 +28,12 @@ echo Build completo.
 echo.
 echo Iniciador: dist\BotManager.exe
 echo Bots:      dist\bots\Cari.exe
-necho           dist\bots\Sunna.exe
-necho           dist\bots\Cami.exe
-necho           dist\bots\Chie.exe
+echo           dist\bots\Sunna.exe
+echo           dist\bots\Cami.exe
+echo           dist\bots\Chie.exe
 echo.
-echo Abrí BotManager.exe para configurar enlaces, tokens y APIs,
-echo luego tocá Comenzar.
+echo Abri BotManager.exe para configurar enlaces, tokens y APIs,
+echo luego toca Comenzar.
 echo ============================================
 echo.
 pause
