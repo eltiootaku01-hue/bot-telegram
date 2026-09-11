@@ -51,11 +51,15 @@ secret_env = "COZE_API_TOKEN"
 priority = 10
 cooldown_seconds = 60.0
 
+# Optional local provider.
+# Keep disabled by default: the desktop has 16 GB RAM and integrated Radeon
+# graphics, so local inference must remain on-demand and must not become a
+# resident background service. Qwen3 1.7B is the conservative baseline.
 [providers.ollama]
 enabled = false
-model = "qwen3:1b"
+model = "qwen3:1.7b"
 max_output_tokens = 256
-timeout_seconds = 60.0
+timeout_seconds = 90.0
 fallback = ""
 
 [services.supabase]

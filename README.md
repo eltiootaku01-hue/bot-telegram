@@ -99,8 +99,11 @@ pero desactivado hasta configurar `COZE_API_TOKEN` y `COZE_BOT_ID`. La cadena
 configurada es OpenAI → Groq → Coze; el manager puede seguir cadenas de fallback
 sin ciclos y admite múltiples cuentas/API keys por provider.
 
-Ollama está desactivado por defecto para no consumir RAM/CPU; si se habilita,
-la configuración prevista es únicamente `qwen3:1b`.
+Ollama está desactivado por defecto para no consumir RAM/CPU. Para el escritorio
+base de BOT-IA (Ryzen 5 5600G, 16 GB de RAM y gráficos Radeon integrados), el
+perfil local conservador es `qwen3:1.7b` y sólo debe utilizarse bajo demanda.
+BOT-IA no mantiene el modelo residente y no convierte Ollama en un servicio
+obligatorio del runtime.
 
 Añadir otro proveedor no requiere cambiar el cerebro, la memoria, el
 bibliotecario ni las interfaces.

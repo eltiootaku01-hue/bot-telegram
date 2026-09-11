@@ -62,25 +62,27 @@ def _stdlib_transport(
         ) from error
 
     except HTTPError as error:
+        try:
+            if error.code == 401:
+                raise MissingApiKeyError(
+                    "provider authentication failed"
+                ) from error
 
-        if error.code == 401:
-            raise MissingApiKeyError(
-                "provider authentication failed"
-            ) from error
+            if error.code == 429:
+                raise ProviderRateLimitError(
+                    "provider rate limit reached"
+                ) from error
 
-        if error.code == 429:
-            raise ProviderRateLimitError(
-                "provider rate limit reached"
-            ) from error
+            if 400 <= error.code < 500:
+                raise ProviderRemoteError(
+                    f"provider returned HTTP {error.code}"
+                ) from error
 
-        if 400 <= error.code < 500:
             raise ProviderRemoteError(
                 f"provider returned HTTP {error.code}"
             ) from error
-
-        raise ProviderRemoteError(
-            f"provider returned HTTP {error.code}"
-        ) from error
+        finally:
+            error.close()
 
     except URLError as error:
         raise ProviderRemoteError(

@@ -14,7 +14,7 @@ class ProviderDefaultTests(unittest.TestCase):
         self.assertTrue(providers["groq"]["enabled"])
         self.assertFalse(providers["coze"]["enabled"])
         self.assertFalse(ollama["enabled"])
-        self.assertEqual("qwen3:1b", ollama["model"])
+        self.assertEqual("qwen3:1.7b", ollama["model"])
         self.assertNotIn("gemini", providers)
 
 
