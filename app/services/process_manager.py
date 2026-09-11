@@ -1,25 +1,24 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from subprocess import PIPE, Popen
 from typing import Callable, Sequence
 
 from app.services.process_health import HealthResult, ProcessHealth
 from app.services.process_reader import ProcessOutput, ProcessReader
-from app.services.startup_sequence import StartupFailure, StartupResult, StartupSequence
-
-
-@dataclass(frozen=True, slots=True)
-class ManagedLaunch:
-    identity: str
-    process: Popen[str]
+from app.services.startup_sequence import StartupResult, StartupSequence
 
 
 class ProcessManager:
     """Own subprocess launch, output capture and fail-fast startup policy."""
 
-    def __init__(self, command: Callable[[str], Sequence[str]], grace_seconds: float = 2.0) -> None:
+    def __init__(
+        self,
+        command: Callable[[str], Sequence[str]],
+        cwd: str | None = None,
+        grace_seconds: float = 2.0,
+    ) -> None:
         self.command = command
+        self.cwd = cwd
         self.reader = ProcessReader()
         self.health = ProcessHealth(self.reader, grace_seconds=grace_seconds)
         self.processes: dict[str, Popen[str]] = {}
@@ -33,7 +32,7 @@ class ProcessManager:
             list(self.command(identity)),
             stdout=PIPE,
             stderr=PIPE,
-            cwd=None,
+            cwd=self.cwd,
             text=True,
             bufsize=1,
         )
