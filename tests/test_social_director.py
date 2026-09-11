@@ -48,10 +48,21 @@ def test_quiet_window_returns_candidates_without_forcing_one():
     decision = SocialDirector().decide(
         snapshot(minutes_since_last_message=45),
         {identity: 0 for identity in BotIdentity},
+        cooldown_roll=15,
     )
     assert decision.should_speak
     assert decision.candidates
     assert decision.reason == "quiet_window"
+    assert decision.cooldown_minutes == 45
+
+
+def test_social_cooldown_stays_inside_30_to_60_minutes():
+    director = SocialDirector()
+    decisions = [
+        director.decide(snapshot(), {identity: 0 for identity in BotIdentity}, cooldown_roll=roll)
+        for roll in (0, 17, 30)
+    ]
+    assert [decision.cooldown_minutes for decision in decisions] == [30, 47, 60]
 
 
 def test_all_bots_exhausted_means_silence():
