@@ -14,6 +14,7 @@ except ImportError:  # pragma: no cover - packaged build installs python-dotenv
     set_key = None
     dotenv_values = None
 
+from app.services.launcher_supervisor import LauncherSupervisor
 from app.services.process_manager import ProcessManager
 
 
@@ -55,17 +56,20 @@ class BotLauncher(tk.Tk):
         self.minsize(900, 700)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.manager = ProcessManager(self._command, cwd=str(ROOT), grace_seconds=1.5)
+        self.supervisor = LauncherSupervisor(self.manager)
         self.ai_global_var = tk.BooleanVar(value=False)
         self.ai_bot_vars: dict[str, tk.BooleanVar] = {}
         self.bot_vars: dict[str, dict[str, tk.StringVar]] = {}
         self.ai_vars: dict[str, tk.StringVar] = {}
         self.status = tk.StringVar(value="Configurá los bots y tocá Comenzar")
         self._dashboard_cards: dict[str, ttk.LabelFrame] = {}
+        self._startup_poll_id: str | None = None
+        self._closing = False
         self._build_setup()
 
     @property
     def processes(self) -> dict[str, subprocess.Popen[str]]:
-        return self.manager.processes
+        return self.manager.active_processes()
 
     def _build_setup(self) -> None:
         for widget in self.winfo_children():
@@ -232,12 +236,40 @@ class BotLauncher(tk.Tk):
         if not self.save_config():
             return
 
-        self.stop_all(silent=True)
+        if self.supervisor.running:
+            self.status.set("Ya hay un arranque en curso")
+            return
+        self.supervisor.stop_all()
         self.status.set("Iniciando bots en secuencia y comprobando salud...")
         self.update_idletasks()
-        result = self.manager.start_sequential(tuple(BOTS))
-        if result.failure is not None:
-            failure = result.failure
+        if not self.supervisor.start_all(tuple(BOTS)):
+            self.status.set("No se pudo iniciar el supervisor")
+            return
+        self._schedule_startup_poll()
+
+    def _schedule_startup_poll(self) -> None:
+        if self._startup_poll_id is not None:
+            self.after_cancel(self._startup_poll_id)
+        self._startup_poll_id = self.after(50, self._poll_startup_result)
+
+    def _poll_startup_result(self) -> None:
+        self._startup_poll_id = None
+        if self._closing:
+            return
+        result = self.supervisor.poll_result()
+        if result is None:
+            self._schedule_startup_poll()
+            return
+        if result.error is not None:
+            self.status.set("Inicio detenido por un error inesperado")
+            messagebox.showerror("Error de inicio", str(result.error))
+            return
+        startup = result.result
+        if startup is None:
+            self.status.set("El supervisor terminó sin resultado")
+            return
+        if startup.failure is not None:
+            failure = startup.failure
             details = self.manager.last_output.get(failure.identity, ())
             lines = [f"Bot: {failure.identity.title()}", f"Código de salida: {failure.returncode}", "", "Salida original:"]
             lines.extend(f"[{event.stream}] {event.line}" for event in details)
@@ -353,10 +385,7 @@ class BotLauncher(tk.Tk):
 
     def refresh_status(self) -> None:
         self.manager.drain_output()
-        for key, process in list(self.processes.items()):
-            if process.poll() is not None:
-                self.processes.pop(key, None)
-                self.status.set(f"{key.title()} terminó · código {process.returncode}")
+        self.manager.reap_finished()
         for key, card in self._dashboard_cards.items():
             process = self.processes.get(key)
             state = getattr(card, "_state", None)
@@ -367,11 +396,15 @@ class BotLauncher(tk.Tk):
             self.after(1000, self.refresh_status)
 
     def stop_all(self, *, silent: bool = False) -> None:
-        self.manager.stop_all()
+        self.supervisor.stop_all()
         if not silent:
             self.status.set("Todos los bots están detenidos")
 
     def close(self) -> None:
+        self._closing = True
+        if self._startup_poll_id is not None:
+            self.after_cancel(self._startup_poll_id)
+            self._startup_poll_id = None
         self.stop_all(silent=True)
         self.destroy()
 
