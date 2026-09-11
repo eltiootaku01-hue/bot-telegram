@@ -12,8 +12,10 @@ En la primera ejecución aparece un asistente gráfico para:
 
 1. Elegir la biblioteca de ONE NEKO PUNCH.
 2. Seleccionar el proveedor IA.
-3. Introducir la clave del proveedor.
+3. Introducir la clave del proveedor cuando sea necesaria.
 4. Configurar Telegram de forma opcional.
+
+**Ollama local** ya es una opción de primera clase: no pide una clave API remota y comprueba `http://127.0.0.1:11434` solo al guardar la configuración. BOT-IA no inicia Ollama automáticamente y el adapter usa `keep_alive=0` para que el modelo no quede residente después de una petición.
 
 Después de guardar, BOT-IA se abre directamente en su interfaz gráfica. No necesitas instalar Python ni ejecutar PowerShell para el uso normal.
 
@@ -52,9 +54,9 @@ update cuando falla la entrega de su respuesta y divide respuestas largas para
 respetar el límite de Telegram. Cada mensaje pasa por el mismo `BotApplication`
 que usa la consola y la API web.
 
-### API web / ChatGPT
+### API web / ChatGPT Actions
 
-Inicia una API local:
+Inicia la API JSON:
 
 ```powershell
 $env:PYTHONPATH = "src"
@@ -69,11 +71,27 @@ Endpoints:
 
 La API local no queda expuesta públicamente por defecto. Para una integración externa se necesita HTTPS público y el token correspondiente.
 
+### Chat web móvil
+
+Para tener una interfaz tipo chat directamente en el navegador, sin Node, Flask,
+React, base de datos adicional ni proceso frontend separado:
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m bot_ia --mode web-chat --host 127.0.0.1 --port 8787
+```
+
+Abre `http://127.0.0.1:8787/`. La interfaz es responsive y conserva el historial visible en `localStorage`; las consultas siguen pasando por `BotApplication`, la biblioteca, memoria, EvidenceGate y el provider seleccionado.
+
+Para usarla desde un teléfono en una LAN de confianza, configura un token de al menos 32 caracteres, usa un host privado/LAN y habilita explícitamente `BOT_IA_ALLOW_INSECURE_LAN=true`. Para acceso fuera de la LAN se debe mantener HTTPS. No se recomienda exponer el puerto directamente a Internet.
+
 ## Providers
 
-OpenAI y Groq están habilitados en la configuración base; OpenRouter está disponible como fallback configurable y Coze queda disponible cuando se aportan sus credenciales. Se admite más de una cuenta por provider.
+OpenAI, Groq y OpenRouter siguen disponibles para las rutas remotas. Ollama está habilitado como capacidad local ligera, pero **no es un servicio residente**: solo se utiliza cuando `BOT_IA_PROVIDER=ollama` y Ollama está disponible.
 
-Ollama permanece desactivado por defecto y limitado al perfil local ligero documentado para uso puntual.
+El modelo experimental recomendado es `qwen3:1.7b-q4_K_M`. Ollama publica esa variante oficial en torno a 1.4 GB; el rendimiento real en el Ryzen 5 5600G debe medirse en el equipo objetivo antes de promoverlo como cerebro único. citeturn1search4turn1search0
+
+No existe una puerta trasera legítima que permita saltarse autenticación de proveedores remotos. La ruta API-free que estamos adoptando es inferencia local mediante Ollama en localhost; el endpoint local no requiere una clave remota. Ollama documenta además tool calling para modelos compatibles como Qwen3. citeturn3search9turn3search6
 
 ## Biblioteca, evidencia y memoria
 
