@@ -67,8 +67,6 @@ class ProcessManager:
                 try:
                     target.wait(timeout=self.stop_timeout)
                 except TimeoutExpired:
-                    # Keep the process registered: claiming it stopped while it is
-                    # still alive would make the dashboard and future controls lie.
                     return
 
         with self._lock:
@@ -94,8 +92,24 @@ class ProcessManager:
             return []
         with self._lock:
             for event in events:
-                self.last_output[event.identity] = self.last_output.get(event.identity, ()) + (event,)
+                self.last_output[event.identity] = self.last_output.get(identity, ()) + (event,)
         return events
+
+    def active_processes(self) -> dict[str, Popen[str]]:
+        """Return a stable snapshot for UI/supervisor consumers."""
+        with self._lock:
+            return dict(self.processes)
+
+    def reap_finished(self) -> list[tuple[str, int | None]]:
+        """Remove exited children and return their identities/codes."""
+        finished: list[tuple[str, int | None]] = []
+        with self._lock:
+            for identity, process in list(self.processes.items()):
+                returncode = process.poll()
+                if returncode is not None:
+                    self.processes.pop(identity, None)
+                    finished.append((identity, returncode))
+        return finished
 
     def stop_all(self) -> None:
         with self._lock:
