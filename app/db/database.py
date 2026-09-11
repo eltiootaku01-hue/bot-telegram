@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.db.models import Base
 from app.db import community_models  # noqa: F401 - registers forum topic tables
+from app.db import social_models  # noqa: F401 - registers social wake tables
 from app.db import trivia_models  # noqa: F401 - registers trivia tables
 
 
