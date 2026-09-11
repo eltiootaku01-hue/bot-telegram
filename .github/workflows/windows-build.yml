@@ -65,8 +65,8 @@ jobs:
           $process = Start-Process -FilePath (Resolve-Path "dist\BotManager.exe") -WorkingDirectory (Resolve-Path "dist") -PassThru
           try {
             Start-Sleep -Seconds 8
-            if ($process.HasExited -and $process.ExitCode -ne 0) {
-              throw "BotManager exited with code $($process.ExitCode)"
+            if ($process.HasExited) {
+              throw "BotManager exited during the 8-second smoke window with code $($process.ExitCode)"
             }
           }
           finally {
