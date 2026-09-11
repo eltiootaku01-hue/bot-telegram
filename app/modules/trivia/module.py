@@ -1,0 +1,149 @@
+from __future__ import annotations
+
+import asyncio
+import random
+
+from aiogram import Bot, F
+from aiogram.filters import Command
+from aiogram.types import CallbackQuery, Message
+from sqlalchemy import select, update
+
+from app.core.identity import BotIdentity
+from app.core.module import BotModule
+from app.db.community_models import SetupSession
+from app.db.database import Database
+from app.db.models import GameProfile
+from app.db.trivia_models import TriviaRound
+from app.game.trivia import TriviaService
+from app.ui.game_keyboards import trivia_keyboard
+
+
+class TriviaModule(BotModule):
+    """Anime trivia and points; public interaction is button-first."""
+
+    name = "trivia"
+
+    def __init__(self, database: Database) -> None:
+        super().__init__()
+        self.database = database
+        self.service = TriviaService()
+        self._bot: Bot | None = None
+
+    def setup(self) -> None:
+        self.router.message.register(self.start_command, Command("trivia"))
+        self.router.message.register(self.points_command, Command("puntos"))
+        self.router.message.register(self.ranking_command, Command("ranking"))
+        self.router.callback_query.register(self.answer, F.data.startswith("game:trivia:"))
+
+    async def on_startup(self, bot: Bot) -> None:
+        self._bot = bot
+        self.tasks.start("trivia-scheduler", self._scheduler())
+
+    async def start_command(self, message: Message) -> None:
+        if message.chat.type != "private":
+            return
+        await message.answer("🧠 La trivia pública aparece sola. Acá podés consultar su estado.")
+
+    async def _publish(self, chat_id: int, source: Message | None = None) -> bool:
+        async with self.database.session() as session:
+            created = await self.service.start_round(session, chat_id)
+        if created is None:
+            return False
+        round_row, question = created
+        text = f"🧠 <b>TRIVIA ANIME</b>\n\n{question.question}\n\n⏱️ 90 segundos · 🏆 +{question.points} puntos"
+        try:
+            if source is not None:
+                await source.answer(text, reply_markup=trivia_keyboard(round_row.id, question.options))
+            elif self._bot is not None:
+                await self._bot.send_message(chat_id, text, reply_markup=trivia_keyboard(round_row.id, question.options))
+            else:
+                return False
+        except Exception:
+            async with self.database.session() as session:
+                await session.execute(
+                    update(TriviaRound).where(TriviaRound.id == round_row.id).values(status="failed")
+                )
+                await session.commit()
+            return False
+        return True
+
+    async def answer(self, callback: CallbackQuery) -> None:
+        parts = (callback.data or "").split(":")
+        if len(parts) != 4 or not parts[2].isdigit() or not parts[3].isdigit() or callback.message is None:
+            await callback.answer("Trivia inválida.", show_alert=True)
+            return
+        round_id, option_index = int(parts[2]), int(parts[3])
+        async with self.database.session() as session:
+            result, balance = await self.service.answer(
+                session,
+                round_id,
+                callback.from_user.id,
+                option_index,
+                chat_id=callback.message.chat.id,
+            )
+            round_row = await session.get(TriviaRound, round_id)
+        if round_row is None:
+            await callback.answer("La trivia ya no existe.", show_alert=True)
+            return
+        if result == "correct":
+            await callback.answer(f"¡Correcto! +{round_row.points} puntos", show_alert=True)
+            await callback.message.edit_text(
+                f"🎉 <b>{callback.from_user.first_name}</b> ganó la trivia.\n"
+                f"🏆 +{round_row.points} puntos · 💰 saldo: {balance}\n\n"
+                f"💡 {round_row.explanation}"
+            )
+            return
+        if result == "wrong":
+            await callback.answer("❌ Incorrecto. Probá suerte en la próxima.")
+        elif result == "already_answered":
+            await callback.answer("Ya respondiste esta trivia.")
+        elif result == "wrong_chat":
+            await callback.answer("Esta trivia pertenece a otra comunidad. 😰", show_alert=True)
+        elif result == "invalid":
+            await callback.answer("Respuesta inválida.", show_alert=True)
+        else:
+            await callback.answer("La trivia ya terminó. 😭")
+
+    async def _community_chat_id(self) -> int | None:
+        async with self.database.session() as session:
+            return await session.scalar(
+                select(SetupSession.chat_id)
+                .where(
+                    SetupSession.bot_identity == BotIdentity.CHIE.value,
+                    SetupSession.status == "configured",
+                )
+                .order_by(SetupSession.id.desc())
+            )
+
+    async def points_command(self, message: Message) -> None:
+        if message.chat.type != "private" or message.from_user is None:
+            return
+        community_chat_id = await self._community_chat_id()
+        if community_chat_id is None:
+            await message.answer("😰 Chie todavía no configuró la comunidad.")
+            return
+        async with self.database.session() as session:
+            profile = await session.scalar(
+                select(GameProfile).where(
+                    GameProfile.user_id == message.from_user.id,
+                    GameProfile.chat_id == community_chat_id,
+                )
+            )
+        points = profile.points if profile is not None else 0
+        await message.answer(f"💰 <b>{message.from_user.first_name}</b>: {points} puntos")
+
+    async def ranking_command(self, message: Message) -> None:
+        if message.chat.type != "private":
+            return
+        await message.answer("🏆 El ranking público se mostrará mediante el panel de puntos.")
+
+    async def _scheduler(self) -> None:
+        await asyncio.sleep(random.randint(60, 180))
+        while True:
+            try:
+                community_chat_id = await self._community_chat_id()
+                if community_chat_id is not None:
+                    await self._publish(community_chat_id)
+            except Exception:
+                pass
+            await asyncio.sleep(random.randint(1200, 2400))
