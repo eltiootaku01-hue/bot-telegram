@@ -1,9 +1,10 @@
 import json
 import threading
 import unittest
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from bot_ia.interfaces.web import WebApi, create_web_server
+from bot_ia.interfaces.web import WebApi, WebApiError, create_web_server
 
 
 class FakeApplication:
@@ -54,14 +55,23 @@ class WebRuntimeTests(unittest.TestCase):
     def test_query_requires_bearer_and_returns_json(self):
         body = json.dumps({"message": "hola"}).encode("utf-8")
         request = Request(self.base + "/v1/query", data=body, headers={"Content-Type": "application/json"}, method="POST")
-        with self.assertRaises(Exception):
+        with self.assertRaises(HTTPError) as raised:
             urlopen(request)
+        raised.exception.close()
 
         request.add_header("Authorization", "Bearer " + "t" * 32)
         with urlopen(request) as response:
             payload = json.loads(response.read())
             self.assertEqual("evidencia", payload["answer"])
             self.assertTrue(payload["searched"])
+
+    def test_non_loopback_binding_requires_api_token(self):
+        with self.assertRaises(WebApiError):
+            create_web_server(WebApi(FakeApplication()), host="0.0.0.0", port=0)
+
+    def test_non_loopback_binding_is_allowed_with_api_token(self):
+        server = create_web_server(WebApi(FakeApplication(), api_token="t" * 32), host="0.0.0.0", port=0)
+        server.server_close()
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hmac
+import ipaddress
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -146,6 +147,15 @@ def _json_bytes(payload: object) -> bytes:
     return json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
 
+def _is_loopback_host(host: str) -> bool:
+    if host.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def create_web_server(
     api: WebApi,
     *,
@@ -153,6 +163,8 @@ def create_web_server(
     port: int = 8787,
     public_base_url: str | None = None,
 ) -> ThreadingHTTPServer:
+    if not _is_loopback_host(host) and not api._api_token:
+        raise WebApiError("non-loopback HTTP binding requires an API token")
     base_url = public_base_url or f"http://{host}:{port}"
 
     class Handler(BaseHTTPRequestHandler):
