@@ -12,8 +12,15 @@ from app.db.models import Chat, GameProfile, PointTransaction, User, UserChat
 class MemberRepository:
     """Persists Telegram identity, membership and activity without involving the AI."""
 
-    async def touch(self, session: AsyncSession, user: TgUser, chat: TgChat) -> None:
-        """Refresh activity using race-safe inserts and atomic message counting."""
+    async def touch(
+        self,
+        session: AsyncSession,
+        user: TgUser,
+        chat: TgChat,
+        *,
+        is_message: bool = True,
+    ) -> None:
+        """Refresh membership and, only for messages, message activity/counts."""
         now = utc_now()
         await self._ensure_user(session, user, now)
         await self._ensure_chat(session, chat, now)
@@ -28,7 +35,7 @@ class MemberRepository:
                         user_id=user.id,
                         chat_id=chat.id,
                         status="member",
-                        message_count=1,
+                        message_count=1 if is_message else 0,
                         first_seen_at=now,
                         joined_at=now,
                         last_seen_at=now,
@@ -39,19 +46,21 @@ class MemberRepository:
                     UserChat.user_id == user.id, UserChat.chat_id == chat.id,
                 ))
         else:
+            values = {
+                "last_seen_at": now,
+                "status": "member" if link.status in {"left", "kicked"} else link.status,
+                "joined_at": link.joined_at or now,
+                "left_at": None if link.status in {"left", "kicked"} else link.left_at,
+            }
+            if is_message:
+                values["message_count"] = UserChat.message_count + 1
             await session.execute(
                 update(UserChat)
                 .where(UserChat.id == link.id)
-                .values(
-                    message_count=UserChat.message_count + 1,
-                    last_seen_at=now,
-                    status="member" if link.status in {"left", "kicked"} else link.status,
-                    joined_at=link.joined_at or now,
-                    left_at=None if link.status in {"left", "kicked"} else link.left_at,
-                )
+                .values(**values)
             )
 
-        if not user.is_bot:
+        if is_message and not user.is_bot:
             await session.execute(
                 update(Chat)
                 .where(Chat.id == chat.id)
