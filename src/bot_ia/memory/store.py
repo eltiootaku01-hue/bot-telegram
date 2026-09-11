@@ -12,6 +12,7 @@ from uuid import uuid4
 from bot_ia.change_management import ChangeManager
 from bot_ia.contracts import Confidence, UniverseRegistry
 
+from .fts import MemoryFTS
 from .models import MemoryMatch, MemoryStatus, MemoryType, PersistentMemoryRecord
 
 _TOKENS = re.compile(r"[\wáéíóúüñ]+", re.IGNORECASE)
@@ -39,6 +40,7 @@ class MemoryStore:
         self._registry = registry
         self._path = ChangeManager(workspace_root).resolve_target(database_path)
         self._closed = False
+        self._fts_available = False
         self._initialize()
 
     @property
@@ -84,6 +86,7 @@ class MemoryStore:
                 connection.execute("CREATE TABLE IF NOT EXISTS memories (memory_id TEXT PRIMARY KEY, universe_id TEXT NOT NULL, user_id TEXT NOT NULL, conversation_id TEXT, memory_type TEXT NOT NULL, content TEXT NOT NULL, source TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, approved INTEGER NOT NULL, status TEXT NOT NULL, confidence TEXT NOT NULL, expires_at TEXT, revoked_at TEXT, tags TEXT NOT NULL, related_entities TEXT NOT NULL, provenance TEXT NOT NULL, supersedes TEXT, conflicts_with TEXT NOT NULL)")
                 connection.execute("CREATE INDEX IF NOT EXISTS memory_lookup ON memories(universe_id, user_id, status, approved, expires_at)")
                 connection.execute(f"PRAGMA user_version={self.SCHEMA_VERSION}")
+            self._fts_available = MemoryFTS.ensure(connection)
             connection.commit()
         except Exception:
             connection.rollback()
@@ -173,16 +176,34 @@ class MemoryStore:
         terms = tuple(dict.fromkeys(_TOKENS.findall(query.casefold())))
         if not terms:
             return ()
-        clauses = []
-        parameters: list[object] = [universe_id, user_id, MemoryStatus.ACTIVE.value, now.isoformat(), conversation_id]
-        for term in terms:
-            pattern = f"%{term}%"
-            clauses.append("(content LIKE ? OR tags LIKE ?)")
-            parameters.extend((pattern, pattern))
-        candidate_filter = " OR ".join(clauses)
-        sql = f"SELECT * FROM memories WHERE universe_id=? AND user_id=? AND status=? AND approved=1 AND (expires_at IS NULL OR expires_at>?) AND (conversation_id IS NULL OR conversation_id=?) AND ({candidate_filter})"
         with self._transaction() as connection:
-            rows = connection.execute(sql, tuple(parameters)).fetchall()
+            if self._fts_available:
+                try:
+                    candidate_ids = MemoryFTS.query(connection, universe_id=universe_id, user_id=user_id, conversation_id=conversation_id, terms=terms)
+                except sqlite3.OperationalError:
+                    MemoryFTS.rebuild(connection)
+                    candidate_ids = MemoryFTS.query(connection, universe_id=universe_id, user_id=user_id, conversation_id=conversation_id, terms=terms)
+                if not candidate_ids:
+                    rows = []
+                else:
+                    placeholders = ",".join("?" for _ in candidate_ids)
+                    parameters: list[object] = [universe_id, user_id, MemoryStatus.ACTIVE.value, now.isoformat(), conversation_id, *candidate_ids]
+                    rows = connection.execute(
+                        f"SELECT * FROM memories WHERE universe_id=? AND user_id=? AND status=? AND approved=1 "
+                        f"AND (expires_at IS NULL OR expires_at>?) AND (conversation_id IS NULL OR conversation_id=?) "
+                        f"AND memory_id IN ({placeholders})",
+                        tuple(parameters),
+                    ).fetchall()
+            else:
+                clauses = []
+                parameters = [universe_id, user_id, MemoryStatus.ACTIVE.value, now.isoformat(), conversation_id]
+                for term in terms:
+                    pattern = f"%{term}%"
+                    clauses.append("(content LIKE ? OR tags LIKE ?)")
+                    parameters.extend((pattern, pattern))
+                candidate_filter = " OR ".join(clauses)
+                sql = f"SELECT * FROM memories WHERE universe_id=? AND user_id=? AND status=? AND approved=1 AND (expires_at IS NULL OR expires_at>?) AND (conversation_id IS NULL OR conversation_id=?) AND ({candidate_filter})"
+                rows = connection.execute(sql, tuple(parameters)).fetchall()
         matches = []
         term_set = set(terms)
         for row in rows:
