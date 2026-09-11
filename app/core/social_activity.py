@@ -10,7 +10,7 @@ from app.core.identity import BotIdentity
 from app.core.social_director import SocialSnapshot
 from app.core.social_memory import SocialMemory
 from app.core.time import utc_now
-from app.db.models import User, UserChat
+from app.db.models import Chat, User, UserChat
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,7 +38,7 @@ class SocialActivity:
 
 
 class SocialActivityService:
-    """Build social context from existing member data without an LLM."""
+    """Build social context from existing member data without involving an LLM."""
 
     ACTIVE_WINDOW_MINUTES = 10
 
@@ -62,18 +62,15 @@ class SocialActivityService:
             )
         ) or 0
 
+        # Message recency belongs to the chat, not membership presence. The
+        # repository updates this field only for human Telegram messages, so
+        # bot activity and membership updates cannot masquerade as a message.
         last_human_message_at = await session.scalar(
-            select(func.max(UserChat.last_seen_at))
-            .join(User, User.id == UserChat.user_id)
-            .where(
-                UserChat.chat_id == chat_id,
-                User.is_bot.is_(False),
-            )
+            select(Chat.last_human_message_at).where(Chat.id == chat_id)
         )
 
-        # UserChat has no rolling message history. Use the latest human
-        # activity and active-user count rather than Chat.last_seen_at, which
-        # is shared by human and bot Telegram events.
+        # There is no rolling message-history table yet. Keep this as a bounded
+        # activity signal rather than pretending it is an exact message count.
         recent_messages = min(int(active_users), 8)
         return SocialActivity(
             chat_id=chat_id,
