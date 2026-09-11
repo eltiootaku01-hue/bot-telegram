@@ -90,6 +90,8 @@ class BrainClient:
         return provider == self.settings.llm_provider.strip().lower()
 
     async def generate(self, request: LLMRequest) -> str:
+        if not self.settings.ai_for(request.identity):
+            raise LLMProviderError("AI is disabled for this bot")
         providers = self.configured_providers()
         if not providers:
             raise LLMProviderError("No LLM backend is configured")
