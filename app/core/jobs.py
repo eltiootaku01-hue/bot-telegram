@@ -80,13 +80,42 @@ class JobQueue:
         candidate = await session.scalar(query.order_by(DurableJob.id.asc()).limit(1))
         if candidate is None:
             return None
-        result = await session.execute(update(DurableJob).where(DurableJob.id == candidate.id, DurableJob.status == "pending").values(status="processing", attempts=DurableJob.attempts + 1, locked_at=now, heartbeat_at=now, updated_at=now))
+        return await self._claim_id(session, candidate.id, now)
+
+    async def claim_by_dedupe_key(self, session: AsyncSession, dedupe_key: str) -> DurableJob | None:
+        """Atomically claim one exact pending job without stealing another job."""
+        now = utc_now()
+        candidate = await session.scalar(
+            select(DurableJob).where(
+                DurableJob.dedupe_key == dedupe_key,
+                DurableJob.status == "pending",
+                DurableJob.run_at <= now,
+            )
+        )
+        if candidate is None:
+            return None
+        return await self._claim_id(session, candidate.id, now)
+
+    async def _claim_id(self, session: AsyncSession, job_id: int, now: datetime) -> DurableJob | None:
+        result = await session.execute(
+            update(DurableJob)
+            .where(DurableJob.id == job_id, DurableJob.status == "pending")
+            .values(
+                status="processing",
+                attempts=DurableJob.attempts + 1,
+                locked_at=now,
+                heartbeat_at=now,
+                updated_at=now,
+            )
+        )
         if result.rowcount != 1:
             await session.rollback()
             return None
         await session.commit()
-        await session.refresh(candidate)
-        return candidate
+        job = await session.get(DurableJob, job_id)
+        if job is not None:
+            await session.refresh(job)
+        return job
 
     async def renew(self, session: AsyncSession, job_id: int, *, lock_time: datetime) -> bool:
         """Refresh liveness without changing the immutable claim token."""
