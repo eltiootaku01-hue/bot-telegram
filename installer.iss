@@ -5,7 +5,7 @@
 #define MyAppExeName "BOT-IA.exe"
 
 [Setup]
-AppId={{9D2C5E3C-6F1C-4B8A-8D4A-BOTIA0001000}
+AppId={{9D2C5E3C-6F1C-4B8A-8D4A-9F10A0B1C200}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
