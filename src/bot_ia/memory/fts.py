@@ -15,7 +15,7 @@ class MemoryFTS:
 
     @classmethod
     def ensure(cls, connection: sqlite3.Connection) -> bool:
-        """Ensure the disposable index exists and is synchronized by memory id."""
+        """Ensure the disposable index exists and matches the source rows."""
         try:
             connection.execute(
                 "CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5("
@@ -43,10 +43,16 @@ class MemoryFTS:
             """
         )
         missing = connection.execute(
-            "SELECT memory_id FROM memories EXCEPT SELECT memory_id FROM memories_fts LIMIT 1"
+            "SELECT memory_id, universe_id, user_id, conversation_id, content, tags "
+            "FROM memories EXCEPT "
+            "SELECT memory_id, universe_id, user_id, conversation_id, content, tags "
+            "FROM memories_fts LIMIT 1"
         ).fetchone()
         extra = connection.execute(
-            "SELECT memory_id FROM memories_fts EXCEPT SELECT memory_id FROM memories LIMIT 1"
+            "SELECT memory_id, universe_id, user_id, conversation_id, content, tags "
+            "FROM memories_fts EXCEPT "
+            "SELECT memory_id, universe_id, user_id, conversation_id, content, tags "
+            "FROM memories LIMIT 1"
         ).fetchone()
         if missing is not None or extra is not None:
             cls.rebuild(connection)

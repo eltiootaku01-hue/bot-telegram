@@ -41,6 +41,16 @@ class MemoryFTSTests(unittest.TestCase):
         self.assertEqual(("m1",), MemoryFTS.query(connection, universe_id="one", user_id="u", conversation_id=None, terms=("source",)))
         self.assertEqual((), MemoryFTS.query(connection, universe_id="one", user_id="u", conversation_id=None, terms=("wrong",)))
 
+    def test_ensure_rebuilds_when_projection_has_same_id_but_wrong_content(self) -> None:
+        connection = sqlite3.connect(":memory:")
+        self._schema(connection)
+        connection.execute("INSERT INTO memories VALUES ('m1','one','u',NULL,'authoritative text','[]')")
+        MemoryFTS.ensure(connection)
+        connection.execute("UPDATE memories_fts SET content='corrupted text' WHERE memory_id='m1'")
+        MemoryFTS.ensure(connection)
+        self.assertEqual(("m1",), MemoryFTS.query(connection, universe_id="one", user_id="u", conversation_id=None, terms=("authoritative",)))
+        self.assertEqual((), MemoryFTS.query(connection, universe_id="one", user_id="u", conversation_id=None, terms=("corrupted",)))
+
     def test_query_uses_or_semantics_and_respects_scope(self) -> None:
         connection = sqlite3.connect(":memory:")
         self._schema(connection)
