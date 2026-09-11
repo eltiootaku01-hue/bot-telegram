@@ -51,14 +51,12 @@ secret_env = "COZE_API_TOKEN"
 priority = 10
 cooldown_seconds = 60.0
 
-# Optional local provider.
-# Keep disabled by default: the desktop has 16 GB RAM and integrated Radeon
-# graphics, so local inference must remain on-demand and must not become a
-# resident background service. Pin the compact Q4_K_M build explicitly so a
-# future change to the floating 1.7b tag cannot silently change the resource
-# profile. The model itself is unloaded after each request by the adapter.
+# Local provider is enabled as a lightweight capability, not as a resident service.
+# Selecting Ollama in the launcher only changes BOT_IA_PROVIDER; it does not start
+# Ollama automatically. The adapter sends keep_alive=0 so the model is released
+# after each request. Pin the compact Q4_K_M build for the 16 GB / integrated-GPU PC.
 [providers.ollama]
-enabled = false
+enabled = true
 model = "qwen3:1.7b-q4_K_M"
 max_output_tokens = 256
 timeout_seconds = 90.0
