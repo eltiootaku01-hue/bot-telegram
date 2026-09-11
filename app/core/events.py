@@ -9,6 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.db.models import DomainEvent
 
 
@@ -67,8 +68,8 @@ class EventBus:
         return envelope
 
     async def recover_stale(self, session: AsyncSession, *, event_type: str | None = None, timeout_seconds: int = 300, max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> int:
-        cutoff = datetime.utcnow() - timedelta(seconds=timeout_seconds)
-        now = datetime.utcnow()
+        cutoff = utc_now() - timedelta(seconds=timeout_seconds)
+        now = utc_now()
         query = select(DomainEvent).where(
             DomainEvent.status == "processing",
             ((DomainEvent.heartbeat_at.is_not(None) & (DomainEvent.heartbeat_at < cutoff)) |
@@ -94,7 +95,7 @@ class EventBus:
         return len(events)
 
     async def claim(self, session: AsyncSession, *, event_type: str | None = None, now: datetime | None = None) -> DomainEvent | None:
-        now = now or datetime.utcnow()
+        now = now or utc_now()
         query = select(DomainEvent).where(DomainEvent.status == "pending", DomainEvent.available_at <= now)
         if event_type is not None:
             query = query.where(DomainEvent.event_type == event_type)
@@ -111,13 +112,13 @@ class EventBus:
 
     async def renew(self, session: AsyncSession, event_id: str, *, lock_time: datetime) -> bool:
         """Refresh liveness without changing the immutable claim token."""
-        now = datetime.utcnow()
+        now = utc_now()
         result = await session.execute(update(DomainEvent).where(DomainEvent.event_id == event_id, DomainEvent.status == "processing", DomainEvent.locked_at == lock_time).values(heartbeat_at=now, updated_at=now))
         await session.commit()
         return result.rowcount == 1
 
     async def complete(self, session: AsyncSession, event_id: str, *, lock_time: datetime | None = None) -> bool:
-        now = datetime.utcnow()
+        now = utc_now()
         conditions = [DomainEvent.event_id == event_id, DomainEvent.status == "processing"]
         if lock_time is not None:
             conditions.append(DomainEvent.locked_at == lock_time)
@@ -126,7 +127,7 @@ class EventBus:
         return result.rowcount == 1
 
     async def fail(self, session: AsyncSession, event_id: str, error: str, *, lock_time: datetime | None = None, retry_at: datetime | None = None, max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> bool:
-        now = datetime.utcnow()
+        now = utc_now()
         event = await session.scalar(select(DomainEvent).where(DomainEvent.event_id == event_id))
         if event is None or (lock_time is not None and (event.status != "processing" or event.locked_at != lock_time)):
             return False
