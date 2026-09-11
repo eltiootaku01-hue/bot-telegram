@@ -32,7 +32,10 @@ def _ensure_compatibility(connection) -> None:
     _add_column_if_missing(connection, "media_assets", "published_page_message_id", "BIGINT", media_columns)
     _add_column_if_missing(connection, "media_assets", "published_request_message_id", "BIGINT", media_columns)
 
-    event_columns = {column["name"] for column in inspector.get_columns("domain_events")}
+    chat_columns = {column["name"] for column in inspect(connection).get_columns("chats")}
+    _add_column_if_missing(connection, "chats", "last_human_message_at", "DATETIME", chat_columns)
+
+    event_columns = {column["name"] for column in inspect(connection).get_columns("domain_events")}
     _add_column_if_missing(connection, "domain_events", "heartbeat_at", "DATETIME", event_columns)
     job_columns = {column["name"] for column in inspect(connection).get_columns("durable_jobs")}
     _add_column_if_missing(connection, "durable_jobs", "heartbeat_at", "DATETIME", job_columns)
