@@ -31,6 +31,7 @@ class JobQueue:
                     raise
                 return existing
             await session.refresh(job)
+            await session.commit()
             return job
         if not session.in_transaction():
             await session.begin()
@@ -115,6 +116,7 @@ class JobQueue:
         job = await session.get(DurableJob, job_id)
         if job is not None:
             await session.refresh(job)
+            await session.commit()
         return job
 
     async def renew(self, session: AsyncSession, job_id: int, *, lock_time: datetime) -> bool:
