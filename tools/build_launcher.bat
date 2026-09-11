@@ -4,7 +4,7 @@ cd /d "%~dp0.."
 
 python -m pip install -e ".[dev]"
 if errorlevel 1 exit /b %errorlevel%
-python -m pip install pyinstaller
+python -m pip install pyinstaller==6.22.2 pyinstaller-hooks-contrib==2026.7
 if errorlevel 1 exit /b %errorlevel%
 
 if exist dist rmdir /s /q dist
