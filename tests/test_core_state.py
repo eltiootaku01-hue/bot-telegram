@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import EventBus
 from app.core.jobs import JobQueue
+from app.core.time import utc_now
 from app.db.database import Database
 from app.db.models import DomainEvent, DurableJob
 
@@ -17,6 +18,13 @@ async def session():
     async with database.session() as db:
         yield db
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_utc_now_is_utc_and_database_compatible():
+    now = utc_now()
+    assert now.tzinfo is None
+    assert abs((now - utc_now()).total_seconds()) < 1
 
 
 @pytest.mark.asyncio
