@@ -14,6 +14,7 @@ from bot_ia.contracts import Confidence, UniverseRegistry
 
 from .fts import MemoryFTS
 from .models import MemoryMatch, MemoryStatus, MemoryType, PersistentMemoryRecord
+from .retrieval_policy import candidate_budget
 
 _TOKENS = re.compile(r"[\wáéíóúüñ]+", re.IGNORECASE)
 _SECRET = re.compile(r"(?:sk-[A-Za-z0-9_-]{12,}|AIza[A-Za-z0-9_-]{12,}|\d{8,12}:[A-Za-z0-9_-]{20,})")
@@ -202,8 +203,8 @@ class MemoryStore:
                     clauses.append("(content LIKE ? OR tags LIKE ?)")
                     parameters.extend((pattern, pattern))
                 candidate_filter = " OR ".join(clauses)
-                sql = f"SELECT * FROM memories WHERE universe_id=? AND user_id=? AND status=? AND approved=1 AND (expires_at IS NULL OR expires_at>?) AND (conversation_id IS NULL OR conversation_id=?) AND ({candidate_filter})"
-                rows = connection.execute(sql, tuple(parameters)).fetchall()
+                sql = f"SELECT * FROM memories WHERE universe_id=? AND user_id=? AND status=? AND approved=1 AND (expires_at IS NULL OR expires_at>?) AND (conversation_id IS NULL OR conversation_id=?) AND ({candidate_filter}) LIMIT ?"
+                rows = connection.execute(sql, tuple((*parameters, candidate_budget()))).fetchall()
         matches = []
         term_set = set(terms)
         for row in rows:
