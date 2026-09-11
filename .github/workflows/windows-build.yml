@@ -8,7 +8,7 @@ on:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -23,6 +23,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
           pip install pyinstaller
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
       - name: Build executables
         shell: cmd
         run: tools\build_launcher.bat
@@ -39,11 +42,38 @@ jobs:
           foreach ($file in $files) {
             if (-not (Test-Path $file)) { throw "Missing executable: $file" }
           }
-      - name: Package
+      - name: Build installer
         shell: pwsh
-        run: Compress-Archive -Path dist\* -DestinationPath bot-telegram-windows.zip -Force
+        run: |
+          $version = if ($env:GITHUB_REF_NAME -match '^v(.+)$') { $Matches[1] } else { '0.1.0' }
+          New-Item -ItemType Directory -Force -Path dist-installer | Out-Null
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" installer\bot-telegram.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem dist-installer -Filter "BotTelegram-Setup-*.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Installer was not generated" }
+          if ($installer.Length -lt 1MB) { throw "Installer looks unexpectedly small: $($installer.Length) bytes" }
+          Write-Host "Installer: $($installer.FullName)"
+      - name: Package portable build
+        shell: pwsh
+        run: Compress-Archive -Path dist\* -DestinationPath bot-telegram-windows-portable.zip -Force
       - uses: actions/upload-artifact@v4
         with:
-          name: bot-telegram-windows
-          path: bot-telegram-windows.zip
+          name: bot-telegram-windows-installer
+          path: dist-installer\BotTelegram-Setup-*.exe
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bot-telegram-windows-portable
+          path: bot-telegram-windows-portable.zip
+          if-no-files-found: error
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $installer = (Get-ChildItem dist-installer -Filter "BotTelegram-Setup-*.exe" | Select-Object -First 1).FullName
+          gh release create "$env:GITHUB_REF_NAME" $installer bot-telegram-windows-portable.zip --generate-notes --title "Bot Telegram $env:GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
