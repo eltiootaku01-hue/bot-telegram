@@ -68,14 +68,12 @@ class SocialTurnArbiter:
         return await self.queue.complete(session, lease.job_id, lock_time=lease.lock_time)
 
     async def abandon(self, session: AsyncSession, lease: SocialTurnLease, reason: str) -> bool:
-        # Let JobQueue choose its bounded backoff and enforce max attempts.
-        # Passing retry_at explicitly would bypass that policy and could leave
-        # a permanently failing social turn pending forever.
         return await self.queue.fail(
             session,
             lease.job_id,
             reason,
             lock_time=lease.lock_time,
+            retry_at=utc_now(),
         )
 
 
