@@ -30,6 +30,13 @@ class BackupService:
         self._memory = SQLiteBackupManager(MemoryStore.APPLICATION_ID, MemoryStore.SCHEMA_VERSION)
         self._sessions = SQLiteBackupManager(PersistentSessionStore.APPLICATION_ID, PersistentSessionStore.SCHEMA_VERSION)
 
+    def _require_workspace_path(self, path: Path) -> Path:
+        """Reject backup destinations outside BOT-IA's local workspace."""
+        resolved = path.resolve()
+        if not resolved.is_relative_to(self.workspace_root):
+            raise ValueError("backup destination must remain inside the BOT-IA workspace")
+        return resolved
+
     def create_snapshot(self, destination_root: Path, *, label: str) -> BackupSnapshot:
         """Create a validated pair from a period with no detected source changes.
 
@@ -41,7 +48,7 @@ class BackupService:
         """
         if not label or Path(label).name != label or label in {".", ".."}:
             raise ValueError("snapshot label must be a single safe path component")
-        destination_root = destination_root.resolve()
+        destination_root = self._require_workspace_path(destination_root)
         snapshot_root = destination_root / label
         if snapshot_root.exists():
             raise ValueError("snapshot destination already exists")

@@ -67,7 +67,7 @@ class LocalWorkflow:
         self._ollie = OllieGuideBuilder()
         self._evidence_gate = EvidenceGate()
         self._provider_config = provider_config or ProviderConfig(provider_id=provider_id, model=provider_model, fallback_provider=fallback_provider)
-        self._response_cache: dict[tuple[str, str, str, str, str, str], ProviderResponse] = {}
+        self._response_cache: dict[tuple[str, str, str, str, str, str, str, str], ProviderResponse] = {}
         self._response_cache_limit = 64
 
     def register_universe(self, definition: UniverseDefinition, entries: tuple[CatalogEntry, ...]) -> None:
@@ -147,6 +147,8 @@ class LocalWorkflow:
         agent_policy_key = f"{agent.recommendation}|{agent.uncertainty or ''}|{';'.join(agent.conflicts)}"
         cache_key = (
             config.provider_id,
+            config.model,
+            brain.universe_id,
             agent.agent_id,
             brain.intent.value,
             str(decision.external_api_authorized),

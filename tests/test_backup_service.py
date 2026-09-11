@@ -66,6 +66,15 @@ class BackupServiceTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 BackupService(root).create_snapshot(backups, label="snapshot-1")
 
+    def test_rejects_backup_destination_outside_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            outside = Path(directory).parent / "bot-ia-backups-outside"
+            service = BackupService(root)
+            with self.assertRaises(ValueError):
+                service.create_snapshot(outside, label="snapshot-1")
+            self.assertFalse(outside.exists())
+
     def test_retries_when_sources_drift_during_pair_creation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
