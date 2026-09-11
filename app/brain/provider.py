@@ -171,9 +171,10 @@ class BrainClient:
             if self._uses_custom_settings("gemini") and self.settings.llm_model.strip()
             else DEFAULT_MODELS["gemini"]
         )
+        # Keep the API key out of the URL so it cannot be copied into request logs/history.
         url = (
             f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{model}:generateContent?key={self.settings.gemini_api_key}"
+            f"{model}:generateContent"
         )
         contents = [
             {"role": "user", "parts": [{"text": item[:800]}]}
@@ -188,7 +189,11 @@ class BrainClient:
                 "maxOutputTokens": request.max_tokens,
             },
         }
-        data = self._post_json(url, {"Content-Type": "application/json"}, payload)
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self.settings.gemini_api_key,
+        }
+        data = self._post_json(url, headers, payload)
         try:
             parts = data["candidates"][0]["content"]["parts"]
         except (KeyError, IndexError, TypeError) as exc:
@@ -207,8 +212,9 @@ class BrainClient:
             with urlopen(request, timeout=35) as response:
                 body = response.read().decode("utf-8")
         except HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace")
-            raise LLMProviderError(f"HTTP {exc.code}: {body[:300]}") from exc
+            # Do not copy the provider response body into logs/errors: it may contain
+            # request details or other data that should not be retained unnecessarily.
+            raise LLMProviderError(f"HTTP {exc.code}") from exc
         except URLError as exc:
             raise LLMProviderError(f"network error: {exc.reason}") from exc
         try:
