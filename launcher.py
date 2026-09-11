@@ -43,6 +43,7 @@ def _write_env(*, universe: str, library: Path, provider: str, api_key: str, tel
         "# BOT-IA generated configuration. This file is local and must never be committed.",
         f"BOT_IA_UNIVERSE={universe}",
         f"BOT_IA_PROVIDER={provider_id}",
+        f"BOT_IA_ENABLE_LOCAL_OLLAMA={'true' if provider_id == 'ollama' else 'false'}",
         f"BOT_IA_ONE_NEKO_PUNCH_ROOT={library}",
         "",
     ]
