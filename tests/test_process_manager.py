@@ -6,22 +6,27 @@ import time
 from app.services.process_manager import ProcessManager
 
 
-def test_process_manager_captures_failed_startup_output() -> None:
-    manager = ProcessManager(
-        lambda _: [
-            sys.executable,
-            "-c",
-            "import sys; print('boot stdout'); print('boot stderr', file=sys.stderr); sys.exit(7)",
-        ],
-        grace_seconds=0.2,
-    )
+def test_process_manager_captures_failed_startup_output_and_fails_fast() -> None:
+    launched: list[str] = []
 
+    def command(identity: str) -> list[str]:
+        launched.append(identity)
+        if identity == "cari":
+            return [
+                sys.executable,
+                "-c",
+                "import sys; print('boot stdout'); print('boot stderr', file=sys.stderr); sys.exit(7)",
+            ]
+        return [sys.executable, "-c", "import time; time.sleep(10)"]
+
+    manager = ProcessManager(command, grace_seconds=0.2)
     result = manager.start_sequential(("cari", "sunna"))
 
     assert result.started == ()
     assert result.failure is not None
     assert result.failure.identity == "cari"
-    assert result.failure.returncode is None or result.failure.returncode == 7
+    assert result.failure.returncode == 7
+    assert launched == ["cari"]
     output = manager.last_output["cari"]
     assert any(item.stream == "stdout" and item.line == "boot stdout" for item in output)
     assert any(item.stream == "stderr" and item.line == "boot stderr" for item in output)
