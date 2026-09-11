@@ -67,6 +67,16 @@ class GameModule(BotModule):
             )
             return setup
 
+    @staticmethod
+    def _private_callback(callback: CallbackQuery) -> bool:
+        """Reject forwarded/stale private-game buttons from other chat contexts."""
+        message = callback.message
+        return (
+            message is not None
+            and message.chat.type == "private"
+            and message.chat.id == callback.from_user.id
+        )
+
     async def game(self, message: Message) -> None:
         if message.chat.type != "private":
             return
@@ -78,8 +88,8 @@ class GameModule(BotModule):
         await message.answer("🎰 <b>Gacha de personajes</b>", reply_markup=gacha_keyboard())
 
     async def inventory_callback(self, callback: CallbackQuery) -> None:
-        if callback.message is None:
-            await callback.answer("Mensaje no disponible.", show_alert=True)
+        if not self._private_callback(callback):
+            await callback.answer("Este botón solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
             return
         chat_id = await self._community_chat_id()
         if chat_id is None:
@@ -135,6 +145,9 @@ class GameModule(BotModule):
             pass
 
     async def fusion(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer("Este botón solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
+            return
         character_id = (callback.data or "").split(":", 2)[-1]
         if not character_id or callback.message is None:
             await callback.answer("Fusión inválida.", show_alert=True)
