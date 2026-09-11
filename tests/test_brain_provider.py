@@ -10,7 +10,7 @@ def test_provider_order_prefers_configured_provider() -> None:
         gemini_api_key="gemi-key",
         openrouter_api_key="router-key",
     )
-    assert BrainClient(settings).configured_providers() == ["groq", "gemini", "openrouter"]
+    assert BrainClient(settings).configured_providers() == ["groq", "gemini", "openrouter", "ollama"]
 
 
 def test_provider_order_without_preference_is_stable() -> None:
@@ -18,7 +18,12 @@ def test_provider_order_without_preference_is_stable() -> None:
         gemini_api_key="gemi-key",
         cerebras_api_key="c-key",
     )
-    assert BrainClient(settings).configured_providers() == ["gemini", "cerebras"]
+    assert BrainClient(settings).configured_providers() == ["gemini", "cerebras", "ollama"]
+
+
+def test_ollama_can_be_the_only_backend() -> None:
+    settings = Settings(ollama_model="llama3.2:1b", ollama_base_url="http://127.0.0.1:11434")
+    assert BrainClient(settings).configured_providers() == ["ollama"]
 
 
 def test_personality_prompt_contains_identity() -> None:
@@ -30,7 +35,7 @@ def test_personality_prompt_contains_identity() -> None:
 
 
 def test_default_models_exist_for_all_supported_providers() -> None:
-    assert set(DEFAULT_MODELS) == {"gemini", "groq", "cerebras", "openrouter"}
+    assert set(DEFAULT_MODELS) == {"gemini", "groq", "cerebras", "openrouter", "ollama"}
 
 
 def test_gemini_keeps_api_key_out_of_url() -> None:
@@ -52,3 +57,21 @@ def test_gemini_keeps_api_key_out_of_url() -> None:
     )
     assert "secret-key" not in str(captured["url"])
     assert captured["headers"]["x-goog-api-key"] == "secret-key"  # type: ignore[index]
+
+
+def test_ollama_request_uses_local_api_without_auth_header() -> None:
+    settings = Settings(llm_provider="ollama", ollama_model="llama3.2:1b")
+    client = BrainClient(settings)
+    captured: dict[str, object] = {}
+
+    def fake_post_json(url: str, headers: dict[str, str], payload: dict) -> dict:
+        captured.update(url=url, headers=headers, payload=payload)
+        return {"message": {"content": "ok"}}
+
+    client._post_json = fake_post_json  # type: ignore[method-assign]
+    result = client._ollama(LLMRequest(identity=BotIdentity.CARI, user_text="hola"))
+
+    assert result == "ok"
+    assert captured["url"] == "http://127.0.0.1:11434/api/chat"
+    assert captured["headers"] == {"Content-Type": "application/json"}
+    assert captured["payload"]["model"] == "llama3.2:1b"  # type: ignore[index]
