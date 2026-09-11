@@ -19,7 +19,7 @@ async def session():
 
 
 @pytest.mark.asyncio
-async def test_observe_ignores_recent_bot_activity_for_human_recency(session: AsyncSession):
+async def test_observe_ignores_member_presence_for_human_recency(session: AsyncSession):
     now = datetime(2026, 9, 11, 12, 0)
     human_at = now - timedelta(minutes=20)
     chat = Chat(id=-100, type="supergroup", title="community", last_seen_at=now)
@@ -35,8 +35,8 @@ async def test_observe_ignores_recent_bot_activity_for_human_recency(session: As
     activity = await SocialActivityService().observe(session, -100, now=now)
 
     assert activity.active_users == 0
-    assert activity.last_human_message_at == human_at
-    assert activity.to_snapshot(SocialMemory()).minutes_since_last_message == 20
+    assert activity.last_human_message_at is None
+    assert activity.to_snapshot(SocialMemory()).minutes_since_last_message == 0
 
 
 @pytest.mark.asyncio
