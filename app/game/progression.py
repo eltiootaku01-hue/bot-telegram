@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
-from sqlalchemy import case, select, update
+from sqlalchemy import case, cast, Integer, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -115,16 +115,20 @@ async def apply_capture_progression(
     profile = await session.get(GameProfile, profile_id)
     if profile is None:
         raise ValueError("Game profile disappeared during capture")
+
+    # Keep both counters and the derived profile level inside SQL. The old
+    # read/refresh/Python assignment could overwrite a newer level when two
+    # captures updated the same profile concurrently.
     await session.execute(
         update(GameProfile)
         .where(GameProfile.id == profile_id)
         .values(
             experience=GameProfile.experience + gained,
+            level=cast((GameProfile.experience + gained) / 500, Integer) + 1,
             updated_at=datetime.utcnow(),
         )
     )
     await session.refresh(profile)
-    profile.level = max(1, 1 + profile.experience // 500)
     await session.flush()
 
     return collection, ProgressionResult(
