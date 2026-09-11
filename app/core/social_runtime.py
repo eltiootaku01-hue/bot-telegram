@@ -7,18 +7,18 @@ from aiogram import Bot
 from sqlalchemy import select
 
 from app.core.identity import BotIdentity
+from app.core.module import BotModule
 from app.core.presence import PresenceService
 from app.core.social_activity import SocialActivityService
 from app.core.social_director import SocialDirector
 from app.core.social_turn import SocialTurnArbiter
-from app.core.social_wake import SocialWakeController, WakeReason
+from app.core.social_wake import SocialWakeController
 from app.core.social_wake_store import SocialWakeStore
 from app.core.time import utc_now
 from app.db.database import Database
 from app.db.models import Chat
 
 logger = logging.getLogger(__name__)
-
 
 SOCIAL_RUNTIME_TASK = "social.runtime"
 DEFAULT_POLL_SECONDS = 30.0
@@ -203,19 +203,13 @@ class _RuntimeMemory:
         return 10_000
 
 
-class SocialRuntimeModule:
-    """BotModule adapter that starts the autonomous social runtime at startup."""
+class SocialRuntimeModule(BotModule):
+    """Start the autonomous social runtime with the normal module lifecycle."""
 
     name = "social_runtime"
 
     def __init__(self, database: Database, identity: BotIdentity) -> None:
-        from app.core.module import BotModule
-
-        # Compose the abstract module implementation dynamically to keep this
-        # runtime usable without changing the existing module base contract.
-        self._module_base = BotModule
-        self.router = __import__("aiogram").Router(name=self.name)
-        self.tasks = __import__("app.core.tasks", fromlist=["TaskSupervisor"]).TaskSupervisor()
+        super().__init__()
         self.runtime = SocialRuntime(database, identity)
 
     def setup(self) -> None:
@@ -226,4 +220,4 @@ class SocialRuntimeModule:
 
     async def on_shutdown(self) -> None:
         self.runtime.stop()
-        await self.tasks.stop_all()
+        await super().on_shutdown()
