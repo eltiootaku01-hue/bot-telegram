@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.identity import BotIdentity
 from app.core.jobs import JobQueue
 from app.core.time import utc_now
-from app.db.models import DurableJob
 
 
 SOCIAL_TURN_JOB = "social.turn"
@@ -54,8 +53,8 @@ class SocialTurnArbiter:
             run_at=utc_now(),
             commit=True,
         )
-        job = await self.queue.claim(session, job_type=SOCIAL_TURN_JOB)
-        if job is None or job.dedupe_key != dedupe_key:
+        job = await self.queue.claim_by_dedupe_key(session, dedupe_key)
+        if job is None:
             return None
         return SocialTurnLease(
             job_id=job.id,
