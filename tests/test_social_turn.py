@@ -39,6 +39,30 @@ async def test_only_one_bot_wins_the_same_social_turn(database):
 
 
 @pytest.mark.asyncio
+async def test_abandoned_social_turn_can_be_reclaimed(database):
+    arbiter = SocialTurnArbiter()
+    async with database.session() as first_session, database.session() as second_session:
+        first = await arbiter.acquire(
+            first_session,
+            chat_id=123,
+            window_key="202609101201",
+            identity=BotIdentity.CARI,
+        )
+        assert first is not None
+        assert await arbiter.abandon(first_session, first)
+
+        second = await arbiter.acquire(
+            second_session,
+            chat_id=123,
+            window_key="202609101201",
+            identity=BotIdentity.CHIE,
+        )
+        assert second is not None
+        assert second.bot_identity == BotIdentity.CHIE
+        assert await arbiter.complete(second_session, second)
+
+
+@pytest.mark.asyncio
 async def test_different_chat_or_window_can_have_independent_turns(database):
     arbiter = SocialTurnArbiter()
     async with database.session() as session:
