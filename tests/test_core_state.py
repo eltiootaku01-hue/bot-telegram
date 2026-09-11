@@ -94,13 +94,13 @@ async def test_job_heartbeat_extends_liveness_without_changing_claim(session):
 @pytest.mark.asyncio
 async def test_event_heartbeat_extends_liveness_without_changing_claim(session):
     bus = EventBus()
-    event = await bus.publish(session, "telegram.publish", {"chat_id": 10}, event_id="heartbeat-event")
+    await bus.publish(session, "telegram.publish", {"chat_id": 10}, event_id="heartbeat-event")
     claimed = await bus.claim(session)
     assert claimed is not None
     original_lock = claimed.locked_at
-    assert await bus.renew(session, event.event_id, lock_time=original_lock) is True
-    refreshed = await session.get(DomainEvent, event.id)
+    assert await bus.renew(session, claimed.event_id, lock_time=original_lock) is True
+    refreshed = await session.get(DomainEvent, claimed.id)
     assert refreshed is not None
     assert refreshed.locked_at == original_lock
     assert refreshed.heartbeat_at is not None
-    assert await bus.complete(session, event.event_id, lock_time=original_lock) is True
+    assert await bus.complete(session, claimed.event_id, lock_time=original_lock) is True
