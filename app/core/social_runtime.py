@@ -157,20 +157,25 @@ class SocialRuntime:
             if decision.candidates[0] is not self.identity:
                 return False
 
-            turn = await self.turns.acquire(session, chat_id, now=now)
+            turn = await self.turns.acquire(
+                session,
+                chat_id=chat_id,
+                window_key=now.strftime("%Y%m%d%H%M"),
+                identity=self.identity,
+            )
             if turn is None:
                 return False
             message = self.composer.compose(self.identity, roll=abs(chat_id) % 2)
 
         try:
             await bot.send_message(chat_id, message)
-        except Exception:
+        except Exception as exc:
             async with self.database.session() as session:
-                await self.turns.abandon(session, turn, now=now)
+                await self.turns.abandon(session, turn, reason=str(exc))
             raise
 
         async with self.database.session() as session:
-            await self.turns.complete(session, turn, now=now)
+            await self.turns.complete(session, turn)
             next_state = self.wakes.after_check(
                 wake,
                 now,
