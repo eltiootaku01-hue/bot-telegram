@@ -60,7 +60,8 @@ jobs:
           }
           $core = Get-Item "release\BOT-IA-Core.exe"
           $launcher = Get-Item "release\BOT-IA.exe"
-          Write-Host "Launcher/Core package pair verified: $($launcher.Length) / $($core.Length) bytes"
+          $installer = Get-Item "release\BOT-IA-Setup.exe"
+          Write-Host "Launcher/Core/Installer verified: $($launcher.Length) / $($core.Length) / $($installer.Length) bytes"
 
       - name: Upload desktop package
         uses: actions/upload-artifact@v6
@@ -68,3 +69,5 @@ jobs:
           name: BOT-IA-Windows
           path: release/
           if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
