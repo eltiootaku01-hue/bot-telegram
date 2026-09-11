@@ -28,25 +28,38 @@ class EventBus:
 
     async def publish(self, session: AsyncSession, event_type: str, payload: dict, *, event_id: str | None = None, commit: bool = True) -> EventEnvelope:
         envelope = EventEnvelope(event_id or uuid.uuid4().hex, event_type, payload)
-        event = DomainEvent(event_id=envelope.event_id, event_type=event_type, payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
-        if commit:
-            session.add(event)
+        if not commit:
+            existing = await session.scalar(select(DomainEvent).where(DomainEvent.event_id == envelope.event_id))
+            if existing is not None:
+                return EventEnvelope(existing.event_id, existing.event_type, json.loads(existing.payload))
+            if not session.in_transaction():
+                await session.begin()
+            event = DomainEvent(
+                event_id=envelope.event_id,
+                event_type=event_type,
+                payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+            )
             try:
-                await session.commit()
+                async with session.begin_nested():
+                    session.add(event)
+                    await session.flush()
             except IntegrityError:
-                await session.rollback()
                 existing = await session.scalar(select(DomainEvent).where(DomainEvent.event_id == envelope.event_id))
                 if existing is None:
                     raise
                 return EventEnvelope(existing.event_id, existing.event_type, json.loads(existing.payload))
             return envelope
-        if not session.in_transaction():
-            await session.begin()
+
+        event = DomainEvent(
+            event_id=envelope.event_id,
+            event_type=event_type,
+            payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+        )
+        session.add(event)
         try:
-            async with session.begin_nested():
-                session.add(event)
-                await session.flush()
+            await session.commit()
         except IntegrityError:
+            await session.rollback()
             existing = await session.scalar(select(DomainEvent).where(DomainEvent.event_id == envelope.event_id))
             if existing is None:
                 raise
