@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from subprocess import Popen
-from time import monotonic
+from time import monotonic, sleep
 
 from app.services.process_reader import ProcessOutput, ProcessReader
 
@@ -29,7 +29,7 @@ class ProcessHealth:
         self.grace_seconds = grace_seconds
 
     def check(self, identity: str, process: Popen[str]) -> HealthResult:
-        del identity  # Reserved for future per-bot diagnostics.
+        del identity
         deadline = monotonic() + self.grace_seconds
         captured: list[ProcessOutput] = []
         while monotonic() < deadline:
@@ -38,6 +38,7 @@ class ProcessHealth:
             if returncode is not None:
                 captured.extend(self.reader.drain())
                 return HealthResult(False, returncode, tuple(captured))
+            sleep(0.01)
         captured.extend(self.reader.drain())
         returncode = process.poll()
         if returncode is not None:
