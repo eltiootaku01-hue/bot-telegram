@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from io import StringIO
 from subprocess import PIPE, Popen
 
 from app.services.process_reader import ProcessReader
