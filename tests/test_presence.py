@@ -1,12 +1,13 @@
 from datetime import timedelta
 
 import pytest
+from sqlalchemy import select
 
 from app.core.identity import BotIdentity
 from app.core.presence import PresenceService
 from app.core.time import utc_now
 from app.db.database import Database
-from app.db.models import BotPresence
+from app.db.models import BotPresence, BotPresenceState
 
 
 @pytest.fixture
@@ -56,12 +57,12 @@ async def test_auto_resume_requires_timer_and_optional_pc_idle(database):
         )
         state = await service.get_or_create(session, BotIdentity.CHIE, commit=False)
         assert state.status == BotPresence.RESTING
-        assert await service.try_auto_resume(session, BotIdentity.CHIE, pc_is_idle=False, commit=False)
-        state = await service.get_or_create(session, BotIdentity.CHIE, commit=False)
-        assert state.status == BotPresence.RESTING
+        blocked = await service.try_auto_resume(session, BotIdentity.CHIE, pc_is_idle=False, commit=False)
+        assert blocked.status == BotPresence.RESTING
 
-        # Move the rest deadline into the past without making the test wait.
-        db_state = await session.get(__import__("app.db.models", fromlist=["BotPresenceState"]).BotPresenceState, 4)
+        db_state = await session.scalar(
+            select(BotPresenceState).where(BotPresenceState.bot_identity == BotIdentity.CHIE.value)
+        )
         assert db_state is not None
         db_state.rest_until = utc_now() - timedelta(seconds=1)
         await session.flush()
