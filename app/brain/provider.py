@@ -17,6 +17,7 @@ DEFAULT_MODELS = {
     "groq": "llama-3.3-70b-versatile",
     "cerebras": "llama-3.3-70b",
     "openrouter": "openrouter/free",
+    "ollama": "llama3.2:1b",
 }
 
 OPENAI_COMPATIBLE_BASE_URLS = {
@@ -62,7 +63,7 @@ class LLMProviderError(RuntimeError):
 
 
 class BrainClient:
-    """Small provider-agnostic async client with deterministic provider fallback."""
+    """Small provider-agnostic async client with local-first fallback."""
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -79,6 +80,8 @@ class BrainClient:
             )
             if key.strip()
         ]
+        if self.settings.ollama_model.strip() and self.settings.ollama_base_url.strip():
+            available.append("ollama")
         if preferred in available:
             return [preferred] + [name for name in available if name != preferred]
         return available
@@ -89,7 +92,7 @@ class BrainClient:
     async def generate(self, request: LLMRequest) -> str:
         providers = self.configured_providers()
         if not providers:
-            raise LLMProviderError("No external LLM API key is configured")
+            raise LLMProviderError("No LLM backend is configured")
         errors: list[str] = []
         for provider in providers:
             try:
@@ -105,6 +108,8 @@ class BrainClient:
     def _generate_sync(self, provider: str, request: LLMRequest) -> str:
         if provider == "gemini":
             return self._gemini(request)
+        if provider == "ollama":
+            return self._ollama(request)
         return self._openai_compatible(provider, request)
 
     def _system_prompt(self, request: LLMRequest) -> str:
@@ -148,10 +153,7 @@ class BrainClient:
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
         }
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         if provider == "openrouter":
             headers["X-Title"] = "Telegram Community Bot"
         data = self._post_json(url, headers, payload)
@@ -165,13 +167,34 @@ class BrainClient:
             )
         return str(content)
 
+    def _ollama(self, request: LLMRequest) -> str:
+        model = (
+            self.settings.llm_model.strip()
+            if self._uses_custom_settings("ollama") and self.settings.llm_model.strip()
+            else self.settings.ollama_model.strip() or DEFAULT_MODELS["ollama"]
+        )
+        url = self.settings.ollama_base_url.rstrip("/") + "/api/chat"
+        payload = {
+            "model": model,
+            "messages": self._messages(request),
+            "stream": False,
+            "options": {
+                "temperature": request.temperature,
+                "num_predict": request.max_tokens,
+            },
+        }
+        data = self._post_json(url, {"Content-Type": "application/json"}, payload)
+        try:
+            return str(data["message"]["content"])
+        except (KeyError, TypeError) as exc:
+            raise LLMProviderError("Invalid Ollama response") from exc
+
     def _gemini(self, request: LLMRequest) -> str:
         model = (
             self.settings.llm_model.strip()
             if self._uses_custom_settings("gemini") and self.settings.llm_model.strip()
             else DEFAULT_MODELS["gemini"]
         )
-        # Keep the API key out of the URL so it cannot be copied into request logs/history.
         url = (
             f"https://generativelanguage.googleapis.com/v1beta/models/"
             f"{model}:generateContent"
@@ -189,10 +212,7 @@ class BrainClient:
                 "maxOutputTokens": request.max_tokens,
             },
         }
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": self.settings.gemini_api_key,
-        }
+        headers = {"Content-Type": "application/json", "x-goog-api-key": self.settings.gemini_api_key}
         data = self._post_json(url, headers, payload)
         try:
             parts = data["candidates"][0]["content"]["parts"]
@@ -212,8 +232,6 @@ class BrainClient:
             with urlopen(request, timeout=35) as response:
                 body = response.read().decode("utf-8")
         except HTTPError as exc:
-            # Do not copy the provider response body into logs/errors: it may contain
-            # request details or other data that should not be retained unnecessarily.
             raise LLMProviderError(f"HTTP {exc.code}") from exc
         except URLError as exc:
             raise LLMProviderError(f"network error: {exc.reason}") from exc
