@@ -50,6 +50,13 @@ class MemberRepository:
                     left_at=None if link.status in {"left", "kicked"} else link.left_at,
                 )
             )
+
+        if not user.is_bot:
+            await session.execute(
+                update(Chat)
+                .where(Chat.id == chat.id)
+                .values(last_human_message_at=now)
+            )
         await session.commit()
 
     async def set_membership(self, session: AsyncSession, user: TgUser, chat: TgChat, status: str) -> None:
