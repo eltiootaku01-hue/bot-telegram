@@ -1,29 +1,42 @@
 # BOT-IA Desktop
 
-BOT-IA now has a graphical Windows interface that uses the same application runtime as the console, Telegram and HTTP API.
+BOT-IA tiene una interfaz gráfica de Windows que utiliza el mismo runtime que la consola, Telegram y la API HTTP.
 
-## What it provides
+## Uso normal
 
-- Chat-style conversation window.
-- Buttons similar to the Telegram main menu.
-- Active novel indicator.
-- Library, continuity, ideas, investigation, scene-helper, API status and progress actions.
-- Progress bars for documented library state, connected universes and enabled providers.
-- `Autorizar API sólo para esta consulta`, disabled by default.
-- `Iniciar en Telegram`, which starts Telegram in a separate process so the desktop window remains usable.
+Para el usuario final, el punto de entrada es `BOT-IA.exe`. No hace falta abrir Python, PowerShell ni una terminal.
 
-## Important safety behavior
+En una instalación nueva, `BOT-IA.exe` abre un asistente de primera configuración. Desde ahí se elige la biblioteca de ONE NEKO PUNCH y el proveedor IA, se introduce la clave y se guarda la configuración local. Después el mismo acceso directo abre la interfaz normal.
 
-The GUI does not create a second brain or a second knowledge base. It calls `BotApplication`, so the same evidence, routing, memory and provider rules remain in force.
+## Qué incluye la interfaz
 
-The API authorization checkbox is deliberately per-request. Leaving it unchecked keeps the request local according to the normal routing rules. If external API research is authorized, its result remains an external proposal and is not silently promoted to project canon.
+- Ventana de conversación.
+- Menú visual para novela, biblioteca, continuidad, ideas e investigación.
+- Ayuda para destrabar escenas.
+- Selección y exportación controlada de contexto.
+- Estado de API y progreso local.
+- Botón para iniciar Telegram en un proceso separado.
+- Autorización de API externa por consulta, desactivada por defecto.
 
-The percentages shown in the dashboard are **local documentation/configuration indicators**, not provider quota balances and not a percentage of story quality. BOT-IA does not invent a provider's real remaining quota.
+## Seguridad
 
-## Windows executable
+La GUI no crea un segundo cerebro ni una segunda base de conocimiento. Utiliza `BotApplication`, por lo que conserva las mismas reglas de evidencia, routing, memoria y providers.
 
-The source entrypoint is `desktop.py`. The PowerShell packaging script is `build_desktop.ps1` and creates `release\\bot.exe`.
+La autorización externa es explícita por consulta. Los resultados externos no se convierten automáticamente en canon.
 
-GitHub Actions can also build the Windows package with `.github/workflows/build-windows.yml`; the resulting `BOT-IA-Windows` artifact contains the executable plus runtime configuration files.
+Los porcentajes del panel son indicadores locales de documentación/configuración; no representan cuotas reales del proveedor.
 
-Keep the real `.env` outside Git. The release directory should contain your local `.env` only on your own machine.
+## Paquete Windows
+
+El proyecto genera dos ejecutables:
+
+- `BOT-IA.exe`: lanzador y asistente de primera configuración.
+- `BOT-IA-Core.exe`: interfaz principal y runtime.
+
+También genera `BOT-IA-Setup.exe`, un instalador de Windows sin necesidad de privilegios de administrador. El acceso directo del escritorio apunta al lanzador.
+
+El paquete se construye automáticamente mediante GitHub Actions y se publica como artefacto de Windows. Las claves reales nunca se almacenan en Git.
+
+## Desarrollo
+
+`desktop.py`, `launcher.py` y `build_desktop.ps1` siguen disponibles para desarrollo y mantenimiento. Las instrucciones con Python y `PYTHONPATH` del README están destinadas al entorno de desarrollo, no al uso normal del programa.
