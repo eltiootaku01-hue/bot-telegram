@@ -36,4 +36,4 @@ echo Abri BotManager.exe para configurar enlaces, tokens y APIs,
 echo luego toca Comenzar.
 echo ============================================
 echo.
-pause
+exit /b 0
