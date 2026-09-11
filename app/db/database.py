@@ -71,6 +71,15 @@ def _ensure_compatibility(connection) -> None:
         "ON trivia_rounds(chat_id) WHERE status = 'active'"
     ))
 
+    # PointTransaction's ORM constraint protects new databases. This partial index
+    # brings older SQLite databases up to the same invariant while preserving the
+    # intended ability to record ordinary transactions with NULL references.
+    connection.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_point_transaction_reference "
+        "ON point_transactions(user_id, chat_id, reference_type, reference_id) "
+        "WHERE reference_type IS NOT NULL AND reference_id IS NOT NULL"
+    ))
+
 
 def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None:
     """Tune SQLite for the four bot processes sharing one local database."""
