@@ -39,7 +39,7 @@ class SocialMemory:
         return SocialMemory(
             last_speaker=bot,
             last_bot_message_at=at,
-            last_event_at=self.last_event_at,
+            last_event_at=at,
             pending_followup_bot=None,
             pending_followup_until=None,
         )
@@ -55,6 +55,21 @@ class SocialMemory:
 
     def followup_due(self, now: datetime) -> bool:
         return self.pending_followup_bot is not None and self.pending_followup_until is not None and now >= self.pending_followup_until
+
+    def minutes_since_last_bot_message(self, now: datetime) -> int:
+        if self.last_bot_message_at is None:
+            return 10**9
+        return max(0, int((now - self.last_bot_message_at).total_seconds() // 60))
+
+    def minutes_since_last_event(self, now: datetime) -> int:
+        if self.last_event_at is None:
+            return 10**9
+        return max(0, int((now - self.last_event_at).total_seconds() // 60))
+
+    def human_activity_recent(self, now: datetime, *, window_minutes: int = 10) -> bool:
+        # A scheduler should replace this with the DB observation when available.
+        # The memory layer itself only knows about bot-side timestamps.
+        return False
 
 
 def human_activity_dominates(observation: SocialObservation, *, window_minutes: int = 10) -> bool:
