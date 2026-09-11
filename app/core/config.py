@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     cerebras_api_key: str = ""
     openrouter_api_key: str = ""
 
+    # Ollama is local-only and needs no API key. The model can be changed per machine.
+    ollama_model: str = "llama3.2:1b"
+    ollama_base_url: str = "http://127.0.0.1:11434"
+
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", case_sensitive=False)
 
     def token_for(self, identity: str) -> str:
