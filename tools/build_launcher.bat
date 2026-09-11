@@ -1,6 +1,9 @@
 @echo off
 setlocal
+cd /d "%~dp0.."
+
 python -m pip install -e ".[dev]"
+if errorlevel 1 exit /b %errorlevel%
 python -m pip install pyinstaller
 if errorlevel 1 exit /b %errorlevel%
 
@@ -20,8 +23,17 @@ pyinstaller --noconfirm --clean --windowed --onefile --name BotManager --distpat
 if errorlevel 1 exit /b %errorlevel%
 
 echo.
+echo ============================================
 echo Build completo.
-echo BotManager: dist\BotManager.exe
-echo Bots:       dist\bots\Cari.exe, Sunna.exe, Cami.exe, Chie.exe
+echo.
+echo Iniciador: dist\BotManager.exe
+echo Bots:      dist\bots\Cari.exe
+necho           dist\bots\Sunna.exe
+necho           dist\bots\Cami.exe
+necho           dist\bots\Chie.exe
+echo.
+echo Abrí BotManager.exe para configurar enlaces, tokens y APIs,
+echo luego tocá Comenzar.
+echo ============================================
 echo.
 pause
