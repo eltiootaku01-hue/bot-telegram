@@ -44,6 +44,21 @@ def test_process_manager_keeps_healthy_process_running() -> None:
     assert result.failure is None
     assert result.started == ("cari",)
     assert manager.processes["cari"].poll() is None
+    assert manager.active_processes()["cari"] is manager.processes["cari"]
     time.sleep(0.01)
     manager.stop_all()
     assert not manager.processes
+
+
+def test_process_manager_reaps_finished_processes() -> None:
+    manager = ProcessManager(
+        lambda _: [sys.executable, "-c", "import sys; sys.exit(3)"],
+        grace_seconds=0,
+    )
+    process = manager.launch("cari")
+    process.wait(timeout=1)
+
+    finished = manager.reap_finished()
+
+    assert finished == [("cari", 3)]
+    assert "cari" not in manager.processes
