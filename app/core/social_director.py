@@ -7,7 +7,6 @@ from app.core.identity import BotIdentity
 from app.core.social import (
     MAX_EVENT_INTERVAL_MINUTES,
     MIN_EVENT_INTERVAL_MINUTES,
-    PERSONALITY_POLICIES,
     rank_interveners,
 )
 
@@ -31,15 +30,20 @@ class SocialDecision:
 
 
 class SocialDirector:
-    """Cheap, deterministic gate that decides whether social AI should wake.
+    """Cheap deterministic gate that decides whether social AI should wake.
 
-    The director deliberately does not generate text. It protects human
-    conversations, staggers bot activity, and can decide to remain silent even
-    when an event window is available. A caller can then choose a candidate
-    randomly and only invoke an LLM after this gate succeeds.
+    It protects human conversations, staggers bot activity and keeps the
+    expensive LLM outside the decision gate. A caller may still choose silence
+    after receiving candidates.
     """
 
-    def decide(self, snapshot: SocialSnapshot, fatigue_by_bot: dict[BotIdentity, int]) -> SocialDecision:
+    def decide(
+        self,
+        snapshot: SocialSnapshot,
+        fatigue_by_bot: dict[BotIdentity, int],
+        *,
+        cooldown_roll: int = 0,
+    ) -> SocialDecision:
         if snapshot.conversation_active:
             return SocialDecision(False, (), "human_conversation_active", 0)
         if snapshot.recent_messages >= 8 or snapshot.active_users >= 3:
@@ -58,15 +62,13 @@ class SocialDirector:
         )
         if not candidates:
             return SocialDecision(False, (), "no_rested_bot", 0)
-        return SocialDecision(True, candidates, "quiet_window", self._next_cooldown(snapshot))
+        return SocialDecision(True, candidates, "quiet_window", self._next_cooldown(cooldown_roll))
 
     @staticmethod
-    def _next_cooldown(snapshot: SocialSnapshot) -> int:
-        # Busy rooms should wait longer before another bot-initiated nudge.
-        # This keeps the default cadence in the requested 30–60 minute range.
-        if snapshot.active_users >= 2 or snapshot.recent_messages >= 4:
-            return MAX_EVENT_INTERVAL_MINUTES
-        return MIN_EVENT_INTERVAL_MINUTES
+    def _next_cooldown(cooldown_roll: int) -> int:
+        """Return a testable pseudo-random interval in the 30–60 minute band."""
+        span = MAX_EVENT_INTERVAL_MINUTES - MIN_EVENT_INTERVAL_MINUTES + 1
+        return MIN_EVENT_INTERVAL_MINUTES + (max(0, cooldown_roll) % span)
 
     @staticmethod
     def followup_allowed(*, original_bot: BotIdentity, now: datetime, last_bot_message_at: datetime | None) -> bool:
