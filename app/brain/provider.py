@@ -83,6 +83,9 @@ class BrainClient:
             return [preferred] + [name for name in available if name != preferred]
         return available
 
+    def _uses_custom_settings(self, provider: str) -> bool:
+        return provider == self.settings.llm_provider.strip().lower()
+
     async def generate(self, request: LLMRequest) -> str:
         providers = self.configured_providers()
         if not providers:
@@ -123,13 +126,21 @@ class BrainClient:
         return messages
 
     def _openai_compatible(self, provider: str, request: LLMRequest) -> str:
-        model = self.settings.llm_model.strip() or DEFAULT_MODELS[provider]
+        model = (
+            self.settings.llm_model.strip()
+            if self._uses_custom_settings(provider) and self.settings.llm_model.strip()
+            else DEFAULT_MODELS[provider]
+        )
         api_key = {
             "groq": self.settings.groq_api_key,
             "cerebras": self.settings.cerebras_api_key,
             "openrouter": self.settings.openrouter_api_key,
         }[provider]
-        base_url = self.settings.llm_base_url.strip() or OPENAI_COMPATIBLE_BASE_URLS[provider]
+        base_url = (
+            self.settings.llm_base_url.strip()
+            if self._uses_custom_settings(provider) and self.settings.llm_base_url.strip()
+            else OPENAI_COMPATIBLE_BASE_URLS[provider]
+        )
         url = base_url.rstrip("/") + "/chat/completions"
         payload = {
             "model": model,
@@ -155,13 +166,18 @@ class BrainClient:
         return str(content)
 
     def _gemini(self, request: LLMRequest) -> str:
-        model = self.settings.llm_model.strip() or DEFAULT_MODELS["gemini"]
+        model = (
+            self.settings.llm_model.strip()
+            if self._uses_custom_settings("gemini") and self.settings.llm_model.strip()
+            else DEFAULT_MODELS["gemini"]
+        )
         url = (
             f"https://generativelanguage.googleapis.com/v1beta/models/"
             f"{model}:generateContent?key={self.settings.gemini_api_key}"
         )
         contents = [
-            {"role": "user", "parts": [{"text": item[:800]}]} for item in request.recent_context[-8:]
+            {"role": "user", "parts": [{"text": item[:800]}]}
+            for item in request.recent_context[-8:]
         ]
         contents.append({"role": "user", "parts": [{"text": request.user_text[:1500]}]})
         payload = {
@@ -172,11 +188,7 @@ class BrainClient:
                 "maxOutputTokens": request.max_tokens,
             },
         }
-        data = self._post_json(
-            url,
-            {"Content-Type": "application/json"},
-            payload,
-        )
+        data = self._post_json(url, {"Content-Type": "application/json"}, payload)
         try:
             parts = data["candidates"][0]["content"]["parts"]
         except (KeyError, IndexError, TypeError) as exc:
