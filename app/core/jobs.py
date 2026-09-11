@@ -7,6 +7,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.db.models import DurableJob
 
 
@@ -18,7 +19,7 @@ class JobQueue:
     """Persistent one-shot jobs with deduplication, recovery and bounded retries."""
 
     async def enqueue(self, session: AsyncSession, job_type: str, payload: dict, *, dedupe_key: str, run_at: datetime | None = None, commit: bool = True) -> DurableJob:
-        job = DurableJob(job_type=job_type, dedupe_key=dedupe_key, payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":")), run_at=run_at or datetime.utcnow())
+        job = DurableJob(job_type=job_type, dedupe_key=dedupe_key, payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":")), run_at=run_at or utc_now())
         if commit:
             session.add(job)
             try:
@@ -45,8 +46,8 @@ class JobQueue:
         return job
 
     async def recover_stale(self, session: AsyncSession, *, job_type: str | None = None, timeout_seconds: int = 300, max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> int:
-        cutoff = datetime.utcnow() - timedelta(seconds=timeout_seconds)
-        now = datetime.utcnow()
+        cutoff = utc_now() - timedelta(seconds=timeout_seconds)
+        now = utc_now()
         query = select(DurableJob).where(
             DurableJob.status == "processing",
             ((DurableJob.heartbeat_at.is_not(None) & (DurableJob.heartbeat_at < cutoff)) |
@@ -72,7 +73,7 @@ class JobQueue:
         return len(jobs)
 
     async def claim(self, session: AsyncSession, *, job_type: str | None = None) -> DurableJob | None:
-        now = datetime.utcnow()
+        now = utc_now()
         query = select(DurableJob).where(DurableJob.status == "pending", DurableJob.run_at <= now)
         if job_type is not None:
             query = query.where(DurableJob.job_type == job_type)
@@ -89,13 +90,13 @@ class JobQueue:
 
     async def renew(self, session: AsyncSession, job_id: int, *, lock_time: datetime) -> bool:
         """Refresh liveness without changing the immutable claim token."""
-        now = datetime.utcnow()
+        now = utc_now()
         result = await session.execute(update(DurableJob).where(DurableJob.id == job_id, DurableJob.status == "processing", DurableJob.locked_at == lock_time).values(heartbeat_at=now, updated_at=now))
         await session.commit()
         return result.rowcount == 1
 
     async def complete(self, session: AsyncSession, job_id: int, *, lock_time: datetime | None = None) -> bool:
-        now = datetime.utcnow()
+        now = utc_now()
         conditions = [DurableJob.id == job_id, DurableJob.status == "processing"]
         if lock_time is not None:
             conditions.append(DurableJob.locked_at == lock_time)
@@ -104,7 +105,7 @@ class JobQueue:
         return result.rowcount == 1
 
     async def fail(self, session: AsyncSession, job_id: int, error: str, *, lock_time: datetime | None = None, retry_at: datetime | None = None, max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> bool:
-        now = datetime.utcnow()
+        now = utc_now()
         job = await session.get(DurableJob, job_id)
         if job is None or (lock_time is not None and (job.status != "processing" or job.locked_at != lock_time)):
             return False
