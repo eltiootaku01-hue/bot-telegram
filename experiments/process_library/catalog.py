@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import re
 from typing import Iterable
 
@@ -76,7 +76,9 @@ class ProcessCatalog:
             searchable = " ".join((process.name, process.objective, process.category)).casefold()
             words = set(_WORDS.findall(searchable))
             overlap = len(tokens & words)
-            category_bonus = 2.0 if category and process.category.casefold() == category.casefold() else 0.0
+            category_bonus = (
+                2.0 if category and process.category.casefold() == category.casefold() else 0.0
+            )
             priority_bonus = min(process.priority, 100) / 100.0
             score = float(overlap) + category_bonus + priority_bonus
             if score > 0:
