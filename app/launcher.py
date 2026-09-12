@@ -4,6 +4,8 @@ import subprocess
 import sys
 import tkinter as tk
 from pathlib import Path
+from queue import Empty, Queue
+from threading import Lock, Thread
 from tkinter import messagebox, ttk
 
 try:
@@ -15,6 +17,7 @@ except ImportError:  # pragma: no cover - packaged build installs python-dotenv
 
 from app.services.launcher_supervisor import LauncherSupervisor
 from app.services.process_manager import ProcessManager
+from app.services.runtime_monitor import RuntimeMonitor, RuntimeSnapshot
 
 
 SOURCE_ROOT = Path(__file__).resolve().parent.parent
@@ -56,6 +59,10 @@ class BotLauncher(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.manager = ProcessManager(self._command, cwd=str(ROOT), grace_seconds=1.5)
         self.supervisor = LauncherSupervisor(self.manager)
+        self.runtime_monitor = RuntimeMonitor()
+        self._runtime_queue: Queue[RuntimeSnapshot] = Queue(maxsize=1)
+        self._runtime_lock = Lock()
+        self._runtime_running = False
         self.ai_global_var = tk.BooleanVar(value=False)
         self.ai_bot_vars: dict[str, tk.BooleanVar] = {}
         self.bot_vars: dict[str, dict[str, tk.StringVar]] = {}
@@ -63,6 +70,7 @@ class BotLauncher(tk.Tk):
         self.status = tk.StringVar(value="Configurá los bots y tocá Comenzar")
         self._dashboard_cards: dict[str, ttk.LabelFrame] = {}
         self._startup_poll_id: str | None = None
+        self._runtime_poll_id: str | None = None
         self._closing = False
         self._build_setup()
 
@@ -307,7 +315,14 @@ class BotLauncher(tk.Tk):
         ttk.Checkbutton(ai_panel, text="IA GENERAL", variable=self.ai_global_var, command=self._toggle_global_ai).pack(side="left")
         self.ai_state_label = ttk.Label(ai_panel, text="🔒 OFF")
         self.ai_state_label.pack(side="left", padx=14)
-        ttk.Label(ai_panel, text="La IA no participa en el arranque ni en diagnósticos deterministas.").pack(side="right")
+        ttk.Label(ai_panel, text="Opcional: el núcleo funciona sin IA ni APIs.").pack(side="right")
+
+        monitor = ttk.LabelFrame(outer, text="SISTEMA / OLLAMA", padding=10)
+        monitor.pack(fill="x", pady=(0, 10))
+        self.system_state = tk.StringVar(value="CPU --   RAM --   DISCO --")
+        self.ollama_state = tk.StringVar(value="OLLAMA: comprobando...")
+        ttk.Label(monitor, textvariable=self.system_state, font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        ttk.Label(monitor, textvariable=self.ollama_state).pack(anchor="w", pady=(4, 0))
 
         grid = ttk.Frame(outer)
         grid.pack(fill="both", expand=True)
@@ -335,6 +350,7 @@ class BotLauncher(tk.Tk):
         ttk.Button(actions, text="Detener todos", command=self.stop_all).pack(side="right")
         ttk.Label(outer, textvariable=self.status, anchor="w").pack(fill="x", pady=(12, 0))
         self._refresh_ai_label()
+        self._schedule_runtime_poll()
         self.after(300, self.refresh_status)
 
     def _toggle_global_ai(self) -> None:
@@ -351,6 +367,56 @@ class BotLauncher(tk.Tk):
             if state is not None:
                 enabled = self.ai_global_var.get() and self.ai_bot_vars.get(key, tk.BooleanVar()).get()
                 state.set("🟢 IA disponible" if enabled else "🔒 IA desactivada")
+
+    def _schedule_runtime_poll(self) -> None:
+        if self._runtime_poll_id is not None:
+            self.after_cancel(self._runtime_poll_id)
+        self._runtime_poll_id = self.after(100, self._poll_runtime)
+        self._start_runtime_snapshot()
+
+    def _start_runtime_snapshot(self) -> None:
+        with self._runtime_lock:
+            if self._runtime_running or self._closing:
+                return
+            self._runtime_running = True
+        Thread(target=self._read_runtime_snapshot, daemon=True, name="runtime-monitor").start()
+
+    def _read_runtime_snapshot(self) -> None:
+        try:
+            result = self.runtime_monitor.snapshot(str(ROOT))
+            try:
+                self._runtime_queue.get_nowait()
+            except Empty:
+                pass
+            self._runtime_queue.put_nowait(result)
+        except Exception:
+            pass
+        finally:
+            with self._runtime_lock:
+                self._runtime_running = False
+
+    def _poll_runtime(self) -> None:
+        self._runtime_poll_id = None
+        if self._closing:
+            return
+        try:
+            result = self._runtime_queue.get_nowait()
+        except Empty:
+            result = None
+        if result is not None:
+            system = result.system
+            self.system_state.set(
+                f"CPU {system.cpu_percent:.0f}%   RAM {system.memory_percent:.0f}%   DISCO {system.disk_percent:.0f}%"
+            )
+            if result.ollama.online:
+                model = result.ollama.running_models[0] if result.ollama.running_models else (
+                    result.ollama.models[0] if result.ollama.models else "sin modelo"
+                )
+                self.ollama_state.set(f"OLLAMA: 🟢 ONLINE · Modelo: {model}")
+            else:
+                self.ollama_state.set("OLLAMA: ○ OFFLINE (opcional)")
+        self._start_runtime_snapshot()
+        self._runtime_poll_id = self.after(5000, self._poll_runtime)
 
     def toggle(self, key: str) -> None:
         process = self.processes.get(key)
@@ -404,6 +470,9 @@ class BotLauncher(tk.Tk):
         if self._startup_poll_id is not None:
             self.after_cancel(self._startup_poll_id)
             self._startup_poll_id = None
+        if self._runtime_poll_id is not None:
+            self.after_cancel(self._runtime_poll_id)
+            self._runtime_poll_id = None
         self.stop_all(silent=True)
         self.destroy()
 
