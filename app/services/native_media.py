@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 from subprocess import PIPE, Popen, TimeoutExpired
 from threading import RLock
-from typing import Sequence
 
 
 class MediaSessionState(str, Enum):
