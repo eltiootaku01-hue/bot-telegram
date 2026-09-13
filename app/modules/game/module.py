@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime
 
 from aiogram import Bot, F
 from aiogram.filters import Command
@@ -9,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.core.time import utc_now
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import GameAttempt, GameCollection, GameEncounter
@@ -221,7 +221,7 @@ class GameModule(BotModule):
             return
         async with self.database.session() as session:
             encounter = await self.encounters.get(session, encounter_id)
-            now = datetime.utcnow()
+            now = utc_now()
             if encounter is None or now >= encounter.expires_at or encounter.status != "active":
                 await callback.answer("La waifu ya se fue. 😭", show_alert=True)
                 return
@@ -258,8 +258,6 @@ class GameModule(BotModule):
                 await callback.answer("❌ Fallaste. Esta oportunidad era solo tuya.", show_alert=True)
                 return
 
-            # First correct answer wins. This conditional state transition is the
-            # authority: two simultaneous correct callbacks cannot both award rewards.
             claimed = await session.execute(
                 update(GameEncounter)
                 .where(
