@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 
 import pytest
 
-from app.services.media_encoder import AudioEncoding, EncoderConfigError, EncoderProfile, LocalEncoder, VideoEncoding
+from app.services.media_encoder import (
+    AudioEncoding,
+    EncoderConfigError,
+    EncoderProfile,
+    LocalEncoder,
+    VideoEncoding,
+)
 from app.services.media_manager import CapturePlan, MediaSource, MediaSourceKind
 
 
 def _fake_ffmpeg(tmp_path: Path) -> str:
-    path = tmp_path / ("ffmpeg.exe" if __import__("os").name == "nt" else "ffmpeg")
+    path = tmp_path / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
     path.write_text("test", encoding="utf-8")
     return str(path)
 
@@ -41,7 +48,7 @@ def test_encoder_builds_local_file_command(tmp_path: Path) -> None:
 
     assert command.executable == executable
     assert "-c:v" in command.arguments
-    assert "1920" not in command.arguments
+    assert "1920x1080" in command.arguments
     assert command.arguments[-1].endswith("capture.mkv")
 
 
@@ -56,7 +63,6 @@ def test_rtmp_output_infers_flv_container(tmp_path: Path) -> None:
         EncoderProfile(executable=executable, output="rtmp://example.invalid/live/test"),
     )
 
-    assert "-f" in command.arguments
     index = command.arguments.index("-f")
     assert command.arguments[index + 1] == "flv"
 
@@ -79,8 +85,6 @@ def test_profile_rejects_invalid_dimensions(tmp_path: Path) -> None:
 
 
 def test_capture_plan_reaches_encoder_with_real_microphone_and_screen(tmp_path: Path) -> None:
-    image = tmp_path / "test.png"
-    image.write_bytes(b"x")
     executable = _fake_ffmpeg(tmp_path)
     plan = CapturePlan(
         (
@@ -96,3 +100,21 @@ def test_capture_plan_reaches_encoder_with_real_microphone_and_screen(tmp_path: 
 
     assert "gdigrab" in command.arguments
     assert "audio=Microphone Array" in command.arguments
+
+
+def test_overwrite_and_extra_arguments_are_deterministic(tmp_path: Path) -> None:
+    executable = _fake_ffmpeg(tmp_path)
+    plan = CapturePlan((MediaSource("screen", MediaSourceKind.SCREEN),))
+
+    command = LocalEncoder().build_command(
+        plan,
+        EncoderProfile(
+            executable=executable,
+            output="capture.mp4",
+            overwrite=True,
+            extra_args=("-pix_fmt", "yuv420p"),
+        ),
+    )
+
+    assert "-y" in command.arguments
+    assert command.arguments[-3:] == ("-pix_fmt", "yuv420p", "capture.mp4")
