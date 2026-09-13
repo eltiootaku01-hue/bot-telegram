@@ -6,7 +6,7 @@ from aiogram import F
 from aiogram.types import Message
 
 from app.brain.provider import BrainClient, LLMProviderError, LLMRequest
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 
@@ -14,14 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class BrainChatModule(BotModule):
-    """Natural-language chat surface using the configured external LLM."""
+    """Optional natural-language chat surface backed by a configured LLM."""
 
     name = "brain_chat"
 
-    def __init__(self, identity: BotIdentity) -> None:
+    def __init__(self, identity: BotIdentity, settings: Settings | None = None) -> None:
         super().__init__()
         self.identity = identity
-        self.brain = BrainClient(get_settings())
+        self.settings = settings or get_settings()
+        self.brain = BrainClient(self.settings)
 
     def setup(self) -> None:
         self.router.message.register(self.chat, F.text)
@@ -36,6 +37,9 @@ class BrainChatModule(BotModule):
         return text in {"bot", "cari", "sunna", "cami", "chie"}
 
     async def chat(self, message: Message) -> None:
+        # AI is an enhancement, never a dependency for the deterministic bot modules.
+        if not self.settings.ai_for(self.identity):
+            return
         if not message.text or not self._directly_addressed(message):
             return
         prompt = message.text.strip()
