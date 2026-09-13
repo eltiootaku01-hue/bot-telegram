@@ -21,7 +21,7 @@ from app.db.database import Database
         ),
         (
             BotIdentity.CAMI,
-            {"system", "social_runtime", "cami_media", "cami_publisher", "admin", "brain_chat"},
+            {"system", "social_runtime", "cami-media", "cami-media-publisher", "admin", "brain_chat"},
         ),
         (
             BotIdentity.CHIE,
