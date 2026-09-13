@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.events import EventBus
+from app.core.events import DEFAULT_MAX_ATTEMPTS as EVENT_MAX_ATTEMPTS, EventBus
 from app.core.jobs import DEFAULT_BACKOFF_SECONDS, DEFAULT_MAX_ATTEMPTS, JobQueue
 from app.core.time import utc_now
 from app.db.database import Database
@@ -133,5 +133,30 @@ async def test_job_failure_uses_bounded_backoff_and_max_attempts(session: AsyncS
             assert refreshed.run_at <= utc_now() + timedelta(seconds=expected_delay + 1)
             refreshed.run_at = utc_now()
             await session.commit()
+        else:
+            assert refreshed.status == "failed"
+
+
+@pytest.mark.asyncio
+async def test_event_failure_cannot_bypass_max_attempts_with_explicit_retry(session: AsyncSession):
+    bus = EventBus()
+    await bus.publish(session, "retry.test", {}, event_id="retry-ceiling")
+
+    for attempt in range(1, EVENT_MAX_ATTEMPTS + 1):
+        claimed = await bus.claim(session)
+        assert claimed is not None
+        assert claimed.attempts == attempt
+        retry_at = utc_now()
+        assert await bus.fail(
+            session,
+            claimed.event_id,
+            "failure",
+            lock_time=claimed.locked_at,
+            retry_at=retry_at,
+        ) is True
+        refreshed = await session.get(DomainEvent, claimed.id)
+        assert refreshed is not None
+        if attempt < EVENT_MAX_ATTEMPTS:
+            assert refreshed.status == "pending"
         else:
             assert refreshed.status == "failed"
