@@ -86,6 +86,8 @@ class LocalEncoder:
         arguments = list(plan.local_input_args())
         arguments.extend(
             (
+                "-s",
+                f"{profile.video.width}x{profile.video.height}",
                 "-c:v",
                 profile.video.codec,
                 "-preset",
