@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.brain.chat import BrainChatModule
 from app.core.composition import BotComposition, ModuleSpec
+from app.core.config import Settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.core.social_runtime import SocialRuntimeModule
@@ -22,12 +23,16 @@ def _spec(name: str, factory, *identities: BotIdentity) -> ModuleSpec:
     return ModuleSpec(name=name, factory=factory, identities=frozenset(identities))
 
 
-def build_bot_modules(database: Database, identity: BotIdentity) -> list[BotModule]:
+def build_bot_modules(
+    database: Database,
+    identity: BotIdentity,
+    settings: Settings | None = None,
+) -> list[BotModule]:
     """Compose shared and identity-specific bot capabilities from reusable modules."""
 
     shared = (
         _spec("system", lambda: SystemModule(identity)),
-        _spec("social-runtime", lambda: SocialRuntimeModule(database, identity)),
+        _spec("social-runtime", lambda: SocialRuntimeModule(database, identity, settings=settings)),
     )
     identity_specific = (
         _spec("chat", ChatModule, BotIdentity.CARI),
@@ -40,7 +45,7 @@ def build_bot_modules(database: Database, identity: BotIdentity) -> list[BotModu
         _spec("cami-admin", lambda: AdminModule(database), BotIdentity.CAMI),
         _spec("chie", lambda: ChieModule(database), BotIdentity.CHIE),
         _spec("requests", lambda: RequestModule(database), BotIdentity.CHIE),
-        _spec("brain-chat", lambda: BrainChatModule(identity)),
+        _spec("brain-chat", lambda: BrainChatModule(identity, settings=settings)),
     )
 
     composition = BotComposition((*shared, *identity_specific))
