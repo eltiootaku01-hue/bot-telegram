@@ -7,6 +7,8 @@ from pathlib import Path
 from subprocess import PIPE, Popen, TimeoutExpired
 from threading import RLock
 
+from app.services.process_reader import ProcessOutput, ProcessReader
+
 
 class MediaSessionState(str, Enum):
     STOPPED = "stopped"
@@ -38,6 +40,8 @@ class NativeMediaSession:
     The manager does not depend on an AI provider or a web API. A profile may
     point at a bundled/local encoder such as FFmpeg, but the core only manages
     the process lifecycle and never downloads or authenticates with a service.
+    Process output is drained asynchronously so a noisy encoder cannot block
+    because stdout/stderr pipes become full.
     """
 
     def __init__(self) -> None:
@@ -45,6 +49,7 @@ class NativeMediaSession:
         self._process: Popen[str] | None = None
         self._state = MediaSessionState.STOPPED
         self._error: str | None = None
+        self._reader = ProcessReader()
 
     def start(self, profile: MediaProfile) -> MediaSessionSnapshot:
         with self._lock:
@@ -64,6 +69,7 @@ class NativeMediaSession:
                     bufsize=1,
                     creationflags=self._windows_creation_flags(),
                 )
+                self._reader.attach(profile.name, self._process)
             except (OSError, ValueError) as exc:
                 self._process = None
                 self._state = MediaSessionState.FAILED
@@ -95,6 +101,10 @@ class NativeMediaSession:
             self._process = None
             self._state = MediaSessionState.STOPPED
             return self.snapshot()
+
+    def drain_output(self) -> list[ProcessOutput]:
+        """Return captured encoder output without blocking the caller."""
+        return self._reader.drain()
 
     def snapshot(self) -> MediaSessionSnapshot:
         with self._lock:
