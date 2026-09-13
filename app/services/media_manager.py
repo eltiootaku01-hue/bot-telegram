@@ -1,10 +1,105 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
 from threading import RLock
 
 from app.services.native_media import MediaProfile, MediaSessionSnapshot, NativeMediaSession
 from app.services.process_reader import ProcessOutput
+
+
+class MediaSourceKind(str, Enum):
+    """Real local capture/input types supported by the future scene engine."""
+
+    FILE = "file"
+    IMAGE = "image"
+    SCREEN = "screen"
+    WINDOW = "window"
+    WEBCAM = "webcam"
+    MICROPHONE = "microphone"
+
+
+@dataclass(frozen=True, slots=True)
+class MediaSource:
+    """Deterministic description of one real local source.
+
+    This object never contacts an AI service or cloud API. A local encoder
+    consumes the generated arguments when it is available on the Windows PC.
+    """
+
+    id: str
+    kind: MediaSourceKind
+    value: str = ""
+    frame_rate: int = 30
+
+    def validate(self) -> None:
+        if not self.id.strip():
+            raise ValueError("source id must not be empty")
+        if self.frame_rate < 1 or self.frame_rate > 240:
+            raise ValueError("frame_rate must be between 1 and 240")
+        if self.kind in {MediaSourceKind.FILE, MediaSourceKind.IMAGE}:
+            if not self.value.strip():
+                raise ValueError("a local media path is required")
+            if not Path(self.value).is_file():
+                raise FileNotFoundError(f"No existe el archivo multimedia local: {self.value}")
+        elif self.kind in {
+            MediaSourceKind.WINDOW,
+            MediaSourceKind.WEBCAM,
+            MediaSourceKind.MICROPHONE,
+        } and not self.value.strip():
+            raise ValueError(f"a device/window name is required for {self.kind.value}")
+
+    def local_input_args(self) -> tuple[str, ...]:
+        """Return deterministic Windows capture arguments for a local encoder."""
+        self.validate()
+        if self.kind is MediaSourceKind.FILE:
+            return ("-re", "-i", self.value)
+        if self.kind is MediaSourceKind.IMAGE:
+            return ("-loop", "1", "-framerate", str(self.frame_rate), "-i", self.value)
+        if self.kind is MediaSourceKind.SCREEN:
+            return ("-f", "gdigrab", "-framerate", str(self.frame_rate), "-i", "desktop")
+        if self.kind is MediaSourceKind.WINDOW:
+            return (
+                "-f",
+                "gdigrab",
+                "-framerate",
+                str(self.frame_rate),
+                "-i",
+                f"title={self.value}",
+            )
+        if self.kind is MediaSourceKind.WEBCAM:
+            return (
+                "-f",
+                "dshow",
+                "-framerate",
+                str(self.frame_rate),
+                "-i",
+                f"video={self.value}",
+            )
+        return ("-f", "dshow", "-i", f"audio={self.value}")
+
+
+@dataclass(frozen=True, slots=True)
+class CapturePlan:
+    """Validate and preserve an ordered set of real local sources."""
+
+    sources: tuple[MediaSource, ...]
+
+    def validate(self) -> None:
+        ids: set[str] = set()
+        for source in self.sources:
+            source.validate()
+            if source.id in ids:
+                raise ValueError(f"duplicate media source: {source.id}")
+            ids.add(source.id)
+
+    def local_input_args(self) -> tuple[str, ...]:
+        self.validate()
+        result: list[str] = []
+        for source in self.sources:
+            result.extend(source.local_input_args())
+        return tuple(result)
 
 
 @dataclass(frozen=True, slots=True)
