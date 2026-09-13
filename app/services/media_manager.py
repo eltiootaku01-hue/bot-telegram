@@ -135,6 +135,15 @@ class MediaManager:
         output = self._require(output_id)
         return self._sessions[output_id].start(output.profile)
 
+    def start_encoded(self, output_id: str, plan: CapturePlan, profile) -> MediaSessionSnapshot:
+        """Start an output using the local encoder command generated from sources."""
+        self._require(output_id)
+        from app.services.media_encoder import LocalEncoder
+
+        command = LocalEncoder().build_command(plan, profile)
+        media_profile = MediaProfile(output_id, command.executable, command.arguments)
+        return self._sessions[output_id].start(media_profile)
+
     def stop(self, output_id: str, timeout: float = 2.0) -> MediaSessionSnapshot:
         self._require(output_id)
         return self._sessions[output_id].stop(timeout)
