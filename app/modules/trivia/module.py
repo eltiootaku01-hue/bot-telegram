@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import random
 
 from aiogram import Bot, F
@@ -16,6 +17,8 @@ from app.db.models import GameProfile
 from app.db.trivia_models import TriviaRound
 from app.game.trivia import TriviaService
 from app.ui.game_keyboards import trivia_keyboard
+
+logger = logging.getLogger(__name__)
 
 
 class TriviaModule(BotModule):
@@ -59,6 +62,7 @@ class TriviaModule(BotModule):
             else:
                 return False
         except Exception:
+            logger.exception("Failed to publish trivia round chat=%s round=%s", chat_id, round_row.id)
             async with self.database.session() as session:
                 await session.execute(
                     update(TriviaRound).where(TriviaRound.id == round_row.id).values(status="failed")
@@ -145,5 +149,5 @@ class TriviaModule(BotModule):
                 if community_chat_id is not None:
                     await self._publish(community_chat_id)
             except Exception:
-                pass
+                logger.exception("Trivia scheduler tick failed")
             await asyncio.sleep(random.randint(1200, 2400))
