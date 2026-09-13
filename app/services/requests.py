@@ -1,10 +1,12 @@
 import json
+
 from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.db.models import DomainEvent, FanRequest, GameProfile, RequestStatus
 from app.db.repositories import MemberRepository
 
@@ -70,8 +72,6 @@ class RequestService:
             commit=False,
         )
         if remaining is None:
-            # The request and any staged ledger mutation belong to the same
-            # business operation: never leave an unpaid request in the session.
             await session.rollback()
             return None
 
@@ -173,7 +173,7 @@ class RequestService:
         if request is None:
             return None
         request.status = status.value
-        request.updated_at = datetime.utcnow()
+        request.updated_at = utc_now()
         if admin_note is not None:
             request.admin_note = admin_note
         if due_at is not None:
