@@ -22,6 +22,8 @@ class ProcessHealth:
     is returned verbatim for diagnostics.
     """
 
+    _OUTPUT_FLUSH_DELAY = 0.01
+
     def __init__(self, reader: ProcessReader, grace_seconds: float = 2.0) -> None:
         if grace_seconds < 0:
             raise ValueError("grace_seconds must be >= 0")
@@ -36,12 +38,17 @@ class ProcessHealth:
             captured.extend(self.reader.drain())
             returncode = process.poll()
             if returncode is not None:
-                captured.extend(self.reader.drain())
+                self._flush_reader(captured)
                 return HealthResult(False, returncode, tuple(captured))
             sleep(0.01)
-        captured.extend(self.reader.drain())
+
+        self._flush_reader(captured)
         returncode = process.poll()
         if returncode is not None:
-            captured.extend(self.reader.drain())
+            self._flush_reader(captured)
             return HealthResult(False, returncode, tuple(captured))
         return HealthResult(True, None, tuple(captured))
+
+    def _flush_reader(self, captured: list[ProcessOutput]) -> None:
+        sleep(self._OUTPUT_FLUSH_DELAY)
+        captured.extend(self.reader.drain())
