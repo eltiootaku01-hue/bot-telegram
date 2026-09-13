@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from aiogram import Router
 
 from app.core.composition import BotComposition, ModuleSpec
 from app.core.identity import BotIdentity
@@ -28,7 +27,7 @@ def test_composition_preserves_declared_order_and_filters_identity() -> None:
 
 def test_empty_identity_set_is_shared() -> None:
     spec = ModuleSpec("shared", DemoModule)
-    assert spec.supports(BotIdentity.CAMi) if False else spec.supports(BotIdentity.CAMI)
+    assert spec.supports(BotIdentity.CAMI)
 
 
 def test_duplicate_specification_names_are_rejected() -> None:
