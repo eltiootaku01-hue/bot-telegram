@@ -7,7 +7,7 @@ from aiogram import Bot
 from sqlalchemy import select
 
 from app.brain.provider import BrainClient, LLMProviderError, LLMRequest
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.core.presence import PresenceService
@@ -61,6 +61,7 @@ class SocialRuntime:
         database: Database,
         identity: BotIdentity,
         *,
+        settings: Settings | None = None,
         poll_seconds: float = DEFAULT_POLL_SECONDS,
         wake_controller: SocialWakeController | None = None,
         activity: SocialActivityService | None = None,
@@ -73,6 +74,7 @@ class SocialRuntime:
     ) -> None:
         self.database = database
         self.identity = identity
+        self.settings = settings or get_settings()
         self.poll_seconds = poll_seconds
         self.wakes = wake_controller or SocialWakeController()
         self.activity = activity or SocialActivityService()
@@ -81,7 +83,7 @@ class SocialRuntime:
         self.wake_store = wake_store or SocialWakeStore()
         self.turns = turns or SocialTurnArbiter()
         self.composer = composer or LocalSocialComposer()
-        self.brain = brain or BrainClient(get_settings())
+        self.brain = brain or BrainClient(self.settings)
         self._stopping = asyncio.Event()
 
     async def run(self, bot: Bot) -> None:
@@ -163,21 +165,22 @@ class SocialRuntime:
                 return False
 
         message = self.composer.compose(self.identity, roll=abs(chat_id) % 2)
-        try:
-            message = await self.brain.generate(
-                LLMRequest(
-                    identity=self.identity,
-                    user_text=(
-                        "Iniciá una intervención espontánea y breve en un chat grupal. "
-                        "No menciones que estás generando una intervención ni hables de APIs."
-                    ),
-                    recent_context=(),
-                    max_tokens=90,
-                    temperature=0.9,
+        if self.settings.ai_for(self.identity):
+            try:
+                message = await self.brain.generate(
+                    LLMRequest(
+                        identity=self.identity,
+                        user_text=(
+                            "Iniciá una intervención espontánea y breve en un chat grupal. "
+                            "No menciones que estás generando una intervención ni hables de APIs."
+                        ),
+                        recent_context=(),
+                        max_tokens=90,
+                        temperature=0.9,
+                    )
                 )
-            )
-        except LLMProviderError:
-            logger.warning("Brain unavailable for proactive speech; using local fallback")
+            except LLMProviderError:
+                logger.warning("Brain unavailable for proactive speech; using local fallback")
 
         try:
             await bot.send_message(chat_id, message)
@@ -225,9 +228,9 @@ class SocialRuntimeModule(BotModule):
 
     name = "social_runtime"
 
-    def __init__(self, database: Database, identity: BotIdentity) -> None:
+    def __init__(self, database: Database, identity: BotIdentity, settings: Settings | None = None) -> None:
         super().__init__()
-        self.runtime = SocialRuntime(database, identity)
+        self.runtime = SocialRuntime(database, identity, settings=settings)
 
     def setup(self) -> None:
         return None
