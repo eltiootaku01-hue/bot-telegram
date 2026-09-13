@@ -24,6 +24,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
           pip install pyinstaller==6.22.2 pyinstaller-hooks-contrib==2026.7
+      - name: Test native media and encoder core
+        run: python -m pytest tests/test_native_media.py tests/test_media_manager.py tests/test_media_encoder.py
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
