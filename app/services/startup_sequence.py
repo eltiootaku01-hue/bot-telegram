@@ -41,7 +41,11 @@ class StartupSequence:
                     self.stop_started(started)
                     return StartupResult(
                         tuple(item[0] for item in started),
-                        StartupFailure(identity, "El proceso no superó la comprobación de salud"),
+                        StartupFailure(
+                            identity,
+                            "El proceso no superó la comprobación de salud",
+                            self._returncode(process),
+                        ),
                     )
                 started.append((identity, process))
             except Exception as exc:
@@ -51,6 +55,11 @@ class StartupSequence:
                     StartupFailure(identity, str(exc), getattr(exc, "returncode", None)),
                 )
         return StartupResult(tuple(item[0] for item in started))
+
+    @staticmethod
+    def _returncode(process: object) -> int | None:
+        poll = getattr(process, "poll", None)
+        return poll() if callable(poll) else None
 
     def stop_started(self, started: Sequence[tuple[str, object]]) -> None:
         for identity, process in reversed(started):
