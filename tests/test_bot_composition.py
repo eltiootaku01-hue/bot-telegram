@@ -47,6 +47,16 @@ def test_composition_uses_supplied_settings_instance() -> None:
     assert brain.settings is settings
     assert social.runtime.settings is settings
 
+    sunna_modules = build_bot_modules(database, BotIdentity.SUNNA, settings)
+    media = next(module for module in sunna_modules if module.name == "media")
+    assert media.settings is settings
+
+    cami_modules = build_bot_modules(database, BotIdentity.CAMI, settings)
+    cami_media = next(module for module in cami_modules if module.name == "cami-media")
+    publisher = next(module for module in cami_modules if module.name == "cami-media-publisher")
+    assert cami_media.settings is settings
+    assert publisher.settings is settings
+
     chie_modules = build_bot_modules(database, BotIdentity.CHIE, settings)
     chie = next(module for module in chie_modules if module.name == "chie")
     assert chie.settings is settings
