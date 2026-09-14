@@ -40,8 +40,13 @@ def test_each_identity_gets_expected_module_set(identity: BotIdentity, expected:
 def test_composition_uses_supplied_settings_instance() -> None:
     settings = Settings(ai_enabled=False)
     database = Database("sqlite+aiosqlite:///:memory:")
-    modules = build_bot_modules(database, BotIdentity.CARI, settings)
-    brain = next(module for module in modules if module.name == "brain_chat")
-    social = next(module for module in modules if module.name == "social_runtime")
+
+    cari_modules = build_bot_modules(database, BotIdentity.CARI, settings)
+    brain = next(module for module in cari_modules if module.name == "brain_chat")
+    social = next(module for module in cari_modules if module.name == "social_runtime")
     assert brain.settings is settings
     assert social.runtime.settings is settings
+
+    chie_modules = build_bot_modules(database, BotIdentity.CHIE, settings)
+    chie = next(module for module in chie_modules if module.name == "chie")
+    assert chie.settings is settings
