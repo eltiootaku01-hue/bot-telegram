@@ -4,7 +4,7 @@ from aiogram import F
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.module import BotModule
 from app.db.database import Database
 from app.db.models import MediaAsset
@@ -17,10 +17,10 @@ class MediaModule(BotModule):
 
     name = "media"
 
-    def __init__(self, database: Database) -> None:
+    def __init__(self, database: Database, settings: Settings | None = None) -> None:
         super().__init__()
         self.database = database
-        self.settings = get_settings()
+        self.settings = settings or get_settings()
         self.library = MediaLibrary()
         self.requests = RequestService()
 
