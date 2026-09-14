@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from html import escape
 
 from aiogram import Bot
@@ -14,6 +14,7 @@ from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.jobs import JobQueue
 from app.core.module import BotModule
+from app.core.time import utc_now
 from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
 from app.db.database import Database
@@ -58,7 +59,7 @@ class CamiMediaPublisher(BotModule):
         """Fence abandoned sends only after the corresponding job is no longer alive."""
         while True:
             try:
-                cutoff = datetime.utcnow() - timedelta(seconds=self.UNKNOWN_DELIVERY_AFTER_SECONDS)
+                cutoff = utc_now() - timedelta(seconds=self.UNKNOWN_DELIVERY_AFTER_SECONDS)
                 async with self.database.session() as session:
                     assets = list(await session.scalars(
                         select(MediaAsset)
@@ -92,7 +93,7 @@ class CamiMediaPublisher(BotModule):
 
                     for asset in candidates:
                         asset.status = "delivery_unknown"
-                        asset.updated_at = datetime.utcnow()
+                        asset.updated_at = utc_now()
                     if candidates:
                         await session.commit()
 
@@ -144,7 +145,7 @@ class CamiMediaPublisher(BotModule):
             group_message_id = asset.published_group_message_id
             page_message_id = asset.published_page_message_id
             asset.status = "publishing"
-            asset.updated_at = datetime.utcnow()
+            asset.updated_at = utc_now()
             await session.commit()
 
         try:
@@ -156,7 +157,7 @@ class CamiMediaPublisher(BotModule):
                         return
                     if current.published_group_message_id is None:
                         current.published_group_message_id = sent.message_id
-                        current.updated_at = datetime.utcnow()
+                        current.updated_at = utc_now()
                         await session.commit()
 
             if destination == "both" and page_message_id is None:
@@ -167,14 +168,14 @@ class CamiMediaPublisher(BotModule):
                         return
                     if current.published_page_message_id is None:
                         current.published_page_message_id = sent.message_id
-                        current.updated_at = datetime.utcnow()
+                        current.updated_at = utc_now()
                         await session.commit()
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
             async with self.database.session() as session:
                 current = await session.get(MediaAsset, asset_id)
                 if current is not None and current.status == "publishing":
                     current.status = "scheduled"
-                    current.updated_at = datetime.utcnow()
+                    current.updated_at = utc_now()
                     await session.commit()
             raise RuntimeError(f"Telegram rejected scheduled publication: {exc}") from exc
 
@@ -186,7 +187,7 @@ class CamiMediaPublisher(BotModule):
             page_done = destination != "both" or current.published_page_message_id is not None
             if group_done and page_done:
                 current.status = "published"
-                current.updated_at = datetime.utcnow()
+                current.updated_at = utc_now()
                 await session.commit()
 
     async def publish_request(self, bot: Bot, payload: dict) -> None:
@@ -201,8 +202,8 @@ class CamiMediaPublisher(BotModule):
                 if request.status == RequestStatus.PROCESSING.value:
                     request.status = RequestStatus.COMPLETED.value
                 asset.status = "published_request"
-                request.updated_at = datetime.utcnow()
-                asset.updated_at = datetime.utcnow()
+                request.updated_at = utc_now()
+                asset.updated_at = utc_now()
                 await session.commit()
                 return
             if request.status != RequestStatus.PROCESSING.value or asset.status == "publishing_request":
@@ -225,7 +226,7 @@ class CamiMediaPublisher(BotModule):
             description = request.description
             group_id = setup.chat_id
             asset.status = "publishing_request"
-            asset.updated_at = datetime.utcnow()
+            asset.updated_at = utc_now()
             await session.commit()
 
         try:
@@ -240,7 +241,7 @@ class CamiMediaPublisher(BotModule):
                 current = await session.get(MediaAsset, asset_id)
                 if current is not None and current.status == "publishing_request":
                     current.status = "cami_inbox"
-                    current.updated_at = datetime.utcnow()
+                    current.updated_at = utc_now()
                     await session.commit()
             raise RuntimeError(f"Telegram rejected request publication: {exc}") from exc
 
@@ -255,8 +256,8 @@ class CamiMediaPublisher(BotModule):
                 request.status = RequestStatus.COMPLETED.value
             if asset.request_id == request_id:
                 asset.status = "published_request"
-            request.updated_at = datetime.utcnow()
-            asset.updated_at = datetime.utcnow()
+            request.updated_at = utc_now()
+            asset.updated_at = utc_now()
             await session.commit()
 
     @staticmethod
