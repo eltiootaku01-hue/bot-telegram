@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from html import escape
 
 from aiogram import Bot, F
@@ -7,7 +9,7 @@ from aiogram.types import CallbackQuery, ChatMemberAdministrator, ChatMemberOwne
 from sqlalchemy import select
 
 from app.core.access import is_chat_staff
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.events import EventBus
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
@@ -30,10 +32,10 @@ class ChieModule(BotModule):
 
     name = "chie"
 
-    def __init__(self, database: Database) -> None:
+    def __init__(self, database: Database, settings: Settings | None = None) -> None:
         self.database = database
         self.topics = ForumTopicService(database)
-        self.settings = get_settings()
+        self.settings = settings or get_settings()
         self.worker = DurableWorker(database, event_bus=EventBus(), poll_seconds=1.0)
         self.bot: Bot | None = None
         super().__init__()
