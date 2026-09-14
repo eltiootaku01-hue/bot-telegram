@@ -1,11 +1,18 @@
+from __future__ import annotations
+
+import logging
+
 from aiogram import Bot, F
+from aiogram.exceptions import TelegramError
 from aiogram.filters import Command, CommandStart
-from aiogram.types import CallbackQuery, ChatMemberUpdated, Message
+from aiogram.types import BotCommand, CallbackQuery, ChatMemberUpdated, Message
 
 from app.core.identity import BotIdentity, get_profile
 from app.core.module import BotModule
 from app.ui.control_keyboards import chie_start_keyboard
 from app.ui.game_keyboards import game_hub_keyboard
+
+logger = logging.getLogger(__name__)
 
 
 class SystemModule(BotModule):
@@ -25,6 +32,42 @@ class SystemModule(BotModule):
         if self.identity is BotIdentity.SUNNA:
             self.router.callback_query.register(self.game_hub, F.data == "game:hub")
         self.router.my_chat_member.register(self.bot_added)
+
+    async def on_startup(self, bot: Bot) -> None:
+        """Publish only the commands supported by this identity in Telegram's menu."""
+        commands = {
+            BotIdentity.CARI: (
+                BotCommand(command="start", description="Presentación de Cari"),
+                BotCommand(command="ping", description="Comprobar que estoy activa"),
+            ),
+            BotIdentity.SUNNA: (
+                BotCommand(command="start", description="Abrir la zona de Sunna"),
+                BotCommand(command="ping", description="Comprobar que estoy activa"),
+                BotCommand(command="juego", description="Abrir los juegos"),
+                BotCommand(command="gacha", description="Abrir el gacha"),
+                BotCommand(command="inventario", description="Ver tu inventario"),
+                BotCommand(command="combate", description="Abrir combate"),
+                BotCommand(command="trivia", description="Consultar la trivia"),
+                BotCommand(command="puntos", description="Consultar tus puntos"),
+                BotCommand(command="ranking", description="Consultar el ranking"),
+                BotCommand(command="pedido", description="Hacer un pedido"),
+            ),
+            BotIdentity.CAMI: (
+                BotCommand(command="start", description="Presentación de Cami"),
+                BotCommand(command="ping", description="Comprobar que estoy activa"),
+                BotCommand(command="recuperar_publicaciones", description="Revisar entregas ambiguas"),
+            ),
+            BotIdentity.CHIE: (
+                BotCommand(command="start", description="Abrir el panel de Chie"),
+                BotCommand(command="ping", description="Comprobar que estoy activa"),
+                BotCommand(command="configurar", description="Configurar la comunidad"),
+                BotCommand(command="comandos", description="Abrir el panel de comandos"),
+            ),
+        }[self.identity]
+        try:
+            await bot.set_my_commands(list(commands))
+        except TelegramError:
+            logger.exception("Could not publish Telegram command menu identity=%s", self.identity.value)
 
     async def start(self, message: Message) -> None:
         text = (
