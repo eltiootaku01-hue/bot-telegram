@@ -1,5 +1,5 @@
 from aiogram import Bot, F
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, ChatMemberUpdated, Message
 
 from app.core.identity import BotIdentity, get_profile
@@ -20,6 +20,7 @@ class SystemModule(BotModule):
 
     def setup(self) -> None:
         self.router.message.register(self.start, CommandStart())
+        self.router.message.register(self.ping, Command("ping"))
         self.router.message.register(self.ping, F.text.casefold() == "ping")
         if self.identity is BotIdentity.SUNNA:
             self.router.callback_query.register(self.game_hub, F.data == "game:hub")
