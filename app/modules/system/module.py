@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from aiogram import Bot, F
-from aiogram.exceptions import TelegramError
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command, CommandStart
 from aiogram.types import BotCommand, CallbackQuery, ChatMemberUpdated, Message
 
@@ -66,7 +66,7 @@ class SystemModule(BotModule):
         }[self.identity]
         try:
             await bot.set_my_commands(list(commands))
-        except TelegramError:
+        except TelegramAPIError:
             logger.exception("Could not publish Telegram command menu identity=%s", self.identity.value)
 
     async def start(self, message: Message) -> None:
