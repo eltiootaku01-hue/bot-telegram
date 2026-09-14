@@ -11,6 +11,7 @@ from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.jobs import JobQueue
 from app.core.module import BotModule
+from app.core.time import utc_now
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import FanRequest, MediaAsset, RequestStatus
@@ -113,7 +114,7 @@ class CamiMediaModule(BotModule):
             except ValueError:
                 await message.answer("🕒 Formato inválido. Ejemplo: <code>25/09/2026 21:30</code>.")
                 return
-            if scheduled_at <= datetime.utcnow():
+            if scheduled_at <= utc_now():
                 await message.answer("🕒 Esa fecha ya pasó. Elegí una fecha futura.")
                 return
             asset.scheduled_at = scheduled_at
@@ -173,11 +174,11 @@ class CamiMediaModule(BotModule):
                 request = await session.get(FanRequest, asset.request_id) if asset.request_id else None
                 if request is not None:
                     request.status = RequestStatus.COMPLETED.value
-                    request.updated_at = datetime.utcnow()
+                    request.updated_at = utc_now()
                     asset.status = "published_request"
                 else:
                     asset.status = "published"
-                asset.updated_at = datetime.utcnow()
+                asset.updated_at = utc_now()
                 await session.commit()
                 await callback.message.edit_text(f"✅ Material #{asset_id} marcado como publicado.")
                 await callback.answer("Confirmado.")
@@ -187,9 +188,9 @@ class CamiMediaModule(BotModule):
                 request = await session.get(FanRequest, asset.request_id) if asset.request_id else None
                 if request is not None and request.status == RequestStatus.PROCESSING.value:
                     request.status = RequestStatus.REJECTED.value
-                    request.updated_at = datetime.utcnow()
+                    request.updated_at = utc_now()
                 asset.status = "archived"
-                asset.updated_at = datetime.utcnow()
+                asset.updated_at = utc_now()
                 await session.commit()
                 await callback.message.edit_text(f"📦 Material #{asset_id} descartado.")
                 await callback.answer("Descartado.")
@@ -197,10 +198,10 @@ class CamiMediaModule(BotModule):
 
             if action == "retry":
                 request = await session.get(FanRequest, asset.request_id) if asset.request_id else None
-                now = datetime.utcnow().isoformat()
+                now = utc_now().isoformat()
                 if request is not None:
                     request.status = RequestStatus.PROCESSING.value
-                    request.updated_at = datetime.utcnow()
+                    request.updated_at = utc_now()
                     asset.status = "request_ready"
                     await self.jobs.enqueue(
                         session,
@@ -210,7 +211,7 @@ class CamiMediaModule(BotModule):
                     )
                 else:
                     asset.status = "scheduled"
-                    asset.updated_at = datetime.utcnow()
+                    asset.updated_at = utc_now()
                     await self.jobs.enqueue(
                         session,
                         "media.publish",
