@@ -10,7 +10,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from sqlalchemy import select
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.jobs import JobQueue
 from app.core.module import BotModule
@@ -30,12 +30,12 @@ class CamiMediaPublisher(BotModule):
     name = "cami-media-publisher"
     UNKNOWN_DELIVERY_AFTER_SECONDS = 600
 
-    def __init__(self, database: Database) -> None:
+    def __init__(self, database: Database, settings: Settings | None = None) -> None:
         super().__init__()
         self.database = database
         self.jobs = JobQueue()
         self.topics = ForumTopicService(database)
-        self.settings = get_settings()
+        self.settings = settings or get_settings()
         self.worker: DurableWorker | None = None
 
     def setup(self) -> None:
