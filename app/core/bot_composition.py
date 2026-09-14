@@ -43,7 +43,7 @@ def build_bot_modules(
         _spec("cami-media", lambda: CamiMediaModule(database), BotIdentity.CAMI),
         _spec("cami-publisher", lambda: CamiMediaPublisher(database), BotIdentity.CAMI),
         _spec("cami-admin", lambda: AdminModule(database), BotIdentity.CAMI),
-        _spec("chie", lambda: ChieModule(database), BotIdentity.CHIE),
+        _spec("chie", lambda: ChieModule(database, settings=settings), BotIdentity.CHIE),
         _spec("requests", lambda: RequestModule(database), BotIdentity.CHIE),
         _spec("brain-chat", lambda: BrainChatModule(identity, settings=settings)),
     )
