@@ -18,17 +18,23 @@ class ChatModule(BotModule):
         self.characters = CharacterIntentRouter()
 
     def setup(self) -> None:
-        self.router.message.register(self.handle_text, F.text)
+        self.router.message.register(
+            self.handle_text,
+            F.text.func(self._should_handle_text),
+        )
+
+    def _should_handle_text(self, text: str) -> bool:
+        return bool(text and (text.casefold().strip() == "bot" or self.characters.classify(text)))
 
     async def handle_text(self, message: Message) -> None:
         if message.from_user is None or not message.text:
             return
         text = message.text.strip()
         intent = self.characters.classify(text)
-        if intent is None and text.casefold() != "bot":
-            return
         if text.casefold() == "bot":
             intent = CharacterIntent.HELP
+        if intent is None:
+            return
         response = self.characters.director.choose(
             self.identity,
             intent,
