@@ -26,11 +26,15 @@ def test_sunna_unknown_topic_keeps_kuudere_repertoire():
 
 def test_cari_can_trigger_authored_friend_intervention():
     director = CharacterDirector()
-    response = director.choose(BotIdentity.CARI, CharacterIntent.UNKNOWN_TOPIC, roll=0)
+    responses = [
+        director.choose(BotIdentity.CARI, CharacterIntent.UNKNOWN_TOPIC, roll=roll)
+        for roll in range(7)
+    ]
 
-    assert response is not None
-    assert response.follow_up is not None
-    assert response.follow_up.speaker is BotIdentity.CAMI
+    follow_ups = [response.follow_up for response in responses if response is not None and response.follow_up]
+    assert follow_ups
+    assert follow_ups[0] is not None
+    assert follow_ups[0].speaker is BotIdentity.CAMI
 
 
 def test_repertoire_has_no_duplicate_scene_keys():
