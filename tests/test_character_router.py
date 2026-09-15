@@ -28,3 +28,7 @@ def test_router_does_not_match_keywords_inside_other_words():
     assert router.classify("holanda") is None
     assert router.classify("hayey") is None
     assert router.classify("agradecimiento") is None
+    assert router.classify("hospital") is None
+    assert router.classify("gracioso") is None
+    assert router.classify("chaucha") is None
+    assert router.classify("hey! hola") is CharacterIntent.GREETING
