@@ -25,14 +25,14 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 | --- | ---: |
 | Perfiles de Cari, Sunna, Cami y Chie | 60% |
 | Director determinista | 60% |
-| Repertorio escrito | 42% |
+| Repertorio escrito | 44% |
 | Router determinista de intenciones | 50% |
 | Rutinas y horarios | 20% |
 | Interacciones entre personajes | 27% |
 | Café Otaku | 20% |
-| Ciudad Animals | 29% |
-| Estadísticas del mundo | 35% |
-| Registro automático de uso de escenas | 10% |
+| Ciudad Animals | 32% |
+| Estadísticas del mundo | 38% |
+| Registro automático de uso de escenas | 35% |
 | IA como curadora periódica | 20% |
 | Juegos nuevos (misterios, cartas, etc.) | 10% |
 | GUI completa de edición | 20% |
@@ -41,12 +41,13 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 
 1. La personalidad está definida pero no toda está conectada al runtime de conversación.
 2. El repertorio sigue creciendo, pero todavía está lejos del volumen necesario para que los cuatro personajes tengan una vida de NPC amplia y sostenible.
-3. La conversación debe seguir siendo determinista y explícitamente activada. El router usa coincidencias de palabras/frases completas para evitar falsos positivos y contempla variantes habituales con acentos.
-4. El runtime social todavía usa un compositor local pequeño separado del director de personajes; su integración futura debe usar el repertorio sin aumentar en exceso la frecuencia de intervención.
-5. Ciudad Animals puede registrar agregados y catálogo, pero el uso de escenas del repertorio todavía no se observa automáticamente desde el runtime.
-6. Café Otaku y las rutinas del mundo siguen siendo diseño parcial, no funcionalidades completas.
-7. Se requieren auditorías posteriores para verificar que nuevos juegos o sistemas no desplacen el objetivo principal: personajes y mundo vivos sin dependencia continua de IA.
-8. Las pruebas deben seguir protegiendo la voz específica de Sunna, Cami y Chie frente a expansiones futuras del repertorio.
+3. La conversación debe seguir siendo determinista y explícitamente activada. El router usa coincidencias de palabras/frases completas y contempla variantes habituales con acentos.
+4. El runtime social ya usa el director y el repertorio para sus respuestas locales, pero todavía necesita más categorías y escenas específicas para que las intervenciones espontáneas tengan mayor variedad.
+5. Ciudad Animals ya puede registrar escenas usadas, intención y ámbito de usuario/chat desde la conversación de Cari. Falta extender el mismo registro a otros flujos de personajes y a más acontecimientos del mundo.
+6. La conversación social todavía necesita una política más rica para decidir qué tipo de escena usar según hora, actividad, eventos y estado del personaje.
+7. Café Otaku y las rutinas del mundo siguen siendo diseño parcial, no funcionalidades completas.
+8. Se requieren auditorías posteriores para verificar que nuevos juegos o sistemas no desplacen el objetivo principal: personajes y mundo vivos sin dependencia continua de IA.
+9. Las pruebas deben seguir protegiendo la voz específica de Sunna, Cami y Chie frente a expansiones futuras del repertorio.
 
 ## Criterio de finalización
 
@@ -56,12 +57,14 @@ No marcar 100% hasta comprobar: personajes completos, repertorio amplio, rutinas
 
 La ejecución de GitHub Actions `34936594933` terminó correctamente: compiló los cuatro bots y BotManager, verificó los ejecutables, ejecutó el smoke test de BotManager, generó instalador y portable, y subió ambos artefactos. Los tests nativos de media ejecutados en esa misma construcción fueron 15/15.
 
-La ejecución `34998729697` detectó una regresión del test del repertorio. Se corrigió el test para validar la propiedad importante —que exista una variante de Cari que delegue en Cami— en lugar de depender de una posición fija.
+La ejecución `34998729697` detectó una regresión del test del repertorio y la ejecución `34999446085` detectó una regresión del router. Ambas fueron corregidas y se agregaron pruebas más resistentes a posiciones fijas y falsos positivos.
 
-Las ejecuciones posteriores identificaron otra regresión más pequeña en el router: la normalización y las frases de ayuda no cubrían `me podés ayudar?`. El router fue ajustado para contemplar esa familia de expresiones manteniendo los límites contra coincidencias embebidas.
+Los cambios actuales también incorporan una prueba de cobertura mínima del repertorio y verifican que el compositor social local use escenas del mismo director determinista que la conversación normal.
 
 ## Trabajo actual
 
-La capa de personajes está avanzando hacia el runtime: existe un director determinista y un router pequeño de intenciones explícitas que usa exclusivamente el repertorio escrito. El chat de Cari queda limitado a esas señales para no capturar mensajes destinados a otros módulos.
+La capa de personajes está conectada de forma más directa al runtime: el chat de Cari usa intenciones explícitas y el director para seleccionar texto escrito, registra la escena utilizada en Ciudad Animals y mantiene seguimiento de usuario/chat sin almacenar texto bruto de la conversación.
 
-En la ronda actual se fortalecieron los límites del router, las pruebas de comportamiento y la protección de voz del repertorio. También se dejó registrada como siguiente integración prioritaria la conexión entre escenas seleccionadas y la observación de Ciudad Animals, sin almacenar texto bruto de conversaciones.
+El runtime social local también fue alineado con el director: Cari y Sunna usan escenas de silencio, mientras Cami y Chie usan escenas de actividad/ocupación cuando hablan espontáneamente. El objetivo es que un personaje no tenga una voz para el chat y otra distinta para sus intervenciones autónomas.
+
+La siguiente fase prioritaria sigue siendo ampliar el gran repertorio y construir rutinas/escenas de Café Otaku y Ciudad Animals alrededor de horarios, acontecimientos, objetos, relaciones y estadísticas.
