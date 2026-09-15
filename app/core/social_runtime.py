@@ -7,6 +7,8 @@ from aiogram import Bot
 from sqlalchemy import select
 
 from app.brain.provider import BrainClient, LLMProviderError, LLMRequest
+from app.characters.director import CharacterDirector
+from app.characters.models import CharacterIntent
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
@@ -29,28 +31,14 @@ DEFAULT_POLL_SECONDS = 30.0
 class LocalSocialComposer:
     """Cheap deterministic fallback for proactive speech when the LLM is unavailable."""
 
-    _MESSAGES: dict[BotIdentity, tuple[str, ...]] = {
-        BotIdentity.CARI: (
-            "Bueno... está demasiado tranquilo por acá 👀",
-            "¿Soy yo o el chat quedó en modo siesta? 😅",
-        ),
-        BotIdentity.SUNNA: (
-            "…Está demasiado tranquilo. Hm.",
-            "Qué silencio… no es que me moleste.",
-        ),
-        BotIdentity.CAMI: (
-            "La actividad del chat cayó. Interesante.",
-            "Todo bastante tranquilo por aquí. Lo registro.",
-        ),
-        BotIdentity.CHIE: (
-            "¿Todo tranquilo por aquí? 🌸",
-            "Parece que el chat está descansando un poquito.",
-        ),
-    }
+    def __init__(self, director: CharacterDirector | None = None) -> None:
+        self.director = director or CharacterDirector()
 
     def compose(self, identity: BotIdentity, roll: int = 0) -> str:
-        messages = self._MESSAGES[identity]
-        return messages[max(0, roll) % len(messages)]
+        response = self.director.choose(identity, CharacterIntent.QUIET, roll=roll)
+        if response is not None:
+            return response.scene.text
+        return "..."
 
 
 class SocialRuntime:
