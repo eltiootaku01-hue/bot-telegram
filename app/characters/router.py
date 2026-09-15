@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from app.characters.director import CharacterDirector
 from app.characters.models import CharacterIntent
 from app.core.identity import BotIdentity
@@ -44,7 +46,7 @@ class CharacterIntentRouter:
         if not normalized:
             return None
         for intent, keywords in self._KEYWORDS:
-            if any(keyword in normalized for keyword in keywords):
+            if any(re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", normalized) for keyword in keywords):
                 return intent
         return None
 
