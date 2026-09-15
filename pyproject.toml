@@ -10,6 +10,7 @@ dependencies = [
   "aiosqlite>=0.21,<1.0",
   "python-dotenv>=1.2,<2.0",
   "psutil>=7.0,<8.0",
+  "tzdata>=2026.1,<2027.0",
 ]
 
 [project.optional-dependencies]
