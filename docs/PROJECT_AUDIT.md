@@ -25,14 +25,14 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 | --- | ---: |
 | Perfiles de Cari, Sunna, Cami y Chie | 60% |
 | Director determinista | 60% |
-| Repertorio escrito | 44% |
+| Repertorio escrito | 46% |
 | Router determinista de intenciones | 50% |
-| Rutinas y horarios | 38% |
+| Rutinas y horarios | 40% |
 | Interacciones entre personajes | 27% |
 | Café Otaku | 20% |
 | Ciudad Animals | 32% |
 | Estadísticas del mundo | 38% |
-| Registro automático de uso de escenas | 35% |
+| Registro automático de uso de escenas | 40% |
 | IA como curadora periódica | 20% |
 | Juegos nuevos (misterios, cartas, etc.) | 10% |
 | GUI completa de edición | 20% |
@@ -42,8 +42,8 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 1. La personalidad está definida pero no toda está conectada al runtime de conversación.
 2. El repertorio sigue creciendo, pero todavía está lejos del volumen necesario para que los cuatro personajes tengan una vida de NPC amplia y sostenible.
 3. La conversación debe seguir siendo determinista y explícitamente activada. El router usa coincidencias de palabras/frases completas y contempla variantes habituales con acentos.
-4. El runtime social ya usa el director y el repertorio para sus respuestas locales, pero todavía necesita más categorías y escenas específicas para que las intervenciones espontáneas tengan mayor variedad.
-5. Ciudad Animals ya puede registrar escenas usadas, intención y ámbito de usuario/chat desde la conversación de Cari. Falta extender el mismo registro a otros flujos de personajes y a más acontecimientos del mundo.
+4. El runtime social ya usa el director, el repertorio y las primeras rutinas horarias, pero todavía necesita más categorías y escenas específicas para que las intervenciones espontáneas tengan mayor variedad.
+5. Ciudad Animals ya puede registrar escenas usadas, intención y ámbitos de usuario/chat. La atribución de escenas de seguimiento ahora se hace sobre el personaje que realmente habla, pero la automatización sigue concentrada principalmente en los flujos conectados a Cari.
 6. Ya existe una primera política de rutinas por horario para las intervenciones locales, pero todavía debe incorporar zona horaria configurable, actividad del café, eventos, relaciones y estado del personaje antes de considerarse completa.
 7. Café Otaku y las rutinas del mundo siguen siendo funcionalidad parcial: las franjas horarias ya están modeladas y consumidas por el runtime social, pero todavía faltan objetos, servicios, economía y eventos conectados a esas rutinas.
 8. Se requieren auditorías posteriores para verificar que nuevos juegos o sistemas no desplacen el objetivo principal: personajes y mundo vivos sin dependencia continua de IA.
@@ -61,14 +61,14 @@ Las ejecuciones `34998729697` y `34999446085` detectaron regresiones durante el 
 
 La ejecución `35000051242` terminó correctamente sobre el commit `e9219bd8`: validó el trabajo de runtime social y su uso del repertorio de personajes.
 
-Los cambios actuales incorporan además una prueba de cobertura mínima del repertorio, pruebas del compositor social y una nueva suite para el director de rutinas horarias.
+Después se añadieron rutinas horarias, escenas de silencio faltantes para Cami/Chie y protección de atribución de escenas de seguimiento. La ejecución CI `35007080551` correspondiente al último cambio de atribución seguía en curso al momento de esta auditoría; no se marca como éxito hasta terminar.
 
 ## Trabajo actual
 
-La capa de personajes está conectada de forma más directa al runtime: el chat de Cari usa intenciones explícitas y el director para seleccionar texto escrito, registra la escena utilizada en Ciudad Animals y mantiene seguimiento de usuario/chat sin almacenar texto bruto de la conversación.
+La capa de personajes está conectada de forma más directa al runtime: el chat de Cari usa intenciones explícitas y el director para seleccionar texto escrito, registra la escena utilizada en Ciudad Animals y mantiene seguimiento de usuario/chat sin almacenar texto bruto de la conversación. Las escenas de seguimiento ahora quedan registradas bajo el personaje que realmente emitió el texto. fileciteturn807file0
 
-El runtime social local también fue alineado con el director: Cari y Sunna usan escenas de silencio fuera de una franja específica, mientras Cami y Chie usan escenas de actividad/ocupación. Ahora el compositor puede consultar una rutina horaria y seleccionar el intent correspondiente del repertorio escrito, sin generar texto nuevo.
+El runtime social local usa el mismo director determinista y ahora consulta una rutina horaria antes del fallback local. La regla sigue siendo texto authored-only: la rutina selecciona un intent y el director selecciona una escena escrita; no se genera texto nuevo por esa vía. fileciteturn790file0
 
-Se añadió `app/characters/routines.py` con 12 ventanas deterministas para los cuatro personajes y `tests/test_character_routines.py` para comprobar cobertura, rangos horarios, determinismo y rechazo de valores inválidos. `app/core/social_runtime.py` consume esas rutinas antes de usar el fallback local genérico.
+Se añadió `app/characters/routines.py` con 12 ventanas deterministas para los cuatro personajes y `tests/test_character_routines.py` con cobertura de identidades, intents escritos, rangos horarios, determinismo y validación de reloj. También se añadieron escenas QUIET para Cami y Chie, necesarias para cubrir sus franjas de cierre.
 
 La siguiente fase prioritaria sigue siendo ampliar el gran repertorio y construir el comportamiento de Café Otaku y Ciudad Animals alrededor de horarios, acontecimientos, objetos, relaciones y estadísticas, manteniendo la IA como componente opcional y no como cerebro permanente.
