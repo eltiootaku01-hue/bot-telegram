@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 
 from aiogram import Bot
 from sqlalchemy import select
@@ -19,7 +20,7 @@ from app.core.social_director import SocialDirector
 from app.core.social_turn import SocialTurnArbiter
 from app.core.social_wake import SocialWakeController
 from app.core.social_wake_store import SocialWakeStore
-from app.core.time import utc_now
+from app.core.time import localize_utc, utc_now
 from app.db.database import Database
 from app.db.models import Chat
 
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 SOCIAL_RUNTIME_TASK = "social.runtime"
 DEFAULT_POLL_SECONDS = 30.0
+DEFAULT_WORLD_TIMEZONE = "America/Argentina/Buenos_Aires"
 
 
 class LocalSocialComposer:
@@ -104,6 +106,7 @@ class SocialRuntime:
         self.turns = turns or SocialTurnArbiter()
         self.composer = composer or LocalSocialComposer()
         self.brain = brain or BrainClient(self.settings)
+        self.world_timezone = os.getenv("BOT_WORLD_TIMEZONE", DEFAULT_WORLD_TIMEZONE)
         self._stopping = asyncio.Event()
 
     async def run(self, bot: Bot) -> None:
@@ -184,11 +187,12 @@ class SocialRuntime:
             if turn is None:
                 return False
 
+        world_now = localize_utc(now, self.world_timezone)
         message = self.composer.compose(
             self.identity,
             roll=abs(chat_id) % 2,
-            weekday=now.weekday(),
-            hour=now.hour,
+            weekday=world_now.weekday(),
+            hour=world_now.hour,
         )
         if self.settings.ai_for(self.identity):
             try:
