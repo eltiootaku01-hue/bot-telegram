@@ -35,7 +35,7 @@ def build_bot_modules(
         _spec("social-runtime", lambda: SocialRuntimeModule(database, identity, settings=settings)),
     )
     identity_specific = (
-        _spec("chat", ChatModule, BotIdentity.CARI),
+        _spec("chat", lambda: ChatModule(database), BotIdentity.CARI),
         _spec("game", lambda: GameModule(database), BotIdentity.SUNNA),
         _spec("trivia", lambda: TriviaModule(database), BotIdentity.SUNNA),
         _spec("media", lambda: MediaModule(database, settings=settings), BotIdentity.SUNNA),
