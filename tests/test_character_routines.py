@@ -1,5 +1,6 @@
 import pytest
 
+from app.characters.director import CharacterDirector
 from app.characters.models import CharacterIntent
 from app.characters.routines import ROUTINE_WINDOWS, RoutineDirector, RoutineWindow
 from app.core.identity import BotIdentity
@@ -7,6 +8,13 @@ from app.core.identity import BotIdentity
 
 def test_routine_catalog_covers_all_identities() -> None:
     assert {window.identity for window in ROUTINE_WINDOWS} == set(BotIdentity)
+
+
+def test_every_routine_intent_has_authored_scene() -> None:
+    director = CharacterDirector()
+
+    for window in ROUTINE_WINDOWS:
+        assert director.choose(window.identity, window.intent, roll=0) is not None, window.key
 
 
 def test_routine_window_matches_regular_and_overnight_ranges() -> None:
