@@ -17,3 +17,8 @@ def test_world_timezone_is_trimmed() -> None:
 def test_world_timezone_rejects_empty_value() -> None:
     with pytest.raises(ValidationError):
         Settings(bot_world_timezone="   ")
+
+
+def test_world_timezone_rejects_unknown_iana_value() -> None:
+    with pytest.raises(ValidationError):
+        Settings(bot_world_timezone="Mars/NoSuchCity")
