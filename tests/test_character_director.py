@@ -60,8 +60,25 @@ def test_cari_profile_exposes_author_canon_drivers():
     assert "otros la protejan" in cari.arc_theme.casefold()
 
 
-def test_non_cari_profiles_keep_optional_canon_fields_empty_until_defined():
-    for identity in (BotIdentity.SUNNA, BotIdentity.CAMI, BotIdentity.CHIE):
+def test_cami_profile_exposes_author_canon_drivers():
+    cami = PROFILES[BotIdentity.CAMI]
+    assert "comprender" in cami.core_drive.casefold()
+    assert "perjudicar" in cami.core_fear.casefold()
+    assert "razón" in cami.arc_theme.casefold()
+    assert "empatía" in cami.arc_theme.casefold()
+
+
+def test_sunna_profile_exposes_author_canon_drivers():
+    sunna = PROFILES[BotIdentity.SUNNA]
+    assert "proteger" in sunna.core_drive.casefold()
+    assert "sola" in sunna.core_fear.casefold()
+    assert "monstruo" in sunna.arc_theme.casefold()
+    assert "linaje" in sunna.arc_theme.casefold()
+    assert "jörmungandr" in sunna.archetype.casefold()
+
+
+def test_profiles_without_author_bible_keep_optional_canon_fields_empty():
+    for identity in (BotIdentity.CHIE,):
         profile = PROFILES[identity]
         assert profile.core_drive == ""
         assert profile.core_fear == ""
