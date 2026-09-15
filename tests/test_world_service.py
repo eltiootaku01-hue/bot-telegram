@@ -43,6 +43,29 @@ async def test_observation_aggregates_without_storing_raw_text(session: AsyncSes
 
 
 @pytest.mark.asyncio
+async def test_database_session_commits_world_observation_between_sessions():
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+
+    async with database.session() as session:
+        service = WorldService()
+        await service.observe(
+            session,
+            bot_identity=BotIdentity.CARI,
+            entry_type="topic",
+            entry_key="persisted",
+        )
+
+    async with database.session() as session:
+        rows = (await session.scalars(select(WorldUsageStat))).all()
+
+    assert len(rows) == 1
+    assert rows[0].entry_key == "persisted"
+    assert rows[0].count == 1
+    await database.close()
+
+
+@pytest.mark.asyncio
 async def test_user_and_world_scopes_stay_separate(session: AsyncSession):
     service = WorldService()
     await service.observe(
