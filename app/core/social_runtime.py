@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 
 from aiogram import Bot
 from sqlalchemy import select
@@ -28,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 SOCIAL_RUNTIME_TASK = "social.runtime"
 DEFAULT_POLL_SECONDS = 30.0
-DEFAULT_WORLD_TIMEZONE = "America/Argentina/Buenos_Aires"
 
 
 class LocalSocialComposer:
@@ -106,7 +104,6 @@ class SocialRuntime:
         self.turns = turns or SocialTurnArbiter()
         self.composer = composer or LocalSocialComposer()
         self.brain = brain or BrainClient(self.settings)
-        self.world_timezone = os.getenv("BOT_WORLD_TIMEZONE", DEFAULT_WORLD_TIMEZONE)
         self._stopping = asyncio.Event()
 
     async def run(self, bot: Bot) -> None:
@@ -187,7 +184,7 @@ class SocialRuntime:
             if turn is None:
                 return False
 
-        world_now = localize_utc(now, self.world_timezone)
+        world_now = localize_utc(now, self.settings.bot_world_timezone)
         message = self.composer.compose(
             self.identity,
             roll=abs(chat_id) % 2,
