@@ -53,6 +53,21 @@ def test_profiles_cover_all_identities():
     assert set(PROFILES) == set(BotIdentity)
 
 
+def test_cari_profile_exposes_author_canon_drivers():
+    cari = PROFILES[BotIdentity.CARI]
+    assert "proteger" in cari.core_drive.casefold()
+    assert "perder" in cari.core_fear.casefold()
+    assert "otros la protejan" in cari.arc_theme.casefold()
+
+
+def test_non_cari_profiles_keep_optional_canon_fields_empty_until_defined():
+    for identity in (BotIdentity.SUNNA, BotIdentity.CAMI, BotIdentity.CHIE):
+        profile = PROFILES[identity]
+        assert profile.core_drive == ""
+        assert profile.core_fear == ""
+        assert profile.arc_theme == ""
+
+
 def test_sunna_repertoire_stays_short_and_contained():
     sunna_lines = [scene.text for scene in REPERTOIRE if scene.speaker is BotIdentity.SUNNA]
 
