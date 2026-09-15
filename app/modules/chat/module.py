@@ -53,12 +53,28 @@ class ChatModule(BotModule):
                 )
         self._catalog_seeded = True
 
-    async def _observe_scene(self, message: Message, scene_key: str, intent: CharacterIntent) -> None:
+    async def _observe_scene(
+        self,
+        message: Message,
+        scene_key: str,
+        intent: CharacterIntent,
+        speaker: BotIdentity,
+        text: str,
+        priority: int = 1,
+    ) -> None:
         await self._seed_catalog()
         async with self.database.session() as session:
+            await self.world.register_catalog_entry(
+                session,
+                bot_identity=speaker,
+                entry_type="scene",
+                entry_key=scene_key,
+                label=text,
+                priority=priority,
+            )
             await self.world.observe(
                 session,
-                bot_identity=self.identity,
+                bot_identity=speaker,
                 entry_type="scene",
                 entry_key=scene_key,
             )
@@ -72,7 +88,7 @@ class ChatModule(BotModule):
             )
             await self.world.observe(
                 session,
-                bot_identity=self.identity,
+                bot_identity=speaker,
                 entry_type="scene",
                 entry_key=scene_key,
                 scope_type="user_chat",
@@ -96,7 +112,21 @@ class ChatModule(BotModule):
         if response is None:
             return
         await message.answer(response.scene.text)
-        await self._observe_scene(message, response.scene.key, intent)
+        await self._observe_scene(
+            message,
+            response.scene.key,
+            intent,
+            response.scene.speaker,
+            response.scene.text,
+            response.scene.weight,
+        )
         if response.follow_up is not None:
             await message.answer(response.follow_up.text)
-            await self._observe_scene(message, response.follow_up.key, intent)
+            await self._observe_scene(
+                message,
+                response.follow_up.key,
+                intent,
+                response.follow_up.speaker,
+                response.follow_up.text,
+                response.follow_up.weight,
+            )
