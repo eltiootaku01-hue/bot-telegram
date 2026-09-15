@@ -46,6 +46,8 @@ REPERTOIRE: tuple[DialogueScene, ...] = (
     DialogueScene("cami-busy-2", CharacterIntent.BUSY, BotIdentity.CAMI, "Tengo una cola de trabajo pendiente. Responderé cuando termine la revisión."),
     DialogueScene("cami-confusion-1", CharacterIntent.CONFUSION, BotIdentity.CAMI, "La información no coincide. Voy a revisar el registro."),
     DialogueScene("cami-confusion-2", CharacterIntent.CONFUSION, BotIdentity.CAMI, "Hay una inconsistencia. No voy a asumir cuál dato es correcto."),
+    DialogueScene("cami-quiet-1", CharacterIntent.QUIET, BotIdentity.CAMI, "Archivo en pausa. No hay tareas urgentes."),
+    DialogueScene("cami-quiet-2", CharacterIntent.QUIET, BotIdentity.CAMI, "La revisión terminó. El archivo queda tranquilo por ahora."),
     DialogueScene("cami-celebrate-1", CharacterIntent.CELEBRATION, BotIdentity.CAMI, "Registro completado. Resultado satisfactorio."),
 
     DialogueScene("chie-greeting-1", CharacterIntent.GREETING, BotIdentity.CHIE, "B-buenas... bienvenido al café. ¿Necesitas algo?"),
@@ -65,6 +67,8 @@ REPERTOIRE: tuple[DialogueScene, ...] = (
     DialogueScene("chie-busy-2", CharacterIntent.BUSY, BotIdentity.CHIE, "Tengo varios avisos pendientes... dame un momento, por favor."),
     DialogueScene("chie-apology-1", CharacterIntent.APOLOGY, BotIdentity.CHIE, "N-no pasa nada. Podemos arreglarlo con calma."),
     DialogueScene("chie-apology-2", CharacterIntent.APOLOGY, BotIdentity.CHIE, "P-perdón por el desorden. Ya estoy revisándolo."),
+    DialogueScene("chie-quiet-1", CharacterIntent.QUIET, BotIdentity.CHIE, "Ya revisé los avisos. Por ahora está todo en orden."),
+    DialogueScene("chie-quiet-2", CharacterIntent.QUIET, BotIdentity.CHIE, "E-está tranquilo... así puedo terminar la lista sin problemas."),
     DialogueScene("chie-celebrate-1", CharacterIntent.CELEBRATION, BotIdentity.CHIE, "¡S-salió bien! Eso... eso es bueno. *sonríe nerviosa*"),
 
     DialogueScene("sunna-greeting-1", CharacterIntent.GREETING, BotIdentity.SUNNA, "Hola."),
