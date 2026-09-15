@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.brain.provider import BrainClient, LLMProviderError, LLMRequest
 from app.characters.director import CharacterDirector
 from app.characters.models import CharacterIntent
+from app.characters.routines import RoutineDirector
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
@@ -38,10 +39,33 @@ class LocalSocialComposer:
         BotIdentity.CHIE: CharacterIntent.BUSY,
     }
 
-    def __init__(self, director: CharacterDirector | None = None) -> None:
+    def __init__(
+        self,
+        director: CharacterDirector | None = None,
+        routines: RoutineDirector | None = None,
+    ) -> None:
         self.director = director or CharacterDirector()
+        self.routines = routines or RoutineDirector(director=self.director)
 
-    def compose(self, identity: BotIdentity, roll: int = 0) -> str:
+    def compose(
+        self,
+        identity: BotIdentity,
+        roll: int = 0,
+        *,
+        weekday: int | None = None,
+        hour: int | None = None,
+    ) -> str:
+        if weekday is not None and hour is not None:
+            scheduled = self.routines.choose(
+                identity,
+                weekday,
+                hour,
+                roll=roll,
+            )
+            if scheduled is not None:
+                _, response = scheduled
+                return response.scene.text
+
         intent = self._LOCAL_INTENTS[identity]
         response = self.director.choose(identity, intent, roll=roll)
         if response is not None:
@@ -160,7 +184,12 @@ class SocialRuntime:
             if turn is None:
                 return False
 
-        message = self.composer.compose(self.identity, roll=abs(chat_id) % 2)
+        message = self.composer.compose(
+            self.identity,
+            roll=abs(chat_id) % 2,
+            weekday=now.weekday(),
+            hour=now.hour,
+        )
         if self.settings.ai_for(self.identity):
             try:
                 message = await self.brain.generate(
