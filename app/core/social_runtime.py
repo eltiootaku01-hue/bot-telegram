@@ -31,11 +31,19 @@ DEFAULT_POLL_SECONDS = 30.0
 class LocalSocialComposer:
     """Cheap deterministic fallback for proactive speech when the LLM is unavailable."""
 
+    _LOCAL_INTENTS: dict[BotIdentity, CharacterIntent] = {
+        BotIdentity.CARI: CharacterIntent.QUIET,
+        BotIdentity.SUNNA: CharacterIntent.QUIET,
+        BotIdentity.CAMI: CharacterIntent.BUSY,
+        BotIdentity.CHIE: CharacterIntent.BUSY,
+    }
+
     def __init__(self, director: CharacterDirector | None = None) -> None:
         self.director = director or CharacterDirector()
 
     def compose(self, identity: BotIdentity, roll: int = 0) -> str:
-        response = self.director.choose(identity, CharacterIntent.QUIET, roll=roll)
+        intent = self._LOCAL_INTENTS[identity]
+        response = self.director.choose(identity, intent, roll=roll)
         if response is not None:
             return response.scene.text
         return "..."
