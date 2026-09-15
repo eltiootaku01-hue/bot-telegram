@@ -122,6 +122,23 @@ A private Telegram group or channel can be configured as the media vault/inbox w
 
 Public wild encounters are capped at class C. Higher-rarity candidates are routed through the private approval path instead of appearing as normal public encounters.
 
+## Ciudad Animals: small living world
+
+The bots remain independent characters, but the project now has a lightweight **world observation ledger** for the future "Ciudad Animals" layer. The ledger records aggregate usage such as topics, actions and scenes per bot and, when useful, per user. It is intentionally not an LLM memory and does not need to retain raw chat text.
+
+The catalog lets us define things that exist in the world even before anyone uses them. A later review can therefore compare:
+
+```text
+most used → what the community is actually enjoying
+least used → what exists but is rarely touched
+unseen    → what is defined but has never appeared
+user      → repeated habits of a particular participant
+```
+
+The implementation is designed for a future **AI curator** that runs periodically (for example, a small daily review or a deeper weekly review). That AI would analyze the aggregate report and suggest new scenes, dialogue, topics or world changes. It does **not** replace the four characters' deterministic runtime and does **not** automatically rewrite their personalities in this first stage.
+
+See `docs/CIUDAD_ANIMALS_WORLD.md` for the design and current status.
+
 ## API-saving strategy
 
 - Commands, moderation rules, points and game rules remain local.
@@ -140,6 +157,8 @@ Telegram
 Core
    ↓
 Events / Modules / Services
+   ↓
+Ciudad Animals observation layer
    ↓
 Brain policy
    ↓
