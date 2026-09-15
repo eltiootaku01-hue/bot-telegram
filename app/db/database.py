@@ -111,8 +111,14 @@ class Database:
 
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
+        """Open one transaction boundary and commit only after all work succeeds."""
         async with self.sessions() as session:
-            yield session
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
 
     async def close(self) -> None:
         await self.engine.dispose()
