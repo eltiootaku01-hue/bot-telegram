@@ -1,5 +1,5 @@
 from app.characters.director import CharacterDirector
-from app.characters.models import CharacterIntent
+from app.characters.models import CharacterIntent, PROFILES
 from app.characters.repertoire import REPERTOIRE
 from app.core.identity import BotIdentity
 
@@ -47,3 +47,15 @@ def test_every_identity_has_core_limit_and_greeting_scenes():
     for identity in BotIdentity:
         assert director.choose(identity, CharacterIntent.GREETING) is not None
         assert director.choose(identity, CharacterIntent.OUT_OF_SCOPE) is not None
+
+
+def test_profiles_cover_all_identities():
+    assert set(PROFILES) == set(BotIdentity)
+
+
+def test_sunna_repertoire_stays_short_and_contained():
+    sunna_lines = [scene.text for scene in REPERTOIRE if scene.speaker is BotIdentity.SUNNA]
+
+    assert sunna_lines
+    assert all("!" not in line for line in sunna_lines)
+    assert max(len(line) for line in sunna_lines) <= 60
