@@ -2,7 +2,6 @@ from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.characters.models import CharacterIntent
 from app.core.identity import BotIdentity
