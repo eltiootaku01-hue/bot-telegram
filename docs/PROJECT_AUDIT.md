@@ -8,9 +8,9 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 
 | Área | Estado |
 | --- | ---: |
-| Arquitectura Core | 86% |
+| Arquitectura Core | 87% |
 | Cuatro identidades independientes | 92% |
-| Persistencia / SQLite / transacciones | 88% |
+| Persistencia / SQLite / transacciones | 91% |
 | Módulos y composición | 88% |
 | Eventos, jobs, turnos y presencia | 84% |
 | WaifuMon / progresión | 82% |
@@ -29,13 +29,14 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 | Router determinista de intenciones | 50% |
 | Rutinas y horarios | 52% |
 | Interacciones entre personajes | 27% |
-| Café Otaku | 20% |
-| Ciudad Animals | 32% |
-| Estadísticas del mundo | 38% |
-| Registro automático de uso de escenas | 42% |
+| Café Otaku | 23% |
+| Ciudad Animals | 35% |
+| Estadísticas del mundo | 40% |
+| Registro automático de uso de escenas | 50% |
 | IA como curadora periódica | 20% |
 | Juegos nuevos (misterios, cartas, etc.) | 10% |
 | GUI completa de edición | 20% |
+| Operador humano Tío Otaku | 15% |
 
 ## Riesgos activos detectados por auditoría
 
@@ -43,64 +44,63 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 2. El repertorio sigue creciendo, pero todavía está lejos del volumen necesario para que los cuatro personajes tengan una vida de NPC amplia y sostenible.
 3. La conversación debe seguir siendo determinista y explícitamente activada. El router usa coincidencias de palabras/frases completas y contempla variantes habituales con acentos.
 4. El runtime social ya usa el director, el repertorio y las rutinas horarias, pero todavía necesita más categorías y escenas específicas para que las intervenciones espontáneas tengan mayor variedad.
-5. Ciudad Animals ya puede registrar escenas usadas, intención y ámbitos de usuario/chat. La atribución de escenas de seguimiento ahora se hace sobre el personaje que realmente habla, y existe una prueba específica que protege esa regla.
-6. Las rutinas horarias ahora usan `Settings.bot_world_timezone` y convierten UTC a una zona IANA explícita (`America/Argentina/Buenos_Aires` por defecto). Esto evita depender de la hora UTC para el comportamiento del mundo.
-7. La distribución Windows necesita conservar datos IANA disponibles de forma reproducible: Python documenta que algunos sistemas, especialmente Windows, pueden no traer una base IANA y recomienda `tzdata` como fuente de datos de primera parte. El proyecto ahora declara `tzdata` explícitamente.
-8. Café Otaku y las rutinas del mundo siguen siendo funcionalidad parcial: las franjas horarias ya están modeladas y consumidas por el runtime social, pero todavía faltan objetos, servicios, economía y eventos conectados a esas rutinas.
-9. Se requieren auditorías posteriores para verificar que nuevos juegos o sistemas no desplacen el objetivo principal: personajes y mundo vivos sin dependencia continua de IA.
-10. Las pruebas deben seguir protegiendo la voz específica de Sunna, Cami y Chie frente a expansiones futuras del repertorio.
-11. El último fallo de CI conocido fue un error de aserción en `test_chat_world_attribution.py`; el test fue corregido en `cad996c85a184042027f6cdb43db606c561f4e28`. No se marca CI verde hasta observar una ejecución posterior que pase realmente.
+5. Ciudad Animals registra escenas usadas, intención y ámbitos de usuario/chat. La atribución de escenas de seguimiento se hace sobre el personaje que realmente habla y existe una prueba dedicada para protegerla.
+6. Las rutinas usan `Settings.bot_world_timezone` y convierten UTC a una zona IANA explícita (`America/Argentina/Buenos_Aires` por defecto). `tzdata` queda declarado para portabilidad de la base horaria en Windows.
+7. El cierre de sesión de `Database.session()` ahora establece explícitamente el límite transaccional: commit al completar el bloque y rollback ante excepciones. Esto es necesario para que observaciones del mundo y otros cambios sean visibles en sesiones posteriores.
+8. Café Otaku y las rutinas del mundo siguen siendo funcionalidad parcial: faltan objetos, servicios, economía, personajes secundarios y eventos conectados a esas rutinas.
+9. La base de comportamiento de maids/tiendas y la base de metadatos de anime son actualmente documentación de referencia; todavía no están convertidas en un catálogo de datos consultable por Cami/Cari.
+10. La futura interfaz de Tío Otaku debe tratarlo como operador humano: el sistema recibe/muestra/envía mensajes, pero no debe sustituir su redacción manual por IA por defecto.
+11. Se requieren auditorías posteriores para verificar que nuevos juegos o sistemas no desplacen el objetivo principal: personajes y mundo vivos sin dependencia continua de IA.
+12. Las pruebas deben seguir protegiendo la voz específica de Sunna, Cami y Chie frente a expansiones futuras del repertorio.
 
 ## Evidencia externa utilizada
 
 ### Telegram / aiogram
 
-La documentación actual de aiogram mantiene el enfoque de `Router`, middlewares, filtros y dependencia de contexto, que encaja con la composición modular existente del proyecto. La propia documentación describe la inyección de dependencias como mecanismo para desacoplar creación y uso de servicios. La API oficial de Telegram expone actualizaciones específicas como `chat_member`, `chat_join_request` y otras que requieren permisos o `allowed_updates` explícitos; cualquier futura ampliación de moderación/coordination debe verificar esos requisitos contra la documentación oficial, no asumir que todos los eventos llegan automáticamente.
+La documentación actual de aiogram mantiene el enfoque de `Router`, middlewares, filtros y dependencia de contexto, que encaja con la composición modular existente del proyecto. La API oficial de Telegram expone diferentes tipos de updates y requisitos de permisos que deben comprobarse antes de ampliar moderación o coordinación.
 
 ### Persistencia / concurrencia
 
-La documentación actual de SQLAlchemy 2.0 confirma que `AsyncSession` es mutable y no debe compartirse entre tareas concurrentes; el modelo correcto es una sesión por tarea concurrente. También documenta el comportamiento de `aiosqlite` para SQLite y que las bases en memoria tienen particularidades de concurrencia. Esto respalda la estrategia del proyecto de abrir sesiones separadas por operación y de tratar cada transacción como unidad aislada.
+La documentación actual de SQLAlchemy 2.0 confirma que `AsyncSession` es mutable y no debe compartirse entre tareas concurrentes; el modelo correcto es una sesión por tarea concurrente. El proyecto usa sesiones creadas por operación y ahora define un límite transaccional explícito en `Database.session()`.
 
 ### Tiempo del mundo
 
-Python `zoneinfo` implementa las zonas IANA y puede tomar datos del sistema o del paquete `tzdata`. La documentación recomienda declarar `tzdata` cuando se necesita compatibilidad multiplataforma y el sistema, especialmente Windows, puede no tener la base horaria disponible. El proyecto ya adoptó esa defensa.
+Python `zoneinfo` implementa zonas IANA y puede usar datos del sistema o `tzdata`. El proyecto declara `tzdata` para que la planificación de Ciudad Animals no dependa de que Windows tenga instalada una base horaria del sistema.
 
 ### IA opcional
 
-Ollama documenta actualmente `/api/chat`, salidas estructuradas mediante JSON Schema y tool calling. Esto hace viable una futura IA curadora que entregue propuestas estructuradas y validables. No justifica convertir la IA en el cerebro del bot: para este proyecto debe permanecer detrás de una compuerta explícita y trabajar sobre datos agregados, inventario y reglas del mundo.
+Ollama soporta chat y salidas estructuradas, lo que permite una futura IA curadora que entregue propuestas validables. Esto no cambia la decisión arquitectónica: para Bot-IA la IA sigue siendo opcional y no el cerebro permanente.
 
-### CI
+### Fuentes de metadatos de anime
 
-La documentación de GitHub recomienda ejecutar en CI los mismos comandos que se usan localmente, y muestra pytest, cobertura y Ruff como patrones de validación para proyectos Python. La auditoría, por tanto, debe seguir tratando cada fallo de CI como evidencia de un problema real hasta que una ejecución posterior lo cierre.
+Wikidata ofrece datos estructurados reutilizables bajo CC0 y relaciones entre entidades. Jikan ofrece una API comunitaria no oficial que obtiene datos públicos de MyAnimeList y expone recursos para obras, búsqueda, personajes, episodios y estadísticas. El proyecto debe importar/normalizar estos datos a un catálogo local en vez de consultar la web en cada conversación. 
 
 ## Comparación de proyectos
 
-Se revisaron varios proyectos públicos de aiogram para contrastar arquitectura y prácticas, entre ellos el repositorio oficial de aiogram, plantillas modulares con routers y configuración, y esqueletos que usan Unit of Work/servicios para separar lógica de handlers.
+Se revisaron proyectos públicos relacionados con aiogram y bots modulares para contrastar separación de handlers, servicios, persistencia, configuración y middleware. El hallazgo útil no es copiar una plantilla: es confirmar que esa separación reduce acoplamiento y facilita pruebas. Bot-IA añade una capa de dominio particular: personalidad, repertorio, mundo y comportamiento authored-only.
 
-El hallazgo útil para Bot-IA no es copiar una plantilla: es confirmar que la separación `handlers / services / persistence / middleware`, el uso de routers y la validación de configuración son patrones recurrentes en proyectos maduros. La arquitectura actual de Bot-IA ya cubre buena parte de esa separación y su diferencia principal es deliberada: la lógica de personaje, mundo y repertorio authored-only es una capa de dominio que las plantillas genéricas no suelen proporcionar.
+## Nuevas bases documentales
+
+`docs/reference/MAID_BEHAVIOR_BASE.md` contiene una taxonomía inicial de actuación para maids, personal de café y tiendas japonesas, incluyendo protocolos, microacciones y reglas contra la invención de productos.
+
+`docs/reference/ANIME_METADATA_BASE.md` define el esquema local para obras, personajes, procedencia y resúmenes originales breves. Los textos de wikis no se copian como contenido propio; se usan datos estructurados y fuentes de referencia para construir fichas locales.
+
+`docs/reference/TIO_OTAKU_OPERATOR.md` fija el concepto de Tío Otaku como operador humano: Telegram es el transporte, el sistema proporciona la interfaz y herramientas, y la decisión/redacción pertenecen al operador.
 
 ## Verificación técnica reciente
 
-La ejecución de GitHub Actions `34936594933` terminó correctamente: compiló los cuatro bots y BotManager, verificó los ejecutables, ejecutó el smoke test de BotManager, generó instalador y portable, y subió ambos artefactos. Los tests nativos de media ejecutados en esa misma construcción fueron 15/15.
+La ejecución `35007258984` falló inicialmente en dos pruebas de atribución: la comparación de `BotIdentity.CARI` estaba corregida, pero las filas no eran visibles porque el contexto de `Database.session()` no hacía commit al salir. El análisis de logs mostró `172 passed, 2 failed` y localizó ambas fallas en `test_chat_world_attribution.py`.
 
-Las ejecuciones `34998729697` y `34999446085` detectaron regresiones durante el endurecimiento del repertorio/router. Ambas fueron corregidas y se agregaron pruebas más resistentes a posiciones fijas y falsos positivos.
+El cambio de sesión transaccional y la prueba de persistencia entre sesiones quedaron implementados en `f0d9ae2ccf85998490bf8108ec598a5a6422642a` y `543c2c933c81de3d7b7397ccc5a71f0bc7413275`, respectivamente. No se marca CI verde hasta observar una ejecución posterior que pase realmente.
 
-La ejecución `35000051242` terminó correctamente sobre el commit `e9219bd8`: validó el trabajo de runtime social y su uso del repertorio de personajes.
-
-La ejecución `35007258984` detectó un fallo de pytest porque la prueba comparaba un campo SQLAlchemy de tipo `str` usando `is` contra `BotIdentity.CARI`. La comparación quedó corregida en `cad996c85a184042027f6cdb43db606c561f4e28`.
-
-El build de Windows `35007258794` terminó correctamente sobre el commit `640ef25...`, por lo que la vía de empaquetado sigue validada de forma independiente.
-
-La ejecución `35008731690` fue disparada posteriormente por la actualización de auditoría y el endurecimiento de zona horaria. Al momento de esta revisión, su job de `test` seguía en ejecución; no se marca éxito hasta disponer de una conclusión positiva real.
+Los builds de Windows `35010256095` y `35010289685` terminaron correctamente, incluyendo pruebas nativas de media, compilación de ejecutables, smoke test de BotManager, instalador, portable, checksums y artefactos.
 
 ## Trabajo actual
 
-La capa de personajes está conectada de forma más directa al runtime: el chat de Cari usa intenciones explícitas y el director para seleccionar texto escrito, registra la escena utilizada en Ciudad Animals y mantiene seguimiento de usuario/chat sin almacenar texto bruto de la conversación. Las escenas de seguimiento quedan registradas bajo el personaje que realmente emitió el texto.
+La capa de personajes está conectada al runtime mediante intenciones explícitas, director determinista, repertorio y rutinas. Las escenas de seguimiento quedan registradas bajo el personaje que realmente emitió el texto.
 
-El runtime social local usa el mismo director determinista y consulta una rutina horaria antes del fallback local. La regla sigue siendo texto authored-only: la rutina selecciona un intent y el director selecciona una escena escrita; no se genera texto nuevo por esa vía.
+El runtime social usa hora mundial configurable y texto authored-only para sus intervenciones locales.
 
-Se añadió `app/characters/routines.py` con 12 ventanas deterministas para los cuatro personajes y `tests/test_character_routines.py` con cobertura de identidades, intents escritos, rangos horarios, determinismo y validación de reloj. También se añadieron escenas QUIET para Cami y Chie, necesarias para cubrir sus franjas de cierre.
+La persistencia de observaciones de mundo ahora tiene un límite transaccional explícito en el gateway de base de datos. Esto corrige un hueco real descubierto por CI y queda protegido por una prueba que verifica visibilidad de la observación desde una sesión posterior.
 
-Se añadió `localize_utc()` y `world_now()` en `app/core/time.py`. El runtime social usa la zona definida por `Settings.bot_world_timezone`, y `.env.example` documenta `BOT_WORLD_TIMEZONE=America/Argentina/Buenos_Aires`. `tzdata` queda declarado como dependencia para que el comportamiento sea reproducible en Windows y otros entornos sin base horaria del sistema.
-
-La siguiente fase prioritaria sigue siendo ampliar el gran repertorio y construir el comportamiento de Café Otaku y Ciudad Animals alrededor de horarios, acontecimientos, objetos, relaciones y estadísticas, manteniendo la IA como componente opcional y no como cerebro permanente.
+La siguiente fase prioritaria sigue siendo convertir las bases documentales en datos de dominio consultables, ampliar el repertorio y construir el comportamiento del Café Otaku/ Ciudad Animals alrededor de horarios, acontecimientos, objetos, relaciones y estados, manteniendo Tío Otaku como operador humano y la IA como componente opcional.
