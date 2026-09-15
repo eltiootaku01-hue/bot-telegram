@@ -1,4 +1,5 @@
 from functools import lru_cache
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -59,6 +60,10 @@ class Settings(BaseSettings):
         value = value.strip()
         if not value:
             raise ValueError("bot_world_timezone must not be empty")
+        try:
+            ZoneInfo(value)
+        except ZoneInfoNotFoundError as exc:
+            raise ValueError(f"unknown IANA timezone: {value}") from exc
         return value
 
     def token_for(self, identity: str) -> str:
