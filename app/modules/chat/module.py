@@ -22,13 +22,25 @@ class ChatModule(BotModule):
     async def handle_text(self, message: Message) -> None:
         if message.from_user is None or not message.text:
             return
+        text = message.text.strip()
         response = self.characters.choose(
             self.identity,
-            message.text,
+            text,
             roll=(message.from_user.id + message.chat.id) % 17,
         )
         if response is None:
             return
+        intent = self.characters.classify(text)
+        if intent is None and text.casefold() != "bot":
+            return
+        if text.casefold() == "bot":
+            response = self.characters.director.choose(
+                self.identity,
+                intent or self.characters.classify("hola"),
+                roll=(message.from_user.id + message.chat.id) % 17,
+            )
+            if response is None:
+                return
         await message.answer(response.scene.text)
         if response.follow_up is not None:
             await message.answer(response.follow_up.text)
