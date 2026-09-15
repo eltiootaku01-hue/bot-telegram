@@ -67,6 +67,6 @@ async def test_user_intent_remains_bound_to_cari_requester(database: Database) -
 
     intent_rows = [row for row in rows if row.entry_type == "intent"]
     assert len(intent_rows) == 1
-    assert intent_rows[0].bot_identity is BotIdentity.CARI
+    assert intent_rows[0].bot_identity == BotIdentity.CARI.value
     assert intent_rows[0].scope_type == "user"
     assert intent_rows[0].scope_id == "7"
