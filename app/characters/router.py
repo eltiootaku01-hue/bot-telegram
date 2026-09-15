@@ -34,7 +34,17 @@ class CharacterIntentRouter:
         ),
         (
             CharacterIntent.HELP,
-            ("ayuda", "ayudame", "ayúdame", "que podes hacer", "qué podés hacer"),
+            (
+                "ayuda",
+                "ayudame",
+                "ayúdame",
+                "que podes hacer",
+                "qué podés hacer",
+                "podes ayudar",
+                "podés ayudar",
+                "me podes ayudar",
+                "me podés ayudar",
+            ),
         ),
     )
 
