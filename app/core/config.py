@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.identity import BotIdentity
@@ -27,6 +28,9 @@ class Settings(BaseSettings):
     media_storage_chat_id: int = 0
     publish_page_chat_id: int = 0
 
+    # World time is explicit for schedules; persistence remains UTC.
+    bot_world_timezone: str = "America/Argentina/Buenos_Aires"
+
     # Global/per-bot AI gates. Features must check these before invoking any LLM.
     ai_enabled: bool = False
     ai_enabled_cari: bool | None = None
@@ -48,6 +52,14 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://127.0.0.1:11434"
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", case_sensitive=False)
+
+    @field_validator("bot_world_timezone")
+    @classmethod
+    def validate_world_timezone(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("bot_world_timezone must not be empty")
+        return value
 
     def token_for(self, identity: str) -> str:
         token = {
