@@ -1,6 +1,7 @@
 from aiogram import F
 from aiogram.types import Message
 
+from app.characters.models import CharacterIntent
 from app.characters.router import CharacterIntentRouter
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
@@ -23,24 +24,18 @@ class ChatModule(BotModule):
         if message.from_user is None or not message.text:
             return
         text = message.text.strip()
-        response = self.characters.choose(
-            self.identity,
-            text,
-            roll=(message.from_user.id + message.chat.id) % 17,
-        )
-        if response is None:
-            return
         intent = self.characters.classify(text)
         if intent is None and text.casefold() != "bot":
             return
         if text.casefold() == "bot":
-            response = self.characters.director.choose(
-                self.identity,
-                intent or self.characters.classify("hola"),
-                roll=(message.from_user.id + message.chat.id) % 17,
-            )
-            if response is None:
-                return
+            intent = CharacterIntent.HELP
+        response = self.characters.director.choose(
+            self.identity,
+            intent,
+            roll=(message.from_user.id + message.chat.id) % 17,
+        )
+        if response is None:
+            return
         await message.answer(response.scene.text)
         if response.follow_up is not None:
             await message.answer(response.follow_up.text)
