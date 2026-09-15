@@ -1,5 +1,6 @@
 from app.characters.director import CharacterDirector
 from app.characters.models import CharacterIntent
+from app.characters.repertoire import REPERTOIRE
 from app.core.identity import BotIdentity
 
 
@@ -30,3 +31,15 @@ def test_cari_can_trigger_authored_friend_intervention():
     assert response is not None
     assert response.follow_up is not None
     assert response.follow_up.speaker is BotIdentity.CAMI
+
+
+def test_repertoire_has_no_duplicate_scene_keys():
+    keys = [scene.key for scene in REPERTOIRE]
+    assert len(keys) == len(set(keys))
+
+
+def test_every_identity_has_core_limit_and_greeting_scenes():
+    director = CharacterDirector()
+    for identity in BotIdentity:
+        assert director.choose(identity, CharacterIntent.GREETING) is not None
+        assert director.choose(identity, CharacterIntent.OUT_OF_SCOPE) is not None
