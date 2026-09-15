@@ -133,7 +133,7 @@ ROUTINE_WINDOWS: tuple[RoutineWindow, ...] = (
         "cierre de coordinación",
         20,
         24,
-        CharacterIntent.BUSY,
+        CharacterIntent.QUIET,
     ),
 )
 
