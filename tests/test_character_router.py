@@ -20,3 +20,11 @@ def test_router_uses_authored_repertoire_for_cari():
     assert response is not None
     assert response.scene.speaker is BotIdentity.CARI
     assert response.scene.intent is CharacterIntent.GREETING
+
+
+def test_router_does_not_match_keywords_inside_other_words():
+    router = CharacterIntentRouter()
+
+    assert router.classify("holanda") is None
+    assert router.classify("hayey") is None
+    assert router.classify("agradecimiento") is None
