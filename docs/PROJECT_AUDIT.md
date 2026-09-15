@@ -25,8 +25,8 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 | --- | ---: |
 | Perfiles de Cari, Sunna, Cami y Chie | 60% |
 | Director determinista | 60% |
-| Repertorio escrito | 38% |
-| Router determinista de intenciones | 35% |
+| Repertorio escrito | 42% |
+| Router determinista de intenciones | 45% |
 | Rutinas y horarios | 20% |
 | Interacciones entre personajes | 27% |
 | Café Otaku | 20% |
@@ -39,11 +39,12 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 ## Riesgos activos detectados por auditoría
 
 1. La personalidad está definida pero no toda está conectada al runtime de conversación.
-2. El repertorio actual es amplio para una primera etapa, pero todavía pequeño frente al objetivo de un NPC con gran variedad y escenas recurrentes.
-3. La conversación debe seguir siendo determinista y opt-in; un handler global de texto puede interferir con otros módulos y debe mantenerse filtrado.
-4. El runtime social todavía usa un compositor local pequeño separado del director de personajes; la próxima integración debe llevarlo al repertorio sin hacer que los bots hablen demasiado.
-5. Café Otaku y las rutinas del mundo todavía son diseño parcial, no funcionalidades completas.
+2. El repertorio sigue creciendo, pero todavía está lejos del volumen necesario para que los cuatro personajes tengan una vida de NPC amplia y sostenible.
+3. La conversación debe seguir siendo determinista y explícitamente activada; el router usa ahora coincidencias de palabras/frases completas para evitar falsos positivos dentro de otras palabras.
+4. El runtime social todavía usa un compositor local pequeño separado del director de personajes; su integración futura debe usar el repertorio sin aumentar en exceso la frecuencia de intervención.
+5. Café Otaku y las rutinas del mundo siguen siendo diseño parcial, no funcionalidades completas.
 6. Se requieren auditorías posteriores para verificar que nuevos juegos o sistemas no desplacen el objetivo principal: personajes y mundo vivos sin dependencia continua de IA.
+7. Deben existir pruebas que protejan la voz específica de Sunna, Cami y Chie frente a expansiones futuras del repertorio.
 
 ## Criterio de finalización
 
@@ -53,6 +54,10 @@ No marcar 100% hasta comprobar: personajes completos, repertorio amplio, rutinas
 
 La ejecución de GitHub Actions `34936594933` terminó correctamente: compiló los cuatro bots y BotManager, verificó los ejecutables, ejecutó el smoke test de BotManager, generó instalador y portable, y subió ambos artefactos. Los tests nativos de media ejecutados en esa misma construcción fueron 15/15.
 
+Una ejecución posterior de CI (`34998729697`) detectó una regresión del test del repertorio tras el endurecimiento de la integración de personajes: Ruff pasó y 155 pruebas pasaron, pero el test de intervención de Cari esperaba la variante de seguimiento en una posición fija del repertorio. Ese test se corrigió para validar la propiedad importante —que exista una variante de Cari que delegue en Cami— en lugar de depender de un índice concreto.
+
 ## Trabajo actual
 
-La capa de personajes está avanzando hacia el runtime: existe un director determinista y ahora un router pequeño de intenciones explícitas que usa exclusivamente el repertorio escrito. El chat de Cari queda limitado a esas señales para no capturar mensajes destinados a otros módulos.
+La capa de personajes está avanzando hacia el runtime: existe un director determinista y un router pequeño de intenciones explícitas que usa exclusivamente el repertorio escrito. El chat de Cari queda limitado a esas señales para no capturar mensajes destinados a otros módulos.
+
+En esta ronda también se endureció la coincidencia del router para que no reconozca palabras clave embebidas dentro de otras palabras y se añadieron pruebas específicas para esos límites.
