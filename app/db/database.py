@@ -10,6 +10,7 @@ from app.db.models import Base
 from app.db import community_models  # noqa: F401 - registers forum topic tables
 from app.db import social_models  # noqa: F401 - registers social wake tables
 from app.db import trivia_models  # noqa: F401 - registers trivia tables
+from app.db import world_models  # noqa: F401 - registers Ciudad Animals world tables
 
 
 def _add_column_if_missing(connection, table: str, column: str, definition: str, existing: set[str]) -> None:
