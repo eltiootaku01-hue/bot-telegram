@@ -115,7 +115,7 @@ def test_cami_and_sunna_have_authored_cross_character_follow_ups():
     assert sunna_response is not None
     assert sunna_response.follow_up is not None
     assert sunna_response.follow_up.speaker is BotIdentity.CHIE
-    assert "quedarte" in sunna_response.scene.text
+    assert "quedarme" in sunna_response.scene.text
 
 
 def test_cross_character_follow_ups_are_authored_dialogue_scenes():
