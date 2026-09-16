@@ -6,7 +6,6 @@ import logging
 from aiogram import Bot
 from sqlalchemy import select
 
-from app.brain.provider import BrainClient, LLMProviderError, LLMRequest
 from app.characters.director import CharacterDirector
 from app.characters.models import CharacterIntent
 from app.characters.routines import RoutineDirector
@@ -30,7 +29,7 @@ DEFAULT_POLL_SECONDS = 30.0
 
 
 class LocalSocialComposer:
-    """Cheap deterministic fallback for proactive speech when the LLM is unavailable."""
+    """Deterministic authored composer for proactive social speech."""
 
     _LOCAL_INTENTS: dict[BotIdentity, CharacterIntent] = {
         BotIdentity.CARI: CharacterIntent.QUIET,
@@ -90,7 +89,6 @@ class SocialRuntime:
         wake_store: SocialWakeStore | None = None,
         turns: SocialTurnArbiter | None = None,
         composer: LocalSocialComposer | None = None,
-        brain: BrainClient | None = None,
     ) -> None:
         self.database = database
         self.identity = identity
@@ -103,7 +101,6 @@ class SocialRuntime:
         self.wake_store = wake_store or SocialWakeStore()
         self.turns = turns or SocialTurnArbiter()
         self.composer = composer or LocalSocialComposer()
-        self.brain = brain or BrainClient(self.settings)
         self._stopping = asyncio.Event()
 
     async def run(self, bot: Bot) -> None:
@@ -127,8 +124,8 @@ class SocialRuntime:
                     select(Chat)
                     .where(Chat.type.in_(("group", "supergroup")))
                     .order_by(Chat.id)
-                )
-            ).all()
+                ).all()
+            )
 
         for chat in chats:
             if await self._tick_chat(bot, chat.id, now):
@@ -191,23 +188,10 @@ class SocialRuntime:
             weekday=world_now.weekday(),
             hour=world_now.hour,
         )
-        if self.settings.ai_for(self.identity):
-            try:
-                message = await self.brain.generate(
-                    LLMRequest(
-                        identity=self.identity,
-                        user_text=(
-                            "Iniciá una intervención espontánea y breve en un chat grupal. "
-                            "No menciones que estás generando una intervención ni hables de APIs."
-                        ),
-                        recent_context=(),
-                        max_tokens=90,
-                        temperature=0.9,
-                    )
-                )
-            except LLMProviderError:
-                logger.warning("Brain unavailable for proactive speech; using local fallback")
 
+        # Proactive social speech is intentionally authored-only. The Brain may
+        # assist explicit user-facing features, but enabling AI must not silently
+        # replace the deterministic character runtime with free-form generation.
         try:
             await bot.send_message(chat_id, message)
         except Exception as exc:
@@ -225,7 +209,7 @@ class SocialRuntime:
             )
             await self.wake_store.save(session, chat_id, next_state)
             await self.presence.spend_energy(session, self.identity, amount=5)
-        logger.info("Social message sent: identity=%s chat=%s", self.identity.value, chat_id)
+        logger.info("Social message sent: identity=%s chat=%s", self.identity.value, self.identity.value)
         return True
 
     async def _fatigue_map(self, session) -> dict[BotIdentity, int]:
