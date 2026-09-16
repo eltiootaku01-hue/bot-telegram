@@ -96,7 +96,8 @@ async def test_handle_text_persists_world_observation_after_authored_response(
     user_scene_rows = [row for row in rows if row.entry_type == "scene" and row.scope_type == "user_chat"]
 
     assert scene_rows
-    assert intent_rows == [row for row in intent_rows if row.bot_identity == BotIdentity.CARI.value]
+    assert len(intent_rows) == 1
+    assert intent_rows[0].bot_identity == BotIdentity.CARI.value
     assert intent_rows[0].scope_id == "7"
     assert user_scene_rows
     assert user_scene_rows[0].scope_id == "7:11"
