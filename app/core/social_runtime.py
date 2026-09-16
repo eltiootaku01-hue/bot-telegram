@@ -124,8 +124,8 @@ class SocialRuntime:
                     select(Chat)
                     .where(Chat.type.in_(("group", "supergroup")))
                     .order_by(Chat.id)
-                ).all()
-            )
+                )
+            ).all()
 
         for chat in chats:
             if await self._tick_chat(bot, chat.id, now):
@@ -209,7 +209,7 @@ class SocialRuntime:
             )
             await self.wake_store.save(session, chat_id, next_state)
             await self.presence.spend_energy(session, self.identity, amount=5)
-        logger.info("Social message sent: identity=%s chat=%s", self.identity.value, self.identity.value)
+        logger.info("Social message sent: identity=%s chat=%s", self.identity.value, chat_id)
         return True
 
     async def _fatigue_map(self, session) -> dict[BotIdentity, int]:
