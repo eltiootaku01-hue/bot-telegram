@@ -1,6 +1,9 @@
+import inspect
+
 from app.characters.director import CharacterDirector
 from app.characters.models import CharacterIntent
 from app.core.identity import BotIdentity
+from app.core import social_runtime
 from app.core.social_runtime import LocalSocialComposer, SocialRuntimeModule
 
 
@@ -42,3 +45,12 @@ def test_social_runtime_module_uses_normal_module_contract() -> None:
     module = SocialRuntimeModule.__new__(SocialRuntimeModule)
 
     assert module.name == "social_runtime"
+
+
+def test_proactive_social_runtime_has_no_brain_generation_path() -> None:
+    """Guard the authored-only boundary against accidental AI substitution."""
+    source = inspect.getsource(social_runtime)
+
+    assert "from app.brain" not in source
+    assert "Brain(" not in source
+    assert ".generate(" not in source
