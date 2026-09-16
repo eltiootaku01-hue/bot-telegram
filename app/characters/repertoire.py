@@ -92,7 +92,16 @@ REPERTOIRE: tuple[DialogueScene, ...] = (
     DialogueScene("sunna-confusion-1", CharacterIntent.CONFUSION, BotIdentity.SUNNA, "No entiendo."),
     DialogueScene("sunna-celebrate-1", CharacterIntent.CELEBRATION, BotIdentity.SUNNA, "Bien."),
     DialogueScene("sunna-celebrate-2", CharacterIntent.CELEBRATION, BotIdentity.SUNNA, "Ganamos."),
+    DialogueScene("sunna-thanks-3", CharacterIntent.THANKS, BotIdentity.SUNNA, "Gracias por quedarte."),
+    DialogueScene("sunna-thanks-4", CharacterIntent.THANKS, BotIdentity.SUNNA, "Me gustó compartirlo."),
+    DialogueScene("sunna-help-3", CharacterIntent.HELP, BotIdentity.SUNNA, "Puedo enseñarte. Despacio."),
+    DialogueScene("sunna-unknown-4", CharacterIntent.UNKNOWN_TOPIC, BotIdentity.SUNNA, "Quiero saber qué es."),
+    DialogueScene("sunna-unknown-5", CharacterIntent.UNKNOWN_TOPIC, BotIdentity.SUNNA, "Nunca había visto eso."),
+    DialogueScene("sunna-quiet-3", CharacterIntent.QUIET, BotIdentity.SUNNA, "Me gusta cuando está tranquilo."),
+    DialogueScene("sunna-celebrate-3", CharacterIntent.CELEBRATION, BotIdentity.SUNNA, "Fue divertido."),
 
     DialogueScene("group-call-cari-cami", CharacterIntent.UNKNOWN_TOPIC, BotIdentity.CARI, "Mmm... no sé..... Cami, ayuda...", follow_up_speaker=BotIdentity.CAMI, follow_up_text="Estoy aquí. ¿Qué necesitas comprobar?"),
     DialogueScene("group-call-cari-chie", CharacterIntent.UNKNOWN_TOPIC, BotIdentity.CARI, "No molestes a Cari -_- ... Casi ven a tomar un juguito.", follow_up_speaker=BotIdentity.CHIE, follow_up_text="P-perdón... ella volverá en un momento. Por favor, no pregunten cosas fuera de sus posibilidades. *sonrisa nerviosa*"),
+    DialogueScene("group-call-cami-sunna", CharacterIntent.UNKNOWN_TOPIC, BotIdentity.CAMI, "Sunna, si quieres podemos revisarlo juntas. Sin prisa.", follow_up_speaker=BotIdentity.SUNNA, follow_up_text="Sí... me gustaría."),
+    DialogueScene("group-call-sunna-chie", CharacterIntent.UNKNOWN_TOPIC, BotIdentity.SUNNA, "Chie... ¿puedo quedarme aquí un rato?", follow_up_speaker=BotIdentity.CHIE, follow_up_text="S-sí. Claro. Puedes quedarte todo el tiempo que necesites."),
 )
