@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.time import utc_now
 from app.db.models import Base
 
 
@@ -19,7 +20,7 @@ class TriviaRound(Base):
     winner_user_id: Mapped[int | None] = mapped_column(BigInteger)
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     won_at: Mapped[datetime | None] = mapped_column(DateTime)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class TriviaAttempt(Base):
@@ -28,5 +29,5 @@ class TriviaAttempt(Base):
     round_id: Mapped[int] = mapped_column(ForeignKey("trivia_rounds.id", ondelete="CASCADE"))
     user_id: Mapped[int] = mapped_column(BigInteger)
     option_index: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     __table_args__ = (UniqueConstraint("round_id", "user_id", name="uq_trivia_round_user"),)
