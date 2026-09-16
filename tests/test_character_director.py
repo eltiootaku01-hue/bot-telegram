@@ -91,3 +91,37 @@ def test_sunna_repertoire_stays_short_and_contained():
     assert sunna_lines
     assert all("!" not in line for line in sunna_lines)
     assert max(len(line) for line in sunna_lines) <= 60
+
+
+def test_sunna_repertoire_includes_growth_beyond_silence():
+    sunna_lines = [scene.text for scene in REPERTOIRE if scene.speaker is BotIdentity.SUNNA]
+
+    assert "Gracias por quedarte." in sunna_lines
+    assert "Quiero saber qué es." in sunna_lines
+    assert "Me gusta cuando está tranquilo." in sunna_lines
+
+
+def test_cami_and_sunna_have_authored_cross_character_follow_ups():
+    director = CharacterDirector()
+
+    cami_response = director.choose(BotIdentity.CAMI, CharacterIntent.UNKNOWN_TOPIC, roll=3)
+    sunna_response = director.choose(BotIdentity.SUNNA, CharacterIntent.UNKNOWN_TOPIC, roll=4)
+
+    assert cami_response is not None
+    assert cami_response.follow_up is not None
+    assert cami_response.follow_up.speaker is BotIdentity.SUNNA
+    assert cami_response.follow_up.text == "Sí... me gustaría."
+
+    assert sunna_response is not None
+    assert sunna_response.follow_up is not None
+    assert sunna_response.follow_up.speaker is BotIdentity.CHIE
+    assert "quedarte" in sunna_response.scene.text
+
+
+def test_cross_character_follow_ups_are_authored_dialogue_scenes():
+    interaction_scenes = [scene for scene in REPERTOIRE if scene.follow_up_speaker is not None]
+
+    assert interaction_scenes
+    for scene in interaction_scenes:
+        assert scene.follow_up_text
+        assert scene.follow_up_speaker is not scene.speaker
