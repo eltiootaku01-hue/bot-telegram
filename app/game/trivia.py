@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.db.repositories import MemberRepository
 from app.db.trivia_models import TriviaAttempt, TriviaRound
 
@@ -38,10 +39,11 @@ class TriviaService:
         return random.choice(QUESTIONS)
 
     async def start_round(self, session: AsyncSession, chat_id: int, *, duration_seconds: int = 90) -> tuple[TriviaRound, TriviaQuestion] | None:
+        now = utc_now()
         active = await session.scalar(select(TriviaRound).where(
             TriviaRound.chat_id == chat_id,
             TriviaRound.status == "active",
-            TriviaRound.expires_at > datetime.utcnow(),
+            TriviaRound.expires_at > now,
         ))
         if active is not None:
             return None
@@ -53,7 +55,7 @@ class TriviaService:
             answer_index=question.answer_index,
             explanation=question.explanation,
             points=question.points,
-            expires_at=datetime.utcnow() + timedelta(seconds=duration_seconds),
+            expires_at=now + timedelta(seconds=duration_seconds),
         )
         session.add(round_row)
         try:
@@ -79,7 +81,7 @@ class TriviaService:
             return "expired", None
         if chat_id is not None and round_row.chat_id != chat_id:
             return "wrong_chat", None
-        if datetime.utcnow() >= round_row.expires_at:
+        if utc_now() >= round_row.expires_at:
             round_row.status = "expired"
             await session.commit()
             return "expired", None
@@ -96,7 +98,7 @@ class TriviaService:
             return "wrong", None
         claimed = await session.execute(update(TriviaRound).where(
             TriviaRound.id == round_id, TriviaRound.status == "active"
-        ).values(status="won", winner_user_id=user_id, won_at=datetime.utcnow()))
+        ).values(status="won", winner_user_id=user_id, won_at=utc_now()))
         if claimed.rowcount != 1:
             await session.rollback()
             return "lost_race", None
