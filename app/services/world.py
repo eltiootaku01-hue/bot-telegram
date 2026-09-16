@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity import BotIdentity
@@ -39,33 +40,57 @@ class WorldService:
             raise ValueError("World observation delta must be positive")
 
         identity = str(bot_identity)
-        stat = await session.scalar(
-            select(WorldUsageStat).where(
-                WorldUsageStat.bot_identity == identity,
-                WorldUsageStat.scope_type == scope_type,
-                WorldUsageStat.scope_id == scope_id,
-                WorldUsageStat.entry_type == entry_type,
-                WorldUsageStat.entry_key == entry_key,
-            )
-        )
         now = utc_now()
-        if stat is None:
-            stat = WorldUsageStat(
-                bot_identity=identity,
-                scope_type=scope_type,
-                scope_id=scope_id,
-                entry_type=entry_type,
-                entry_key=entry_key,
-                count=delta,
-                first_seen_at=now,
+        filters = (
+            WorldUsageStat.bot_identity == identity,
+            WorldUsageStat.scope_type == scope_type,
+            WorldUsageStat.scope_id == scope_id,
+            WorldUsageStat.entry_type == entry_type,
+            WorldUsageStat.entry_key == entry_key,
+        )
+
+        # Update-first makes repeated observations atomic at the row level and
+        # avoids the lost-update window of SELECT -> mutate -> flush. If two bot
+        # processes observe a never-seen key at the same time, the unique index
+        # arbitrates the first insert and the loser retries as an update.
+        result = await session.execute(
+            update(WorldUsageStat)
+            .where(*filters)
+            .values(
+                count=WorldUsageStat.count + delta,
                 last_seen_at=now,
             )
-            session.add(stat)
-        else:
-            stat.count += delta
-            stat.last_seen_at = now
-        await session.flush()
-        return stat
+        )
+        if result.rowcount:
+            return await session.scalar(select(WorldUsageStat).where(*filters))  # type: ignore[return-value]
+
+        try:
+            async with session.begin_nested():
+                stat = WorldUsageStat(
+                    bot_identity=identity,
+                    scope_type=scope_type,
+                    scope_id=scope_id,
+                    entry_type=entry_type,
+                    entry_key=entry_key,
+                    count=delta,
+                    first_seen_at=now,
+                    last_seen_at=now,
+                )
+                session.add(stat)
+                await session.flush()
+        except IntegrityError:
+            result = await session.execute(
+                update(WorldUsageStat)
+                .where(*filters)
+                .values(
+                    count=WorldUsageStat.count + delta,
+                    last_seen_at=now,
+                )
+            )
+            if not result.rowcount:
+                raise
+
+        return await session.scalar(select(WorldUsageStat).where(*filters))  # type: ignore[return-value]
 
     async def register_catalog_entry(
         self,
@@ -79,30 +104,51 @@ class WorldService:
         enabled: bool = True,
     ) -> WorldCatalogEntry:
         identity = str(bot_identity)
-        entry = await session.scalar(
-            select(WorldCatalogEntry).where(
-                WorldCatalogEntry.bot_identity == identity,
-                WorldCatalogEntry.entry_type == entry_type,
-                WorldCatalogEntry.entry_key == entry_key,
-            )
+        filters = (
+            WorldCatalogEntry.bot_identity == identity,
+            WorldCatalogEntry.entry_type == entry_type,
+            WorldCatalogEntry.entry_key == entry_key,
         )
-        if entry is None:
-            entry = WorldCatalogEntry(
-                bot_identity=identity,
-                entry_type=entry_type,
-                entry_key=entry_key,
+        result = await session.execute(
+            update(WorldCatalogEntry)
+            .where(*filters)
+            .values(
                 label=label,
                 priority=priority,
                 enabled=enabled,
+                updated_at=utc_now(),
             )
-            session.add(entry)
-        else:
-            entry.label = label
-            entry.priority = priority
-            entry.enabled = enabled
-            entry.updated_at = utc_now()
-        await session.flush()
-        return entry
+        )
+        if result.rowcount:
+            return await session.scalar(select(WorldCatalogEntry).where(*filters))  # type: ignore[return-value]
+
+        try:
+            async with session.begin_nested():
+                entry = WorldCatalogEntry(
+                    bot_identity=identity,
+                    entry_type=entry_type,
+                    entry_key=entry_key,
+                    label=label,
+                    priority=priority,
+                    enabled=enabled,
+                )
+                session.add(entry)
+                await session.flush()
+        except IntegrityError:
+            result = await session.execute(
+                update(WorldCatalogEntry)
+                .where(*filters)
+                .values(
+                    label=label,
+                    priority=priority,
+                    enabled=enabled,
+                    updated_at=utc_now(),
+                )
+            )
+            if not result.rowcount:
+                raise
+
+        return await session.scalar(select(WorldCatalogEntry).where(*filters))  # type: ignore[return-value]
 
     async def user_summary(
         self,
