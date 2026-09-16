@@ -105,7 +105,7 @@ def test_cami_and_sunna_have_authored_cross_character_follow_ups():
     director = CharacterDirector()
 
     cami_response = director.choose(BotIdentity.CAMI, CharacterIntent.UNKNOWN_TOPIC, roll=3)
-    sunna_response = director.choose(BotIdentity.SUNNA, CharacterIntent.UNKNOWN_TOPIC, roll=4)
+    sunna_response = director.choose(BotIdentity.SUNNA, CharacterIntent.UNKNOWN_TOPIC, roll=5)
 
     assert cami_response is not None
     assert cami_response.follow_up is not None
