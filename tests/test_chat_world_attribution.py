@@ -70,3 +70,33 @@ async def test_user_intent_remains_bound_to_cari_requester(database: Database) -
     assert intent_rows[0].bot_identity == BotIdentity.CARI.value
     assert intent_rows[0].scope_type == "user"
     assert intent_rows[0].scope_id == "7"
+
+
+@pytest.mark.asyncio
+async def test_handle_text_persists_world_observation_after_authored_response(
+    database: Database,
+) -> None:
+    module = ChatModule(database)
+    answers: list[str] = []
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=7),
+        chat=SimpleNamespace(id=11),
+        text="hola",
+    )
+    message.answer = answers.append
+
+    await module.handle_text(message)
+
+    assert answers
+    async with database.session() as session:
+        rows = (await session.scalars(select(WorldUsageStat))).all()
+
+    scene_rows = [row for row in rows if row.entry_type == "scene" and row.scope_type == "world"]
+    intent_rows = [row for row in rows if row.entry_type == "intent"]
+    user_scene_rows = [row for row in rows if row.entry_type == "scene" and row.scope_type == "user_chat"]
+
+    assert scene_rows
+    assert intent_rows == [row for row in intent_rows if row.bot_identity == BotIdentity.CARI.value]
+    assert intent_rows[0].scope_id == "7"
+    assert user_scene_rows
+    assert user_scene_rows[0].scope_id == "7:11"
