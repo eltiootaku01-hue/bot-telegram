@@ -1,6 +1,6 @@
 # Auditoría viva del proyecto
 
-Fecha de referencia: 2026-09-15
+Fecha de referencia: 2026-09-16
 
 Este documento separa el estado técnico comprobable del avance hacia la visión completa de Ciudad Animals. Los porcentajes son estimaciones de alcance, no métricas automáticas de cobertura.
 
@@ -54,6 +54,7 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 11. La bibliotecaria y las capas de conocimiento deben distinguir entre canon del autor, datos externos normalizados, planificación y propuestas.
 12. Las pruebas deben seguir protegiendo la voz específica de Sunna, Cami y Chie frente a expansiones futuras del repertorio.
 13. CI no se considera verde solo por una corrección local: cada cambio debe tener una ejecución posterior concluida con éxito.
+14. La trivia tenía llamadas directas a `datetime.utcnow()` y defaults de modelo basados en ese reloj, fuera de la abstracción temporal central. Esto se corrigió para usar `app.core.time.utc_now()`, manteniendo el almacenamiento UTC-naive coherente con el resto de la plataforma.
 
 ## Canon de personajes incorporado
 
@@ -87,7 +88,7 @@ La documentación actual de SQLAlchemy 2.0 confirma que `AsyncSession` es mutabl
 
 ### Tiempo del mundo
 
-Python `zoneinfo` implementa zonas IANA y puede usar datos del sistema o `tzdata`. El proyecto valida la zona configurada y declara `tzdata` para reproducibilidad en Windows.
+Python `zoneinfo` implementa zonas IANA y puede usar datos del sistema o `tzdata`. El proyecto valida la zona configurada y declara `tzdata` para reproducibilidad en Windows. La auditoría del 16-09-2026 extendió esta regla a Trivia, eliminando el uso directo de `datetime.utcnow()` en el servicio y sus modelos.
 
 ### IA opcional
 
@@ -107,7 +108,9 @@ La comparación de proyectos públicos de aiogram y bots modulares confirma como
 - Se corrigió `Database.session()` para commit/rollback y se añadió una prueba de persistencia entre sesiones.
 - La comparación incorrecta con `BotIdentity.CARI` también quedó corregida para usar su valor en el campo persistido.
 - Los builds de Windows `35010256095` y `35010289685` terminaron correctamente, incluyendo media, ejecutables, smoke test, instalador, portable, checksums y artefactos.
-- Las ejecuciones CI posteriores deben cerrar la validación conjunta; no se marca éxito hasta observar su conclusión positiva.
+- CI `35063030974` detectó un contrato incorrecto en una prueba de `ChatModule`: el stub de `message.answer` era síncrono mientras la producción lo espera como coroutine. Se corrigió el test para respetar el contrato real.
+- El commit `95e9f2a45feec848a2493dc714e7acb6b5bc7516` disparó un nuevo Windows build (`35103114020`) y posteriormente el commit de tiempo de Trivia disparó CI `35103303476`. En el momento de esta auditoría ambos seguían en ejecución; por tanto, todavía no se declara CI verde.
+- El build Windows `35103114020` ya había completado instalación de dependencias, pruebas nativas de media, instalación de Inno Setup y resolución de versión antes de continuar con los ejecutables.
 
 ## Trabajo actual
 
@@ -115,7 +118,9 @@ La capa de personajes ya distingue entre canon del autor y comportamiento operat
 
 El runtime social usa director, repertorio y rutinas con hora mundial configurable y texto authored-only.
 
-La persistencia de observaciones de mundo tiene una frontera transaccional explícita y cobertura dedicada.
+La persistencia de observaciones de mundo tiene una frontera transaccional explícita, operaciones de observación resistentes a carreras y cobertura dedicada. `ChatModule` ya conecta una respuesta authored-only con una observación de mundo persistida.
+
+La auditoría de módulos muestra que WaifuMon/progresión y solicitudes tienen límites transaccionales explícitos. La trivia también queda alineada con el reloj central después de la corrección del 16-09-2026. Todavía falta extender de forma deliberada la observación del mundo a eventos de dominio relevantes de juegos, trivia, media y solicitudes; no se añadirá telemetría indiscriminada solo para aumentar estadísticas.
 
 La siguiente fase prioritaria es convertir las bases documentales en datos de dominio consultables, ampliar el repertorio, modelar relaciones/acontecimientos/objetos/estado del Café Otaku y Ciudad Animals, y diseñar la futura interfaz de Tío Otaku como herramienta de operación humana. La IA seguirá siendo opcional.
 
