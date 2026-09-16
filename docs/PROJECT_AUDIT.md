@@ -55,6 +55,8 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 12. Las pruebas deben seguir protegiendo la voz específica de Sunna, Cami y Chie frente a expansiones futuras del repertorio.
 13. CI no se considera verde solo por una corrección local: cada cambio debe tener una ejecución posterior concluida con éxito.
 14. La trivia tenía llamadas directas a `datetime.utcnow()` y defaults de modelo basados en ese reloj, fuera de la abstracción temporal central. Esto se corrigió para usar `app.core.time.utc_now()`, manteniendo el almacenamiento UTC-naive coherente con el resto de la plataforma.
+15. La auditoría de solicitudes detectó una segunda frontera transaccional que debe vigilarse: `RequestService.create_paid()` hace `commit()` y `rollback()` internos aunque el llamador usa `Database.session()` como frontera transaccional. Esto funciona en el flujo actual, pero reduce la composabilidad del servicio y puede confirmar o deshacer trabajo ajeno si el mismo `AsyncSession` se reutiliza. SQLAlchemy recomienda una `AsyncSession` por tarea y una transacción claramente delimitada; la siguiente corrección debe preservar la atomicidad del cobro y de la solicitud sin romper la frontera superior.
+16. `FanRequest` y `PointTransaction` tienen restricciones únicas y el servicio ya intenta resolver carreras de mensajes duplicados mediante `source_message_id` y referencias de puntos. Falta una prueba de integración que ejerza explícitamente dos intentos concurrentes y compruebe que solo uno cobra y crea la solicitud.
 
 ## Canon de personajes incorporado
 
@@ -84,11 +86,15 @@ La documentación oficial de aiogram mantiene el enfoque de `Router`, middleware
 
 ### Persistencia / concurrencia
 
-La documentación actual de SQLAlchemy 2.0 confirma que `AsyncSession` es mutable y no debe compartirse entre tareas concurrentes; el proyecto usa sesiones separadas por operación y ahora define una frontera transaccional explícita.
+La documentación actual de SQLAlchemy 2.1 confirma que `AsyncSession` es mutable y no debe compartirse entre tareas concurrentes; el patrón recomendado es una sesión por tarea y una transacción por unidad de trabajo. Esta regla se usa ahora como criterio explícito de auditoría para servicios que reciben una sesión desde `Database.session()`.
 
 ### Tiempo del mundo
 
 Python `zoneinfo` implementa zonas IANA y puede usar datos del sistema o `tzdata`. El proyecto valida la zona configurada y declara `tzdata` para reproducibilidad en Windows. La auditoría del 16-09-2026 extendió esta regla a Trivia, eliminando el uso directo de `datetime.utcnow()` en el servicio y sus modelos.
+
+### GitHub Actions / CI
+
+GitHub documenta que las ejecuciones de Actions pueden ejecutarse concurrentemente por defecto y que `concurrency` permite limitar o cancelar ejecuciones obsoletas. Por ahora no se añade esa configuración por estética: primero se debe comprobar si el patrón real del repositorio genera ejecuciones redundantes o conflictos. El objetivo es que CI siga verificando cada cambio útil sin ocultar fallos ni desperdiciar recursos.
 
 ### IA opcional
 
@@ -109,8 +115,9 @@ La comparación de proyectos públicos de aiogram y bots modulares confirma como
 - La comparación incorrecta con `BotIdentity.CARI` también quedó corregida para usar su valor en el campo persistido.
 - Los builds de Windows `35010256095` y `35010289685` terminaron correctamente, incluyendo media, ejecutables, smoke test, instalador, portable, checksums y artefactos.
 - CI `35063030974` detectó un contrato incorrecto en una prueba de `ChatModule`: el stub de `message.answer` era síncrono mientras la producción lo espera como coroutine. Se corrigió el test para respetar el contrato real.
-- El commit `95e9f2a45feec848a2493dc714e7acb6b5bc7516` disparó un nuevo Windows build (`35103114020`) y posteriormente el commit de tiempo de Trivia disparó CI `35103303476`. En el momento de esta auditoría ambos seguían en ejecución; por tanto, todavía no se declara CI verde.
-- El build Windows `35103114020` ya había completado instalación de dependencias, pruebas nativas de media, instalación de Inno Setup y resolución de versión antes de continuar con los ejecutables.
+- El commit `95e9f2a45feec848a2493dc714e7acb6b5bc7516` disparó un nuevo Windows build (`35103114020`).
+- El commit `248255158ea8adb981594e58c8c01db6ee6bf5d2` es actualmente `main`. Para ese commit, Windows build `35103365937` terminó con conclusión `success` el 16-09-2026.
+- La última ejecución Linux conocida asociada al commit anterior `44ee28a6e28e9082d6c665dd9b525893d204ca2c` también terminó con éxito. La auditoría no marcará todo el pipeline como verde para el commit `248255...` hasta observar una ejecución Linux posterior específica de ese SHA.
 
 ## Trabajo actual
 
@@ -120,9 +127,11 @@ El runtime social usa director, repertorio y rutinas con hora mundial configurab
 
 La persistencia de observaciones de mundo tiene una frontera transaccional explícita, operaciones de observación resistentes a carreras y cobertura dedicada. `ChatModule` ya conecta una respuesta authored-only con una observación de mundo persistida.
 
-La auditoría de módulos muestra que WaifuMon/progresión y solicitudes tienen límites transaccionales explícitos. La trivia también queda alineada con el reloj central después de la corrección del 16-09-2026. Todavía falta extender de forma deliberada la observación del mundo a eventos de dominio relevantes de juegos, trivia, media y solicitudes; no se añadirá telemetría indiscriminada solo para aumentar estadísticas.
+La auditoría de módulos muestra que WaifuMon/progresión y solicitudes tienen límites transaccionales explícitos en sus flujos actuales, pero solicitudes necesita una corrección posterior para que el servicio no se apropie de la transacción del llamador. La trivia también queda alineada con el reloj central después de la corrección del 16-09-2026. Todavía falta extender de forma deliberada la observación del mundo a eventos de dominio relevantes de juegos, trivia, media y solicitudes; no se añadirá telemetría indiscriminada solo para aumentar estadísticas.
 
-La siguiente fase prioritaria es convertir las bases documentales en datos de dominio consultables, ampliar el repertorio, modelar relaciones/acontecimientos/objetos/estado del Café Otaku y Ciudad Animals, y diseñar la futura interfaz de Tío Otaku como herramienta de operación humana. La IA seguirá siendo opcional.
+La siguiente fase inmediata es: (1) comprobar el pipeline Linux para el SHA actual, (2) añadir una prueba de concurrencia/idempotencia para solicitudes y puntos, (3) corregir la propiedad de la transacción en `RequestService` sin perder atomicidad, (4) repetir CI Linux + Windows, y (5) continuar con WaifuMon, Trivia y Media bajo el mismo recorrido `Telegram → módulo → servicio de dominio → persistencia → evento/mundo`.
+
+La siguiente fase de producto, después de cerrar esas fronteras, es convertir las bases documentales en datos de dominio consultables, ampliar el repertorio, modelar relaciones/acontecimientos/objetos/estado del Café Otaku y Ciudad Animals, y diseñar la futura interfaz de Tío Otaku como herramienta de operación humana. La IA seguirá siendo opcional.
 
 ## Criterio de finalización
 
