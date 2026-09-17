@@ -71,12 +71,32 @@ async def test_private_chat_is_limited_to_configured_admin() -> None:
     assert await middleware(handler, denied, {"event_update": denied}) is None
 
 
+@pytest.mark.asyncio
+async def test_private_admin_can_be_disabled_explicitly() -> None:
+    settings = Settings(admin_user_id=77, allow_admin_private_chat=False)
+    middleware = ChatAccessMiddleware(settings)
+
+    async def handler(event, data):
+        return "must-not-run"
+
+    update = make_update(chat_id=77, chat_type="private", user_id=77)
+
+    assert await middleware(handler, update, {"event_update": update}) is None
+
+
 def test_empty_or_malformed_allowlist_fails_closed() -> None:
     settings = Settings(authorized_chat_ids=" ,not-a-chat-id, ")
     middleware = ChatAccessMiddleware(settings)
 
     assert settings.authorized_chat_ids_set == frozenset()
     assert middleware._is_allowed(make_update(chat_id=-100123, chat_type="supergroup")) is False
+
+
+def test_malformed_allowlist_entries_do_not_expand_access() -> None:
+    settings = Settings(authorized_chat_ids="-100123,  ,abc, -100456xyz, -100456")
+
+    assert settings.authorized_chat_ids_set == frozenset({-100123, -100456})
+    assert settings.is_chat_allowed(-100999, "group") is False
 
 
 def test_central_chat_policy_matches_middleware_rules() -> None:
