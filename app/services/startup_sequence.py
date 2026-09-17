@@ -15,6 +15,7 @@ class StartupFailure:
 class StartupResult:
     started: tuple[str, ...]
     failure: StartupFailure | None = None
+    cancelled: bool = False
 
 
 class StartupSequence:
@@ -26,17 +27,25 @@ class StartupSequence:
         launch: Callable[[str], object],
         health: Callable[[str, object], bool],
         stop: Callable[[str, object], None],
+        should_continue: Callable[[], bool] | None = None,
     ) -> None:
         self.identities = tuple(identities)
         self.launch = launch
         self.health = health
         self.stop = stop
+        self.should_continue = should_continue or (lambda: True)
 
     def run(self) -> StartupResult:
         started: list[tuple[str, object]] = []
         for identity in self.identities:
+            if not self.should_continue():
+                self.stop_started(started)
+                return StartupResult(tuple(), cancelled=True)
             try:
                 process = self.launch(identity)
+                if not self.should_continue():
+                    self.stop_started((*started, (identity, process)))
+                    return StartupResult(tuple(), cancelled=True)
                 if not self.health(identity, process):
                     self.stop_started(started)
                     return StartupResult(
@@ -47,6 +56,9 @@ class StartupSequence:
                             self._returncode(process),
                         ),
                     )
+                if not self.should_continue():
+                    self.stop_started((*started, (identity, process)))
+                    return StartupResult(tuple(), cancelled=True)
                 started.append((identity, process))
             except Exception as exc:
                 self.stop_started(started)
