@@ -21,6 +21,19 @@ class PaidRequestResult:
     created: bool
 
 
+def _is_fan_request_source_conflict(exc: IntegrityError) -> bool:
+    """Recognize only the unique constraint used for request idempotency."""
+    constraint_name = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+    if constraint_name == "uq_fan_request_source":
+        return True
+    message = str(exc.orig).lower()
+    return "uq_fan_request_source" in message or (
+        "fan_requests.user_id" in message
+        and "fan_requests.chat_id" in message
+        and "fan_requests.source_message_id" in message
+    )
+
+
 class RequestService:
     """Persistence boundary for fan requests; the web panel can reuse it later."""
 
@@ -111,9 +124,9 @@ class RequestService:
                 )
             )
             await nested.commit()
-        except IntegrityError:
+        except IntegrityError as exc:
             await nested.rollback()
-            if source_message_id is None:
+            if source_message_id is None or not _is_fan_request_source_conflict(exc):
                 raise
             existing = await session.scalar(
                 select(FanRequest).where(
