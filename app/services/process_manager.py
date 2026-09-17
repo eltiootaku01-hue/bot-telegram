@@ -73,8 +73,18 @@ class ProcessManager:
             if self.processes.get(identity) is target:
                 self.processes.pop(identity, None)
 
-    def start_sequential(self, identities: Sequence[str]) -> StartupResult:
-        sequence = StartupSequence(identities, self.launch, self.check_health, self.stop)
+    def start_sequential(
+        self,
+        identities: Sequence[str],
+        should_continue: Callable[[], bool] | None = None,
+    ) -> StartupResult:
+        sequence = StartupSequence(
+            identities,
+            self.launch,
+            self.check_health,
+            self.stop,
+            should_continue,
+        )
         result = sequence.run()
         if result.failure is not None:
             events = self.reader.drain()
@@ -93,7 +103,7 @@ class ProcessManager:
         with self._lock:
             for event in events:
                 existing = self.last_output.get(event.identity, ())
-                self.last_output[event.identity] = existing + (event,)
+                self.last_output[identity] = existing + (event,)
         return events
 
     def active_processes(self) -> dict[str, Popen[str]]:
