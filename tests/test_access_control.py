@@ -4,6 +4,8 @@ import pytest
 from aiogram.types import Chat, Message, Update, User
 
 from app.core.config import Settings
+from app.core.identity import BotIdentity
+from app.core.social_runtime import SocialRuntime
 from app.middleware.access_control import ChatAccessMiddleware
 
 
@@ -75,3 +77,23 @@ def test_empty_or_malformed_allowlist_fails_closed() -> None:
 
     assert settings.authorized_chat_ids_set == frozenset()
     assert middleware._is_allowed(make_update(chat_id=-100123, chat_type="supergroup")) is False
+
+
+def test_central_chat_policy_matches_middleware_rules() -> None:
+    settings = Settings(authorized_chat_ids="-100123", admin_user_id=77)
+
+    assert settings.is_chat_allowed(-100123, "group") is True
+    assert settings.is_chat_allowed(-100999, "supergroup") is False
+    assert settings.is_chat_allowed(77, "private", 77) is True
+    assert settings.is_chat_allowed(88, "private", 88) is False
+    assert settings.is_chat_allowed(-100123, "channel") is False
+
+
+@pytest.mark.asyncio
+async def test_social_runtime_skips_unauthorized_chat_before_database_work() -> None:
+    settings = Settings(authorized_chat_ids="-100123")
+    runtime = SocialRuntime(database=None, identity=BotIdentity.CARI, settings=settings)
+
+    result = await runtime._tick_chat(bot=None, chat_id=-100999, now=datetime.now(timezone.utc))
+
+    assert result is False
