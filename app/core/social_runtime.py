@@ -128,11 +128,18 @@ class SocialRuntime:
             ).all()
 
         for chat in chats:
+            if not self.settings.is_chat_allowed(chat.id, chat.type):
+                continue
             if await self._tick_chat(bot, chat.id, now):
                 return True
         return False
 
     async def _tick_chat(self, bot: Bot, chat_id: int, now) -> bool:
+        if not self.settings.is_chat_allowed(chat_id, "group") and not self.settings.is_chat_allowed(
+            chat_id, "supergroup"
+        ):
+            return False
+
         async with self.database.session() as session:
             wake = await self.wake_store.get_or_create(
                 session,
@@ -193,6 +200,13 @@ class SocialRuntime:
         # assist explicit user-facing features, but enabling AI must not silently
         # replace the deterministic character runtime with free-form generation.
         try:
+            if not (
+                self.settings.is_chat_allowed(chat_id, "group")
+                or self.settings.is_chat_allowed(chat_id, "supergroup")
+            ):
+                async with self.database.session() as session:
+                    await self.turns.abandon(session, turn, reason="chat no longer authorized")
+                return False
             await bot.send_message(chat_id, message)
         except Exception as exc:
             async with self.database.session() as session:
