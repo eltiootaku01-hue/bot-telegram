@@ -5,6 +5,7 @@ import time
 
 from app.services.launcher_supervisor import LauncherSupervisor
 from app.services.process_manager import ProcessManager
+from app.services.startup_sequence import StartupSequence
 
 
 def wait_result(supervisor: LauncherSupervisor):
@@ -76,3 +77,57 @@ def test_supervisor_preserves_fail_fast_startup_result() -> None:
     assert result.result.failure.identity == "cari"
     assert result.result.failure.returncode == 9
     assert "sunna" not in manager.processes
+
+
+def test_startup_sequence_cancels_before_launching_next_identity() -> None:
+    launched: list[str] = []
+    stopped: list[str] = []
+    continue_state = {"value": True}
+
+    def launch(identity: str) -> object:
+        launched.append(identity)
+        continue_state["value"] = False
+        return object()
+
+    def health(_: str, __: object) -> bool:
+        return True
+
+    def stop(identity: str, _: object) -> None:
+        stopped.append(identity)
+
+    sequence = StartupSequence(
+        ("cari", "sunna", "cami"),
+        launch,
+        health,
+        stop,
+        lambda: continue_state["value"],
+    )
+
+    result = sequence.run()
+
+    assert result.cancelled is True
+    assert result.failure is None
+    assert result.started == ()
+    assert launched == ["cari"]
+    assert stopped == ["cari"]
+
+
+def test_supervisor_stop_all_cancels_pending_startup() -> None:
+    manager = ProcessManager(
+        lambda _: [sys.executable, "-c", "import time; time.sleep(10)"],
+        grace_seconds=0.5,
+        stop_timeout=0.5,
+    )
+    supervisor = LauncherSupervisor(manager)
+
+    assert supervisor.start_all(("cari", "sunna"))
+    time.sleep(0.05)
+    supervisor.stop_all()
+
+    result = wait_result(supervisor)
+    assert result.error is None
+    assert result.result is not None
+    assert result.result.cancelled is True
+    assert result.result.failure is None
+    assert result.result.started == ()
+    assert manager.active_processes() == {}
