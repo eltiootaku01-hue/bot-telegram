@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from queue import Empty, Queue
-from threading import Lock, Thread
+from threading import Event, Lock, Thread
 from typing import Sequence
 
 from app.services.process_manager import ProcessManager
@@ -23,6 +23,7 @@ class LauncherSupervisor:
         self._lock = Lock()
         self._results: Queue[StartupTaskResult] = Queue()
         self._thread: Thread | None = None
+        self._cancel = Event()
 
     @property
     def running(self) -> bool:
@@ -33,6 +34,7 @@ class LauncherSupervisor:
         with self._lock:
             if self.running:
                 return False
+            self._cancel.clear()
             self._thread = Thread(
                 target=self._run,
                 args=(tuple(identities),),
@@ -44,10 +46,13 @@ class LauncherSupervisor:
 
     def _run(self, identities: tuple[str, ...]) -> None:
         try:
-            result = StartupTaskResult(result=self.manager.start_sequential(identities))
+            result = StartupTaskResult(result=self.manager.start_sequential(identities, self._should_continue))
         except BaseException as exc:  # surface unexpected startup errors to the UI
             result = StartupTaskResult(error=exc)
         self._results.put(result)
+
+    def _should_continue(self) -> bool:
+        return not self._cancel.is_set()
 
     def poll_result(self) -> StartupTaskResult | None:
         """Non-blocking result retrieval; safe to call from Tk's event loop."""
@@ -60,4 +65,5 @@ class LauncherSupervisor:
         return result
 
     def stop_all(self) -> None:
+        self._cancel.set()
         self.manager.stop_all()
