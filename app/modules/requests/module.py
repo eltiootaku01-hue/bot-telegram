@@ -38,10 +38,12 @@ class RequestModule(BotModule):
             await callback.answer("Los pedidos se hacen desde el grupo.", show_alert=True)
             return
         async with self.database.session() as session:
-            profile = await session.scalar(select(GameProfile).where(
-                GameProfile.user_id == callback.from_user.id,
-                GameProfile.chat_id == callback.message.chat.id,
-            ))
+            profile = await session.scalar(
+                select(GameProfile).where(
+                    GameProfile.user_id == callback.from_user.id,
+                    GameProfile.chat_id == callback.message.chat.id,
+                )
+            )
             balance = profile.points if profile else 0
         if balance < DEFAULT_REQUEST_COST:
             await callback.answer(
@@ -79,10 +81,16 @@ class RequestModule(BotModule):
         if result is None:
             await message.answer("😰 No pude cobrar el pedido: ya no tenés suficientes puntos.")
             return
-        request, remaining = result
+        request = result.request
+        if not result.created:
+            await message.answer(
+                f"ℹ️ <b>Pedido #{request.id} ya estaba registrado.</b>\n"
+                f"No se volvieron a descontar puntos. Saldo actual: <b>{result.remaining_points}</b>."
+            )
+            return
         await message.answer(
             f"✅ <b>Pedido #{request.id} registrado.</b>\n"
-            f"💰 Se descontaron {DEFAULT_REQUEST_COST} puntos. Saldo restante: <b>{remaining}</b>.\n\n"
+            f"💰 Se descontaron {DEFAULT_REQUEST_COST} puntos. Saldo restante: <b>{result.remaining_points}</b>.\n\n"
             "Chie ya avisó al encargado. Cuando la imagen esté lista, Cami la llevará a #pedidos y te etiquetará.",
         )
 
