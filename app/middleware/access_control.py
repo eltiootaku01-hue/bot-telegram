@@ -37,17 +37,9 @@ class ChatAccessMiddleware(BaseMiddleware):
         if message is None:
             return False
 
-        chat = message.chat
-        if chat.type == "private":
-            user = message.from_user
-            return (
-                self.settings.allow_admin_private_chat
-                and self.settings.admin_user_id != 0
-                and user is not None
-                and user.id == self.settings.admin_user_id
-            )
-
-        if chat.type not in {"group", "supergroup"}:
-            return False
-
-        return chat.id in self.settings.authorized_chat_ids_set
+        user = message.from_user
+        return self.settings.is_chat_allowed(
+            message.chat.id,
+            message.chat.type,
+            user.id if user is not None else None,
+        )
