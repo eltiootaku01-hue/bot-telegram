@@ -84,6 +84,23 @@ class Settings(BaseSettings):
                 continue
         return frozenset(result)
 
+    def is_chat_allowed(
+        self,
+        chat_id: int,
+        chat_type: str,
+        user_id: int | None = None,
+    ) -> bool:
+        """Return whether this Telegram chat may reach bot application logic."""
+        if chat_type == "private":
+            return (
+                self.allow_admin_private_chat
+                and self.admin_user_id != 0
+                and user_id == self.admin_user_id
+            )
+        if chat_type in {"group", "supergroup"}:
+            return chat_id in self.authorized_chat_ids_set
+        return False
+
     def token_for(self, identity: str) -> str:
         token = {
             "cari": self.bot_token_cari,
