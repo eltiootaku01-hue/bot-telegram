@@ -47,6 +47,9 @@ class StartupSequence:
                     self.stop_started((*started, (identity, process)))
                     return StartupResult(tuple(), cancelled=True)
                 if not self.health(identity, process):
+                    if not self.should_continue():
+                        self.stop_started((*started, (identity, process)))
+                        return StartupResult(tuple(), cancelled=True)
                     self.stop_started(started)
                     return StartupResult(
                         tuple(item[0] for item in started),
@@ -61,6 +64,9 @@ class StartupSequence:
                     return StartupResult(tuple(), cancelled=True)
                 started.append((identity, process))
             except Exception as exc:
+                if not self.should_continue():
+                    self.stop_started((*started,))
+                    return StartupResult(tuple(), cancelled=True)
                 self.stop_started(started)
                 return StartupResult(
                     tuple(item[0] for item in started),
