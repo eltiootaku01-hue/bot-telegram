@@ -78,8 +78,11 @@ def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None:
 
 
 def _begin_sqlite_transaction(connection) -> None:
-    """Emit an explicit BEGIN for every SQLAlchemy transaction on SQLite."""
-    connection.exec_driver_sql("BEGIN")
+    """Emit an explicit BEGIN, optionally acquiring the SQLite write lock early."""
+    mode = connection.get_execution_options().get("sqlite_txn_mode", "DEFERRED")
+    if mode not in {"DEFERRED", "IMMEDIATE", "EXCLUSIVE"}:
+        raise ValueError(f"Unsupported SQLite transaction mode: {mode}")
+    connection.exec_driver_sql(f"BEGIN {mode}")
 
 
 class Database:
@@ -110,10 +113,12 @@ class Database:
                 await asyncio.sleep(0.1 * (2**attempt))
 
     @asynccontextmanager
-    async def session(self) -> AsyncIterator[AsyncSession]:
+    async def session(self, *, write: bool = False) -> AsyncIterator[AsyncSession]:
         """Open one transaction boundary and commit only after all work succeeds."""
         async with self.sessions() as session:
             try:
+                if write and self.engine.dialect.name == "sqlite":
+                    await session.connection(execution_options={"sqlite_txn_mode": "IMMEDIATE"})
                 yield session
                 await session.commit()
             except Exception:
