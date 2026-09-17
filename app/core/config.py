@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     media_storage_chat_id: int = 0
     publish_page_chat_id: int = 0
 
+    # Telegram access is fail-closed: group/supergroup ids must be explicitly authorized.
+    authorized_chat_ids: str = ""
+    allow_admin_private_chat: bool = True
+
     # World time is explicit for schedules; persistence remains UTC.
     bot_world_timezone: str = "America/Argentina/Buenos_Aires"
 
@@ -65,6 +69,20 @@ class Settings(BaseSettings):
         except ZoneInfoNotFoundError as exc:
             raise ValueError(f"unknown IANA timezone: {value}") from exc
         return value
+
+    @property
+    def authorized_chat_ids_set(self) -> frozenset[int]:
+        """Parse the explicit group allowlist; malformed entries fail closed."""
+        result: set[int] = set()
+        for raw_value in self.authorized_chat_ids.split(","):
+            value = raw_value.strip()
+            if not value:
+                continue
+            try:
+                result.add(int(value))
+            except ValueError:
+                continue
+        return frozenset(result)
 
     def token_for(self, identity: str) -> str:
         token = {
