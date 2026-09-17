@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import func, select
 
 from app.db.database import Database
-from app.db.models import DomainEvent, FanRequest, GameProfile, PointTransaction, User, Chat
+from app.db.models import Chat, DomainEvent, FanRequest, GameProfile, PointTransaction, User
 from app.services.requests import DEFAULT_REQUEST_COST, RequestService
 
 
@@ -20,6 +20,7 @@ async def seed_profile(database: Database, *, user_id: int, chat_id: int, points
     async with database.session() as session:
         session.add(User(id=user_id, first_name="Test"))
         session.add(Chat(id=chat_id, type="supergroup"))
+        await session.flush()
         session.add(GameProfile(user_id=user_id, chat_id=chat_id, points=points))
 
 
