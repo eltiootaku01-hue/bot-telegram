@@ -68,7 +68,7 @@ class RequestModule(BotModule):
         if len(description) < 4:
             await message.answer("🎨 Necesito un poco más de detalle para crear el pedido.")
             return
-        async with self.database.session() as session:
+        async with self.database.session(write=True) as session:
             result = await self.service.create_paid(
                 session,
                 user_id=message.from_user.id,
