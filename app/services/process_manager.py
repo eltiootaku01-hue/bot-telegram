@@ -129,12 +129,17 @@ class ProcessManager:
         with self._lock:
             items = list(self.processes.items())
 
+        finished_processes: list[tuple[str, Popen[str], int | None]] = []
         for identity, process in items:
             returncode = process.poll()
-            if returncode is None:
-                continue
+            if returncode is not None:
+                finished_processes.append((identity, process, returncode))
+
+        if finished_processes:
             self.drain_output()
-            with self._lock:
+
+        with self._lock:
+            for identity, process, returncode in finished_processes:
                 if self.processes.get(identity) is not process:
                     continue
                 output = self.last_output.get(identity, ())
