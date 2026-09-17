@@ -39,6 +39,8 @@ ENV_DEFAULTS = {
     "ADMIN_USER_ID": "0",
     "MEDIA_STORAGE_CHAT_ID": "0",
     "PUBLISH_PAGE_CHAT_ID": "0",
+    "AUTHORIZED_CHAT_IDS": "",
+    "ALLOW_ADMIN_PRIVATE_CHAT": "true",
     "AI_ENABLED": "false",
 }
 
@@ -54,8 +56,8 @@ class BotLauncher(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Bot Manager")
-        self.geometry("900x760")
-        self.minsize(900, 700)
+        self.geometry("900x820")
+        self.minsize(900, 760)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.manager = ProcessManager(self._command, cwd=str(ROOT), grace_seconds=1.5)
         self.supervisor = LauncherSupervisor(self.manager)
@@ -109,6 +111,31 @@ class BotLauncher(tk.Tk):
             ttk.Entry(bots_box, textvariable=link).grid(row=row, column=1, sticky="ew", padx=5, pady=6)
             ttk.Entry(bots_box, textvariable=token, show="•").grid(row=row, column=2, sticky="ew", padx=5, pady=6)
 
+        access_box = ttk.LabelFrame(outer, text="Seguridad de acceso de Telegram", padding=14)
+        access_box.pack(fill="x", pady=(16, 0))
+        access_box.columnconfigure(1, weight=1)
+        ttk.Label(
+            access_box,
+            text="Chats de grupos autorizados (IDs separados por coma)",
+        ).grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        self.authorized_chats_var = tk.StringVar(value=values.get("AUTHORIZED_CHAT_IDS", "") or "")
+        ttk.Entry(access_box, textvariable=self.authorized_chats_var).grid(
+            row=0, column=1, sticky="ew", padx=5, pady=5
+        )
+        self.allow_admin_private_var = tk.BooleanVar(
+            value=(values.get("ALLOW_ADMIN_PRIVATE_CHAT", "true") or "true").strip().lower()
+            in {"1", "true", "yes", "on"}
+        )
+        ttk.Checkbutton(
+            access_box,
+            text="Permitir chat privado únicamente al ADMIN_USER_ID",
+            variable=self.allow_admin_private_var,
+        ).grid(row=1, column=0, columnspan=2, sticky="w", padx=5, pady=(5, 2))
+        ttk.Label(
+            access_box,
+            text="Vacío = ningún grupo autorizado. Los IDs se validan nuevamente en el runtime.",
+        ).grid(row=2, column=0, columnspan=2, sticky="w", padx=5, pady=(0, 3))
+
         ai_box = ttk.LabelFrame(outer, text="IA opcional", padding=14)
         ai_box.pack(fill="x", pady=(16, 0))
         ai_box.columnconfigure(1, weight=1)
@@ -127,7 +154,7 @@ class BotLauncher(tk.Tk):
         per_bot = ttk.Frame(ai_box)
         per_bot.grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=(8, 0))
         for index, key in enumerate(BOTS):
-            self.ai_bot_vars[key] = tk.BooleanVar(value=False)
+            self.ai_bot_vars[key] = tk.BooleanVar(value=(values.get(f"AI_ENABLED_{key.upper()}", "") or "").strip().lower() in {"1", "true", "yes", "on"})
             ttk.Checkbutton(per_bot, text=f"IA {BOTS[key][0]}", variable=self.ai_bot_vars[key]).grid(
                 row=0, column=index, padx=(0, 14)
             )
@@ -210,6 +237,8 @@ class BotLauncher(tk.Tk):
             "OLLAMA_MODEL": self.model_var.get().strip() or "llama3.2:1b",
             "ADMIN_USER_ID": self.admin_var.get().strip() or "0",
             "MEDIA_STORAGE_CHAT_ID": self.media_var.get().strip() or "0",
+            "AUTHORIZED_CHAT_IDS": self.authorized_chats_var.get().strip(),
+            "ALLOW_ADMIN_PRIVATE_CHAT": "true" if self.allow_admin_private_var.get() else "false",
             "BOT_IDENTITY": "cari",
             "AI_ENABLED": "true" if self.ai_global_var.get() else "false",
         })
@@ -274,6 +303,9 @@ class BotLauncher(tk.Tk):
         startup = result.result
         if startup is None:
             self.status.set("El supervisor terminó sin resultado")
+            return
+        if startup.cancelled:
+            self.status.set("Inicio cancelado; todos los bots están detenidos")
             return
         if startup.failure is not None:
             failure = startup.failure
