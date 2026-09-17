@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from subprocess import PIPE, Popen, TimeoutExpired
 from threading import RLock
 from typing import Callable, Sequence
@@ -7,6 +8,15 @@ from typing import Callable, Sequence
 from app.services.process_health import HealthResult, ProcessHealth
 from app.services.process_reader import ProcessOutput, ProcessReader
 from app.services.startup_sequence import StartupResult, StartupSequence
+
+
+@dataclass(frozen=True, slots=True)
+class ProcessExit:
+    """Recorded termination of a managed child process."""
+
+    identity: str
+    returncode: int | None
+    output: tuple[ProcessOutput, ...]
 
 
 class ProcessManager:
@@ -29,6 +39,7 @@ class ProcessManager:
         self._lock = RLock()
         self.processes: dict[str, Popen[str]] = {}
         self.last_output: dict[str, tuple[ProcessOutput, ...]] = {}
+        self.last_exit: dict[str, ProcessExit] = {}
 
     def launch(self, identity: str) -> Popen[str]:
         with self._lock:
@@ -45,6 +56,7 @@ class ProcessManager:
             )
             self.reader.attach(identity, process)
             self.processes[identity] = process
+            self.last_exit.pop(identity, None)
             return process
 
     def check_health(self, identity: str, process: Popen[str]) -> bool:
@@ -112,15 +124,28 @@ class ProcessManager:
             return dict(self.processes)
 
     def reap_finished(self) -> list[tuple[str, int | None]]:
-        """Remove exited children and return their identities/codes."""
+        """Remove exited children and retain their exit diagnostics."""
         finished: list[tuple[str, int | None]] = []
         with self._lock:
-            for identity, process in list(self.processes.items()):
-                returncode = process.poll()
-                if returncode is not None:
-                    self.processes.pop(identity, None)
-                    finished.append((identity, returncode))
+            items = list(self.processes.items())
+
+        for identity, process in items:
+            returncode = process.poll()
+            if returncode is None:
+                continue
+            self.drain_output()
+            with self._lock:
+                if self.processes.get(identity) is not process:
+                    continue
+                output = self.last_output.get(identity, ())
+                self.processes.pop(identity, None)
+                self.last_exit[identity] = ProcessExit(identity, returncode, output)
+                finished.append((identity, returncode))
         return finished
+
+    def last_exit_for(self, identity: str) -> ProcessExit | None:
+        with self._lock:
+            return self.last_exit.get(identity)
 
     def stop_all(self) -> None:
         with self._lock:
