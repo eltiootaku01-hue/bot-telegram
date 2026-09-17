@@ -74,6 +74,7 @@ class BotLauncher(tk.Tk):
         self._startup_poll_id: str | None = None
         self._runtime_poll_id: str | None = None
         self._closing = False
+        self._reported_unexpected_exits: set[str] = set()
         self._build_setup()
 
     @property
@@ -481,13 +482,34 @@ class BotLauncher(tk.Tk):
         self.refresh_status()
 
     def refresh_status(self) -> None:
-        self.manager.drain_output()
-        self.manager.reap_finished()
+        finished = self.manager.reap_finished()
+        for key, returncode in finished:
+            exit_info = self.manager.last_exit_for(key)
+            if exit_info is None:
+                continue
+            self._reported_unexpected_exits.discard(key)
+            state = getattr(self._dashboard_cards.get(key), "_state", None)
+            if state is not None:
+                code = "sin código" if returncode is None else str(returncode)
+                state.set(f"⚠ Terminó inesperadamente · código {code}")
+            if key not in self._reported_unexpected_exits:
+                self._reported_unexpected_exits.add(key)
+                details = [
+                    f"Bot: {key.title()}",
+                    f"Código de salida: {'desconocido' if returncode is None else returncode}",
+                    "",
+                    "Salida capturada:",
+                ]
+                details.extend(f"[{event.stream}] {event.line}" for event in exit_info.output)
+                if len(details) == 4:
+                    details.append("(El proceso terminó sin producir salida capturada.)")
+                self.status.set(f"{key.title()} terminó inesperadamente")
+                messagebox.showerror("Bot detenido inesperadamente", "\n".join(details))
         for key, card in self._dashboard_cards.items():
             process = self.processes.get(key)
             state = getattr(card, "_state", None)
-            if state is not None:
-                state.set("● Ejecutándose" if process and process.poll() is None else "○ Detenido")
+            if state is not None and process is not None and process.poll() is None:
+                state.set("● Ejecutándose")
         self._refresh_ai_label()
         if self.winfo_exists():
             self.after(1000, self.refresh_status)
