@@ -509,6 +509,7 @@ class BotLauncher(tk.Tk):
             process = self.processes.get(key)
             state = getattr(card, "_state", None)
             if state is not None and process is not None and process.poll() is None:
+                self._reported_unexpected_exits.discard(key)
                 state.set("● Ejecutándose")
         self._refresh_ai_label()
         if self.winfo_exists():
