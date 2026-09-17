@@ -1,5 +1,5 @@
 import json
-
+from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import select
@@ -12,6 +12,13 @@ from app.db.repositories import MemberRepository
 
 
 DEFAULT_REQUEST_COST = 50
+
+
+@dataclass(frozen=True, slots=True)
+class PaidRequestResult:
+    request: FanRequest
+    remaining_points: int
+    created: bool
 
 
 class RequestService:
@@ -28,7 +35,7 @@ class RequestService:
         character_id: str | None = None,
         special_details: str | None = None,
         source_message_id: int | None = None,
-    ) -> tuple[FanRequest, int] | None:
+    ) -> PaidRequestResult | None:
         if not description.strip():
             raise ValueError("Request description cannot be empty")
         if points_cost <= 0:
@@ -44,60 +51,68 @@ class RequestService:
             )
             if existing is not None:
                 profile = await session.scalar(
-                    select(GameProfile).where(GameProfile.user_id == user_id, GameProfile.chat_id == chat_id)
+                    select(GameProfile).where(
+                        GameProfile.user_id == user_id,
+                        GameProfile.chat_id == chat_id,
+                    )
                 )
-                return existing, profile.points if profile else 0
+                return PaidRequestResult(
+                    request=existing,
+                    remaining_points=profile.points if profile else 0,
+                    created=False,
+                )
 
-        request = FanRequest(
-            user_id=user_id,
-            chat_id=chat_id,
-            description=description.strip(),
-            character_id=character_id,
-            special_details=special_details,
-            points_cost=points_cost,
-            source_message_id=source_message_id,
-            status=RequestStatus.PENDING_ADMIN.value,
-        )
-        session.add(request)
-        await session.flush()
-
-        remaining = await MemberRepository().spend_points(
-            session,
-            user_id=user_id,
-            chat_id=chat_id,
-            amount=points_cost,
-            reason="Pedido de fan",
-            reference_type="fan_request",
-            reference_id=str(request.id),
-            commit=False,
-        )
-        if remaining is None:
-            await session.rollback()
-            return None
-
-        session.add(
-            DomainEvent(
-                event_id=f"fan-request-created:{request.id}",
-                event_type="fan_request.created",
-                payload=json.dumps(
-                    {
-                        "request_id": request.id,
-                        "user_id": user_id,
-                        "chat_id": chat_id,
-                        "description": request.description,
-                        "points_cost": points_cost,
-                        "character_id": character_id,
-                        "special_details": special_details,
-                    },
-                    ensure_ascii=False,
-                    separators=(",", ":"),
-                ),
-            )
-        )
+        nested = await session.begin_nested()
         try:
-            await session.commit()
+            request = FanRequest(
+                user_id=user_id,
+                chat_id=chat_id,
+                description=description.strip(),
+                character_id=character_id,
+                special_details=special_details,
+                points_cost=points_cost,
+                source_message_id=source_message_id,
+                status=RequestStatus.PENDING_ADMIN.value,
+            )
+            session.add(request)
+            await session.flush()
+
+            remaining = await MemberRepository().spend_points(
+                session,
+                user_id=user_id,
+                chat_id=chat_id,
+                amount=points_cost,
+                reason="Pedido de fan",
+                reference_type="fan_request",
+                reference_id=str(request.id),
+                commit=False,
+            )
+            if remaining is None:
+                await nested.rollback()
+                return None
+
+            session.add(
+                DomainEvent(
+                    event_id=f"fan-request-created:{request.id}",
+                    event_type="fan_request.created",
+                    payload=json.dumps(
+                        {
+                            "request_id": request.id,
+                            "user_id": user_id,
+                            "chat_id": chat_id,
+                            "description": request.description,
+                            "points_cost": points_cost,
+                            "character_id": character_id,
+                            "special_details": special_details,
+                        },
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                )
+            )
+            await nested.commit()
         except IntegrityError:
-            await session.rollback()
+            await nested.rollback()
             if source_message_id is None:
                 raise
             existing = await session.scalar(
@@ -110,11 +125,23 @@ class RequestService:
             if existing is None:
                 raise
             profile = await session.scalar(
-                select(GameProfile).where(GameProfile.user_id == user_id, GameProfile.chat_id == chat_id)
+                select(GameProfile).where(
+                    GameProfile.user_id == user_id,
+                    GameProfile.chat_id == chat_id,
+                )
             )
-            return existing, profile.points if profile else 0
+            return PaidRequestResult(
+                request=existing,
+                remaining_points=profile.points if profile else 0,
+                created=False,
+            )
+
         await session.refresh(request)
-        return request, remaining
+        return PaidRequestResult(
+            request=request,
+            remaining_points=remaining,
+            created=True,
+        )
 
     async def create(
         self,
@@ -153,7 +180,11 @@ class RequestService:
         result = await session.scalars(
             select(FanRequest)
             .where(
-                FanRequest.status.in_([RequestStatus.NEW.value, RequestStatus.NEEDS_INFO.value, RequestStatus.PENDING_ADMIN.value])
+                FanRequest.status.in_([
+                    RequestStatus.NEW.value,
+                    RequestStatus.NEEDS_INFO.value,
+                    RequestStatus.PENDING_ADMIN.value,
+                ])
             )
             .order_by(FanRequest.created_at.asc())
             .limit(limit)
