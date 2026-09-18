@@ -86,12 +86,12 @@ class EventBus:
             conditions.append(DomainEvent.locked_at == event.locked_at)
         if event.heartbeat_at is None:
             conditions.append(DomainEvent.heartbeat_at.is_(None))
-            if event.locked_at is None or event.locked_at >= cutoff:
+            if event.locked_at is None:
                 return False
+            conditions.append(DomainEvent.locked_at < cutoff)
         else:
             conditions.append(DomainEvent.heartbeat_at == event.heartbeat_at)
-            if event.heartbeat_at >= cutoff:
-                return False
+            conditions.append(DomainEvent.heartbeat_at < cutoff)
 
         if event.attempts >= max_attempts:
             values = {
