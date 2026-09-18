@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from random import randint
 from secrets import token_urlsafe
 
+from app.core.time import utc_now
 from app.game.models import Character, Rarity
 
 
@@ -45,7 +46,7 @@ def encounter_options(encounter: Encounter) -> list[str]:
 
 
 def new_encounter(character: Character, now: datetime | None = None) -> Encounter:
-    now = now or datetime.utcnow()
+    now = now or utc_now()
     plan = PLANS.get(character.rarity, PLANS[Rarity.D])
     duration = randint(60, 600)
     question = (
