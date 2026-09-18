@@ -48,6 +48,10 @@ class LauncherSupervisor:
         try:
             result = StartupTaskResult(result=self.manager.start_sequential(identities, self._should_continue))
         except BaseException as exc:  # surface unexpected startup errors to the UI
+            try:
+                self.manager.stop_all()
+            except Exception:
+                pass
             result = StartupTaskResult(error=exc)
         self._results.put(result)
 
