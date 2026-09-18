@@ -11,7 +11,7 @@ from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.jobs import JobQueue
 from app.core.module import BotModule
-from app.core.time import utc_now
+from app.core.time import local_to_utc, utc_now
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import FanRequest, MediaAsset, RequestStatus
@@ -110,7 +110,10 @@ class CamiMediaModule(BotModule):
                 return
 
             try:
-                scheduled_at = datetime.strptime(message.text.strip(), "%d/%m/%Y %H:%M")
+                scheduled_at = local_to_utc(
+                    datetime.strptime(message.text.strip(), "%d/%m/%Y %H:%M"),
+                    self.settings.bot_world_timezone,
+                )
             except ValueError:
                 await message.answer("🕒 Formato inválido. Ejemplo: <code>25/09/2026 21:30</code>.")
                 return
