@@ -72,7 +72,8 @@ class ProcessManager:
         with self._lock:
             managed = self.processes.get(identity)
             target = managed if managed is not None else process
-            if target.poll() is None:
+            requested_stop = target.poll() is None
+            if requested_stop:
                 self._intentional_stops.add(identity)
 
         if target.poll() is None:
@@ -86,22 +87,17 @@ class ProcessManager:
                 except TimeoutExpired:
                     return
 
-        output = self.drain_output()
+        self.drain_output()
         with self._lock:
             if self.processes.get(identity) is target:
                 self.processes.pop(identity, None)
             returncode = target.poll()
             if returncode is not None:
-                existing = self.last_output.get(identity, ())
-                if output:
-                    captured = existing
-                else:
-                    captured = existing
                 self.last_exit[identity] = ProcessExit(
                     identity,
                     returncode,
-                    captured,
-                    expected=True,
+                    self.last_output.get(identity, ()),
+                    expected=requested_stop,
                 )
             self._intentional_stops.discard(identity)
 
