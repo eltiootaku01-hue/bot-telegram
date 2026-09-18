@@ -2,28 +2,26 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.jobs import JobQueue
-from app.db.models import Base, DurableJob
+from app.db.database import Database
+from app.db.models import DurableJob
 
 
 @pytest.fixture
-async def session_factory(tmp_path):
-    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'jobs.db'}")
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-    factory = async_sessionmaker(engine, expire_on_commit=False)
-    yield factory
-    await engine.dispose()
+async def database(tmp_path):
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'jobs.db'}")
+    await database.create_schema()
+    yield database
+    await database.close()
 
 
 @pytest.mark.asyncio
-async def test_stale_job_recovery_is_fenced_by_heartbeat(session_factory) -> None:
+async def test_stale_job_recovery_is_fenced_by_heartbeat(database: Database) -> None:
     locked_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
     stale_heartbeat = locked_at
     live_heartbeat = locked_at + timedelta(hours=1)
-    async with session_factory() as session:
+    async with database.sessions() as session:
         session.add(
             DurableJob(
                 job_type="test",
@@ -36,7 +34,7 @@ async def test_stale_job_recovery_is_fenced_by_heartbeat(session_factory) -> Non
         )
         await session.commit()
 
-    async with session_factory() as recovery_session, session_factory() as heartbeat_session:
+    async with database.sessions() as recovery_session, database.sessions() as heartbeat_session:
         job = await recovery_session.scalar(
             select(DurableJob).where(DurableJob.dedupe_key == "job-1")
         )
