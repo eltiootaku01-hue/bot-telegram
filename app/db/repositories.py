@@ -70,7 +70,15 @@ class MemberRepository:
         if commit:
             await session.commit()
 
-    async def set_membership(self, session: AsyncSession, user: TgUser, chat: TgChat, status: str) -> None:
+    async def set_membership(
+        self,
+        session: AsyncSession,
+        user: TgUser,
+        chat: TgChat,
+        status: str,
+        *,
+        commit: bool = True,
+    ) -> None:
         now = utc_now()
         await self._ensure_user(session, user, now)
         await self._ensure_chat(session, chat, now)
@@ -94,7 +102,8 @@ class MemberRepository:
             link.left_at = None
         elif status in {"left", "kicked"}:
             link.left_at = now
-        await session.commit()
+        if commit:
+            await session.commit()
 
     async def get_or_create_game_profile(
         self, session: AsyncSession, user_id: int, chat_id: int, *, commit: bool = True
