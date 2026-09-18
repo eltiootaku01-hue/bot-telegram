@@ -1,21 +1,19 @@
 import pytest
 from aiogram.types import Chat as TgChat, User as TgUser
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.db.models import Base, Chat, User, UserChat
+from app.db.database import Database
+from app.db.models import Chat, User, UserChat
 from app.db.repositories import MemberRepository
 
 
 @pytest.fixture
 async def session():
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-    factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with factory() as db:
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    async with database.session() as db:
         yield db
-    await engine.dispose()
+    await database.close()
 
 
 def telegram_user() -> TgUser:
