@@ -17,6 +17,7 @@ class ProcessExit:
     identity: str
     returncode: int | None
     output: tuple[ProcessOutput, ...]
+    expected: bool = False
 
 
 class ProcessManager:
@@ -40,6 +41,7 @@ class ProcessManager:
         self.processes: dict[str, Popen[str]] = {}
         self.last_output: dict[str, tuple[ProcessOutput, ...]] = {}
         self.last_exit: dict[str, ProcessExit] = {}
+        self._intentional_stops: set[str] = set()
 
     def launch(self, identity: str) -> Popen[str]:
         with self._lock:
@@ -67,6 +69,7 @@ class ProcessManager:
 
     def stop(self, identity: str, process: Popen[str]) -> None:
         with self._lock:
+            self._intentional_stops.add(identity)
             managed = self.processes.get(identity)
             target = managed if managed is not None else process
 
@@ -144,7 +147,9 @@ class ProcessManager:
                     continue
                 output = self.last_output.get(identity, ())
                 self.processes.pop(identity, None)
-                self.last_exit[identity] = ProcessExit(identity, returncode, output)
+                expected = identity in self._intentional_stops
+                self._intentional_stops.discard(identity)
+                self.last_exit[identity] = ProcessExit(identity, returncode, output, expected=expected)
                 finished.append((identity, returncode))
         return finished
 
