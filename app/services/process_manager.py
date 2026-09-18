@@ -86,9 +86,24 @@ class ProcessManager:
                 except TimeoutExpired:
                     return
 
+        output = self.drain_output()
         with self._lock:
             if self.processes.get(identity) is target:
                 self.processes.pop(identity, None)
+            returncode = target.poll()
+            if returncode is not None:
+                existing = self.last_output.get(identity, ())
+                if output:
+                    captured = existing
+                else:
+                    captured = existing
+                self.last_exit[identity] = ProcessExit(
+                    identity,
+                    returncode,
+                    captured,
+                    expected=True,
+                )
+            self._intentional_stops.discard(identity)
 
     def start_sequential(
         self,
