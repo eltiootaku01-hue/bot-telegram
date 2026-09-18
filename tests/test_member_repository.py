@@ -50,3 +50,17 @@ async def test_touch_increments_message_count_atomically(session):
     link = await session.scalar(select(UserChat).where(UserChat.user_id == 7, UserChat.chat_id == -100))
     assert link is not None
     assert link.message_count == 3
+
+
+@pytest.mark.asyncio
+async def test_touch_can_join_caller_transaction(session):
+    repo = MemberRepository()
+
+    await repo.touch(session, telegram_user(), telegram_chat(), commit=False)
+    await session.rollback()
+
+    assert await session.get(User, 7) is None
+    assert await session.get(Chat, -100) is None
+    assert await session.scalar(
+        select(UserChat).where(UserChat.user_id == 7, UserChat.chat_id == -100)
+    ) is None
