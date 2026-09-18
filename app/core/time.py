@@ -23,3 +23,11 @@ def localize_utc(utc_datetime: datetime, timezone_name: str) -> datetime:
 def world_now(timezone_name: str) -> datetime:
     """Return the current instant expressed in the configured world timezone."""
     return localize_utc(utc_now(), timezone_name)
+
+
+def local_to_utc(local_datetime: datetime, timezone_name: str) -> datetime:
+    """Convert a naive world-local datetime into a naive UTC datetime for storage."""
+    if not timezone_name.strip():
+        raise ValueError("timezone_name must not be empty")
+    aware_local = local_datetime.replace(tzinfo=ZoneInfo(timezone_name))
+    return aware_local.astimezone(timezone.utc).replace(tzinfo=None)
