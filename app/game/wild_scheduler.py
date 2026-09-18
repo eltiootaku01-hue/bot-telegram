@@ -1,8 +1,6 @@
 import asyncio
 import logging
 import random
-from datetime import datetime
-
 from aiogram import Bot
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
