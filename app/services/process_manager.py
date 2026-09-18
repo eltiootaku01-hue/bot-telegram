@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from subprocess import PIPE, Popen, TimeoutExpired
 from threading import RLock
 from typing import Callable, Sequence
@@ -7,6 +8,16 @@ from typing import Callable, Sequence
 from app.services.process_health import HealthResult, ProcessHealth
 from app.services.process_reader import ProcessOutput, ProcessReader
 from app.services.startup_sequence import StartupResult, StartupSequence
+
+
+@dataclass(frozen=True, slots=True)
+class ProcessExit:
+    """Recorded termination of a managed child process."""
+
+    identity: str
+    returncode: int | None
+    output: tuple[ProcessOutput, ...]
+    expected: bool = False
 
 
 class ProcessManager:
@@ -29,6 +40,8 @@ class ProcessManager:
         self._lock = RLock()
         self.processes: dict[str, Popen[str]] = {}
         self.last_output: dict[str, tuple[ProcessOutput, ...]] = {}
+        self.last_exit: dict[str, ProcessExit] = {}
+        self._intentional_stops: set[str] = set()
 
     def launch(self, identity: str) -> Popen[str]:
         with self._lock:
@@ -45,6 +58,8 @@ class ProcessManager:
             )
             self.reader.attach(identity, process)
             self.processes[identity] = process
+            self.last_exit.pop(identity, None)
+            self._intentional_stops.discard(identity)
             return process
 
     def check_health(self, identity: str, process: Popen[str]) -> bool:
@@ -57,6 +72,9 @@ class ProcessManager:
         with self._lock:
             managed = self.processes.get(identity)
             target = managed if managed is not None else process
+            requested_stop = target.poll() is None
+            if requested_stop:
+                self._intentional_stops.add(identity)
 
         if target.poll() is None:
             target.terminate()
@@ -69,12 +87,33 @@ class ProcessManager:
                 except TimeoutExpired:
                     return
 
+        self.drain_output()
         with self._lock:
             if self.processes.get(identity) is target:
                 self.processes.pop(identity, None)
+            returncode = target.poll()
+            if returncode is not None:
+                self.last_exit[identity] = ProcessExit(
+                    identity,
+                    returncode,
+                    self.last_output.get(identity, ()),
+                    expected=requested_stop,
+                )
+            self._intentional_stops.discard(identity)
 
-    def start_sequential(self, identities: Sequence[str]) -> StartupResult:
-        sequence = StartupSequence(identities, self.launch, self.check_health, self.stop)
+    def start_sequential(
+        self,
+        identities: Sequence[str],
+        should_continue: Callable[[], bool] | None = None,
+        launch: Callable[[str], Popen[str]] | None = None,
+    ) -> StartupResult:
+        sequence = StartupSequence(
+            identities,
+            self.launch if launch is None else launch,
+            self.check_health,
+            self.stop,
+            should_continue,
+        )
         result = sequence.run()
         if result.failure is not None:
             events = self.reader.drain()
@@ -102,15 +141,35 @@ class ProcessManager:
             return dict(self.processes)
 
     def reap_finished(self) -> list[tuple[str, int | None]]:
-        """Remove exited children and return their identities/codes."""
+        """Remove exited children and retain their exit diagnostics."""
         finished: list[tuple[str, int | None]] = []
         with self._lock:
-            for identity, process in list(self.processes.items()):
-                returncode = process.poll()
-                if returncode is not None:
-                    self.processes.pop(identity, None)
-                    finished.append((identity, returncode))
+            items = list(self.processes.items())
+
+        finished_processes: list[tuple[str, Popen[str], int | None]] = []
+        for identity, process in items:
+            returncode = process.poll()
+            if returncode is not None:
+                finished_processes.append((identity, process, returncode))
+
+        if finished_processes:
+            self.drain_output()
+
+        with self._lock:
+            for identity, process, returncode in finished_processes:
+                if self.processes.get(identity) is not process:
+                    continue
+                output = self.last_output.get(identity, ())
+                self.processes.pop(identity, None)
+                expected = identity in self._intentional_stops
+                self._intentional_stops.discard(identity)
+                self.last_exit[identity] = ProcessExit(identity, returncode, output, expected=expected)
+                finished.append((identity, returncode))
         return finished
+
+    def last_exit_for(self, identity: str) -> ProcessExit | None:
+        with self._lock:
+            return self.last_exit.get(identity)
 
     def stop_all(self) -> None:
         with self._lock:

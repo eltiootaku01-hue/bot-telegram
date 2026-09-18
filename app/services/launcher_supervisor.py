@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from queue import Empty, Queue
-from threading import Lock, Thread
+from threading import Event, Lock, Thread, current_thread
 from typing import Sequence
 
 from app.services.process_manager import ProcessManager
@@ -23,6 +23,8 @@ class LauncherSupervisor:
         self._lock = Lock()
         self._results: Queue[StartupTaskResult] = Queue()
         self._thread: Thread | None = None
+        self._cancel = Event()
+        self._launch_lock = Lock()
 
     @property
     def running(self) -> bool:
@@ -33,6 +35,7 @@ class LauncherSupervisor:
         with self._lock:
             if self.running:
                 return False
+            self._cancel.clear()
             self._thread = Thread(
                 target=self._run,
                 args=(tuple(identities),),
@@ -44,10 +47,23 @@ class LauncherSupervisor:
 
     def _run(self, identities: tuple[str, ...]) -> None:
         try:
-            result = StartupTaskResult(result=self.manager.start_sequential(identities))
+            result = StartupTaskResult(result=self.manager.start_sequential(identities, should_continue=self._should_continue, launch=self._launch))
         except BaseException as exc:  # surface unexpected startup errors to the UI
+            try:
+                self.manager.stop_all()
+            except Exception:
+                pass
             result = StartupTaskResult(error=exc)
         self._results.put(result)
+
+    def _should_continue(self) -> bool:
+        return not self._cancel.is_set()
+
+    def _launch(self, identity: str):
+        with self._launch_lock:
+            if not self._should_continue():
+                raise RuntimeError("startup cancelled before process launch")
+            return self.manager.launch(identity)
 
     def poll_result(self) -> StartupTaskResult | None:
         """Non-blocking result retrieval; safe to call from Tk's event loop."""
@@ -59,5 +75,16 @@ class LauncherSupervisor:
             self._thread = None
         return result
 
-    def stop_all(self) -> None:
-        self.manager.stop_all()
+    def wait(self, timeout: float | None = None) -> bool:
+        """Wait for the current startup worker to terminate."""
+        thread = self._thread
+        if thread is None or thread is current_thread():
+            return True
+        thread.join(timeout)
+        return not thread.is_alive()
+
+    def stop_all(self, *, wait: bool = True, timeout: float | None = None) -> bool:
+        self._cancel.set()
+        with self._launch_lock:
+            self.manager.stop_all()
+        return self.wait(timeout) if wait else True
