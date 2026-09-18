@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import pytest
 from sqlalchemy import select, update
@@ -18,7 +18,7 @@ async def database(tmp_path):
 
 @pytest.mark.asyncio
 async def test_stale_job_recovery_is_fenced_by_heartbeat(database: Database) -> None:
-    locked_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    locked_at = datetime(2020, 1, 1)
     stale_heartbeat = locked_at
     live_heartbeat = locked_at + timedelta(hours=1)
     async with database.sessions() as session:
