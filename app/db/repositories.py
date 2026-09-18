@@ -19,8 +19,9 @@ class MemberRepository:
         chat: TgChat,
         *,
         is_message: bool = True,
+        commit: bool = True,
     ) -> None:
-        """Refresh membership and, only for messages, message activity/counts."""
+        """Refresh membership and optionally leave transaction ownership to the caller."""
         now = utc_now()
         await self._ensure_user(session, user, now)
         await self._ensure_chat(session, chat, now)
@@ -66,7 +67,8 @@ class MemberRepository:
                 .where(Chat.id == chat.id)
                 .values(last_human_message_at=now)
             )
-        await session.commit()
+        if commit:
+            await session.commit()
 
     async def set_membership(self, session: AsyncSession, user: TgUser, chat: TgChat, status: str) -> None:
         now = utc_now()
