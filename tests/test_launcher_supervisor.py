@@ -4,6 +4,7 @@ import sys
 import time
 
 from app.services.launcher_supervisor import LauncherSupervisor
+from app.services.startup_sequence import StartupResult
 from app.services.process_manager import ProcessManager
 from app.services.startup_sequence import StartupSequence
 
@@ -153,4 +154,33 @@ def test_supervisor_cleans_up_if_startup_raises_outside_sequence_handling() -> N
 
     assert isinstance(result.error, RuntimeError)
     assert str(result.error) == "unexpected supervisor failure"
+    assert manager.stopped is True
+
+
+
+def test_supervisor_stop_all_closes_launch_race() -> None:
+    class Manager:
+        def __init__(self) -> None:
+            self.launched: list[str] = []
+            self.stopped = False
+
+        def launch(self, identity: str):
+            self.launched.append(identity)
+            return object()
+
+        def start_sequential(self, identities, launch, should_continue):
+            launch(identities[0])
+            return StartupResult((identities[0],))
+
+        def stop_all(self) -> None:
+            self.stopped = True
+
+    manager = Manager()
+    supervisor = LauncherSupervisor(manager)  # type: ignore[arg-type]
+    assert supervisor.start_all(("cari",))
+    supervisor.stop_all()
+    result = wait_result(supervisor)
+
+    assert result.result is not None
+    assert manager.launched == ["cari"]
     assert manager.stopped is True
