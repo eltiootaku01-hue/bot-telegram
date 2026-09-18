@@ -1,8 +1,7 @@
-from datetime import datetime
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.db.models import RareDropApproval
 
 
@@ -39,6 +38,6 @@ async def decide(session: AsyncSession, approval_id: int, approved: bool) -> Rar
     if request is None or request.status != "pending":
         return None
     request.status = "approved" if approved else "rejected"
-    request.decided_at = datetime.utcnow()
+    request.decided_at = utc_now()
     await session.commit()
     return request
