@@ -65,12 +65,12 @@ class JobQueue:
             conditions.append(DurableJob.locked_at == job.locked_at)
         if job.heartbeat_at is None:
             conditions.append(DurableJob.heartbeat_at.is_(None))
-            if job.locked_at is None or job.locked_at >= cutoff:
+            if job.locked_at is None:
                 return False
+            conditions.append(DurableJob.locked_at < cutoff)
         else:
             conditions.append(DurableJob.heartbeat_at == job.heartbeat_at)
-            if job.heartbeat_at >= cutoff:
-                return False
+            conditions.append(DurableJob.heartbeat_at < cutoff)
 
         if job.attempts >= max_attempts:
             values = {
