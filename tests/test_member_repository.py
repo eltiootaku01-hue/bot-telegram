@@ -60,8 +60,8 @@ async def test_touch_can_join_caller_transaction(session):
     await session.rollback()
     session.expire_all()
 
-    assert await session.get(User, 7) is None
-    assert await session.get(Chat, -100) is None
+    assert await session.scalar(select(User.id).where(User.id == 7)) is None
+    assert await session.scalar(select(Chat.id).where(Chat.id == -100)) is None
     assert await session.scalar(
-        select(UserChat).where(UserChat.user_id == 7, UserChat.chat_id == -100)
+        select(UserChat.id).where(UserChat.user_id == 7, UserChat.chat_id == -100)
     ) is None
