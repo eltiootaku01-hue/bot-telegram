@@ -58,6 +58,7 @@ async def test_touch_can_join_caller_transaction(session):
 
     await repo.touch(session, telegram_user(), telegram_chat(), commit=False)
     await session.rollback()
+    session.expire_all()
 
     assert await session.get(User, 7) is None
     assert await session.get(Chat, -100) is None
