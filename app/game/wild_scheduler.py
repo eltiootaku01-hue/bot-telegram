@@ -7,6 +7,7 @@ from aiogram import Bot
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.core.time import utc_now
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import GameEncounter
@@ -81,7 +82,7 @@ class WildWaifuScheduler:
             return list(dict.fromkeys(result))
 
     async def _has_active_encounter(self, chat_id: int) -> bool:
-        now = datetime.utcnow()
+        now = utc_now()
         async with self.database.session() as session:
             encounter = await session.scalar(
                 select(GameEncounter.id)
@@ -158,7 +159,7 @@ class WildWaifuScheduler:
                 saved.message_id = sent.message_id
                 await session.commit()
 
-        await asyncio.sleep(max(0, (expires - datetime.utcnow()).total_seconds()))
+        await asyncio.sleep(max(0, (expires - utc_now()).total_seconds()))
         await self.expire(encounter.id, chat_id, sent.message_id)
 
     async def expire(self, encounter_id: str, chat_id: int, message_id: int) -> None:
