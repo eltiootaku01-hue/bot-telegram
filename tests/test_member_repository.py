@@ -65,3 +65,24 @@ async def test_touch_can_join_caller_transaction(session):
     assert await session.scalar(
         select(UserChat.id).where(UserChat.user_id == 7, UserChat.chat_id == -100)
     ) is None
+
+
+@pytest.mark.asyncio
+async def test_set_membership_can_join_caller_transaction(session):
+    repo = MemberRepository()
+
+    await repo.set_membership(
+        session,
+        telegram_user(),
+        telegram_chat(),
+        "member",
+        commit=False,
+    )
+    await session.rollback()
+    session.expire_all()
+
+    assert await session.scalar(select(User.id).where(User.id == 7)) is None
+    assert await session.scalar(select(Chat.id).where(Chat.id == -100)) is None
+    assert await session.scalar(
+        select(UserChat.id).where(UserChat.user_id == 7, UserChat.chat_id == -100)
+    ) is None
