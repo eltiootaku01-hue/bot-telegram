@@ -25,6 +25,9 @@ def test_save_config_persists_chat_access_policy(monkeypatch, tmp_path: Path) ->
         def get(self):
             return self.value
 
+        def set(self, value) -> None:
+            self.value = value
+
     class FakeEntry:
         def get(self) -> str:
             return ""
