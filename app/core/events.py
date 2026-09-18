@@ -67,6 +67,53 @@ class EventBus:
             return EventEnvelope(existing.event_id, existing.event_type, json.loads(existing.payload))
         return envelope
 
+    async def _recover_event(
+        self,
+        session: AsyncSession,
+        event: DomainEvent,
+        *,
+        cutoff: datetime,
+        now: datetime,
+        max_attempts: int,
+    ) -> bool:
+        conditions = [
+            DomainEvent.id == event.id,
+            DomainEvent.status == "processing",
+        ]
+        if event.locked_at is None:
+            conditions.append(DomainEvent.locked_at.is_(None))
+        else:
+            conditions.append(DomainEvent.locked_at == event.locked_at)
+        if event.heartbeat_at is None:
+            conditions.append(DomainEvent.heartbeat_at.is_(None))
+            if event.locked_at is None or event.locked_at >= cutoff:
+                return False
+        else:
+            conditions.append(DomainEvent.heartbeat_at == event.heartbeat_at)
+            if event.heartbeat_at >= cutoff:
+                return False
+
+        if event.attempts >= max_attempts:
+            values = {
+                "status": "failed",
+                "last_error": "Event abandoned after maximum recovery attempts",
+                "locked_at": None,
+                "heartbeat_at": None,
+                "updated_at": now,
+            }
+        else:
+            delay = DEFAULT_BACKOFF_SECONDS[min(event.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
+            values = {
+                "status": "pending",
+                "available_at": now + timedelta(seconds=delay),
+                "last_error": "Recovered stale processing event",
+                "locked_at": None,
+                "heartbeat_at": None,
+                "updated_at": now,
+            }
+        result = await session.execute(update(DomainEvent).where(*conditions).values(**values))
+        return result.rowcount == 1
+
     async def recover_stale(self, session: AsyncSession, *, event_type: str | None = None, timeout_seconds: int = 300, max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> int:
         cutoff = utc_now() - timedelta(seconds=timeout_seconds)
         now = utc_now()
@@ -80,43 +127,15 @@ class EventBus:
         events = list(await session.scalars(query))
         recovered = 0
         for event in events:
-            locked_at = event.locked_at
-            heartbeat_at = event.heartbeat_at
-            conditions = [
-                DomainEvent.id == event.id,
-                DomainEvent.status == "processing",
-            ]
-            if locked_at is None:
-                conditions.append(DomainEvent.locked_at.is_(None))
-            else:
-                conditions.append(DomainEvent.locked_at == locked_at)
-            if heartbeat_at is None:
-                conditions.append(DomainEvent.heartbeat_at.is_(None))
-                conditions.append(DomainEvent.locked_at < cutoff)
-            else:
-                conditions.append(DomainEvent.heartbeat_at == heartbeat_at)
-                conditions.append(DomainEvent.heartbeat_at < cutoff)
-
-            if event.attempts >= max_attempts:
-                values = {
-                    "status": "failed",
-                    "last_error": "Event abandoned after maximum recovery attempts",
-                    "locked_at": None,
-                    "heartbeat_at": None,
-                    "updated_at": now,
-                }
-            else:
-                delay = DEFAULT_BACKOFF_SECONDS[min(event.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
-                values = {
-                    "status": "pending",
-                    "available_at": now + timedelta(seconds=delay),
-                    "last_error": "Recovered stale processing event",
-                    "locked_at": None,
-                    "heartbeat_at": None,
-                    "updated_at": now,
-                }
-            result = await session.execute(update(DomainEvent).where(*conditions).values(**values))
-            recovered += int(result.rowcount == 1)
+            recovered += int(
+                await self._recover_event(
+                    session,
+                    event,
+                    cutoff=cutoff,
+                    now=now,
+                    max_attempts=max_attempts,
+                )
+            )
         if recovered:
             await session.commit()
         return recovered
