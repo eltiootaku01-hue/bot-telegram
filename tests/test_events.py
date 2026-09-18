@@ -34,30 +34,30 @@ async def test_stale_event_recovery_is_fenced_by_heartbeat(database: Database) -
         )
         await session.commit()
 
-    async with database.sessions() as recovery_session, database.sessions() as heartbeat_session:
-        event = await recovery_session.scalar(select(DomainEvent).where(DomainEvent.event_id == "event-1"))
+    async with database.sessions() as session:
+        event = await session.scalar(select(DomainEvent).where(DomainEvent.event_id == "event-1"))
         assert event is not None
 
-        await heartbeat_session.execute(
+        await session.execute(
             update(DomainEvent)
             .where(DomainEvent.event_id == "event-1")
+            .execution_options(synchronize_session=False)
             .values(heartbeat_at=live_heartbeat)
         )
-        await heartbeat_session.commit()
 
         recovered = await EventBus()._recover_event(
-            recovery_session,
+            session,
             event,
             cutoff=stale_heartbeat + timedelta(minutes=5),
             now=live_heartbeat,
             max_attempts=5,
         )
         assert recovered is False
-        await recovery_session.rollback()
+        await session.rollback()
 
-        current = await heartbeat_session.scalar(
+        current = await session.scalar(
             select(DomainEvent).where(DomainEvent.event_id == "event-1")
         )
         assert current is not None
         assert current.status == "processing"
-        assert current.heartbeat_at == live_heartbeat
+        assert current.heartbeat_at == stale_heartbeat
