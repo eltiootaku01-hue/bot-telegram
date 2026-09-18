@@ -78,21 +78,48 @@ class EventBus:
         if event_type is not None:
             query = query.where(DomainEvent.event_type == event_type)
         events = list(await session.scalars(query))
+        recovered = 0
         for event in events:
+            locked_at = event.locked_at
+            heartbeat_at = event.heartbeat_at
+            conditions = [
+                DomainEvent.id == event.id,
+                DomainEvent.status == "processing",
+            ]
+            if locked_at is None:
+                conditions.append(DomainEvent.locked_at.is_(None))
+            else:
+                conditions.append(DomainEvent.locked_at == locked_at)
+            if heartbeat_at is None:
+                conditions.append(DomainEvent.heartbeat_at.is_(None))
+                conditions.append(DomainEvent.locked_at < cutoff)
+            else:
+                conditions.append(DomainEvent.heartbeat_at == heartbeat_at)
+                conditions.append(DomainEvent.heartbeat_at < cutoff)
+
             if event.attempts >= max_attempts:
-                event.status = "failed"
-                event.last_error = "Event abandoned after maximum recovery attempts"
+                values = {
+                    "status": "failed",
+                    "last_error": "Event abandoned after maximum recovery attempts",
+                    "locked_at": None,
+                    "heartbeat_at": None,
+                    "updated_at": now,
+                }
             else:
                 delay = DEFAULT_BACKOFF_SECONDS[min(event.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
-                event.status = "pending"
-                event.available_at = now + timedelta(seconds=delay)
-                event.last_error = "Recovered stale processing event"
-            event.locked_at = None
-            event.heartbeat_at = None
-            event.updated_at = now
-        if events:
+                values = {
+                    "status": "pending",
+                    "available_at": now + timedelta(seconds=delay),
+                    "last_error": "Recovered stale processing event",
+                    "locked_at": None,
+                    "heartbeat_at": None,
+                    "updated_at": now,
+                }
+            result = await session.execute(update(DomainEvent).where(*conditions).values(**values))
+            recovered += int(result.rowcount == 1)
+        if recovered:
             await session.commit()
-        return len(events)
+        return recovered
 
     async def claim(self, session: AsyncSession, *, event_type: str | None = None, now: datetime | None = None) -> DomainEvent | None:
         now = now or utc_now()
@@ -134,8 +161,6 @@ class EventBus:
         if retry_at is None and event.attempts < max_attempts:
             delay = DEFAULT_BACKOFF_SECONDS[min(event.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
             retry_at = now + timedelta(seconds=delay)
-        # An explicit retry time may request an immediate retry, but it must
-        # never override the queue's maximum-attempt safety boundary.
         permanent = event.attempts >= max_attempts
         conditions = [DomainEvent.event_id == event_id, DomainEvent.status == "processing"]
         if lock_time is not None:
