@@ -105,10 +105,11 @@ class ProcessManager:
         self,
         identities: Sequence[str],
         should_continue: Callable[[], bool] | None = None,
+        launch: Callable[[str], Popen[str]] | None = None,
     ) -> StartupResult:
         sequence = StartupSequence(
             identities,
-            self.launch,
+            self.launch if launch is None else launch,
             self.check_health,
             self.stop,
             should_continue,
