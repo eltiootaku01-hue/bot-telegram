@@ -87,3 +87,31 @@ def test_process_manager_clears_stale_exit_when_process_is_started_again() -> No
     manager.launch("cari")
     assert manager.last_exit_for("cari") is None
     manager.stop_all()
+
+
+def test_process_manager_marks_requested_stop_as_expected_exit() -> None:
+    manager = ProcessManager(
+        lambda _: [sys.executable, "-c", "import time; time.sleep(10)"],
+        grace_seconds=0,
+        stop_timeout=0.5,
+    )
+    process = manager.launch("cari")
+
+    manager.stop("cari", process)
+    assert manager.reap_finished() == []
+    exit_info = manager.last_exit_for("cari")
+    assert exit_info is None
+
+
+def test_process_manager_marks_external_exit_as_unexpected() -> None:
+    manager = ProcessManager(
+        lambda _: [sys.executable, "-c", "import sys; sys.exit(12)"],
+        grace_seconds=0,
+    )
+    process = manager.launch("cari")
+    process.wait(timeout=1)
+
+    assert manager.reap_finished() == [("cari", 12)]
+    exit_info = manager.last_exit_for("cari")
+    assert exit_info is not None
+    assert exit_info.expected is False
