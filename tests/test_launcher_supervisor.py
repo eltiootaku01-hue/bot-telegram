@@ -175,7 +175,7 @@ def test_supervisor_stop_all_closes_launch_race() -> None:
             return object()
 
         def start_sequential(self, identities, launch, should_continue):
-            process = launch(identities[0])
+            launch(identities[0])
             if not should_continue():
                 return StartupResult((), cancelled=True)
             return StartupResult((identities[0],))
