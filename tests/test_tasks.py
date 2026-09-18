@@ -34,7 +34,7 @@ async def test_old_completion_callback_cannot_remove_replacement_task() -> None:
     first = supervisor.start("worker", asyncio.sleep(0))
     await first
 
-    second = supervisor.start("worker", asyncio.sleep(60))
+    supervisor.start("worker", asyncio.sleep(60))
     supervisor._finish("worker", first)
 
     assert supervisor.running("worker")
