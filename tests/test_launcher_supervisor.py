@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import time
+from threading import Event, Thread
 
 from app.services.launcher_supervisor import LauncherSupervisor
 from app.services.startup_sequence import StartupResult
@@ -140,7 +141,7 @@ def test_supervisor_cleans_up_if_startup_raises_outside_sequence_handling() -> N
         def __init__(self) -> None:
             self.stopped = False
 
-        def start_sequential(self, identities, should_continue):
+        def start_sequential(self, identities, launch, should_continue):
             raise RuntimeError("unexpected supervisor failure")
 
         def stop_all(self) -> None:
@@ -159,6 +160,9 @@ def test_supervisor_cleans_up_if_startup_raises_outside_sequence_handling() -> N
 
 
 def test_supervisor_stop_all_closes_launch_race() -> None:
+    launch_entered = Event()
+    release_launch = Event()
+
     class Manager:
         def __init__(self) -> None:
             self.launched: list[str] = []
@@ -166,10 +170,14 @@ def test_supervisor_stop_all_closes_launch_race() -> None:
 
         def launch(self, identity: str):
             self.launched.append(identity)
+            launch_entered.set()
+            assert release_launch.wait(timeout=2)
             return object()
 
         def start_sequential(self, identities, launch, should_continue):
-            launch(identities[0])
+            process = launch(identities[0])
+            if not should_continue():
+                return StartupResult((), cancelled=True)
             return StartupResult((identities[0],))
 
         def stop_all(self) -> None:
@@ -178,9 +186,17 @@ def test_supervisor_stop_all_closes_launch_race() -> None:
     manager = Manager()
     supervisor = LauncherSupervisor(manager)  # type: ignore[arg-type]
     assert supervisor.start_all(("cari",))
-    supervisor.stop_all()
-    result = wait_result(supervisor)
+    assert launch_entered.wait(timeout=2)
 
+    stopper = Thread(target=supervisor.stop_all, daemon=True)
+    stopper.start()
+    time.sleep(0.02)
+    release_launch.set()
+    stopper.join(timeout=2)
+    assert not stopper.is_alive()
+
+    result = wait_result(supervisor)
     assert result.result is not None
+    assert result.result.cancelled is True
     assert manager.launched == ["cari"]
     assert manager.stopped is True
