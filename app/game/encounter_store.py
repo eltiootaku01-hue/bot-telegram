@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.db.models import GameAttempt, GameEncounter
 
 
@@ -23,7 +24,7 @@ class EncounterStore:
     ) -> bool | None:
         """Return True/False for the first attempt, None when the user already tried."""
         encounter = await session.get(GameEncounter, encounter_id)
-        if encounter is None or encounter.status != "active" or encounter.expires_at <= datetime.utcnow():
+        if encounter is None or encounter.status != "active" or encounter.expires_at <= utc_now():
             return None
         attempt = GameAttempt(
             encounter_id=encounter_id,
