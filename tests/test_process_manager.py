@@ -100,7 +100,10 @@ def test_process_manager_marks_requested_stop_as_expected_exit() -> None:
     manager.stop("cari", process)
     assert manager.reap_finished() == []
     exit_info = manager.last_exit_for("cari")
-    assert exit_info is None
+    assert exit_info is not None
+    assert exit_info.identity == "cari"
+    assert exit_info.returncode is not None
+    assert exit_info.expected is True
 
 
 def test_process_manager_marks_external_exit_as_unexpected() -> None:
