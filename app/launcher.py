@@ -487,7 +487,8 @@ class BotLauncher(tk.Tk):
             exit_info = self.manager.last_exit_for(key)
             if exit_info is None:
                 continue
-            self._reported_unexpected_exits.discard(key)
+            if exit_info.expected:
+                continue
             state = getattr(self._dashboard_cards.get(key), "_state", None)
             if state is not None:
                 code = "sin código" if returncode is None else str(returncode)
