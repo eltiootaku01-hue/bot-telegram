@@ -131,3 +131,26 @@ def test_supervisor_stop_all_cancels_pending_startup() -> None:
     assert result.result.failure is None
     assert result.result.started == ()
     assert manager.active_processes() == {}
+
+
+
+def test_supervisor_cleans_up_if_startup_raises_outside_sequence_handling() -> None:
+    class FailingManager:
+        def __init__(self) -> None:
+            self.stopped = False
+
+        def start_sequential(self, identities, should_continue):
+            raise RuntimeError("unexpected supervisor failure")
+
+        def stop_all(self) -> None:
+            self.stopped = True
+
+    manager = FailingManager()
+    supervisor = LauncherSupervisor(manager)  # type: ignore[arg-type]
+
+    assert supervisor.start_all(("cari",))
+    result = wait_result(supervisor)
+
+    assert isinstance(result.error, RuntimeError)
+    assert str(result.error) == "unexpected supervisor failure"
+    assert manager.stopped is True
