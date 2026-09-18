@@ -59,6 +59,7 @@ class ProcessManager:
             self.reader.attach(identity, process)
             self.processes[identity] = process
             self.last_exit.pop(identity, None)
+            self._intentional_stops.discard(identity)
             return process
 
     def check_health(self, identity: str, process: Popen[str]) -> bool:
@@ -69,9 +70,10 @@ class ProcessManager:
 
     def stop(self, identity: str, process: Popen[str]) -> None:
         with self._lock:
-            self._intentional_stops.add(identity)
             managed = self.processes.get(identity)
             target = managed if managed is not None else process
+            if target.poll() is None:
+                self._intentional_stops.add(identity)
 
         if target.poll() is None:
             target.terminate()
