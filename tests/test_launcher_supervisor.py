@@ -159,6 +159,26 @@ def test_supervisor_cleans_up_if_startup_raises_outside_sequence_handling() -> N
 
 
 
+
+def test_supervisor_waits_for_startup_worker() -> None:
+    release = Event()
+
+    class SlowManager:
+        def start_sequential(self, identities, launch, should_continue):
+            release.wait(timeout=2)
+            return StartupResult((), cancelled=not should_continue())
+
+        def stop_all(self) -> None:
+            release.set()
+
+    supervisor = LauncherSupervisor(SlowManager())  # type: ignore[arg-type]
+
+    assert supervisor.start_all(("cari",))
+    assert supervisor.running
+    assert supervisor.stop_all() is True
+    assert not supervisor.running
+
+
 def test_supervisor_stop_all_closes_launch_race() -> None:
     launch_entered = Event()
     release_launch = Event()
