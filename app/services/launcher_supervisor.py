@@ -47,7 +47,7 @@ class LauncherSupervisor:
 
     def _run(self, identities: tuple[str, ...]) -> None:
         try:
-            result = StartupTaskResult(result=self.manager.start_sequential(identities, self._launch, self._should_continue))
+            result = StartupTaskResult(result=self.manager.start_sequential(identities, should_continue=self._should_continue, launch=self._launch))
         except BaseException as exc:  # surface unexpected startup errors to the UI
             try:
                 self.manager.stop_all()
