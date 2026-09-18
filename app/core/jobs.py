@@ -46,6 +46,53 @@ class JobQueue:
             return existing
         return job
 
+    async def _recover_job(
+        self,
+        session: AsyncSession,
+        job: DurableJob,
+        *,
+        cutoff: datetime,
+        now: datetime,
+        max_attempts: int,
+    ) -> bool:
+        conditions = [
+            DurableJob.id == job.id,
+            DurableJob.status == "processing",
+        ]
+        if job.locked_at is None:
+            conditions.append(DurableJob.locked_at.is_(None))
+        else:
+            conditions.append(DurableJob.locked_at == job.locked_at)
+        if job.heartbeat_at is None:
+            conditions.append(DurableJob.heartbeat_at.is_(None))
+            if job.locked_at is None or job.locked_at >= cutoff:
+                return False
+        else:
+            conditions.append(DurableJob.heartbeat_at == job.heartbeat_at)
+            if job.heartbeat_at >= cutoff:
+                return False
+
+        if job.attempts >= max_attempts:
+            values = {
+                "status": "failed",
+                "last_error": "Job abandoned after maximum recovery attempts",
+                "locked_at": None,
+                "heartbeat_at": None,
+                "updated_at": now,
+            }
+        else:
+            delay = DEFAULT_BACKOFF_SECONDS[min(job.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
+            values = {
+                "status": "pending",
+                "run_at": now + timedelta(seconds=delay),
+                "last_error": "Recovered stale processing job",
+                "locked_at": None,
+                "heartbeat_at": None,
+                "updated_at": now,
+            }
+        result = await session.execute(update(DurableJob).where(*conditions).values(**values))
+        return result.rowcount == 1
+
     async def recover_stale(self, session: AsyncSession, *, job_type: str | None = None, timeout_seconds: int = 300, max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> int:
         cutoff = utc_now() - timedelta(seconds=timeout_seconds)
         now = utc_now()
@@ -59,43 +106,15 @@ class JobQueue:
         jobs = list(await session.scalars(query))
         recovered = 0
         for job in jobs:
-            locked_at = job.locked_at
-            heartbeat_at = job.heartbeat_at
-            conditions = [
-                DurableJob.id == job.id,
-                DurableJob.status == "processing",
-            ]
-            if locked_at is None:
-                conditions.append(DurableJob.locked_at.is_(None))
-            else:
-                conditions.append(DurableJob.locked_at == locked_at)
-            if heartbeat_at is None:
-                conditions.append(DurableJob.heartbeat_at.is_(None))
-                conditions.append(DurableJob.locked_at < cutoff)
-            else:
-                conditions.append(DurableJob.heartbeat_at == heartbeat_at)
-                conditions.append(DurableJob.heartbeat_at < cutoff)
-
-            if job.attempts >= max_attempts:
-                values = {
-                    "status": "failed",
-                    "last_error": "Job abandoned after maximum recovery attempts",
-                    "locked_at": None,
-                    "heartbeat_at": None,
-                    "updated_at": now,
-                }
-            else:
-                delay = DEFAULT_BACKOFF_SECONDS[min(job.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
-                values = {
-                    "status": "pending",
-                    "run_at": now + timedelta(seconds=delay),
-                    "last_error": "Recovered stale processing job",
-                    "locked_at": None,
-                    "heartbeat_at": None,
-                    "updated_at": now,
-                }
-            result = await session.execute(update(DurableJob).where(*conditions).values(**values))
-            recovered += int(result.rowcount == 1)
+            recovered += int(
+                await self._recover_job(
+                    session,
+                    job,
+                    cutoff=cutoff,
+                    now=now,
+                    max_attempts=max_attempts,
+                )
+            )
         if recovered:
             await session.commit()
         return recovered
