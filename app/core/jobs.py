@@ -57,21 +57,48 @@ class JobQueue:
         if job_type is not None:
             query = query.where(DurableJob.job_type == job_type)
         jobs = list(await session.scalars(query))
+        recovered = 0
         for job in jobs:
+            locked_at = job.locked_at
+            heartbeat_at = job.heartbeat_at
+            conditions = [
+                DurableJob.id == job.id,
+                DurableJob.status == "processing",
+            ]
+            if locked_at is None:
+                conditions.append(DurableJob.locked_at.is_(None))
+            else:
+                conditions.append(DurableJob.locked_at == locked_at)
+            if heartbeat_at is None:
+                conditions.append(DurableJob.heartbeat_at.is_(None))
+                conditions.append(DurableJob.locked_at < cutoff)
+            else:
+                conditions.append(DurableJob.heartbeat_at == heartbeat_at)
+                conditions.append(DurableJob.heartbeat_at < cutoff)
+
             if job.attempts >= max_attempts:
-                job.status = "failed"
-                job.last_error = "Job abandoned after maximum recovery attempts"
+                values = {
+                    "status": "failed",
+                    "last_error": "Job abandoned after maximum recovery attempts",
+                    "locked_at": None,
+                    "heartbeat_at": None,
+                    "updated_at": now,
+                }
             else:
                 delay = DEFAULT_BACKOFF_SECONDS[min(job.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
-                job.status = "pending"
-                job.run_at = now + timedelta(seconds=delay)
-                job.last_error = "Recovered stale processing job"
-            job.locked_at = None
-            job.heartbeat_at = None
-            job.updated_at = now
-        if jobs:
+                values = {
+                    "status": "pending",
+                    "run_at": now + timedelta(seconds=delay),
+                    "last_error": "Recovered stale processing job",
+                    "locked_at": None,
+                    "heartbeat_at": None,
+                    "updated_at": now,
+                }
+            result = await session.execute(update(DurableJob).where(*conditions).values(**values))
+            recovered += int(result.rowcount == 1)
+        if recovered:
             await session.commit()
-        return len(jobs)
+        return recovered
 
     async def claim(self, session: AsyncSession, *, job_type: str | None = None) -> DurableJob | None:
         now = utc_now()
@@ -145,8 +172,6 @@ class JobQueue:
         if retry_at is None and job.attempts < max_attempts:
             delay = DEFAULT_BACKOFF_SECONDS[min(job.attempts, len(DEFAULT_BACKOFF_SECONDS) - 1)]
             retry_at = now + timedelta(seconds=delay)
-        # An explicit retry time may request an immediate retry, but it must
-        # never override the queue's maximum-attempt safety boundary.
         permanent = job.attempts >= max_attempts
         conditions = [DurableJob.id == job_id, DurableJob.status == "processing"]
         if lock_time is not None:
