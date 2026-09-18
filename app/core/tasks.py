@@ -5,6 +5,7 @@ import logging
 from collections.abc import Coroutine
 from typing import Any
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +26,8 @@ class TaskSupervisor:
         return task
 
     def _finish(self, name: str, task: asyncio.Task[Any]) -> None:
-        self._tasks.pop(name, None)
+        if self._tasks.get(name) is task:
+            self._tasks.pop(name, None)
         if task.cancelled():
             return
         try:
