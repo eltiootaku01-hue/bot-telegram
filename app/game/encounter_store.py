@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
