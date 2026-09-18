@@ -24,6 +24,7 @@ class LauncherSupervisor:
         self._results: Queue[StartupTaskResult] = Queue()
         self._thread: Thread | None = None
         self._cancel = Event()
+        self._launch_lock = Lock()
 
     @property
     def running(self) -> bool:
@@ -46,7 +47,7 @@ class LauncherSupervisor:
 
     def _run(self, identities: tuple[str, ...]) -> None:
         try:
-            result = StartupTaskResult(result=self.manager.start_sequential(identities, self._should_continue))
+            result = StartupTaskResult(result=self.manager.start_sequential(identities, self._launch, self._should_continue))
         except BaseException as exc:  # surface unexpected startup errors to the UI
             try:
                 self.manager.stop_all()
@@ -57,6 +58,12 @@ class LauncherSupervisor:
 
     def _should_continue(self) -> bool:
         return not self._cancel.is_set()
+
+    def _launch(self, identity: str):
+        with self._launch_lock:
+            if not self._should_continue():
+                raise RuntimeError("startup cancelled before process launch")
+            return self.manager.launch(identity)
 
     def poll_result(self) -> StartupTaskResult | None:
         """Non-blocking result retrieval; safe to call from Tk's event loop."""
@@ -70,4 +77,5 @@ class LauncherSupervisor:
 
     def stop_all(self) -> None:
         self._cancel.set()
-        self.manager.stop_all()
+        with self._launch_lock:
+            self.manager.stop_all()
