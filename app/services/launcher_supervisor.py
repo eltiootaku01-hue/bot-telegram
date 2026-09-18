@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from queue import Empty, Queue
-from threading import Event, Lock, Thread
+from threading import Event, Lock, Thread, current_thread
 from typing import Sequence
 
 from app.services.process_manager import ProcessManager
@@ -75,7 +75,16 @@ class LauncherSupervisor:
             self._thread = None
         return result
 
-    def stop_all(self) -> None:
+    def wait(self, timeout: float | None = None) -> bool:
+        """Wait for the current startup worker to terminate."""
+        thread = self._thread
+        if thread is None or thread is current_thread():
+            return True
+        thread.join(timeout)
+        return not thread.is_alive()
+
+    def stop_all(self, *, wait: bool = True, timeout: float | None = None) -> bool:
         self._cancel.set()
         with self._launch_lock:
             self.manager.stop_all()
+        return self.wait(timeout) if wait else True
