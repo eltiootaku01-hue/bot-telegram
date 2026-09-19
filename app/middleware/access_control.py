@@ -27,6 +27,17 @@ class ChatAccessMiddleware(BaseMiddleware):
         return None
 
     def _is_allowed(self, update: Update) -> bool:
+        membership = (
+            update.chat_member
+            or update.chat_join_request
+            or update.my_chat_member
+        )
+        if membership is not None:
+            return self.settings.is_chat_allowed(
+                membership.chat.id,
+                membership.chat.type,
+            )
+
         callback = update.callback_query
         if callback is not None and callback.message is not None:
             message = callback.message
