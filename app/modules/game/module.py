@@ -43,7 +43,7 @@ class GameModule(BotModule):
         self.router.message.register(self.gacha, Command("gacha"))
         self.router.message.register(self.inventory, Command("inventario"))
         self.router.message.register(self.combat, Command("combate"))
-        self.router.callback_query.register(self.game_hub, F.data == "game:gacha:open")
+        self.router.callback_query.register(self.gacha_open, F.data == "game:gacha:open")
         self.router.callback_query.register(self.inventory_callback, F.data == "game:inventory:open")
         self.router.callback_query.register(self.combat_open, F.data == "game:combat:open")
         self.router.callback_query.register(self.gacha_roll, F.data == "game:gacha:roll")
@@ -114,6 +114,18 @@ class GameModule(BotModule):
         await message.answer("🎰 <b>Gacha de personajes</b>", reply_markup=gacha_keyboard())
         if message.from_user is not None:
             await self._observe_action("gacha_open", message.from_user.id)
+
+    async def gacha_open(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer("Este panel solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
+            return
+        if callback.message is not None:
+            await callback.message.edit_text(
+                "🎰 <b>Gacha de personajes</b>",
+                reply_markup=gacha_keyboard(),
+            )
+        await self._observe_action("gacha_open", callback.from_user.id)
+        await callback.answer()
 
     async def inventory_callback(self, callback: CallbackQuery) -> None:
         if not self._private_callback(callback):
