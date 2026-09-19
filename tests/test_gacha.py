@@ -1,5 +1,3 @@
-from unittest.mock import AsyncMock
-
 import pytest
 from sqlalchemy import select
 
