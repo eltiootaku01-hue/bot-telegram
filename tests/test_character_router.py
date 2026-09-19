@@ -53,3 +53,11 @@ def test_cari_does_not_claim_messages_addressed_to_another_character(database=No
     assert module._should_handle_text("Hola Sunna") is False
     assert module._should_handle_text("Hola Chie") is False
     assert module._should_handle_text("Hola") is True
+
+
+def test_router_classifies_authored_confusion_phrases() -> None:
+    router = CharacterIntentRouter()
+
+    assert router.classify("No entiendo qué pasó") is CharacterIntent.CONFUSION
+    assert router.classify("qué está pasando?") is CharacterIntent.CONFUSION
+    assert router.classify("no comprendo") is CharacterIntent.CONFUSION
