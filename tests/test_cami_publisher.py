@@ -33,7 +33,7 @@ async def test_publish_claim_allows_only_one_concurrent_sender(tmp_path) -> None
     bot.send_photo.return_value = SimpleNamespace(message_id=123)
     publisher = CamiMediaPublisher(
         database,
-        Settings(publish_page_chat_id=0),
+        Settings(authorized_chat_ids="-100", publish_page_chat_id=0),
     )
     publisher.topics.get_thread_id = AsyncMock(return_value=77)
 
