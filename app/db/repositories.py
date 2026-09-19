@@ -212,6 +212,18 @@ class MemberRepository:
                 ))
                 await session.flush()
         except _InsufficientPoints:
+            if has_reference:
+                existing = await session.scalar(
+                    select(PointTransaction).where(
+                        PointTransaction.user_id == user_id,
+                        PointTransaction.chat_id == chat_id,
+                        PointTransaction.reference_type == reference_type,
+                        PointTransaction.reference_id == reference_id,
+                    )
+                )
+                if existing is not None:
+                    await session.refresh(profile)
+                    return profile.points
             if commit:
                 await session.rollback()
             return None
