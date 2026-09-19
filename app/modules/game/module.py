@@ -23,6 +23,7 @@ from app.game.fusion import fuse_collection
 from app.game.gacha import GACHA_COST_POINTS, GachaService
 from app.game.progression import apply_capture_progression, collection_status
 from app.game.wild_scheduler import WildWaifuScheduler
+from app.services.community import CommunityResolver
 from app.services.world import WorldService
 from app.ui.control_keyboards import rare_approval_keyboard
 from app.ui.game_keyboards import combat_keyboard, fusion_keyboard, game_hub_keyboard, gacha_keyboard
@@ -42,6 +43,7 @@ class GameModule(BotModule):
         self.encounters = EncounterStore()
         self.wild: WildWaifuScheduler | None = None
         self.world = WorldService()
+        self.community = CommunityResolver()
 
     def setup(self) -> None:
         self.router.message.register(self.game, Command("juego"))
@@ -84,17 +86,9 @@ class GameModule(BotModule):
         except Exception:
             logger.exception("World observation failed for Sunna action=%s user=%s", action_key, user_id)
 
-    async def _community_chat_id(self) -> int | None:
+    async def _community_chat_id(self, user_id: int) -> int | None:
         async with self.database.session() as session:
-            setup = await session.scalar(
-                select(SetupSession.chat_id)
-                .where(
-                    SetupSession.bot_identity == BotIdentity.CHIE.value,
-                    SetupSession.status == "configured",
-                )
-                .order_by(SetupSession.id.desc())
-            )
-            return setup
+            return await self.community.for_user(session, user_id)
 
     @staticmethod
     def _private_callback(callback: CallbackQuery) -> bool:
@@ -139,7 +133,7 @@ class GameModule(BotModule):
         if not self._private_callback(callback):
             await callback.answer("Este botón solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
             return
-        chat_id = await self._community_chat_id()
+        chat_id = await self._community_chat_id(callback.from_user.id)
         if chat_id is None:
             await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
             return
@@ -149,7 +143,7 @@ class GameModule(BotModule):
     async def inventory(self, message: Message) -> None:
         if message.chat.type != "private" or message.from_user is None:
             return
-        chat_id = await self._community_chat_id()
+        chat_id = await self._community_chat_id(callback.from_user.id)
         if chat_id is None:
             await message.answer("😰 Chie todavía no configuró la comunidad para el juego.")
             return
@@ -200,7 +194,7 @@ class GameModule(BotModule):
         if not character_id or callback.message is None:
             await callback.answer("Fusión inválida.", show_alert=True)
             return
-        chat_id = await self._community_chat_id()
+        chat_id = await self._community_chat_id(callback.from_user.id)
         if chat_id is None:
             await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
             return
@@ -257,7 +251,7 @@ class GameModule(BotModule):
         if not self._private_callback(callback):
             await callback.answer("Este panel solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
             return
-        chat_id = await self._community_chat_id()
+        chat_id = await self._community_chat_id(callback.from_user.id)
         if chat_id is None:
             await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
             return
