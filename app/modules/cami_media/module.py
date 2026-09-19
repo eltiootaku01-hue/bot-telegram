@@ -13,6 +13,7 @@ from app.core.identity import BotIdentity
 from app.core.jobs import JobQueue
 from app.core.module import BotModule
 from app.core.time import local_to_utc, utc_now
+from app.services.community import CommunityResolver
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import FanRequest, MediaAsset, RequestStatus
@@ -40,6 +41,7 @@ class CamiMediaModule(BotModule):
         self.topics = ForumTopicService(database)
         self.settings = settings or get_settings()
         self.world = WorldService()
+        self.community = CommunityResolver()
 
     async def _observe_action(self, action_key: str, user_id: int) -> None:
         """Record Cami media-desk usage without affecting the main workflow."""
@@ -140,6 +142,28 @@ class CamiMediaModule(BotModule):
             if scheduled_at <= utc_now():
                 await message.answer("🕒 Esa fecha ya pasó. Elegí una fecha futura.")
                 return
+
+            target_chat_id: int | None = None
+            if asset.request_id is not None:
+                request = await session.get(FanRequest, asset.request_id)
+                if request is None:
+                    await message.answer("😰 El pedido asociado ya no existe.")
+                    return
+                target_chat_id = request.chat_id
+            else:
+                target_chat_id = await self.community.for_user(session, message.from_user.id)
+                if target_chat_id is None:
+                    await message.answer(
+                        "😰 Necesito una comunidad definida para esta publicación. "
+                        "Con varias comunidades, el administrador debe pertenecer a la comunidad destino."
+                    )
+                    return
+
+            if not is_authorized_community(self.settings, target_chat_id):
+                await message.answer("😰 La comunidad destino ya no está autorizada para publicar.")
+                return
+
+            asset.publish_group_chat_id = target_chat_id
             asset.scheduled_at = scheduled_at
             asset.status = "scheduled"
             await self.jobs.enqueue(
