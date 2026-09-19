@@ -176,3 +176,50 @@ async def test_gacha_approval_can_be_refunded_once(database):
 
     assert profile is not None and profile.points == GACHA_COST_POINTS
     assert len(refunds) == 1
+
+
+@pytest.mark.asyncio
+async def test_gacha_approval_grants_rare_character_once(database):
+    from app.game.rare_approval import decide
+
+    async with database.session() as session:
+        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS))
+
+    service = GachaService(FixedEngine(Rarity.B))
+
+    async with database.session() as session:
+        result = await service.roll(session, user_id=7, chat_id=-100, seed="approve")
+        await session.commit()
+        approval_id = result.approval.id
+
+    async with database.session() as session:
+        request = await decide(session, approval_id, True, commit=False)
+        assert request is not None
+        granted, balance = await service.finalize_approval(session, request)
+        await session.commit()
+
+    assert granted is True
+    assert balance == 0
+
+    async with database.session() as session:
+        collection = await session.scalar(
+            select(GameCollection).where(
+                GameCollection.profile_id == 1,
+                GameCollection.character_id == "taiga",
+            )
+        )
+        roll = await session.scalar(
+            select(GameGachaRoll).where(GameGachaRoll.roll_id == "approve")
+        )
+
+    assert collection is not None
+    assert collection.copies == 1
+    assert roll is not None and roll.granted is True
+
+    async with database.session() as session:
+        request = await session.get(RareDropApproval, approval_id)
+        assert request is not None
+        second_granted, _ = await service.finalize_approval(session, request)
+        await session.commit()
+
+    assert second_granted is True
