@@ -135,6 +135,12 @@ Available characters are selected from the local catalog up to the rolled rarity
 
 The gacha state, approval state and reward transaction are stored in SQLite, so the workflow survives process restarts.
 
+## Misterio diario del Café Otaku
+
+Sunna incorpora un misterio authored que puede iniciarse en la comunidad con `/misterio`. Cada comunidad tiene como máximo una ronda por día del mundo. El caso se elige de forma determinista según la comunidad y la fecha, incluye cuatro pistas y cuatro opciones, y el primer jugador que acierta obtiene **15 puntos**.
+
+La ronda y los intentos quedan persistidos en SQLite. Cada jugador puede responder una sola vez, el ganador se reclama con una transición atómica y la recompensa usa una referencia idempotente en el ledger de puntos. Si Telegram rechaza la publicación inicial, la ronda queda marcada para poder reintentarse en lugar de bloquear el día.
+
 ## Shared points
 
 Every successful waifu capture can award community points. Points belong to the player + community and use an auditable transaction ledger. Fan requests and Gacha spend those same points.

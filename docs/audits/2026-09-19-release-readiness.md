@@ -1,18 +1,37 @@
 # Release readiness — 2026-09-19
 
-## Estado de Git
+## Estado actual
 
 - Rama de entrega: `main`
-- El árbol incluye el endurecimiento de concurrencia de Sunna/WaifuMon.
-- El árbol incluye catálogo persistente de Ciudad Animals y su inicialización desde el módulo Core.
-- El árbol incluye ranking comunitario de puntos para Sunna.
-- El árbol incluye autorización específica del canal configurado como media vault.
-- El árbol incluye selección ponderada del repertorio authored.
+- SHA validado: `3f2e4a1261a5ea4b2111e226a6e769e674e6b802`
+- CI #938: **SUCCESS**
+- Windows Build #579: **SUCCESS**
+- Las dos canalizaciones terminaron correctamente sobre el mismo SHA.
 
-## Validación esperada
+## Incluido en este estado
 
-CI debe ejecutar Ruff y toda la suite Pytest.
+- endurecimiento de concurrencia de Sunna/WaifuMon;
+- control de acceso central y autenticación correcta de callbacks;
+- allowlist aplicada también a envíos automáticos;
+- publicaciones de Cami con claim atómico + `BEGIN IMMEDIATE`;
+- catálogo persistente de Ciudad Animals;
+- repertorio authored-only y nuevas rutas de interacción;
+- Misterio diario de Sunna con persistencia, recuperación e idempotencia;
+- prueba de carrera con dos conexiones SQLite para demostrar un único ganador/recompensa;
+- paquete Windows completo.
 
-Windows Build debe ejecutar las pruebas nativas, compilar los cinco ejecutables, verificar BotManager, crear el instalador Inno Setup, generar el ZIP portable y producir SHA256.
+## Paquete Windows comprobado
 
-No se considera una entrega completa hasta que ambas canalizaciones terminen correctamente sobre el mismo SHA.
+El workflow #579 verificó:
+- los cuatro bots;
+- BotManager;
+- instalador Inno Setup;
+- ZIP portable;
+- checksums SHA-256;
+- subida de ambos artefactos.
+
+El paquete queda listo para instalación/uso desde los artefactos de GitHub Actions. Una publicación de GitHub Release requiere un tag `v<version>` coherente con `pyproject.toml`.
+
+## Estado de producto
+
+Este estado representa una base funcional y empaquetada, no el 100% de la hoja de ruta narrativa. Continúan pendientes áreas de expansión como volumen de repertorio, biblias canónicas completas para personajes sin material equivalente, mayor profundidad de Ciudad Animals/Café Otaku, GUI completa, catálogo documental consultable y herramientas avanzadas del operador humano Tío Otaku.
