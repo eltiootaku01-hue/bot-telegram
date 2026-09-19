@@ -159,3 +159,40 @@ def test_director_honors_authored_scene_weights() -> None:
     assert director.choose(BotIdentity.CARI, CharacterIntent.GREETING, roll=1).scene.text == "heavy"
     assert director.choose(BotIdentity.CARI, CharacterIntent.GREETING, roll=2).scene.text == "heavy"
     assert director.choose(BotIdentity.CARI, CharacterIntent.GREETING, roll=3).scene.text == "light"
+
+
+def test_cross_character_cafe_scenes_cover_the_four_friendships() -> None:
+    director = CharacterDirector()
+
+    expected = (
+        (BotIdentity.CARI, CharacterIntent.BELONGING, BotIdentity.SUNNA),
+        (BotIdentity.CARI, CharacterIntent.REASSURANCE, BotIdentity.CAMI),
+        (BotIdentity.CAMI, CharacterIntent.HELP, BotIdentity.CHIE),
+        (BotIdentity.SUNNA, CharacterIntent.AFFECTION, BotIdentity.CARI),
+        (BotIdentity.SUNNA, CharacterIntent.CONFUSION, BotIdentity.CAMI),
+        (BotIdentity.CHIE, CharacterIntent.HELP, BotIdentity.CAMI),
+        (BotIdentity.CHIE, CharacterIntent.REASSURANCE, BotIdentity.SUNNA),
+    )
+
+    for speaker, intent, follow_up in expected:
+        found = [
+            director.choose(speaker, intent, roll=index)
+            for index in range(16)
+        ]
+        assert any(
+            response is not None
+            and response.follow_up is not None
+            and response.follow_up.speaker is follow_up
+            for response in found
+        )
+
+
+def test_cross_character_scenes_remain_authored_and_deterministic() -> None:
+    director = CharacterDirector()
+    first = director.choose(BotIdentity.SUNNA, CharacterIntent.AFFECTION, roll=3)
+    second = director.choose(BotIdentity.SUNNA, CharacterIntent.AFFECTION, roll=3)
+
+    assert first == second
+    assert first is not None
+    assert first.follow_up is not None
+    assert "Gracias por esperarme" in first.scene.text
