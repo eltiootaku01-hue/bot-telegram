@@ -300,10 +300,24 @@ class GameModule(BotModule):
             f"{clues}\n\n"
             f"🏆 El primer acertante gana <b>+{started.round.points} puntos</b>."
         )
-        sent = await message.answer(
-            text,
-            reply_markup=mystery_keyboard(started.round.id, started.case.options),
-        )
+        try:
+            sent = await message.answer(
+                text,
+                reply_markup=mystery_keyboard(started.round.id, started.case.options),
+            )
+        except Exception:
+            logger.exception(
+                "Failed to publish daily mystery chat=%s round=%s",
+                message.chat.id,
+                started.round.id,
+            )
+            async with self.database.session(write=True) as session:
+                row = await session.get(MysteryRound, started.round.id)
+                if row is not None and row.status == "active":
+                    row.status = "failed"
+                    row.updated_at = utc_now()
+            await message.answer("😰 No pude publicar el misterio ahora. Podés volver a intentarlo.")
+            return
         async with self.database.session(write=True) as session:
             row = await session.get(MysteryRound, started.round.id)
             if row is not None and row.message_id is None:
