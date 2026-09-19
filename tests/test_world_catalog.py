@@ -1,3 +1,9 @@
+import pytest
+from sqlalchemy import select
+
+from app.db.database import Database
+from app.db.world_models import WorldCatalogEntry
+
 from app.characters.repertoire import REPERTOIRE
 from app.core.identity import BotIdentity
 from app.services.world_catalog import WORLD_CATALOG, catalog_for_identity
@@ -34,12 +40,6 @@ def test_world_catalog_has_cafe_and_waifumon_core_entries() -> None:
         for item in WORLD_CATALOG
     )
 
-
-import pytest
-from sqlalchemy import select
-
-from app.db.database import Database
-from app.db.world_models import WorldCatalogEntry
 
 
 @pytest.mark.asyncio
