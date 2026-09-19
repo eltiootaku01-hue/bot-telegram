@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+from unittest.mock import AsyncMock
+
 import pytest
 from sqlalchemy import select
 
@@ -135,7 +137,7 @@ async def test_non_cari_character_chat_requires_explicit_address(database: Datab
 @pytest.mark.asyncio
 async def test_system_startup_seeds_world_catalog(database: Database) -> None:
     module = SystemModule(BotIdentity.SUNNA, database)
-    await module.on_startup(None)
+    await module.on_startup(AsyncMock())
 
     async with database.session() as session:
         rows = list(await session.scalars(select(WorldUsageStat)))
