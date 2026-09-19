@@ -129,6 +129,21 @@ class MysteryService:
         )
         if existing is not None:
             case = cls._case_for(chat_id, day_key)
+            if existing.status == "failed":
+                now = utc_now()
+                existing.title = case.title
+                existing.question = case.question
+                existing.clues_json = json.dumps(case.clues, ensure_ascii=False)
+                existing.options_json = json.dumps(case.options, ensure_ascii=False)
+                existing.answer_index = case.answer_index
+                existing.points = MYSTERY_POINTS
+                existing.status = "active"
+                existing.winner_user_id = None
+                existing.message_id = None
+                existing.expires_at = now + timedelta(hours=24)
+                existing.updated_at = now
+                await session.flush()
+                return MysteryStart(existing, case, True)
             return MysteryStart(existing, case, False)
 
         case = cls._case_for(chat_id, day_key)
