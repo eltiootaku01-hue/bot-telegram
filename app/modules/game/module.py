@@ -245,7 +245,7 @@ class GameModule(BotModule):
 
         clues = "\n".join(f"🔎 {clue}" for clue in started.case.clues)
         text = (
-            "🕵️ <b>MISTERIO DEL CAFÉ OTaku</b>\n\n"
+            "🕵️ <b>MISTERIO DEL CAFÉ OTAKU</b>\n\n"
             f"<b>{started.case.title}</b>\n"
             f"{started.case.question}\n\n"
             f"{clues}\n\n"
