@@ -31,7 +31,7 @@ async def test_private_user_resolves_to_recent_configured_membership(tmp_path) -
                     status="configured",
                 ),
                 SetupSession(
-                    user_id=1,
+                    user_id=2,
                     chat_id=-200,
                     bot_identity=BotIdentity.CHIE.value,
                     status="configured",
@@ -125,7 +125,7 @@ async def test_configured_returns_unique_communities(tmp_path) -> None:
             [
                 SetupSession(user_id=1, chat_id=-100, bot_identity="chie", status="configured"),
                 SetupSession(user_id=2, chat_id=-100, bot_identity="chie", status="configured"),
-                SetupSession(user_id=1, chat_id=-200, bot_identity="chie", status="configured"),
+                SetupSession(user_id=3, chat_id=-200, bot_identity="chie", status="configured"),
             ]
         )
 
