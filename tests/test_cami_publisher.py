@@ -75,3 +75,47 @@ async def test_publish_claim_allows_only_one_concurrent_sender(tmp_path) -> None
     assert asset.published_group_message_id == 123
     assert bot.send_photo.await_count == 1
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_publish_rejects_unauthorized_group_before_claim(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'publisher-unauthorized.db'}")
+    await database.create_schema()
+    bot = AsyncMock()
+    publisher = CamiMediaPublisher(
+        database,
+        Settings(authorized_chat_ids="-100123", publish_page_chat_id=0),
+    )
+
+    async with database.session() as session:
+        session.add(
+            SetupSession(
+                user_id=1,
+                chat_id=-100999,
+                bot_identity="chie",
+                status="configured",
+            )
+        )
+        asset = MediaAsset(
+            telegram_file_id="file-unauthorized",
+            source_chat_id=-200,
+            source_message_id=2,
+            status="scheduled",
+            publish_group=True,
+            publish_page=False,
+        )
+        session.add(asset)
+        await session.flush()
+        asset_id = asset.id
+
+    with pytest.raises(RuntimeError, match="not authorized"):
+        await publisher.publish(bot, {"asset_id": asset_id, "destination": "group"})
+
+    bot.send_photo.assert_not_awaited()
+
+    async with database.session() as session:
+        saved = await session.get(MediaAsset, asset_id)
+
+    assert saved is not None
+    assert saved.status == "scheduled"
+    await database.close()
