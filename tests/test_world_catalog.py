@@ -23,7 +23,7 @@ def test_world_catalog_keys_are_unique_per_identity_and_type() -> None:
     assert len(keys) == len(set(keys))
 
 
-def test_world_catalog_has_cafe_and_waiifumon_core_entries() -> None:
+def test_world_catalog_has_cafe_and_waifumon_core_entries() -> None:
     assert any(
         item.entry_key == "cafe_otaku" and item.bot_identity is BotIdentity.CARI
         for item in WORLD_CATALOG
