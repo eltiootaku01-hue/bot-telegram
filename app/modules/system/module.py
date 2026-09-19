@@ -54,6 +54,7 @@ class SystemModule(BotModule):
                 BotCommand(command="gacha", description="Abrir el gacha"),
                 BotCommand(command="inventario", description="Ver tu inventario"),
                 BotCommand(command="combate", description="Abrir combate"),
+                BotCommand(command="misterio", description="Resolver el misterio diario"),
                 BotCommand(command="trivia", description="Consultar la trivia"),
                 BotCommand(command="puntos", description="Consultar tus puntos"),
                 BotCommand(command="ranking", description="Consultar el ranking"),
