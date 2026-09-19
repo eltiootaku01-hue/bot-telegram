@@ -98,6 +98,8 @@ Implementado:
 - observación de escenas de diálogo y de acciones reales de Sunna, Cami y Chie;
 - panel privado de Chie para revisar señales agregadas;
 - pruebas de agregación, separación de ámbitos y cobertura del catálogo;
-- conversación determinista de las cuatro identidades sin dependencia del LLM.
+- conversación determinista de las cuatro identidades sin dependencia del LLM;
+- sincronización persistente de altas, bajas y restricciones de miembros de Telegram;
+- Chie mantiene personalidad operativa sin inventar una biblia narrativa que todavía no existe.
 
 El mundo sigue siendo deliberadamente pequeño y curado: las métricas describen uso real, pero la IA no puede convertir esas métricas en canon automáticamente. La expansión del libreto, nuevas relaciones y hechos narrativos continúan siendo cambios autorales explícitos.
