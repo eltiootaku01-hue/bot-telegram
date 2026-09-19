@@ -42,7 +42,7 @@ class GameModule(BotModule):
         self.encounters = EncounterStore()
         self.wild: WildWaifuScheduler | None = None
         self.world = WorldService()
-        self.community = CommunityResolver()
+        self.community = CommunityResolver(self.settings)
 
     def setup(self) -> None:
         self.router.message.register(self.game, Command("juego"))
