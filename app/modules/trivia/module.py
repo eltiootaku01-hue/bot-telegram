@@ -41,6 +41,7 @@ class TriviaModule(BotModule):
         self.router.message.register(self.start_command, Command("trivia"))
         self.router.message.register(self.points_command, Command("puntos"))
         self.router.message.register(self.ranking_command, Command("ranking"))
+        self.router.callback_query.register(self.start_panel, F.data == "game:trivia:start")
         self.router.callback_query.register(self.answer, F.data.startswith("game:trivia:"))
 
     async def on_startup(self, bot: Bot) -> None:
@@ -51,6 +52,35 @@ class TriviaModule(BotModule):
         if message.chat.type != "private":
             return
         await message.answer("🧠 La trivia pública aparece sola. Acá podés consultar su estado.")
+
+    async def start_panel(self, callback: CallbackQuery) -> None:
+        if callback.message is None or callback.message.chat.type != "private":
+            await callback.answer("La consulta de trivia se hace desde tu chat privado con Sunna.", show_alert=True)
+            return
+        community_chat_id = await self._community_chat_id()
+        if community_chat_id is None:
+            await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
+            return
+        async with self.database.session() as session:
+            round_row = await session.scalar(
+                select(TriviaRound)
+                .where(
+                    TriviaRound.chat_id == community_chat_id,
+                    TriviaRound.status == "active",
+                )
+                .order_by(TriviaRound.id.desc())
+            )
+        if round_row is None or utc_now() >= round_row.expires_at:
+            await callback.answer("No hay una trivia activa ahora. Aparecerá automáticamente en la comunidad.", show_alert=True)
+            return
+        await callback.message.edit_text(
+            "🧠 <b>Trivia activa</b>\n\n"
+            f"{round_row.question}\n\n"
+            f"⏱️ Termina pronto · 🏆 +{round_row.points} puntos\n"
+            "Respondé directamente en la publicación de trivia del grupo."
+        )
+        await self._observe_action("trivia_status", callback.from_user.id)
+        await callback.answer()
 
     async def _publish(self, chat_id: int, source: Message | None = None) -> bool:
         if not is_authorized_community(self.settings, chat_id):
