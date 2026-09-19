@@ -21,18 +21,17 @@ async def test_start_round_retires_expired_active_round(database):
     service = TriviaService()
 
     async with database.session() as session:
-        session.add(
-            TriviaRound(
+        stale = TriviaRound(
                 chat_id=-100,
                 question="vieja",
-                options="["a", "b"]",
+                options='["a", "b"]',
                 answer_index=0,
                 explanation="",
                 points=10,
                 status="active",
                 expires_at=utc_now() - timedelta(seconds=1),
             )
-        )
+        session.add(stale)
 
     async with database.session() as session:
         created = await service.start_round(session, -100)
@@ -41,7 +40,7 @@ async def test_start_round_retires_expired_active_round(database):
     round_row, _ = created
 
     async with database.session() as session:
-        old_round = await session.get(TriviaRound, round_row.id - 1)
+        old_round = await session.get(TriviaRound, stale.id)
         new_round = await session.get(TriviaRound, round_row.id)
 
     assert old_round is not None
