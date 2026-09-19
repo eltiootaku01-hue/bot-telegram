@@ -72,7 +72,6 @@ class TriviaService:
                 await session.flush()
         except IntegrityError:
             return None
-        await session.commit()
         await session.refresh(round_row)
         return round_row, question
 
@@ -92,24 +91,22 @@ class TriviaService:
             return "wrong_chat", None
         if utc_now() >= round_row.expires_at:
             round_row.status = "expired"
-            await session.commit()
+            await session.flush()
             return "expired", None
         if option_index < 0 or option_index >= len(json.loads(round_row.options)):
             return "invalid", None
         try:
-            session.add(TriviaAttempt(round_id=round_id, user_id=user_id, option_index=option_index))
-            await session.flush()
+            async with session.begin_nested():
+                session.add(TriviaAttempt(round_id=round_id, user_id=user_id, option_index=option_index))
+                await session.flush()
         except IntegrityError:
-            await session.rollback()
             return "already_answered", None
         if option_index != round_row.answer_index:
-            await session.commit()
             return "wrong", None
         claimed = await session.execute(update(TriviaRound).where(
             TriviaRound.id == round_id, TriviaRound.status == "active"
         ).values(status="won", winner_user_id=user_id, won_at=utc_now()))
         if claimed.rowcount != 1:
-            await session.rollback()
             return "lost_race", None
         balance = await MemberRepository().add_points(
             session,
@@ -119,5 +116,6 @@ class TriviaService:
             reason="Trivia anime",
             reference_type="trivia",
             reference_id=str(round_id),
+            commit=False,
         )
         return "correct", balance
