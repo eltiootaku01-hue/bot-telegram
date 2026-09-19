@@ -182,10 +182,13 @@ class BotLauncher(tk.Tk):
         infra.pack(fill="x", pady=(12, 0))
         self.admin_var = tk.StringVar(value=values.get("ADMIN_USER_ID", "0") or "0")
         self.media_var = tk.StringVar(value=values.get("MEDIA_STORAGE_CHAT_ID", "0") or "0")
+        self.publish_page_var = tk.StringVar(value=values.get("PUBLISH_PAGE_CHAT_ID", "0") or "0")
         ttk.Label(infra, text="Admin Telegram ID").grid(row=0, column=0, sticky="w")
         ttk.Entry(infra, textvariable=self.admin_var, width=16).grid(row=0, column=1, sticky="w", padx=8)
         ttk.Label(infra, text="Media vault chat ID").grid(row=0, column=2, sticky="w", padx=(20, 0))
         ttk.Entry(infra, textvariable=self.media_var, width=16).grid(row=0, column=3, sticky="w", padx=8)
+        ttk.Label(infra, text="Página/Canal de publicaciones").grid(row=1, column=0, sticky="w", pady=(8, 0))
+        ttk.Entry(infra, textvariable=self.publish_page_var, width=16).grid(row=1, column=1, sticky="w", padx=8, pady=(8, 0))
 
         note = ttk.Label(
             outer,
@@ -238,6 +241,7 @@ class BotLauncher(tk.Tk):
             "OLLAMA_MODEL": self.model_var.get().strip() or "llama3.2:1b",
             "ADMIN_USER_ID": self.admin_var.get().strip() or "0",
             "MEDIA_STORAGE_CHAT_ID": self.media_var.get().strip() or "0",
+            "PUBLISH_PAGE_CHAT_ID": self.publish_page_var.get().strip() or "0",
             "AUTHORIZED_CHAT_IDS": self.authorized_chats_var.get().strip(),
             "ALLOW_ADMIN_PRIVATE_CHAT": "true" if self.allow_admin_private_var.get() else "false",
             "BOT_IDENTITY": "cari",
