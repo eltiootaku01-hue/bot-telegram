@@ -89,11 +89,15 @@ Una frecuencia diaria no es necesaria para que el sistema funcione. La observaci
 Implementado:
 
 - catálogo persistente de elementos del mundo;
+- carga idempotente del catálogo al arrancar la capa de conversación;
 - contador agregado por bot, ámbito y entrada;
 - ámbito global y ámbito por usuario/usuario+chat;
 - primera/última observación;
 - consulta de entradas más usadas y menos usadas;
 - detección de entradas catalogadas todavía no usadas;
-- pruebas de agregación y separación de ámbitos.
+- observación de escenas de diálogo y de acciones reales de Sunna, Cami y Chie;
+- panel privado de Chie para revisar señales agregadas;
+- pruebas de agregación, separación de ámbitos y cobertura del catálogo;
+- conversación determinista de las cuatro identidades sin dependencia del LLM.
 
-Pendiente antes de llamarlo "mundo vivo": conectar las acciones reales de los cuatro bots a `WorldService.observe()` y diseñar el libreto/escenas de cada personaje.
+El mundo sigue siendo deliberadamente pequeño y curado: las métricas describen uso real, pero la IA no puede convertir esas métricas en canon automáticamente. La expansión del libreto, nuevas relaciones y hechos narrativos continúan siendo cambios autorales explícitos.
