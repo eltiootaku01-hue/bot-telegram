@@ -125,6 +125,25 @@ class RareDropApproval(Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
+class GameGachaRoll(Base):
+    """Durable ledger for one gacha roll, preventing duplicate rewards."""
+
+    __tablename__ = "game_gacha_rolls"
+    __table_args__ = (
+        UniqueConstraint("roll_id", name="uq_game_gacha_roll_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    roll_id: Mapped[str] = mapped_column(String(255))
+    user_id: Mapped[int] = mapped_column(BigInteger)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    rolled_rarity: Mapped[str] = mapped_column(String(32))
+    character_id: Mapped[str] = mapped_column(String(100))
+    approval_id: Mapped[int | None] = mapped_column()
+    granted: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class MediaAsset(Base):
     __tablename__ = "media_assets"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
