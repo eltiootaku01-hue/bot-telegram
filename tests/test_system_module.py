@@ -16,7 +16,7 @@ async def test_sunna_command_menu_does_not_advertise_removed_request_command() -
     names = {command.command for command in commands}
 
     assert "pedido" not in names
-    assert {"juego", "gacha", "inventario", "combate", "trivia", "puntos", "ranking"} <= names
+    assert {"juego", "gacha", "inventario", "combate", "misterio", "trivia", "puntos", "ranking"} <= names
 
 
 @pytest.mark.asyncio
