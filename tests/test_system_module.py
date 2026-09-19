@@ -38,7 +38,6 @@ async def test_chie_world_command_reports_catalog_and_usage() -> None:
     from types import SimpleNamespace
 
     from app.db.database import Database
-    from app.db.world_models import WorldUsageStat
 
     database = Database("sqlite+aiosqlite:///:memory:")
     await database.create_schema()
