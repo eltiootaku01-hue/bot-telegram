@@ -7,6 +7,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
+from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.core.time import utc_now
@@ -19,9 +20,11 @@ from app.game.encounter_store import EncounterStore
 from app.game.encounters import Encounter, encounter_options
 from app.game.engine import GameEngine
 from app.game.fusion import fuse_collection
+from app.game.gacha import GACHA_COST_POINTS, GachaService
 from app.game.progression import apply_capture_progression, collection_status
 from app.game.wild_scheduler import WildWaifuScheduler
 from app.services.world import WorldService
+from app.ui.control_keyboards import rare_approval_keyboard
 from app.ui.game_keyboards import combat_keyboard, fusion_keyboard, game_hub_keyboard, gacha_keyboard
 
 logger = logging.getLogger(__name__)
@@ -30,10 +33,12 @@ logger = logging.getLogger(__name__)
 class GameModule(BotModule):
     name = "game"
 
-    def __init__(self, database: Database) -> None:
+    def __init__(self, database: Database, settings: Settings | None = None) -> None:
         super().__init__()
         self.database = database
+        self.settings = settings or get_settings()
         self.engine = GameEngine()
+        self.gacha = GachaService(self.engine)
         self.encounters = EncounterStore()
         self.wild: WildWaifuScheduler | None = None
         self.world = WorldService()
@@ -111,7 +116,10 @@ class GameModule(BotModule):
     async def gacha(self, message: Message) -> None:
         if message.chat.type != "private":
             return
-        await message.answer("🎰 <b>Gacha de personajes</b>", reply_markup=gacha_keyboard())
+        await message.answer(
+            f"🎰 <b>Gacha de personajes</b>\nCada tirada cuesta {GACHA_COST_POINTS} puntos.",
+            reply_markup=gacha_keyboard(),
+        )
         if message.from_user is not None:
             await self._observe_action("gacha_open", message.from_user.id)
 
@@ -245,13 +253,60 @@ class GameModule(BotModule):
             reply_markup=combat_keyboard(),
         )
 
-    async def gacha_roll(self, callback: CallbackQuery) -> None:
+    async def gacha_roll(self, callback: CallbackQuery, bot: Bot) -> None:
         if not self._private_callback(callback):
             await callback.answer("Este panel solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
             return
-        rarity = self.engine.roll_gacha(seed=str(callback.id))
-        await self._observe_action("gacha_roll", callback.from_user.id)
-        await callback.answer(f"¡Salió {rarity.value}!", show_alert=True)
+        chat_id = await self._community_chat_id()
+        if chat_id is None:
+            await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
+            return
+
+        async with self.database.session() as session:
+            result = await self.gacha.roll(
+                session,
+                user_id=callback.from_user.id,
+                chat_id=chat_id,
+                seed=str(callback.id),
+            )
+            if result is None:
+                await callback.answer(
+                    f"Necesitás {GACHA_COST_POINTS} puntos para tirar.",
+                    show_alert=True,
+                )
+                return
+            await session.commit()
+
+        await self._observe_action("gacha_roll", callback.from_user.id, chat_id)
+
+        if result.approval is not None:
+            admin_id = self.settings.admin_user_id
+            if admin_id:
+                try:
+                    await bot.send_message(
+                        admin_id,
+                        "🌟 <b>Solicitud de drop raro</b>\n\n"
+                        f"Jugador: <code>{callback.from_user.id}</code>\n"
+                        f"Comunidad: <code>{chat_id}</code>\n"
+                        f"Personaje: <b>{result.character.name}</b>\n"
+                        f"Rareza: <b>{result.character.rarity.value}</b>\n"
+                        f"Saldo restante: <b>{result.remaining_points}</b>",
+                        reply_markup=rare_approval_keyboard(result.approval.id),
+                    )
+                except Exception:
+                    logger.exception("Could not notify owner about gacha approval=%s", result.approval.id)
+            await callback.answer(
+                f"🎰 {result.character.name} ({result.character.rarity.value}) salió. "
+                "Quedó pendiente de aprobación del propietario.",
+                show_alert=True,
+            )
+            return
+
+        await callback.answer(
+            f"🎉 ¡Salió {result.character.name} ({result.character.rarity.value})! "
+            f"Saldo: {result.remaining_points}",
+            show_alert=True,
+        )
 
     async def combat_action(self, callback: CallbackQuery) -> None:
         if not self._private_callback(callback):
