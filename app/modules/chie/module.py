@@ -227,6 +227,15 @@ class ChieModule(BotModule):
                 await callback.answer("Primero ejecutá /configurar dentro del grupo.", show_alert=True)
                 return
             chat_id = setup.chat_id
+        if not any(
+            self.settings.is_chat_allowed(chat_id, chat_type)
+            for chat_type in ("group", "supergroup")
+        ):
+            await callback.answer(
+                "Esta comunidad todavía no está autorizada. Agregá su ID a AUTHORIZED_CHAT_IDS antes de continuar.",
+                show_alert=True,
+            )
+            return
         member = await bot.get_chat_member(chat_id, bot.id)
         missing = [] if isinstance(member, (ChatMemberAdministrator, ChatMemberOwner)) else list(REQUIRED_ADMIN_PERMISSIONS.values())
         if isinstance(member, (ChatMemberAdministrator, ChatMemberOwner)):
