@@ -134,3 +134,28 @@ def test_every_identity_has_authored_emotional_interaction_scenes():
         assert director.choose(identity, CharacterIntent.AFFECTION) is not None
         assert director.choose(identity, CharacterIntent.REASSURANCE) is not None
         assert director.choose(identity, CharacterIntent.BELONGING) is not None
+
+
+def test_director_honors_authored_scene_weights() -> None:
+    weighted = (
+        DialogueScene(
+            "weighted-heavy",
+            CharacterIntent.GREETING,
+            BotIdentity.CARI,
+            "heavy",
+            weight=3,
+        ),
+        DialogueScene(
+            "weighted-light",
+            CharacterIntent.GREETING,
+            BotIdentity.CARI,
+            "light",
+            weight=1,
+        ),
+    )
+    director = CharacterDirector(weighted)
+
+    assert director.choose(BotIdentity.CARI, CharacterIntent.GREETING, roll=0).scene.text == "heavy"
+    assert director.choose(BotIdentity.CARI, CharacterIntent.GREETING, roll=1).scene.text == "heavy"
+    assert director.choose(BotIdentity.CARI, CharacterIntent.GREETING, roll=2).scene.text == "heavy"
+    assert director.choose(BotIdentity.CARI, CharacterIntent.GREETING, roll=3).scene.text == "light"
