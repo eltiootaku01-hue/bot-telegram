@@ -49,7 +49,7 @@ class CamiMediaModule(BotModule):
         self.topics = ForumTopicService(database)
         self.settings = settings or get_settings()
         self.world = WorldService()
-        self.community = CommunityResolver()
+        self.community = CommunityResolver(self.settings)
 
     async def _observe_action(self, action_key: str, user_id: int) -> None:
         """Record Cami media-desk usage without affecting the main workflow."""
