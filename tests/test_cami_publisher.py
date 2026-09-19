@@ -134,6 +134,8 @@ async def test_request_publication_ignores_archived_asset(tmp_path) -> None:
     )
 
     async with database.session() as session:
+        from app.db.models import Chat, User
+
         session.add(
             SetupSession(
                 user_id=1,
@@ -142,6 +144,8 @@ async def test_request_publication_ignores_archived_asset(tmp_path) -> None:
                 status="configured",
             )
         )
+        session.add(User(id=7, first_name="Test"))
+        session.add(Chat(id=-100, type="supergroup", title="Community"))
         request = FanRequest(
             user_id=7,
             chat_id=-100,
