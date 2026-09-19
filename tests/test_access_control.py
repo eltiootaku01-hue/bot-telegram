@@ -9,7 +9,7 @@ from app.core.social_runtime import SocialRuntime
 from app.middleware.access_control import ChatAccessMiddleware
 
 
-def make_update(*, chat_id: int, chat_type: str, user_id: int = 77) -> Update:
+def make_update(*, chat_id: int, chat_type: str, user_id: int = 77, text: str = "/start") -> Update:
     message = Message(
         message_id=1,
         date=datetime.now(timezone.utc),
