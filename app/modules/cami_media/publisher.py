@@ -130,14 +130,20 @@ class CamiMediaPublisher(BotModule):
             asset = await session.get(MediaAsset, asset_id)
             if asset is None or asset.status != "scheduled":
                 return
-            setup = await session.scalar(
-                select(SetupSession)
-                .where(SetupSession.bot_identity == BotIdentity.CHIE.value, SetupSession.status == "configured")
-                .order_by(SetupSession.id.desc())
-            )
-            if setup is None:
-                raise RuntimeError("No configured Chie community")
-            group_id = setup.chat_id
+            group_id = asset.publish_group_chat_id
+            if group_id is None:
+                setup = await session.scalar(
+                    select(SetupSession)
+                    .where(
+                        SetupSession.bot_identity == BotIdentity.CHIE.value,
+                        SetupSession.status == "configured",
+                    )
+                    .order_by(SetupSession.id.desc())
+                )
+                if setup is None:
+                    raise RuntimeError("No configured Chie community")
+                group_id = setup.chat_id
+                asset.publish_group_chat_id = group_id
             if not is_authorized_community(self.settings, group_id):
                 raise RuntimeError("Configured community is not authorized for media publishing")
             thread_id = await self.topics.get_thread_id(group_id, "noticias")
@@ -217,24 +223,18 @@ class CamiMediaPublisher(BotModule):
             if request.status != RequestStatus.PROCESSING.value or asset.status not in {"request_ready", "delivery_unknown"}:
                 return
 
-            setup = await session.scalar(
-                select(SetupSession)
-                .where(SetupSession.bot_identity == BotIdentity.CHIE.value, SetupSession.status == "configured")
-                .order_by(SetupSession.id.desc())
-            )
-            if setup is None:
-                raise RuntimeError("No configured Chie community")
-            thread_id = await self.topics.get_thread_id(setup.chat_id, "pedidos")
+            group_id = request.chat_id
+            if not is_authorized_community(self.settings, group_id):
+                raise RuntimeError("Request community is not authorized for request publishing")
+            thread_id = await self.topics.get_thread_id(group_id, "pedidos")
             if thread_id is None:
-                raise RuntimeError("Configured community has no #pedidos topic")
+                raise RuntimeError("Request community has no #pedidos topic")
             request_user = await session.get(User, request.user_id)
             user_name = escape((request_user.first_name if request_user else "integrante") or "integrante")
             user_tag = f'<a href="tg://user?id={request.user_id}">{user_name}</a>'
             file_id = asset.telegram_file_id
             description = request.description
-            group_id = setup.chat_id
-            if not is_authorized_community(self.settings, group_id):
-                raise RuntimeError("Configured community is not authorized for request publishing")
+            asset.publish_group_chat_id = group_id
             claimed = await session.execute(
                 update(MediaAsset)
                 .where(
