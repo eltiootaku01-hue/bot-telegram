@@ -10,6 +10,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from sqlalchemy import select, update
 
+from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.jobs import JobQueue
@@ -137,6 +138,8 @@ class CamiMediaPublisher(BotModule):
             if setup is None:
                 raise RuntimeError("No configured Chie community")
             group_id = setup.chat_id
+            if not is_authorized_community(self.settings, group_id):
+                raise RuntimeError("Configured community is not authorized for media publishing")
             thread_id = await self.topics.get_thread_id(group_id, "noticias")
             if thread_id is None:
                 raise RuntimeError("Configured community has no #noticias topic")
@@ -230,6 +233,8 @@ class CamiMediaPublisher(BotModule):
             file_id = asset.telegram_file_id
             description = request.description
             group_id = setup.chat_id
+            if not is_authorized_community(self.settings, group_id):
+                raise RuntimeError("Configured community is not authorized for request publishing")
             claimed = await session.execute(
                 update(MediaAsset)
                 .where(
