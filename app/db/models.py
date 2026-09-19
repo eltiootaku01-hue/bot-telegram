@@ -171,6 +171,47 @@ class MediaAsset(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+class MysteryRound(Base):
+    """Daily Café Otaku mystery, one deterministic case per community/day."""
+
+    __tablename__ = "mystery_rounds"
+    __table_args__ = (
+        UniqueConstraint("chat_id", "day_key", name="uq_mystery_round_chat_day"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    day_key: Mapped[str] = mapped_column(String(16))
+    title: Mapped[str] = mapped_column(String(255))
+    question: Mapped[str] = mapped_column(String(1000))
+    clues_json: Mapped[str] = mapped_column(String(4000), default="[]")
+    options_json: Mapped[str] = mapped_column(String(2000), default="[]")
+    answer_index: Mapped[int] = mapped_column(Integer)
+    points: Mapped[int] = mapped_column(Integer, default=15)
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    winner_user_id: Mapped[int | None] = mapped_column(BigInteger)
+    message_id: Mapped[int | None] = mapped_column(BigInteger)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class MysteryAttempt(Base):
+    """One answer attempt per player and mystery round."""
+
+    __tablename__ = "mystery_attempts"
+    __table_args__ = (
+        UniqueConstraint("round_id", "user_id", name="uq_mystery_attempt"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    round_id: Mapped[int] = mapped_column(ForeignKey("mystery_rounds.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(BigInteger)
+    option_index: Mapped[int] = mapped_column(Integer)
+    correct: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class GameCharacterArt(Base):
     __tablename__ = "game_character_art"
     __table_args__ = (UniqueConstraint("character_id", "evolution_stage", name="uq_character_art_stage"),)
