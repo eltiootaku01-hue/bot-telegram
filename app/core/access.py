@@ -1,6 +1,8 @@
 from aiogram import Bot
 from aiogram.types import ChatMemberAdministrator, ChatMemberOwner, Message
 
+from app.core.config import Settings
+
 
 PUBLIC_COMMANDS_DISABLED = True
 
@@ -15,3 +17,11 @@ async def is_chat_staff(message: Message, bot: Bot) -> bool:
 
 def is_private(message: Message) -> bool:
     return message.chat.type == "private"
+
+
+def is_authorized_community(settings: Settings, chat_id: int) -> bool:
+    """Return whether a group/supergroup chat is explicitly authorized."""
+    return any(
+        settings.is_chat_allowed(chat_id, chat_type)
+        for chat_type in ("group", "supergroup")
+    )
