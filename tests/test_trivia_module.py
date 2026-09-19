@@ -135,6 +135,7 @@ async def test_ranking_command_lists_only_configured_community(tmp_path) -> None
                 User(id=9, first_name="Otro"),
             ]
         )
+        await session.flush()
         session.add_all(
             [
                 GameProfile(user_id=7, chat_id=-100, points=100, experience=400, level=2),
