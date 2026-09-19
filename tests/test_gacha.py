@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from sqlalchemy import select
 
@@ -223,3 +225,59 @@ async def test_gacha_approval_grants_rare_character_once(database):
         await session.commit()
 
     assert second_granted is True
+
+
+@pytest.mark.asyncio
+async def test_gacha_approval_finalization_has_one_concurrent_grant_winner(database):
+    service = GachaService(FixedEngine(Rarity.B))
+
+    async with database.session() as session:
+        approval = RareDropApproval(
+            character_id="taiga",
+            rarity=Rarity.B.value,
+            target_user_id=7,
+            target_chat_id=-100,
+            status="approved",
+        )
+        session.add(approval)
+        await session.flush()
+        roll = GameGachaRoll(
+            roll_id="concurrent-approval",
+            user_id=7,
+            chat_id=-100,
+            rolled_rarity=Rarity.B.value,
+            character_id="taiga",
+            approval_id=approval.id,
+            granted=False,
+        )
+        session.add(roll)
+        await session.flush()
+        await session.commit()
+        approval_id = approval.id
+        roll_id = roll.id
+
+    async def finalize_once():
+        async with database.session() as session:
+            request = await session.get(RareDropApproval, approval_id)
+            assert request is not None
+            result = await service.finalize_approval(session, request)
+            await session.commit()
+            return result
+
+    first, second = await asyncio.gather(finalize_once(), finalize_once())
+
+    assert first[0] is True
+    assert second[0] is True
+
+    async with database.session() as session:
+        collection = await session.scalar(
+            select(GameCollection).where(
+                GameCollection.profile_id == 1,
+                GameCollection.character_id == "taiga",
+            )
+        )
+        roll = await session.get(GameGachaRoll, roll_id)
+
+    assert collection is not None
+    assert collection.copies == 1
+    assert roll is not None and roll.granted is True
