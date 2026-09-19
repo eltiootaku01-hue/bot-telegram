@@ -9,6 +9,7 @@ from app.db.database import Database
 
 DEFAULT_TOPICS = {
     "comandos": "🤖 COMANDOS DE LA COMUNIDAD",
+    "bienvenida": "👋 BIENVENIDAS",
     "reglas": "📜 REGLAS DE LA COMUNIDAD",
     "noticias": "📰 NOTICIAS",
     "undiacomohoy": "📅 UN DÍA COMO HOY",
