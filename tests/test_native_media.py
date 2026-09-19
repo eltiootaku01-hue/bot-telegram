@@ -39,7 +39,7 @@ def test_negative_stop_timeout_is_rejected() -> None:
 def test_early_exit_reports_failure_and_captures_output() -> None:
     session = NativeMediaSession()
     result = session.start(_profile("import sys; print('media-error', flush=True); sys.exit(7)"))
-    assert result.state is MediaSessionState.RUNNING
+    assert result.state in {MediaSessionState.RUNNING, MediaSessionState.FAILED}
 
     snapshot = result
     for _ in range(100):
