@@ -1,13 +1,12 @@
 from datetime import timedelta
 
 import pytest
+from sqlalchemy import select
 
 from app.core.time import utc_now
 from app.db.database import Database
+from app.db.models import Chat, GameProfile, User
 from app.db.trivia_models import TriviaAttempt, TriviaRound
-from app.db.models import GameProfile
-from sqlalchemy import select
-
 from app.game.trivia import TriviaService
 
 
@@ -25,15 +24,15 @@ async def test_start_round_retires_expired_active_round(database):
 
     async with database.session() as session:
         stale = TriviaRound(
-                chat_id=-100,
-                question="vieja",
-                options='["a", "b"]',
-                answer_index=0,
-                explanation="",
-                points=10,
-                status="active",
-                expires_at=utc_now() - timedelta(seconds=1),
-            )
+            chat_id=-100,
+            question="vieja",
+            options='["a", "b"]',
+            answer_index=0,
+            explanation="",
+            points=10,
+            status="active",
+            expires_at=utc_now() - timedelta(seconds=1),
+        )
         session.add(stale)
 
     async with database.session() as session:
@@ -52,14 +51,11 @@ async def test_start_round_retires_expired_active_round(database):
     assert new_round.status == "active"
 
 
-
 @pytest.mark.asyncio
 async def test_answer_joins_caller_transaction(database):
     service = TriviaService()
 
     async with database.session() as session:
-        from app.db.models import Chat, User
-
         session.add(User(id=7, first_name="Test"))
         session.add(Chat(id=-100, type="supergroup", title="Community"))
         await session.flush()
@@ -92,7 +88,11 @@ async def test_answer_joins_caller_transaction(database):
 
     async with database.session() as session:
         stored_round = await session.get(TriviaRound, round_id)
-        attempts = list(await session.scalars(select(TriviaAttempt).where(TriviaAttempt.round_id == round_id)))
+        attempts = list(
+            await session.scalars(
+                select(TriviaAttempt).where(TriviaAttempt.round_id == round_id)
+            )
+        )
         profile = await session.scalar(
             select(GameProfile).where(GameProfile.user_id == 7, GameProfile.chat_id == -100)
         )
