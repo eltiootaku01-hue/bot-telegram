@@ -37,7 +37,7 @@ def build_bot_modules(
     identity_specific = (
         _spec("chat", lambda: ChatModule(database, identity=identity), *BotIdentity),
         _spec("game", lambda: GameModule(database, settings=settings), BotIdentity.SUNNA),
-        _spec("trivia", lambda: TriviaModule(database), BotIdentity.SUNNA),
+        _spec("trivia", lambda: TriviaModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("media", lambda: MediaModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("sunna-admin", lambda: AdminModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("cami-media", lambda: CamiMediaModule(database, settings=settings), BotIdentity.CAMI),
