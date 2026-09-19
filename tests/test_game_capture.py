@@ -66,8 +66,8 @@ async def test_capture_callback_persists_progression(tmp_path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_private_game_callbacks_reject_group_context(database) -> None:
-    module = GameModule(database)
+async def test_private_game_callbacks_reject_group_context() -> None:
+    module = GameModule(None)
     answers = []
 
     async def answer(text, **kwargs):
