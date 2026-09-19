@@ -9,8 +9,6 @@ from app.core.config import Settings
 
 
 class ChatAccessMiddleware(BaseMiddleware):
-    """Fail-closed Telegram chat gate before member sync, routing or module work."""
-
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
@@ -29,17 +27,20 @@ class ChatAccessMiddleware(BaseMiddleware):
         return None
 
     def _is_allowed(self, update: Update) -> bool:
-        message = update.message or update.edited_message
-        if message is None:
-            callback = update.callback_query
-            message = callback.message if callback is not None else None
+        callback = update.callback_query
+        if callback is not None and callback.message is not None:
+            message = callback.message
+            actor = callback.from_user
+        else:
+            message = update.message or update.edited_message
+            actor = message.from_user if message is not None else None
 
         if message is None:
             return False
 
-        user = message.from_user
+        chat = message.chat
         return self.settings.is_chat_allowed(
-            message.chat.id,
-            message.chat.type,
-            user.id if user is not None else None,
+            chat.id,
+            chat.type,
+            actor.id if actor is not None else None,
         )
