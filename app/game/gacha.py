@@ -79,6 +79,8 @@ class GachaService:
             select(GameGachaRoll).where(GameGachaRoll.roll_id == seed)
         )
         if existing is not None:
+            if existing.user_id != user_id or existing.chat_id != chat_id:
+                raise ValueError("Gacha roll reference belongs to another player or community")
             approval = (
                 await session.get(RareDropApproval, existing.approval_id)
                 if existing.approval_id is not None
@@ -108,6 +110,8 @@ class GachaService:
             )
             if existing is None:
                 raise
+            if existing.user_id != user_id or existing.chat_id != chat_id:
+                raise ValueError("Gacha roll reference belongs to another player or community")
             approval = (
                 await session.get(RareDropApproval, existing.approval_id)
                 if existing.approval_id is not None
