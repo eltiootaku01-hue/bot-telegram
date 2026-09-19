@@ -228,7 +228,10 @@ async def test_gacha_approval_grants_rare_character_once(database):
 
 
 @pytest.mark.asyncio
-async def test_gacha_approval_finalization_has_one_concurrent_grant_winner(database):
+async def test_gacha_approval_finalization_has_one_concurrent_grant_winner(
+    database,
+    monkeypatch,
+):
     service = GachaService(FixedEngine(Rarity.B))
 
     async with database.session() as session:
@@ -256,6 +259,18 @@ async def test_gacha_approval_finalization_has_one_concurrent_grant_winner(datab
         approval_id = approval.id
         roll_id = roll.id
 
+    started = asyncio.Event()
+    release = asyncio.Event()
+    calls = 0
+
+    async def fake_progression(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+
+    monkeypatch.setattr("app.game.gacha.apply_capture_progression", fake_progression)
+
     async def finalize_once():
         async with database.session() as session:
             request = await session.get(RareDropApproval, approval_id)
@@ -264,20 +279,20 @@ async def test_gacha_approval_finalization_has_one_concurrent_grant_winner(datab
             await session.commit()
             return result
 
-    first, second = await asyncio.gather(finalize_once(), finalize_once())
+    first_task = asyncio.create_task(finalize_once())
+    await asyncio.wait_for(started.wait(), timeout=2)
+
+    second_task = asyncio.create_task(finalize_once())
+    await asyncio.sleep(0.05)
+    release.set()
+
+    first, second = await asyncio.gather(first_task, second_task)
 
     assert first[0] is True
     assert second[0] is True
+    assert calls == 1
 
     async with database.session() as session:
-        collection = await session.scalar(
-            select(GameCollection).where(
-                GameCollection.profile_id == 1,
-                GameCollection.character_id == "taiga",
-            )
-        )
         roll = await session.get(GameGachaRoll, roll_id)
 
-    assert collection is not None
-    assert collection.copies == 1
     assert roll is not None and roll.granted is True
