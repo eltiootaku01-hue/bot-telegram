@@ -34,3 +34,18 @@ def chie_request_cancel_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="❌ Cancelar pedido", callback_data="chie:request:cancel"))
     return builder.as_markup()
+
+
+def rare_approval_keyboard(approval_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✅ Aprobar",
+            callback_data=f"admin:rare:approve:{approval_id}",
+        ),
+        InlineKeyboardButton(
+            text="❌ Rechazar",
+            callback_data=f"admin:rare:reject:{approval_id}",
+        ),
+    )
+    return builder.as_markup()
