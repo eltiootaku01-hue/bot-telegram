@@ -29,6 +29,9 @@ class AdminModule(BotModule):
         return (
             bool(self.settings.admin_user_id)
             and callback.from_user.id == self.settings.admin_user_id
+            and callback.message is not None
+            and callback.message.chat.type == "private"
+            and callback.message.chat.id == self.settings.admin_user_id
         )
 
     async def rare_decision(self, callback: CallbackQuery) -> None:
