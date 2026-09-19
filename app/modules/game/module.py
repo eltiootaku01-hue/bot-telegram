@@ -79,7 +79,7 @@ class GameModule(BotModule):
         except Exception:
             logger.exception("World observation failed for Sunna action=%s user=%s", action_key, user_id)
 
-        async def _community_chat_id(self) -> int | None:
+    async def _community_chat_id(self) -> int | None:
         async with self.database.session() as session:
             setup = await session.scalar(
                 select(SetupSession.chat_id)
