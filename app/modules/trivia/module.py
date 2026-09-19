@@ -12,6 +12,7 @@ from sqlalchemy import select, update
 from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
+from app.services.world import WorldService
 from app.core.module import BotModule
 from app.db.community_models import SetupSession
 from app.db.database import Database
@@ -34,6 +35,7 @@ class TriviaModule(BotModule):
         self.settings = settings or get_settings()
         self.service = TriviaService()
         self._bot: Bot | None = None
+        self.world = WorldService()
 
     def setup(self) -> None:
         self.router.message.register(self.start_command, Command("trivia"))
@@ -104,6 +106,7 @@ class TriviaModule(BotModule):
             await callback.answer("La trivia ya no existe.", show_alert=True)
             return
         if result == "correct":
+            await self._observe_action("trivia_correct", callback.from_user.id, callback.message.chat.id)
             await callback.answer(f"¡Correcto! +{round_row.points} puntos", show_alert=True)
             await callback.message.edit_text(
                 f"🎉 <b>{callback.from_user.first_name}</b> ganó la trivia.\n"
@@ -112,6 +115,7 @@ class TriviaModule(BotModule):
             )
             return
         if result == "wrong":
+            await self._observe_action("trivia_wrong", callback.from_user.id, callback.message.chat.id)
             await callback.answer("❌ Incorrecto. Probá suerte en la próxima.")
         elif result == "already_answered":
             await callback.answer("Ya respondiste esta trivia.")
@@ -122,6 +126,40 @@ class TriviaModule(BotModule):
         else:
             await callback.answer("La trivia ya terminó. 😭")
 
+    async def _observe_action(
+        self,
+        action_key: str,
+        user_id: int,
+        chat_id: int | None = None,
+    ) -> None:
+        """Record trivia usage outside the gameplay transaction."""
+        try:
+            async with self.database.session() as session:
+                await self.world.observe(
+                    session,
+                    bot_identity=BotIdentity.SUNNA,
+                    entry_type="action",
+                    entry_key=action_key,
+                )
+                await self.world.observe(
+                    session,
+                    bot_identity=BotIdentity.SUNNA,
+                    entry_type="action",
+                    entry_key=action_key,
+                    scope_type="user",
+                    scope_id=str(user_id),
+                )
+                if chat_id is not None:
+                    await self.world.observe(
+                        session,
+                        bot_identity=BotIdentity.SUNNA,
+                        entry_type="action",
+                        entry_key=action_key,
+                        scope_type="user_chat",
+                        scope_id=f"{user_id}:{chat_id}",
+                    )
+        except Exception:
+            logger.exception("World observation failed for Trivia action=%s user=%s", action_key, user_id)
     async def _community_chat_id(self) -> int | None:
         async with self.database.session() as session:
             return await session.scalar(
