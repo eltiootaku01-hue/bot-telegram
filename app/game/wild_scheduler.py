@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 from aiogram import Bot
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.core.time import utc_now
@@ -161,11 +161,19 @@ class WildWaifuScheduler:
         await self.expire(encounter.id, chat_id, sent.message_id)
 
     async def expire(self, encounter_id: str, chat_id: int, message_id: int) -> None:
+        now = utc_now()
         async with self.database.session() as session:
-            encounter = await session.get(GameEncounter, encounter_id)
-            if encounter is None or encounter.status != "active":
+            result = await session.execute(
+                update(GameEncounter)
+                .where(
+                    GameEncounter.id == encounter_id,
+                    GameEncounter.status == "active",
+                    GameEncounter.expires_at <= now,
+                )
+                .values(status="expired")
+            )
+            if result.rowcount != 1:
                 return
-            encounter.status = "expired"
             await session.commit()
         try:
             await self.bot.edit_message_text(
