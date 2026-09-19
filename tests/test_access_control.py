@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 import pytest
-from aiogram.types import CallbackQuery, Chat, Message, Update, User
+from aiogram.types import CallbackQuery, Chat, ChatMemberAdministrator, Message, Update, User
 
 from app.core.config import Settings
 from app.core.identity import BotIdentity
@@ -174,3 +174,63 @@ def test_authorized_membership_update_reaches_access_policy() -> None:
 
     assert middleware._is_allowed(update) is True
     assert middleware._is_allowed(denied) is False
+
+
+@pytest.mark.asyncio
+async def test_unauthorized_group_allows_admin_chie_bootstrap_command() -> None:
+    settings = Settings(authorized_chat_ids="")
+    middleware = ChatAccessMiddleware(settings)
+
+    class BotStub:
+        async def get_chat_member(self, chat_id, user_id):
+            return ChatMemberAdministrator(
+                user=User(id=user_id, is_bot=False, first_name="Admin"),
+                status="administrator",
+                can_manage_chat=True,
+                can_delete_messages=True,
+            )
+
+    async def handler(event, data):
+        return data.get(ChatAccessMiddleware.BOOTSTRAP_FLAG, False)
+
+    message = make_update(
+        chat_id=-100999,
+        chat_type="supergroup",
+        user_id=77,
+    ).message
+    message.text = "/configurar"
+    update = Update(update_id=100, message=message)
+
+    result = await middleware(
+        handler,
+        update,
+        {"event_update": update, "bot": BotStub()},
+    )
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_unauthorized_group_bootstrap_rejects_non_admin() -> None:
+    settings = Settings(authorized_chat_ids="")
+    middleware = ChatAccessMiddleware(settings)
+
+    class BotStub:
+        async def get_chat_member(self, chat_id, user_id):
+            return object()
+
+    async def handler(event, data):
+        return "must-not-run"
+
+    message = make_update(
+        chat_id=-100999,
+        chat_type="supergroup",
+        user_id=77,
+    ).message
+    message.text = "/configurar"
+    update = Update(update_id=101, message=message)
+
+    assert await middleware(
+        handler,
+        update,
+        {"event_update": update, "bot": BotStub()},
+    ) is None
