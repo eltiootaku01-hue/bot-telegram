@@ -48,7 +48,9 @@ def test_composition_uses_supplied_settings_instance() -> None:
     assert social.runtime.settings is settings
 
     sunna_modules = build_bot_modules(database, BotIdentity.SUNNA, settings)
+    trivia = next(module for module in sunna_modules if module.name == "trivia")
     media = next(module for module in sunna_modules if module.name == "media")
+    assert trivia.settings is settings
     assert media.settings is settings
 
     cami_modules = build_bot_modules(database, BotIdentity.CAMI, settings)
