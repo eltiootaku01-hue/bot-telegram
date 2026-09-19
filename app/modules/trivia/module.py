@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+from html import escape
 
 from aiogram import Bot, F
 from aiogram.filters import Command
@@ -17,7 +18,7 @@ from app.core.module import BotModule
 from app.core.time import utc_now
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import GameProfile
+from app.db.models import GameProfile, User
 from app.db.trivia_models import TriviaRound
 from app.game.trivia import TriviaService
 from app.ui.game_keyboards import trivia_keyboard
@@ -204,9 +205,42 @@ class TriviaModule(BotModule):
         await message.answer(f"💰 <b>{message.from_user.first_name}</b>: {points} puntos")
 
     async def ranking_command(self, message: Message) -> None:
-        if message.chat.type != "private":
+        if message.chat.type != "private" or message.from_user is None:
             return
-        await message.answer("🏆 El ranking público se mostrará mediante el panel de puntos.")
+        community_chat_id = await self._community_chat_id()
+        if community_chat_id is None:
+            await message.answer("😰 Chie todavía no configuró la comunidad.")
+            return
+
+        async with self.database.session() as session:
+            rows = (
+                await session.execute(
+                    select(GameProfile, User)
+                    .join(User, User.id == GameProfile.user_id)
+                    .where(GameProfile.chat_id == community_chat_id)
+                    .order_by(
+                        GameProfile.points.desc(),
+                        GameProfile.experience.desc(),
+                        GameProfile.user_id.asc(),
+                    )
+                    .limit(10)
+                )
+            ).all()
+
+        if not rows:
+            await message.answer("🏆 Todavía no hay jugadores con perfil de puntos en la comunidad.")
+            return
+
+        lines = ["🏆 <b>Ranking de Ciudad Animals</b>", ""]
+        medals = ("🥇", "🥈", "🥉")
+        for position, (profile, user) in enumerate(rows, start=1):
+            prefix = medals[position - 1] if position <= len(medals) else f"{position}."
+            name = escape(user.first_name or user.username or f"Jugador {user.id}")
+            lines.append(
+                f"{prefix} <b>{name}</b> — {profile.points} puntos · Nv.{profile.level}"
+            )
+        await message.answer("\n".join(lines))
+        await self._observe_action("ranking_view", message.from_user.id)
 
     async def _scheduler(self) -> None:
         await asyncio.sleep(random.randint(60, 180))
