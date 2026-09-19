@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -84,3 +86,77 @@ async def test_reference_keyed_charge_is_applied_only_once(session):
     assert profile.points == 20
     ledger = list(await session.scalars(select(PointTransaction).order_by(PointTransaction.id)))
     assert [entry.amount for entry in ledger] == [50, -30]
+
+
+@pytest.mark.asyncio
+async def test_reference_keyed_charge_is_idempotent_under_concurrency(tmp_path):
+    from app.db.database import Database
+    from app.db.models import Chat, User
+
+    db_path = tmp_path / "points-concurrent.sqlite3"
+    seed_db = Database(f"sqlite+aiosqlite:///{db_path}")
+    await seed_db.create_schema()
+
+    async with seed_db.session() as session:
+        session.add(User(id=7, first_name="User"))
+        session.add(Chat(id=-100, type="supergroup"))
+        await session.flush()
+
+        repo = MemberRepository()
+        await repo.add_points(
+            session,
+            user_id=7,
+            chat_id=-100,
+            amount=50,
+            reason="seed",
+            commit=False,
+        )
+
+    await seed_db.close()
+    database_a = Database(f"sqlite+aiosqlite:///{db_path}")
+    database_b = Database(f"sqlite+aiosqlite:///{db_path}")
+    repo = MemberRepository()
+
+    async def spend(database):
+        async with database.session(write=True) as session:
+            return await repo.spend_points(
+                session,
+                user_id=7,
+                chat_id=-100,
+                amount=30,
+                reason="request",
+                reference_type="fan_request",
+                reference_id="req-concurrent",
+                commit=False,
+            )
+
+    try:
+        first, second = await asyncio.gather(spend(database_a), spend(database_b))
+        assert first == 20
+        assert second == 20
+
+        async with database_a.session() as session:
+            profile = await session.scalar(
+                select(GameProfile).where(
+                    GameProfile.user_id == 7,
+                    GameProfile.chat_id == -100,
+                )
+            )
+            ledger = list(
+                await session.scalars(
+                    select(PointTransaction).where(
+                        PointTransaction.user_id == 7,
+                        PointTransaction.chat_id == -100,
+                        PointTransaction.reference_type == "fan_request",
+                        PointTransaction.reference_id == "req-concurrent",
+                    )
+                )
+            )
+
+        assert profile is not None
+        assert profile.points == 20
+        assert len(ledger) == 1
+        assert ledger[0].amount == -30
+    finally:
+        await database_b.close()
+        await database_a.close()
