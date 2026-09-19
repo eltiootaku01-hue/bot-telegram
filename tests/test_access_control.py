@@ -151,3 +151,26 @@ def test_authorized_community_requires_allowlisted_group_or_supergroup() -> None
     settings = Settings(authorized_chat_ids="-100123")
     assert is_authorized_community(settings, -100123) is True
     assert is_authorized_community(settings, -100999) is False
+
+
+def test_authorized_membership_update_reaches_access_policy() -> None:
+    from types import SimpleNamespace
+
+    settings = Settings(authorized_chat_ids="-100123")
+    middleware = ChatAccessMiddleware(settings)
+
+    update = Update.model_construct(
+        update_id=90,
+        chat_member=SimpleNamespace(
+            chat=Chat(id=-100123, type="supergroup"),
+        ),
+    )
+    denied = Update.model_construct(
+        update_id=91,
+        chat_member=SimpleNamespace(
+            chat=Chat(id=-100999, type="supergroup"),
+        ),
+    )
+
+    assert middleware._is_allowed(update) is True
+    assert middleware._is_allowed(denied) is False
