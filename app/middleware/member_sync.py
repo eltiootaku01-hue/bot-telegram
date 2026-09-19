@@ -66,6 +66,8 @@ class MemberSyncMiddleware(BaseMiddleware):
 
     async def _sync_membership_event(self, event: ChatMemberUpdated) -> None:
         member_user = event.new_chat_member.user
+        if member_user.is_bot:
+            return
         status = getattr(event.new_chat_member.status, "value", event.new_chat_member.status)
         if status == "restricted":
             status = "member" if getattr(event.new_chat_member, "is_member", False) else "left"
