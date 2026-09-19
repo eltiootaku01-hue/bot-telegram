@@ -17,15 +17,15 @@ from app.db.database import Database
         ),
         (
             BotIdentity.SUNNA,
-            {"system", "social_runtime", "game", "trivia", "media", "admin", "brain_chat"},
+            {"system", "social_runtime", "chat", "game", "trivia", "media", "admin", "brain_chat"},
         ),
         (
             BotIdentity.CAMI,
-            {"system", "social_runtime", "cami-media", "cami-media-publisher", "admin", "brain_chat"},
+            {"system", "social_runtime", "chat", "cami-media", "cami-media-publisher", "admin", "brain_chat"},
         ),
         (
             BotIdentity.CHIE,
-            {"system", "social_runtime", "chie", "requests", "brain_chat"},
+            {"system", "social_runtime", "chat", "chie", "requests", "brain_chat"},
         ),
     ),
 )
