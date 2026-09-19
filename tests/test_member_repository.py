@@ -1,10 +1,14 @@
+from datetime import datetime, timezone
+from types import SimpleNamespace
+
 import pytest
-from aiogram.types import Chat as TgChat, User as TgUser
+from aiogram.types import Chat as TgChat, ChatMemberUpdated, User as TgUser
 from sqlalchemy import select
 
 from app.db.database import Database
 from app.db.models import Chat, User, UserChat
 from app.db.repositories import MemberRepository
+from app.middleware.member_sync import MemberSyncMiddleware
 
 
 @pytest.fixture
@@ -13,6 +17,14 @@ async def session():
     await database.create_schema()
     async with database.session() as db:
         yield db
+    await database.close()
+
+
+@pytest.fixture
+async def database():
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    yield database
     await database.close()
 
 
@@ -86,45 +98,79 @@ async def test_set_membership_can_join_caller_transaction(session):
     ) is None
 
 
-@pytest.mark.asyncio
-async def test_member_sync_persists_membership_updates(session):
-    from datetime import datetime, timezone
-    from types import SimpleNamespace
-
-    from aiogram.types import Chat, ChatMemberUpdated, User
-    from app.db.models import UserChat
-    from app.middleware.member_sync import MemberSyncMiddleware
-
-    user = User(id=42, is_bot=False, first_name="Member")
-    event = ChatMemberUpdated.model_construct(
+def membership_update(*, status: str, is_member: bool | None = None) -> ChatMemberUpdated:
+    user = TgUser(id=42, is_bot=False, first_name="Member")
+    return ChatMemberUpdated.model_construct(
         update_id=1,
-        chat=Chat(id=-100, type="supergroup", title="Community"),
-        from_user=User(id=99, is_bot=False, first_name="Actor"),
+        chat=TgChat(id=-100123, type="supergroup", title="Community"),
+        from_user=TgUser(id=99, is_bot=False, first_name="Actor"),
         date=datetime.now(timezone.utc),
         old_chat_member=SimpleNamespace(status="left"),
         new_chat_member=SimpleNamespace(
-            status="member",
+            status=status,
             user=user,
-            is_member=True,
+            is_member=is_member,
         ),
     )
 
-    middleware = MemberSyncMiddleware(session.bind)
+
+@pytest.mark.asyncio
+async def test_member_sync_persists_join_and_leave(database: Database) -> None:
+    middleware = MemberSyncMiddleware(database)
 
     async def handler(event, data):
         return "handled"
 
-    # Use the production Database gateway behind this fixture through the same
-    # repository session; the test only verifies the membership transition contract.
-    repository = MemberRepository()
-    await repository.set_membership(session, user, event.chat, "member")
-    session.expire_all()
+    assert await middleware(handler, membership_update(status="member"), {}) == "handled"
 
-    link = await session.scalar(
-        select(UserChat).where(
-            UserChat.user_id == 42,
-            UserChat.chat_id == -100,
+    async with database.session() as session:
+        joined = await session.scalar(
+            select(UserChat).where(
+                UserChat.user_id == 42,
+                UserChat.chat_id == -100123,
+            )
         )
-    )
+
+    assert joined is not None
+    assert joined.status == "member"
+    assert joined.message_count == 0
+    assert joined.joined_at is not None
+    assert joined.left_at is None
+
+    event = membership_update(status="left")
+    event.old_chat_member = SimpleNamespace(status="member")
+    assert await middleware(handler, event, {}) == "handled"
+
+    async with database.session() as session:
+        left = await session.scalar(
+            select(UserChat).where(
+                UserChat.user_id == 42,
+                UserChat.chat_id == -100123,
+            )
+        )
+
+    assert left is not None
+    assert left.status == "left"
+    assert left.message_count == 0
+    assert left.left_at is not None
+
+
+@pytest.mark.asyncio
+async def test_member_sync_maps_restricted_membership(database: Database) -> None:
+    middleware = MemberSyncMiddleware(database)
+
+    async def handler(event, data):
+        return None
+
+    await middleware(handler, membership_update(status="restricted", is_member=True), {})
+
+    async with database.session() as session:
+        link = await session.scalar(
+            select(UserChat).where(
+                UserChat.user_id == 42,
+                UserChat.chat_id == -100123,
+            )
+        )
+
     assert link is not None
     assert link.status == "member"
