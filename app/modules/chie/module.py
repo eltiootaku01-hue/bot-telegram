@@ -17,6 +17,7 @@ from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
+from app.services.world import WorldService
 from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard
 
 
@@ -36,6 +37,7 @@ class ChieModule(BotModule):
         self.database = database
         self.topics = ForumTopicService(database)
         self.settings = settings or get_settings()
+        self.world = WorldService()
         self.worker = DurableWorker(database, event_bus=EventBus(), poll_seconds=1.0)
         self.bot: Bot | None = None
         super().__init__()
@@ -47,6 +49,7 @@ class ChieModule(BotModule):
         self.router.callback_query.register(self.command_hub, F.data.startswith("chie:hub:"))
         self.router.message.register(self.configure_group, Command("configurar"))
         self.router.message.register(self.command_hub_command, Command("comandos"))
+        self.router.message.register(self.world_command, Command("mundo"))
 
     async def on_startup(self, bot: Bot) -> None:
         self.bot = bot
@@ -191,6 +194,28 @@ class ChieModule(BotModule):
             await callback.message.edit_text("Configuración cancelada. Cuando quieras, tocá /start y volvemos a intentarlo.")
         await callback.answer()
 
+    async def world_command(self, message: Message) -> None:
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or message.from_user.id != self.settings.admin_user_id
+        ):
+            return
+        lines = ["🌍 <b>Ciudad Animals — estado agregado</b>", ""]
+        async with self.database.session() as session:
+            for identity in BotIdentity:
+                insights = await self.world.insights(session, bot_identity=identity)
+                lines.append(f"<b>{identity.value.title()}</b>")
+                if insights.hot:
+                    lines.append("🔥 " + ", ".join(f"{key} ({count})" for key, count in insights.hot[:3]))
+                if insights.cold:
+                    lines.append("❄️ " + ", ".join(f"{key} ({count})" for key, count in insights.cold[:3]))
+                if insights.unseen:
+                    lines.append("👀 " + ", ".join(key for key, _ in insights.unseen[:3]))
+                if not insights.hot and not insights.cold and not insights.unseen:
+                    lines.append("· sin datos todavía")
+                lines.append("")
+        await message.answer("\n".join(lines))
     async def command_hub_command(self, message: Message, bot: Bot) -> None:
         if message.chat.type != "private" and not await is_chat_staff(message, bot):
             return
