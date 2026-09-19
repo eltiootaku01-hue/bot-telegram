@@ -92,6 +92,39 @@ class WorldService:
 
         return await session.scalar(select(WorldUsageStat).where(*filters))  # type: ignore[return-value]
 
+    async def observe_action(
+        self,
+        session: AsyncSession,
+        *,
+        bot_identity: BotIdentity | str,
+        action_key: str,
+        user_id: int,
+        chat_id: int | None = None,
+    ) -> None:
+        """Record one action at world, user and optional user+chat scope."""
+        await self.observe(
+            session,
+            bot_identity=bot_identity,
+            entry_type="action",
+            entry_key=action_key,
+        )
+        await self.observe(
+            session,
+            bot_identity=bot_identity,
+            entry_type="action",
+            entry_key=action_key,
+            scope_type="user",
+            scope_id=str(user_id),
+        )
+        if chat_id is not None:
+            await self.observe(
+                session,
+                bot_identity=bot_identity,
+                entry_type="action",
+                entry_key=action_key,
+                scope_type="user_chat",
+                scope_id=f"{user_id}:{chat_id}",
+            )
     async def register_catalog_entry(
         self,
         session: AsyncSession,
