@@ -32,3 +32,34 @@ def test_world_catalog_has_cafe_and_waifumon_core_entries() -> None:
         item.entry_key == "waifumon" and item.bot_identity is BotIdentity.SUNNA
         for item in WORLD_CATALOG
     )
+
+
+import pytest
+from sqlalchemy import select
+
+from app.db.database import Database
+from app.db.world_models import WorldCatalogEntry
+
+
+@pytest.mark.asyncio
+async def test_world_catalog_seed_is_idempotent() -> None:
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+
+    from app.services.world import WorldService
+
+    service = WorldService()
+    async with database.session() as session:
+        await service.seed_catalog(session)
+    async with database.session() as session:
+        await service.seed_catalog(session)
+
+    async with database.session() as session:
+        rows = list(await session.scalars(select(WorldCatalogEntry)))
+
+    assert len(rows) == len(WORLD_CATALOG) + len(
+        [scene for scene in __import__("app.characters.repertoire", fromlist=["REPERTOIRE"]).REPERTOIRE]
+    )
+    keys = [(row.bot_identity, row.entry_type, row.entry_key) for row in rows]
+    assert len(keys) == len(set(keys))
+    await database.close()
