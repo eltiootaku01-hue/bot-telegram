@@ -105,3 +105,27 @@ async def test_handle_text_persists_world_observation_after_authored_response(
     assert intent_rows[0].scope_id == "7"
     assert user_scene_rows
     assert user_scene_rows[0].scope_id == "7:11"
+
+
+@pytest.mark.asyncio
+async def test_non_cari_character_chat_requires_explicit_address(database: Database) -> None:
+    from app.core.identity import BotIdentity
+
+    sunna = ChatModule(database, identity=BotIdentity.SUNNA)
+    assert sunna._should_handle_text("hola") is False
+    assert sunna._should_handle_text("Sunna") is True
+
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=12),
+        chat=SimpleNamespace(id=44),
+        text="Sunna",
+        answer=answer,
+    )
+    await sunna.handle_text(message)
+
+    assert answers == ["¿Sí?"]
