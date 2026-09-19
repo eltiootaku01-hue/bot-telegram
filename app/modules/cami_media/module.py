@@ -408,6 +408,14 @@ class CamiMediaModule(BotModule):
                 await callback.answer("Este material ya está asociado a un pedido.", show_alert=True)
                 return
 
+            request = await session.get(FanRequest, request_id)
+            if request is None:
+                await callback.answer("No encuentro ese pedido.", show_alert=True)
+                return
+            if not is_authorized_community(self.settings, request.chat_id):
+                await callback.answer("La comunidad de ese pedido ya no está autorizada.", show_alert=True)
+                return
+
             claimed = await session.execute(
                 update(FanRequest)
                 .where(
@@ -435,6 +443,7 @@ class CamiMediaModule(BotModule):
                 return
 
             asset.request_id = request_id
+            asset.publish_group_chat_id = request.chat_id
             asset.status = "request_ready"
             await self.jobs.enqueue(
                 session,
