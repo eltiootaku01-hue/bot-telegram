@@ -185,6 +185,8 @@ class MysteryService:
         if row is None or row.chat_id != chat_id:
             return "invalid", 0
         now = utc_now()
+        if row.status == "won":
+            return "already_won", 0
         if row.status != "active" or now >= row.expires_at:
             if row.status == "active":
                 row.status = "expired"
