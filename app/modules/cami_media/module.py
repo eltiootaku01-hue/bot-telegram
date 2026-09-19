@@ -4,6 +4,8 @@ import logging
 from datetime import datetime
 
 from aiogram import Bot, F
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
@@ -28,6 +30,11 @@ from app.ui.media_keyboards import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class CamiMediaStates(StatesGroup):
+    waiting_tags = State()
+    waiting_schedule = State()
 
 
 class CamiMediaModule(BotModule):
@@ -99,19 +106,21 @@ class CamiMediaModule(BotModule):
         )
         await self._observe_action("media_ingest", message.from_user.id)
 
-    async def receive_schedule_or_tags(self, message: Message) -> None:
+    async def receive_schedule_or_tags(self, message: Message, state: FSMContext) -> None:
         if not self._is_media_staff(message) or not message.text:
             return
+        data = await state.get_data()
+        asset_id = data.get("asset_id")
+        if not isinstance(asset_id, int):
+            return
         async with self.database.session() as session:
-            asset = await session.scalar(
-                select(MediaAsset)
-                .where(
-                    MediaAsset.source_chat_id == message.chat.id,
-                    MediaAsset.status.in_(["needs_tag", "waiting_schedule"]),
-                )
-                .order_by(MediaAsset.id.desc())
-            )
-            if asset is None:
+            asset = await session.get(MediaAsset, asset_id)
+            if (
+                asset is None
+                or asset.source_chat_id != message.chat.id
+                or asset.status not in {"needs_tag", "waiting_schedule"}
+            ):
+                await state.clear()
                 return
             if asset.status == "needs_tag":
                 parts = [part.strip() for part in message.text.split("|")]
@@ -130,6 +139,7 @@ class CamiMediaModule(BotModule):
                     "🏷️ Etiquetas guardadas. El material queda en la biblioteca para decidir su publicación."
                 )
                 await self._observe_action("media_tag", message.from_user.id)
+                await state.clear()
                 return
 
             try:
@@ -176,6 +186,7 @@ class CamiMediaModule(BotModule):
             )
         await message.answer("🗓️ <b>Programado.</b> La orden quedó persistida para que sobreviva a un reinicio.")
         await self._observe_action("media_schedule", message.from_user.id)
+        await state.clear()
 
     async def recovery_command(self, message: Message) -> None:
         if not self._is_media_staff(message):
@@ -276,7 +287,12 @@ class CamiMediaModule(BotModule):
 
         await callback.answer("Acción no implementada.", show_alert=True)
 
-    async def media_action(self, callback: CallbackQuery, bot: Bot) -> None:
+    async def media_action(
+        self,
+        callback: CallbackQuery,
+        bot: Bot,
+        state: FSMContext,
+    ) -> None:
         if callback.message is None or callback.data is None:
             await callback.answer("Acción inválida.", show_alert=True)
             return
@@ -306,6 +322,8 @@ class CamiMediaModule(BotModule):
             if action == "tag":
                 asset.status = "needs_tag"
                 await session.commit()
+                await state.set_state(CamiMediaStates.waiting_tags)
+                await state.update_data(asset_id=asset_id)
                 await callback.message.edit_text(
                     "🏷️ <b>Listo para etiquetar.</b>\nMandame:\n"
                     "<code>Asuna | Sword Art Online | cabello azul, uniforme | waifu</code>"
@@ -316,6 +334,7 @@ class CamiMediaModule(BotModule):
             if action == "schedule":
                 asset.status = "waiting_destination"
                 await session.commit()
+                await state.clear()
                 await callback.message.edit_text(
                     "🗓️ ¿Dónde querés publicarlo?\n"
                     "<b>Página + tema del grupo</b> mantiene ambos con el mismo segmento.",
@@ -349,6 +368,7 @@ class CamiMediaModule(BotModule):
             if action == "archive":
                 asset.status = "archived"
                 await session.commit()
+                await state.clear()
                 await callback.message.edit_text("📦 Archivado. No se publicará.")
                 await self._observe_action("media_archive", callback.from_user.id)
                 await callback.answer()
@@ -364,6 +384,8 @@ class CamiMediaModule(BotModule):
                 asset.publish_group = True
                 asset.status = "waiting_schedule"
                 await session.commit()
+                await state.set_state(CamiMediaStates.waiting_schedule)
+                await state.update_data(asset_id=asset_id)
                 await callback.message.edit_text(
                     "🕒 Decime cuándo querés enviarlo en formato <code>DD/MM/YYYY HH:MM</code>."
                 )
@@ -374,6 +396,7 @@ class CamiMediaModule(BotModule):
             if action == "cancel":
                 asset.status = "cami_inbox"
                 await session.commit()
+                await state.clear()
                 await callback.message.edit_text(
                     "↩️ Cancelado. El material vuelve a la bandeja de Cami.",
                     reply_markup=cami_media_actions(asset_id),
