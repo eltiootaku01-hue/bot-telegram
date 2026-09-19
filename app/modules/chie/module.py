@@ -61,6 +61,7 @@ class ChieModule(BotModule):
         self.router.callback_query.register(self.command_hub, F.data.startswith("chie:hub:"))
         self.router.message.register(self.configure_group, Command("configurar"))
         self.router.message.register(self.command_hub_command, Command("comandos"))
+        self.router.message.register(self.rules_command, Command("reglas"))
         self.router.message.register(self.world_command, Command("mundo"))
         self.router.message.register(self.rules_command, Command("reglas"))
         self.router.chat_member.register(self.member_joined)
@@ -290,6 +291,22 @@ class ChieModule(BotModule):
                     lines.append("· sin datos todavía")
                 lines.append("")
         await message.answer("\n".join(lines))
+
+    async def rules_command(self, message: Message) -> None:
+        if message.chat.type not in {"group", "supergroup", "private"}:
+            return
+        await message.answer(
+            "📜 <b>Reglas del Café Otaku</b>\n\n"
+            "1. Respeto entre integrantes: nada de acoso, amenazas o ataques personales.\n"
+            "2. Nada de spam, flood o contenido diseñado para molestar.\n"
+            "3. No compartas datos personales de otras personas sin permiso.\n"
+            "4. Usa cada tema del foro para su propósito y evita desviar conversaciones constantemente.\n"
+            "5. Los juegos, puntos y pedidos deben usarse de forma honesta; no intentes explotar errores.\n"
+            "6. Respeta las indicaciones de los moderadores y de Chie.\n"
+            "7. El material ilegal o que infrinja las reglas de Telegram no tiene lugar en la comunidad.\n\n"
+            "Estas reglas son operativas y pueden ampliarse cuando la comunidad defina nuevas normas."
+        )
+
     async def command_hub_command(self, message: Message, bot: Bot) -> None:
         if message.chat.type != "private" and not await is_chat_staff(message, bot):
             return
