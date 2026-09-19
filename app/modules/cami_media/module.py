@@ -16,6 +16,7 @@ from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import FanRequest, MediaAsset, RequestStatus
 from app.services.forum_topics import ForumTopicService
+from app.services.world import WorldService
 from app.ui.media_keyboards import (
     cami_media_actions,
     cami_pending_requests,
@@ -35,7 +36,21 @@ class CamiMediaModule(BotModule):
         self.jobs = JobQueue()
         self.topics = ForumTopicService(database)
         self.settings = settings or get_settings()
+        self.world = WorldService()
 
+    async def _observe_action(self, action_key: str, user_id: int) -> None:
+        """Record Cami media-desk usage without affecting the main workflow."""
+        try:
+            async with self.database.session() as session:
+                await self.world.observe_action(
+                    session,
+                    bot_identity=BotIdentity.CAMI,
+                    action_key=action_key,
+                    user_id=user_id,
+                )
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("World observation failed for Cami action=%s user=%s", action_key, user_id)
     def setup(self) -> None:
         self.router.message.register(self.receive_photo, F.photo)
         self.router.message.register(self.recovery_command, Command("recuperar_publicaciones"))
@@ -107,6 +122,7 @@ class CamiMediaModule(BotModule):
                 await message.answer(
                     "🏷️ Etiquetas guardadas. El material queda en la biblioteca para decidir su publicación."
                 )
+                await self._observe_action("media_tag", message.from_user.id)
                 return
 
             try:
