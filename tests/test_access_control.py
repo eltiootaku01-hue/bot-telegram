@@ -229,3 +229,39 @@ async def test_unauthorized_group_bootstrap_rejects_non_admin() -> None:
         update,
         {"event_update": update, "bot": BotStub()},
     ) is None
+
+
+def test_authorized_media_channel_post_reaches_access_policy() -> None:
+    from aiogram.types import PhotoSize
+
+    settings = Settings(media_storage_chat_id=-100555)
+    middleware = ChatAccessMiddleware(settings)
+    channel_post = Message(
+        message_id=12,
+        date=datetime.now(timezone.utc),
+        chat=Chat(id=-100555, type="channel"),
+        photo=[
+            PhotoSize(
+                file_id="file",
+                file_unique_id="unique",
+                width=1,
+                height=1,
+            )
+        ],
+    )
+    update = Update(update_id=120, channel_post=channel_post)
+
+    assert middleware._is_allowed(update) is True
+
+
+def test_unauthorized_media_channel_post_is_blocked() -> None:
+    settings = Settings(media_storage_chat_id=-100555)
+    middleware = ChatAccessMiddleware(settings)
+    channel_post = Message(
+        message_id=13,
+        date=datetime.now(timezone.utc),
+        chat=Chat(id=-100777, type="channel"),
+    )
+    update = Update(update_id=121, channel_post=channel_post)
+
+    assert middleware._is_allowed(update) is False
