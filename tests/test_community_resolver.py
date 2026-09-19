@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 
 from app.core.identity import BotIdentity
@@ -39,15 +41,25 @@ async def test_private_user_resolves_to_recent_configured_membership(tmp_path) -
         await session.flush()
         session.add_all(
             [
-                UserChat(user_id=7, chat_id=-100, status="member"),
-                UserChat(user_id=7, chat_id=-200, status="creator"),
+                UserChat(
+                    user_id=7,
+                    chat_id=-100,
+                    status="member",
+                    last_seen_at=datetime(2026, 9, 19, 10, 0, 0),
+                ),
+                UserChat(
+                    user_id=7,
+                    chat_id=-200,
+                    status="creator",
+                    last_seen_at=datetime(2026, 9, 19, 11, 0, 0),
+                ),
             ]
         )
 
     async with database.session() as session:
         resolved = await CommunityResolver().for_user(session, 7)
 
-    assert resolved in {-100, -200}
+    assert resolved == -200
     await database.close()
 
 
