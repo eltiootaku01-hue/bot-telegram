@@ -6,7 +6,7 @@ from html import escape
 from aiogram import Bot, F
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, ChatMemberAdministrator, ChatMemberOwner, Message
+from aiogram.types import CallbackQuery, ChatMemberAdministrator, ChatMemberOwner, ChatMemberUpdated, Message
 from sqlalchemy import select
 
 from app.core.access import is_chat_staff
@@ -29,6 +29,15 @@ REQUIRED_ADMIN_PERMISSIONS = {
     "can_delete_messages": "eliminar mensajes",
     "can_restrict_members": "restringir miembros",
 }
+
+COMMUNITY_RULES = (
+    "📜 <b>Reglas de Ciudad Animals</b>\n\n"
+    "1. Respeto entre integrantes.\n"
+    "2. Nada de spam, flood o contenido malicioso.\n"
+    "3. Los pedidos y publicaciones deben usar los canales correspondientes.\n"
+    "4. Las decisiones de moderación buscan mantener el espacio ordenado y seguro.\n"
+    "5. Ante una duda, preguntá a Chie o a una persona administradora."
+)
 
 
 class ChieModule(BotModule):
@@ -53,6 +62,8 @@ class ChieModule(BotModule):
         self.router.message.register(self.configure_group, Command("configurar"))
         self.router.message.register(self.command_hub_command, Command("comandos"))
         self.router.message.register(self.world_command, Command("mundo"))
+        self.router.message.register(self.rules_command, Command("reglas"))
+        self.router.chat_member.register(self.member_joined)
 
     async def on_startup(self, bot: Bot) -> None:
         self.bot = bot
@@ -108,6 +119,52 @@ class ChieModule(BotModule):
                 )
         except Exception:
             logger.exception("World observation failed for Chie action=%s user=%s", action_key, user_id)
+    async def member_joined(self, event: ChatMemberUpdated, bot: Bot) -> None:
+        if self.bot is None:
+            return
+        old_status = event.old_chat_member.status
+        new_member = event.new_chat_member
+        if old_status not in {"left", "kicked"}:
+            return
+        if new_member.status not in {"member", "administrator"}:
+            return
+        if new_member.user.is_bot:
+            return
+        async with self.database.session() as session:
+            setup = await session.scalar(
+                select(SetupSession)
+                .where(
+                    SetupSession.chat_id == event.chat.id,
+                    SetupSession.bot_identity == BotIdentity.CHIE.value,
+                    SetupSession.status == "configured",
+                )
+                .order_by(SetupSession.id.desc())
+            )
+        if setup is None:
+            return
+        name = escape(new_member.user.full_name)
+        thread_id = await self.topics.get_thread_id(event.chat.id, "bienvenida")
+        await bot.send_message(
+            event.chat.id,
+            f"👋 <b>¡Bienvenido/a, {name}!</b>\n\n"
+            "Soy Chie y estoy en la recepción de Ciudad Animals. "
+            "Pasá por el tema de <b>reglas</b> antes de empezar. 💛",
+            message_thread_id=thread_id,
+        ) if thread_id is not None else await bot.send_message(
+            event.chat.id,
+            f"👋 <b>¡Bienvenido/a, {name}!</b>\n\n"
+            "Soy Chie y estoy en la recepción de Ciudad Animals. "
+            "Pasá por el tema de <b>reglas</b> antes de empezar. 💛",
+        )
+        await self._observe_action("welcome", new_member.user.id, event.chat.id)
+
+    async def rules_command(self, message: Message) -> None:
+        if message.chat.type not in {"group", "supergroup"}:
+            return
+        await message.answer(COMMUNITY_RULES)
+        if message.from_user is not None:
+            await self._observe_action("rules_view", message.from_user.id, message.chat.id)
+
     async def start_setup(self, callback: CallbackQuery) -> None:
         if not callback.message or callback.message.chat.type != "private":
             await callback.answer("Abrime en privado para iniciar la configuración.", show_alert=True)
@@ -175,7 +232,7 @@ class ChieModule(BotModule):
         if missing:
             await callback.answer("Todavía me faltan: " + ", ".join(missing), show_alert=True)
             return
-        topic_keys = ("comandos", "noticias", "undiacomohoy", "recomendaciondiaria", "curiosidades", "estrenos", "memes", "material", "anime", "debates", "trivia", "waifumon", "puntos", "pedidos")
+        topic_keys = ("comandos", "bienvenida", "reglas", "noticias", "undiacomohoy", "recomendaciondiaria", "curiosidades", "estrenos", "memes", "material", "anime", "debates", "trivia", "waifumon", "puntos", "pedidos")
         created = 0
         failures: list[str] = []
         for key in topic_keys:
