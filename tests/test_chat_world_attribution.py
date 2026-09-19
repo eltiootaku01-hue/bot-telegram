@@ -146,3 +146,13 @@ async def test_chat_startup_seeds_world_catalog(database: Database) -> None:
     assert any(entry.entry_key == "waifumon" for entry in catalog)
     assert any(entry.entry_key == "cari-cami" for entry in catalog)
     assert any(entry.entry_key == "chie-sunna" for entry in catalog)
+
+
+@pytest.mark.asyncio
+async def test_non_cari_character_chat_leaves_complex_addressed_prompt_for_brain(database: Database) -> None:
+    from app.core.identity import BotIdentity
+
+    sunna = ChatModule(database, identity=BotIdentity.SUNNA)
+
+    assert sunna._should_handle_text("Sunna, explicame cómo funciona el gacha") is False
+    assert sunna._should_handle_text("Sunna") is True
