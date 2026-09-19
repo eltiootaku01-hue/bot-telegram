@@ -124,9 +124,17 @@ Chie, necesito ayuda
 → Te escucho... p-podemos verlo juntas.
 ```
 
+## WaifuMon gacha
+
+Sunna's private Gacha is a real persistent game action, not a cosmetic rarity roll. Each tirada costs **10 community points** and is recorded with an idempotent roll ID, so repeating the same Telegram callback cannot grant a second character.
+
+Available characters are selected from the local catalog up to the rolled rarity. Public D/C results are added directly to the player's collection and grant collection XP. A B/A/S/SS/SSS result creates a private owner approval request; the character is not added until the owner approves it. A rejected exceptional drop refunds the 10 points exactly once.
+
+The gacha state, approval state and reward transaction are stored in SQLite, so the workflow survives process restarts.
+
 ## Shared points
 
-Every successful waifu capture can award community points. Points belong to the player + community and use an auditable transaction ledger. Fan requests spend those same points.
+Every successful waifu capture can award community points. Points belong to the player + community and use an auditable transaction ledger. Fan requests and Gacha spend those same points.
 
 ## Fan requests: persistent ticket number
 
