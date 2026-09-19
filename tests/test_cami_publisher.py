@@ -295,3 +295,65 @@ async def test_request_publish_uses_request_community_not_latest_setup(tmp_path)
     assert saved_request is not None
     assert saved_request.status == "completed"
     await database.close()
+
+
+
+@pytest.mark.asyncio
+async def test_scheduled_publish_refuses_unbound_asset_with_multiple_communities(tmp_path) -> None:
+    from app.db.models import Chat
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'multi-community-unbound.db'}")
+    await database.create_schema()
+    bot = AsyncMock()
+    publisher = CamiMediaPublisher(
+        database,
+        Settings(authorized_chat_ids="-100,-200", publish_page_chat_id=0),
+    )
+
+    async with database.session() as session:
+        session.add_all(
+            [
+                Chat(id=-100, type="supergroup", title="Community One"),
+                Chat(id=-200, type="supergroup", title="Community Two"),
+                SetupSession(
+                    user_id=1,
+                    chat_id=-100,
+                    bot_identity="chie",
+                    status="configured",
+                ),
+                SetupSession(
+                    user_id=2,
+                    chat_id=-200,
+                    bot_identity="chie",
+                    status="configured",
+                ),
+                MediaAsset(
+                    telegram_file_id="unbound-multi",
+                    source_chat_id=-999,
+                    source_message_id=5,
+                    status="scheduled",
+                    publish_group=True,
+                    publish_page=False,
+                    publish_destination="group",
+                ),
+            ]
+        )
+        await session.commit()
+
+    async with database.session() as session:
+        asset = await session.scalar(select(MediaAsset))
+        assert asset is not None
+        asset_id = asset.id
+
+    with pytest.raises(RuntimeError, match="multiple Chie communities"):
+        await publisher.publish(bot, {"asset_id": asset_id, "destination": "group"})
+
+    bot.send_photo.assert_not_awaited()
+
+    async with database.session() as session:
+        saved = await session.get(MediaAsset, asset_id)
+
+    assert saved is not None
+    assert saved.status == "scheduled"
+    assert saved.publish_group_chat_id is None
+    await database.close()
