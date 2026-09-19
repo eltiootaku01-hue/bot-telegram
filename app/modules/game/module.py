@@ -38,7 +38,7 @@ class GameModule(BotModule):
         self.database = database
         self.settings = settings or get_settings()
         self.engine = GameEngine()
-        self.gacha = GachaService(self.engine)
+        self.gacha_service = GachaService(self.engine)
         self.encounters = EncounterStore()
         self.wild: WildWaifuScheduler | None = None
         self.world = WorldService()
@@ -263,7 +263,7 @@ class GameModule(BotModule):
             return
 
         async with self.database.session() as session:
-            result = await self.gacha.roll(
+            result = await self.gacha_service.roll(
                 session,
                 user_id=callback.from_user.id,
                 chat_id=chat_id,
