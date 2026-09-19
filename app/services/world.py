@@ -207,6 +207,37 @@ class WorldService:
 
         return await session.scalar(select(WorldCatalogEntry).where(*filters))  # type: ignore[return-value]
 
+    async def clear_user_statistics(
+        self,
+        session: AsyncSession,
+        *,
+        user_id: int,
+        bot_identity: BotIdentity | str | None = None,
+        chat_id: int | None = None,
+    ) -> int:
+        """Delete only the requesting user's user-scoped world statistics."""
+        from sqlalchemy import delete, or_
+
+        user_scope = or_(
+            (
+                (WorldUsageStat.scope_type == "user")
+                & (WorldUsageStat.scope_id == str(user_id))
+            ),
+            (
+                (WorldUsageStat.scope_type == "user_chat")
+                & (WorldUsageStat.scope_id.like(f"{user_id}:%"))
+            ),
+        )
+        conditions = [user_scope]
+        if bot_identity is not None:
+            conditions.append(WorldUsageStat.bot_identity == str(bot_identity))
+        if chat_id is not None:
+            conditions.append(WorldUsageStat.scope_type == "user_chat")
+            conditions.append(WorldUsageStat.scope_id == f"{user_id}:{chat_id}")
+
+        result = await session.execute(delete(WorldUsageStat).where(*conditions))
+        return int(result.rowcount or 0)
+
     async def user_summary(
         self,
         session: AsyncSession,
