@@ -17,6 +17,7 @@ async def propose(
     rarity: str,
     target_user_id: int,
     target_chat_id: int,
+    commit: bool = True,
 ) -> RareDropApproval:
     """Create a private approval request; caller must notify the configured owner."""
     if rarity not in HIGH_RARITIES:
@@ -28,7 +29,10 @@ async def propose(
         target_chat_id=target_chat_id,
     )
     session.add(request)
-    await session.commit()
+    if commit:
+        await session.commit()
+    else:
+        await session.flush()
     await session.refresh(request)
     return request
 
