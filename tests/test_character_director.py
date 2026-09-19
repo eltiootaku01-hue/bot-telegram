@@ -1,5 +1,5 @@
 from app.characters.director import CharacterDirector
-from app.characters.models import CharacterIntent, PROFILES
+from app.characters.models import CharacterIntent, DialogueScene, PROFILES
 from app.characters.repertoire import REPERTOIRE
 from app.core.identity import BotIdentity
 
