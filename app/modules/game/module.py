@@ -11,7 +11,6 @@ from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.core.time import utc_now
-from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import GameAttempt, GameCollection, GameEncounter
 from app.db.repositories import MemberRepository
@@ -133,7 +132,7 @@ class GameModule(BotModule):
         if not self._private_callback(callback):
             await callback.answer("Este botón solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
             return
-        chat_id = await self._community_chat_id(callback.from_user.id)
+        chat_id = await self._community_chat_id(message.from_user.id)
         if chat_id is None:
             await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
             return
