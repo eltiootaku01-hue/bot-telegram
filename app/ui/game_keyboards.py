@@ -56,3 +56,16 @@ def fusion_keyboard(character_id: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="✨ Evolucionar", callback_data=f"game:fusion:{character_id}"))
     return builder.as_markup()
+
+def mystery_keyboard(round_id: int, options: tuple[str, ...]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for index, option in enumerate(options):
+        builder.add(
+            InlineKeyboardButton(
+                text=option,
+                callback_data=f"game:mystery:{round_id}:{index}",
+            )
+        )
+    builder.adjust(2)
+    return builder.as_markup()
+
