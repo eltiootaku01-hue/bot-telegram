@@ -1,3 +1,4 @@
+from app.characters.repertoire import REPERTOIRE
 from app.core.identity import BotIdentity
 from app.services.world_catalog import WORLD_CATALOG, catalog_for_identity
 
@@ -57,9 +58,7 @@ async def test_world_catalog_seed_is_idempotent() -> None:
     async with database.session() as session:
         rows = list(await session.scalars(select(WorldCatalogEntry)))
 
-    assert len(rows) == len(WORLD_CATALOG) + len(
-        [scene for scene in __import__("app.characters.repertoire", fromlist=["REPERTOIRE"]).REPERTOIRE]
-    )
+    assert len(rows) == len(WORLD_CATALOG) + len(REPERTOIRE)
     keys = [(row.bot_identity, row.entry_type, row.entry_key) for row in rows]
     assert len(keys) == len(set(keys))
     await database.close()
