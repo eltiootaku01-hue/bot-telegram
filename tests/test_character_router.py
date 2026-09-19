@@ -41,3 +41,15 @@ def test_router_detects_exact_character_addressing() -> None:
     assert router.target_identity("hola, Cami") is BotIdentity.CAMI
     assert router.target_identity("Chie, una pregunta") is BotIdentity.CHIE
     assert router.target_identity("cariños") is None
+
+
+def test_cari_does_not_claim_messages_addressed_to_another_character(database=None):
+    # The conversation module must allow the explicitly named bot to own the turn.
+    from app.core.identity import BotIdentity
+    from app.modules.chat.module import ChatModule
+
+    module = ChatModule(database, identity=BotIdentity.CARI)
+    assert module._should_handle_text("Hola Cami") is False
+    assert module._should_handle_text("Hola Sunna") is False
+    assert module._should_handle_text("Hola Chie") is False
+    assert module._should_handle_text("Hola") is True
