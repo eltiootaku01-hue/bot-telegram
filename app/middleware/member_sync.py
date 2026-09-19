@@ -1,27 +1,26 @@
 from collections.abc import Awaitable, Callable
 
 from aiogram import BaseMiddleware
-from aiogram.types import CallbackQuery, Message, TelegramObject
+from aiogram.types import CallbackQuery, ChatMemberUpdated, Message, TelegramObject
 
 from app.core.social_wake import WakeReason
-from app.core.social_wake_store import SocialWakeStore
 from app.core.time import utc_now
 from app.db.database import Database
 from app.db.repositories import MemberRepository
 
 
 class MemberSyncMiddleware(BaseMiddleware):
-    """Keeps member/chat activity fresh and wakes social observation on demand."""
+    """Keeps member/chat identity, membership and activity fresh."""
 
     def __init__(
         self,
         database: Database,
         repository: MemberRepository | None = None,
-        wake_store: SocialWakeStore | None = None,
+        wake_store=None,
     ) -> None:
         self.database = database
         self.repository = repository or MemberRepository()
-        self.wake_store = wake_store or SocialWakeStore()
+        self.wake_store = wake_store
 
     async def __call__(
         self,
@@ -29,6 +28,10 @@ class MemberSyncMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict,
     ) -> object:
+        if isinstance(event, ChatMemberUpdated):
+            await self._sync_membership_event(event)
+            return await handler(event, data)
+
         user = getattr(event, "from_user", None)
         chat = getattr(event, "chat", None)
         if isinstance(event, CallbackQuery) and event.message is not None:
@@ -51,7 +54,13 @@ class MemberSyncMiddleware(BaseMiddleware):
                     and not user.is_bot
                     and chat.type in {"group", "supergroup"}
                 ):
-                    await self.wake_store.request_wake(
+                    if self.wake_store is None:
+                        from app.core.social_wake_store import SocialWakeStore
+
+                        wake_store = SocialWakeStore()
+                    else:
+                        wake_store = self.wake_store
+                    await wake_store.request_wake(
                         session,
                         chat.id,
                         utc_now(),
@@ -59,3 +68,17 @@ class MemberSyncMiddleware(BaseMiddleware):
                         commit=False,
                     )
         return await handler(event, data)
+
+    async def _sync_membership_event(self, event: ChatMemberUpdated) -> None:
+        member_user = event.new_chat_member.user
+        status = getattr(event.new_chat_member.status, "value", event.new_chat_member.status)
+        if status == "restricted":
+            status = "member" if getattr(event.new_chat_member, "is_member", False) else "left"
+        async with self.database.session() as session:
+            await self.repository.set_membership(
+                session,
+                member_user,
+                event.chat,
+                str(status),
+                commit=False,
+            )
