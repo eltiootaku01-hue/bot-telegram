@@ -139,3 +139,23 @@ async def test_invalid_observation_is_rejected(session: AsyncSession):
             entry_key="anime",
             delta=0,
         )
+
+
+@pytest.mark.asyncio
+async def test_observe_action_populates_world_user_and_user_chat_scopes(session: AsyncSession):
+    service = WorldService()
+
+    await service.observe_action(
+        session,
+        bot_identity=BotIdentity.CAMI,
+        action_key="media_tag",
+        user_id=42,
+        chat_id=99,
+    )
+
+    rows = list(await session.scalars(select(WorldUsageStat)))
+    scopes = {(row.scope_type, row.scope_id, row.count) for row in rows}
+
+    assert ("world", "global", 1) in scopes
+    assert ("user", "42", 1) in scopes
+    assert ("user_chat", "42:99", 1) in scopes
