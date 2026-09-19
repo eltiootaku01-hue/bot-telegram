@@ -40,6 +40,7 @@ def test_save_config_persists_chat_access_policy(monkeypatch, tmp_path: Path) ->
             self.model_var = FakeVar("llama3.2:1b")
             self.admin_var = FakeVar("123")
             self.media_var = FakeVar("0")
+            self.publish_page_var = FakeVar("-100333")
             self.ai_global_var = FakeVar(False)
             self.ai_bot_vars = {name: FakeVar(False) for name in launcher.BOTS}
             self.ai_vars = {name: FakeVar("") for name, _ in launcher.AI_FIELDS}
@@ -64,3 +65,4 @@ def test_save_config_persists_chat_access_policy(monkeypatch, tmp_path: Path) ->
     assert values["AUTHORIZED_CHAT_IDS"] == "-100111,-100222"
     assert values["ALLOW_ADMIN_PRIVATE_CHAT"] == "false"
     assert values["ADMIN_USER_ID"] == "123"
+    assert values["PUBLISH_PAGE_CHAT_ID"] == "-100333"
