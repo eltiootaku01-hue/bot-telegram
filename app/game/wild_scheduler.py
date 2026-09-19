@@ -5,6 +5,8 @@ from aiogram import Bot
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
+from app.core.access import is_authorized_community
+from app.core.config import Settings, get_settings
 from app.core.time import utc_now
 from app.db.community_models import SetupSession
 from app.db.database import Database
@@ -19,9 +21,15 @@ logger = logging.getLogger(__name__)
 class WildWaifuScheduler:
     """Creates occasional public encounters only in the configured community."""
 
-    def __init__(self, bot: Bot, database: Database) -> None:
+    def __init__(
+        self,
+        bot: Bot,
+        database: Database,
+        settings: Settings | None = None,
+    ) -> None:
         self.bot = bot
         self.database = database
+        self.settings = settings or get_settings()
         self.task: asyncio.Task | None = None
         self.spawn_tasks: set[asyncio.Task] = set()
         self.stopping = False
@@ -103,6 +111,10 @@ class WildWaifuScheduler:
             return encounter is not None
 
     async def spawn(self, chat_id: int) -> None:
+        # Background sends must honor the same central allowlist as inbound updates.
+        if not is_authorized_community(self.settings, chat_id):
+            return
+
         # The database is the source of truth, so a restart or duplicate scheduler
         # cannot flood a chat with multiple active encounters.
         if await self._has_active_encounter(chat_id):
@@ -146,6 +158,18 @@ class WildWaifuScheduler:
                 # on active encounters makes only one winner possible.
                 await session.rollback()
                 return
+
+        if not is_authorized_community(self.settings, chat_id):
+            async with self.database.session() as session:
+                await session.execute(
+                    update(GameEncounter)
+                    .where(
+                        GameEncounter.id == encounter.id,
+                        GameEncounter.status == "active",
+                    )
+                    .values(status="cancelled")
+                )
+            return
 
         try:
             sent = await self.bot.send_message(
