@@ -106,6 +106,23 @@ dist\\bots\\Chie.exe
 
 The installer definition lives at `installer/bot-telegram.iss` and packages those executables into a normal Windows setup program. GitHub Actions installs Inno Setup, compiles the installer, verifies it, and publishes the resulting artifact/release asset.
 
+## Deterministic character conversations
+
+The four identities share a small local conversation module in addition to their specialized roles. Cari can answer common community greetings directly; Sunna, Cami and Chie require an explicit name/address so one group message does not produce four simultaneous character replies. These replies come only from authored repertoire and never require the AI Brain.
+
+Examples:
+
+```text
+Sunna
+→ ¿Sí? / Te escucho.
+
+Cami, una pregunta
+→ ¿Sí? Decime qué necesitás.
+
+Chie, necesito ayuda
+→ Te escucho... p-podemos verlo juntas.
+```
+
 ## Shared points
 
 Every successful waifu capture can award community points. Points belong to the player + community and use an auditable transaction ledger. Fan requests spend those same points.
