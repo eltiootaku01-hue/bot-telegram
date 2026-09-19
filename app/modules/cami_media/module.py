@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 
 from aiogram import Bot, F
 from aiogram.filters import Command
@@ -17,6 +18,8 @@ from app.db.database import Database
 from app.db.models import FanRequest, MediaAsset, RequestStatus
 from app.services.forum_topics import ForumTopicService
 from app.services.world import WorldService
+logger = logging.getLogger(__name__)
+
 from app.ui.media_keyboards import (
     cami_media_actions,
     cami_pending_requests,
@@ -49,8 +52,8 @@ class CamiMediaModule(BotModule):
                     user_id=user_id,
                 )
         except Exception:
-            import logging
-            logging.getLogger(__name__).exception("World observation failed for Cami action=%s user=%s", action_key, user_id)
+            logger.exception("World observation failed for Cami action=%s user=%s", action_key, user_id)
+
     def setup(self) -> None:
         self.router.message.register(self.receive_photo, F.photo)
         self.router.message.register(self.recovery_command, Command("recuperar_publicaciones"))
@@ -91,6 +94,7 @@ class CamiMediaModule(BotModule):
             "🗂️ <b>Recibido.</b> ¿Qué querés que haga con este material?",
             reply_markup=cami_media_actions(asset_id),
         )
+        await self._observe_action("media_ingest", message.from_user.id)
 
     async def receive_schedule_or_tags(self, message: Message) -> None:
         if not self._is_media_staff(message) or not message.text:
@@ -146,6 +150,7 @@ class CamiMediaModule(BotModule):
                 run_at=scheduled_at,
             )
         await message.answer("🗓️ <b>Programado.</b> La orden quedó persistida para que sobreviva a un reinicio.")
+        await self._observe_action("media_schedule", message.from_user.id)
 
     async def recovery_command(self, message: Message) -> None:
         if not self._is_media_staff(message):
@@ -200,6 +205,7 @@ class CamiMediaModule(BotModule):
                 asset.updated_at = utc_now()
                 await session.commit()
                 await callback.message.edit_text(f"✅ Material #{asset_id} marcado como publicado.")
+                await self._observe_action("publication_recovery_confirm", callback.from_user.id)
                 await callback.answer("Confirmado.")
                 return
 
@@ -212,6 +218,7 @@ class CamiMediaModule(BotModule):
                 asset.updated_at = utc_now()
                 await session.commit()
                 await callback.message.edit_text(f"📦 Material #{asset_id} descartado.")
+                await self._observe_action("publication_recovery_discard", callback.from_user.id)
                 await callback.answer("Descartado.")
                 return
 
@@ -238,6 +245,7 @@ class CamiMediaModule(BotModule):
                         dedupe_key=f"media-publish:{asset.id}:recovery:{now}",
                     )
                 await callback.message.edit_text(f"🔁 Material #{asset_id} puesto nuevamente en cola.")
+                await self._observe_action("publication_recovery_retry", callback.from_user.id)
                 await callback.answer("Reintentando.")
                 return
 
@@ -317,6 +325,7 @@ class CamiMediaModule(BotModule):
                 asset.status = "archived"
                 await session.commit()
                 await callback.message.edit_text("📦 Archivado. No se publicará.")
+                await self._observe_action("media_archive", callback.from_user.id)
                 await callback.answer()
                 return
 
@@ -333,6 +342,7 @@ class CamiMediaModule(BotModule):
                 await callback.message.edit_text(
                     "🕒 Decime cuándo querés enviarlo en formato <code>DD/MM/YYYY HH:MM</code>."
                 )
+                await self._observe_action("media_destination_set", callback.from_user.id)
                 await callback.answer()
                 return
 
@@ -343,6 +353,7 @@ class CamiMediaModule(BotModule):
                     "↩️ Cancelado. El material vuelve a la bandeja de Cami.",
                     reply_markup=cami_media_actions(asset_id),
                 )
+                await self._observe_action("media_cancel", callback.from_user.id)
                 await callback.answer()
                 return
 
