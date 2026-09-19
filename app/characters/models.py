@@ -6,6 +6,7 @@ from app.core.identity import BotIdentity
 
 class CharacterIntent(StrEnum):
     GREETING = "greeting"
+    CALLED = "called"
     FAREWELL = "farewell"
     UNKNOWN_TOPIC = "unknown_topic"
     OUT_OF_SCOPE = "out_of_scope"
