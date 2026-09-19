@@ -35,7 +35,11 @@ class ChatModule(BotModule):
         )
 
     def _should_handle_text(self, text: str) -> bool:
-        return bool(text and (text.casefold().strip() == "bot" or self.characters.classify(text)))
+        if not text:
+            return False
+        if self.identity is BotIdentity.CARI:
+            return bool(text.casefold().strip() == "bot" or self.characters.classify(text))
+        return self.characters.target_identity(text) is self.identity
 
     async def _seed_catalog(self) -> None:
         if self._catalog_seeded:
@@ -113,8 +117,11 @@ class ChatModule(BotModule):
             return
         text = message.text.strip()
         intent = self.characters.classify(text)
+        target = self.characters.target_identity(text)
         if text.casefold() == "bot":
             intent = CharacterIntent.HELP
+        elif intent is None and target is self.identity:
+            intent = CharacterIntent.CALLED
         if intent is None:
             return
         response = self.characters.director.choose(
