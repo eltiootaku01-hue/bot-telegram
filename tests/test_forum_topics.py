@@ -18,10 +18,18 @@ async def test_concurrent_topic_creation_cleans_the_loser_topic(tmp_path) -> Non
     database_b = Database(f"sqlite+aiosqlite:///{db_path}")
 
     bot = AsyncMock()
-    bot.create_forum_topic.side_effect = [
-        SimpleNamespace(message_thread_id=101),
-        SimpleNamespace(message_thread_id=202),
-    ]
+    entered = 0
+    both_entered = asyncio.Event()
+
+    async def create_forum_topic(*, chat_id: int, name: str):
+        nonlocal entered
+        entered += 1
+        if entered == 2:
+            both_entered.set()
+        await both_entered.wait()
+        return SimpleNamespace(message_thread_id=101 + (entered * 101))
+
+    bot.create_forum_topic.side_effect = create_forum_topic
 
     service_a = ForumTopicService(database_a)
     service_b = ForumTopicService(database_b)
@@ -33,7 +41,7 @@ async def test_concurrent_topic_creation_cleans_the_loser_topic(tmp_path) -> Non
         )
 
         assert results[0] == results[1]
-        assert results[0] in {101, 202}
+        assert results[0] in {202, 303}
         assert bot.create_forum_topic.await_count == 2
         assert bot.delete_forum_topic.await_count == 1
 
