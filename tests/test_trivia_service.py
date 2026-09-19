@@ -1,0 +1,64 @@
+from datetime import timedelta
+
+import pytest
+
+from app.core.time import utc_now
+from app.db.database import Database
+from app.db.trivia_models import TriviaRound
+from app.game.trivia import TriviaService
+
+
+@pytest.fixture
+async def database():
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    yield database
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_start_round_retires_expired_active_round(database):
+    service = TriviaService()
+
+    async with database.session() as session:
+        session.add(
+            TriviaRound(
+                chat_id=-100,
+                question="vieja",
+                options="["a", "b"]",
+                answer_index=0,
+                explanation="",
+                points=10,
+                status="active",
+                expires_at=utc_now() - timedelta(seconds=1),
+            )
+        )
+
+    async with database.session() as session:
+        created = await service.start_round(session, -100)
+
+    assert created is not None
+    round_row, _ = created
+
+    async with database.session() as session:
+        old_round = await session.get(TriviaRound, round_row.id - 1)
+        new_round = await session.get(TriviaRound, round_row.id)
+
+    assert old_round is not None
+    assert old_round.status == "expired"
+    assert new_round is not None
+    assert new_round.status == "active"
+
+
+@pytest.mark.asyncio
+async def test_start_round_keeps_existing_live_round(database):
+    service = TriviaService()
+
+    async with database.session() as session:
+        first = await service.start_round(session, -100)
+
+    async with database.session() as session:
+        second = await service.start_round(session, -100)
+
+    assert first is not None
+    assert second is None
