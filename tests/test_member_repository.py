@@ -173,3 +173,39 @@ async def test_member_sync_maps_restricted_membership(database: Database) -> Non
 
     assert link is not None
     assert link.status == "member"
+
+
+@pytest.mark.asyncio
+async def test_member_sync_ignores_bot_membership(database: Database) -> None:
+    from types import SimpleNamespace
+    from aiogram.types import Chat, ChatMemberUpdated, User
+
+    middleware = MemberSyncMiddleware(database)
+
+    event = ChatMemberUpdated.model_construct(
+        update_id=2,
+        chat=Chat(id=-100123, type="supergroup", title="Community"),
+        from_user=User(id=1, is_bot=False, first_name="Admin"),
+        date=datetime.now(timezone.utc),
+        old_chat_member=SimpleNamespace(status="left"),
+        new_chat_member=SimpleNamespace(
+            status="member",
+            user=User(id=99, is_bot=True, first_name="Sunna"),
+            is_member=True,
+        ),
+    )
+
+    async def handler(event, data):
+        return "handled"
+
+    assert await middleware(handler, event, {}) == "handled"
+
+    async with database.session() as session:
+        link = await session.scalar(
+            select(UserChat).where(
+                UserChat.user_id == 99,
+                UserChat.chat_id == -100123,
+            )
+        )
+
+    assert link is None
