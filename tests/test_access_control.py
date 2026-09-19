@@ -57,8 +57,25 @@ async def test_unauthorized_group_is_blocked_before_handler() -> None:
 
 
 @pytest.mark.asyncio
-async def test_private_chat_is_limited_to_configured_admin() -> None:
-    settings = Settings(admin_user_id=77, allow_admin_private_chat=True)
+async def test_private_user_features_are_available_to_normal_users_by_default() -> None:
+    settings = Settings(admin_user_id=77, allow_user_private_chat=True)
+    middleware = ChatAccessMiddleware(settings)
+
+    async def handler(event, data):
+        return "handled"
+
+    update = make_update(chat_id=88, chat_type="private", user_id=88)
+
+    assert await middleware(handler, update, {"event_update": update}) == "handled"
+
+
+@pytest.mark.asyncio
+async def test_private_access_can_be_restricted_to_admin_when_requested() -> None:
+    settings = Settings(
+        admin_user_id=77,
+        allow_admin_private_chat=True,
+        allow_user_private_chat=False,
+    )
     middleware = ChatAccessMiddleware(settings)
 
     async def handler(event, data):
@@ -72,8 +89,12 @@ async def test_private_chat_is_limited_to_configured_admin() -> None:
 
 
 @pytest.mark.asyncio
-async def test_private_admin_can_be_disabled_explicitly() -> None:
-    settings = Settings(admin_user_id=77, allow_admin_private_chat=False)
+async def test_private_access_can_be_disabled_for_everyone() -> None:
+    settings = Settings(
+        admin_user_id=77,
+        allow_admin_private_chat=False,
+        allow_user_private_chat=False,
+    )
     middleware = ChatAccessMiddleware(settings)
 
     async def handler(event, data):
@@ -105,7 +126,7 @@ def test_central_chat_policy_matches_middleware_rules() -> None:
     assert settings.is_chat_allowed(-100123, "group") is True
     assert settings.is_chat_allowed(-100999, "supergroup") is False
     assert settings.is_chat_allowed(77, "private", 77) is True
-    assert settings.is_chat_allowed(88, "private", 88) is False
+    assert settings.is_chat_allowed(88, "private", 88) is True
     assert settings.is_chat_allowed(-100123, "channel") is False
 
 
