@@ -8,6 +8,7 @@ from app.core.identity import BotIdentity
 from app.db.database import Database
 from app.db.world_models import WorldUsageStat
 from app.modules.chat.module import ChatModule
+from app.modules.system.module import SystemModule
 
 
 @pytest.fixture
@@ -132,8 +133,8 @@ async def test_non_cari_character_chat_requires_explicit_address(database: Datab
 
 
 @pytest.mark.asyncio
-async def test_chat_startup_seeds_world_catalog(database: Database) -> None:
-    module = ChatModule(database)
+async def test_system_startup_seeds_world_catalog(database: Database) -> None:
+    module = SystemModule(BotIdentity.SUNNA, database)
     await module.on_startup(None)
 
     async with database.session() as session:
