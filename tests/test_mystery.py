@@ -155,3 +155,31 @@ async def test_different_day_creates_independent_round(database):
         )
 
     assert len(rows) == 2
+
+
+@pytest.mark.asyncio
+async def test_failed_round_can_be_reactivated_for_publication_retry(database):
+    service = MysteryService()
+
+    async with database.session(write=True) as session:
+        started = await service.start_round(
+            session,
+            chat_id=-100,
+            day_key="2026-09-21",
+        )
+        row = await session.get(MysteryRound, started.round.id)
+        assert row is not None
+        row.status = "failed"
+        await session.flush()
+
+    async with database.session(write=True) as session:
+        retry = await service.start_round(
+            session,
+            chat_id=-100,
+            day_key="2026-09-21",
+        )
+
+    assert retry.created is True
+    assert retry.round.id == started.round.id
+    assert retry.round.status == "active"
+    assert retry.round.message_id is None
