@@ -126,7 +126,7 @@ class CamiMediaPublisher(BotModule):
         if destination == "both" and not self.settings.publish_page_chat_id:
             raise RuntimeError("Media destination 'both' requires PUBLISH_PAGE_CHAT_ID to be configured")
 
-        async with self.database.session() as session:
+        async with self.database.session(write=True) as session:
             asset = await session.get(MediaAsset, asset_id)
             if asset is None or asset.status != "scheduled":
                 return
@@ -214,7 +214,7 @@ class CamiMediaPublisher(BotModule):
     async def publish_request(self, bot: Bot, payload: dict) -> None:
         asset_id = int(payload["asset_id"])
         request_id = int(payload["request_id"])
-        async with self.database.session() as session:
+        async with self.database.session(write=True) as session:
             asset = await session.get(MediaAsset, asset_id)
             request = await session.get(FanRequest, request_id)
             if asset is None or request is None or asset.request_id != request_id:
