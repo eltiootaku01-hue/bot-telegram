@@ -50,7 +50,6 @@ class SystemModule(BotModule):
                 BotCommand(command="trivia", description="Consultar la trivia"),
                 BotCommand(command="puntos", description="Consultar tus puntos"),
                 BotCommand(command="ranking", description="Consultar el ranking"),
-                BotCommand(command="pedido", description="Hacer un pedido"),
             ),
             BotIdentity.CAMI: (
                 BotCommand(command="start", description="Presentación de Cami"),
@@ -62,6 +61,7 @@ class SystemModule(BotModule):
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
                 BotCommand(command="configurar", description="Configurar la comunidad"),
                 BotCommand(command="comandos", description="Abrir el panel de comandos"),
+                BotCommand(command="mundo", description="Ver métricas de Ciudad Animals"),
             ),
         }[self.identity]
         try:
