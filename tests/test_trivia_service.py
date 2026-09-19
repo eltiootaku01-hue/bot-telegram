@@ -4,7 +4,10 @@ import pytest
 
 from app.core.time import utc_now
 from app.db.database import Database
-from app.db.trivia_models import TriviaRound
+from app.db.trivia_models import TriviaAttempt, TriviaRound
+from app.db.models import GameProfile
+from sqlalchemy import select
+
 from app.game.trivia import TriviaService
 
 
@@ -47,6 +50,58 @@ async def test_start_round_retires_expired_active_round(database):
     assert old_round.status == "expired"
     assert new_round is not None
     assert new_round.status == "active"
+
+
+
+@pytest.mark.asyncio
+async def test_answer_joins_caller_transaction(database):
+    service = TriviaService()
+
+    async with database.session() as session:
+        from app.db.models import Chat, User
+
+        session.add(User(id=7, first_name="Test"))
+        session.add(Chat(id=-100, type="supergroup", title="Community"))
+        await session.flush()
+        session.add(GameProfile(user_id=7, chat_id=-100))
+        round_row = TriviaRound(
+            chat_id=-100,
+            question="Pregunta",
+            options='["correcta", "incorrecta"]',
+            answer_index=0,
+            explanation="",
+            points=20,
+            status="active",
+            expires_at=utc_now() + timedelta(seconds=60),
+        )
+        session.add(round_row)
+        await session.commit()
+        round_id = round_row.id
+
+    async with database.session() as session:
+        result, balance = await service.answer(
+            session,
+            round_id,
+            7,
+            0,
+            chat_id=-100,
+        )
+        assert result == "correct"
+        assert balance == 20
+        await session.rollback()
+
+    async with database.session() as session:
+        stored_round = await session.get(TriviaRound, round_id)
+        attempts = list(await session.scalars(select(TriviaAttempt).where(TriviaAttempt.round_id == round_id)))
+        profile = await session.scalar(
+            select(GameProfile).where(GameProfile.user_id == 7, GameProfile.chat_id == -100)
+        )
+
+    assert stored_round is not None
+    assert stored_round.status == "active"
+    assert attempts == []
+    assert profile is not None
+    assert profile.points == 0
 
 
 @pytest.mark.asyncio
