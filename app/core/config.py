@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     # Telegram access is fail-closed: group/supergroup ids must be explicitly authorized.
     authorized_chat_ids: str = ""
     allow_admin_private_chat: bool = True
+    allow_user_private_chat: bool = True
 
     # World time is explicit for schedules; persistence remains UTC.
     bot_world_timezone: str = "America/Argentina/Buenos_Aires"
@@ -92,11 +93,12 @@ class Settings(BaseSettings):
     ) -> bool:
         """Return whether this Telegram chat may reach bot application logic."""
         if chat_type == "private":
-            return (
+            admin_allowed = (
                 self.allow_admin_private_chat
                 and self.admin_user_id != 0
                 and user_id == self.admin_user_id
             )
+            return self.allow_user_private_chat or admin_allowed
         if chat_type in {"group", "supergroup"}:
             return chat_id in self.authorized_chat_ids_set
         if chat_type == "channel":
