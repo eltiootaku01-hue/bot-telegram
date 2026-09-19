@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
-from app.core.time import utc_now
+from app.core.time import utc_now, world_now
 from app.db.database import Database
 from app.db.models import GameAttempt, GameCollection, GameEncounter
 from app.db.repositories import MemberRepository
@@ -20,12 +20,13 @@ from app.game.encounters import Encounter, encounter_options
 from app.game.engine import GameEngine
 from app.game.fusion import fuse_collection
 from app.game.gacha import GACHA_COST_POINTS, GachaService
+from app.game.mystery import MysteryService
 from app.game.progression import apply_capture_progression, collection_status
 from app.game.wild_scheduler import WildWaifuScheduler
 from app.services.community import CommunityResolver
 from app.services.world import WorldService
 from app.ui.control_keyboards import rare_approval_keyboard
-from app.ui.game_keyboards import combat_keyboard, fusion_keyboard, game_hub_keyboard, gacha_keyboard
+from app.ui.game_keyboards import combat_keyboard, fusion_keyboard, game_hub_keyboard, gacha_keyboard, mystery_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class GameModule(BotModule):
         self.settings = settings or get_settings()
         self.engine = GameEngine()
         self.gacha_service = GachaService(self.engine)
+        self.mystery_service = MysteryService()
         self.encounters = EncounterStore()
         self.wild: WildWaifuScheduler | None = None
         self.world = WorldService()
@@ -49,6 +51,7 @@ class GameModule(BotModule):
         self.router.message.register(self.gacha, Command("gacha"))
         self.router.message.register(self.inventory, Command("inventario"))
         self.router.message.register(self.combat, Command("combate"))
+        self.router.message.register(self.mystery, Command("misterio"))
         self.router.callback_query.register(self.gacha_open, F.data == "game:gacha:open")
         self.router.callback_query.register(self.inventory_callback, F.data == "game:inventory:open")
         self.router.callback_query.register(self.combat_open, F.data == "game:combat:open")
@@ -56,6 +59,7 @@ class GameModule(BotModule):
         self.router.callback_query.register(self.fusion, F.data.startswith("game:fusion:"))
         self.router.callback_query.register(self.combat_action, F.data.startswith("game:combat:"))
         self.router.callback_query.register(self.encounter_answer, F.data.startswith("game:encounter:"))
+        self.router.callback_query.register(self.mystery_answer, F.data.startswith("game:mystery:"))
 
     async def on_startup(self, bot: Bot) -> None:
         self.wild = WildWaifuScheduler(bot, self.database)
@@ -224,6 +228,39 @@ class GameModule(BotModule):
         await self._observe_action("game_hub", callback.from_user.id)
         await callback.answer()
 
+    async def mystery(self, message: Message) -> None:
+        if message.chat.type not in {"group", "supergroup"} or message.from_user is None:
+            return
+        day_key = world_now(self.settings.bot_world_timezone).date().isoformat()
+        async with self.database.session(write=True) as session:
+            started = await self.mystery_service.start_round(
+                session,
+                chat_id=message.chat.id,
+                day_key=day_key,
+            )
+        if not started.created:
+            await message.answer("🕵️ El misterio de hoy ya está en juego. Buscá el mensaje de la ronda actual.")
+            await self._observe_action("mystery_open_existing", message.from_user.id, message.chat.id)
+            return
+
+        clues = "\n".join(f"🔎 {clue}" for clue in started.case.clues)
+        text = (
+            "🕵️ <b>MISTERIO DEL CAFÉ OTaku</b>\n\n"
+            f"<b>{started.case.title}</b>\n"
+            f"{started.case.question}\n\n"
+            f"{clues}\n\n"
+            f"🏆 El primer acertante gana <b>+{started.round.points} puntos</b>."
+        )
+        sent = await message.answer(
+            text,
+            reply_markup=mystery_keyboard(started.round.id, started.case.options),
+        )
+        async with self.database.session(write=True) as session:
+            row = await session.get(MysteryRound, started.round.id)
+            if row is not None and row.message_id is None:
+                row.message_id = sent.message_id
+                row.updated_at = utc_now()
+        await self._observe_action("mystery_start", message.from_user.id, message.chat.id)
     async def combat(self, message: Message) -> None:
         if message.chat.type != "private":
             return
