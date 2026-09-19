@@ -1,19 +1,20 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy import select
 
-from app.core.config import Settings
 from app.db.database import Database
-from app.db.models import Chat, GameProfile, PointTransaction, User
+from app.db.models import Chat, GameCollection, GameGachaRoll, GameProfile, PointTransaction, RareDropApproval, User
 from app.game.engine import GameEngine
 from app.game.gacha import GACHA_COST_POINTS, GachaService
+from app.game.models import Rarity
 
 
 class FixedEngine(GameEngine):
-    def __init__(self, rarity):
+    def __init__(self, rarity: Rarity) -> None:
         self.rarity = rarity
 
-    def roll_gacha(self, seed=None):
+    def roll_gacha(self, seed: str | None = None) -> Rarity:
         return self.rarity
 
 
@@ -24,23 +25,15 @@ async def database(tmp_path):
     async with database.session() as session:
         session.add(User(id=7, first_name="Test"))
         session.add(Chat(id=-100, type="supergroup", title="Community"))
-        await session.commit()
     yield database
     await database.close()
 
 
 @pytest.mark.asyncio
 async def test_gacha_drops_public_character_and_charges_points(database):
-    service = GachaService(FixedEngine.__new__(FixedEngine))
-    service.engine.rarity = __import__("app.game.models", fromlist=["Rarity"]).Rarity.D
-
     async with database.session() as session:
-        profile = GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS)
-        session.add(profile)
-        await session.commit()
-        profile_id = profile.id
-
-    service.engine.rarity = __import__("app.game.models", fromlist=["Rarity"]).Rarity.D
+        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS))
+    service = GachaService(FixedEngine(Rarity.D))
 
     async with database.session() as session:
         result = await service.roll(session, user_id=7, chat_id=-100, seed="gacha-1")
@@ -53,35 +46,31 @@ async def test_gacha_drops_public_character_and_charges_points(database):
     assert result.remaining_points == 0
 
     async with database.session() as session:
-        profile = await session.get(GameProfile, profile_id)
-        transactions = list(
-            await session.scalars(
-                __import__("sqlalchemy", fromlist=["select"]).select(PointTransaction).where(
-                    PointTransaction.user_id == 7,
-                    PointTransaction.chat_id == -100,
-                    PointTransaction.reference_type == "gacha",
-                    PointTransaction.reference_id == "gacha-1",
-                )
+        profile = await session.scalar(
+            select(GameProfile).where(GameProfile.user_id == 7, GameProfile.chat_id == -100)
+        )
+        collection = await session.scalar(
+            select(GameCollection).where(GameCollection.character_id == "anya")
+        )
+        transaction = await session.scalar(
+            select(PointTransaction).where(
+                PointTransaction.user_id == 7,
+                PointTransaction.chat_id == -100,
+                PointTransaction.reference_type == "gacha",
+                PointTransaction.reference_id == "gacha-1",
             )
         )
 
-    assert profile is not None
-    assert profile.points == 0
-    assert len(transactions) == 1
+    assert profile is not None and profile.points == 0
+    assert collection is not None and collection.copies == 1
+    assert transaction is not None and transaction.amount == -GACHA_COST_POINTS
 
 
 @pytest.mark.asyncio
 async def test_gacha_high_rarity_creates_approval_without_granting_character(database):
-    from app.game.models import Rarity
-    from app.db.models import GameCollection, RareDropApproval
-
-    service = GachaService(FixedEngine.__new__(FixedEngine))
-    service.engine.rarity = Rarity.B
-
     async with database.session() as session:
-        profile = GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS)
-        session.add(profile)
-        await session.commit()
+        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS))
+    service = GachaService(FixedEngine(Rarity.B))
 
     async with database.session() as session:
         result = await service.roll(session, user_id=7, chat_id=-100, seed="gacha-rare")
@@ -95,28 +84,97 @@ async def test_gacha_high_rarity_creates_approval_without_granting_character(dat
     async with database.session() as session:
         approval = await session.get(RareDropApproval, result.approval.id)
         collection = await session.scalar(
-            __import__("sqlalchemy", fromlist=["select"]).select(GameCollection).where(
-                GameCollection.character_id == "taiga"
-            )
+            select(GameCollection).where(GameCollection.character_id == "taiga")
         )
 
-    assert approval is not None
-    assert approval.status == "pending"
+    assert approval is not None and approval.status == "pending"
     assert collection is None
 
 
 @pytest.mark.asyncio
-async def test_gacha_requires_enough_points(database):
-    from app.game.models import Rarity
+async def test_gacha_roll_is_idempotent_for_same_reference(database):
+    async with database.session() as session:
+        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS))
 
-    service = GachaService(FixedEngine.__new__(FixedEngine))
-    service.engine.rarity = Rarity.D
+    service = GachaService(FixedEngine(Rarity.D))
 
     async with database.session() as session:
-        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS - 1))
+        first = await service.roll(session, user_id=7, chat_id=-100, seed="same")
         await session.commit()
+
+    async with database.session() as session:
+        second = await service.roll(session, user_id=7, chat_id=-100, seed="same")
+        await session.commit()
+
+    assert first is not None and second is not None
+    assert first.character.id == second.character.id
+    assert first.granted is True and second.granted is True
+
+    async with database.session() as session:
+        rolls = list(await session.scalars(select(GameGachaRoll).where(GameGachaRoll.roll_id == "same")))
+        collection = await session.scalar(
+            select(GameCollection).where(GameCollection.character_id == "anya")
+        )
+        transactions = list(
+            await session.scalars(
+                select(PointTransaction).where(
+                    PointTransaction.reference_type == "gacha",
+                    PointTransaction.reference_id == "same",
+                )
+            )
+        )
+
+    assert len(rolls) == 1
+    assert collection is not None and collection.copies == 1
+    assert len(transactions) == 1
+
+
+@pytest.mark.asyncio
+async def test_gacha_requires_enough_points(database):
+    async with database.session() as session:
+        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS - 1))
+    service = GachaService(FixedEngine(Rarity.D))
 
     async with database.session() as session:
         result = await service.roll(session, user_id=7, chat_id=-100, seed="poor")
 
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_gacha_approval_can_be_refunded_once(database):
+    async with database.session() as session:
+        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS))
+
+    service = GachaService(FixedEngine(Rarity.B))
+
+    async with database.session() as session:
+        result = await service.roll(session, user_id=7, chat_id=-100, seed="refund")
+        await session.commit()
+        approval_id = result.approval.id
+
+    async with database.session() as session:
+        approval = await session.get(RareDropApproval, approval_id)
+        assert approval is not None
+        from app.game.rare_approval import decide
+        await decide(session, approval_id, False, commit=False)
+        approval = await session.get(RareDropApproval, approval_id)
+        assert approval is not None
+        await service.finalize_approval(session, approval)
+        await session.commit()
+
+    async with database.session() as session:
+        profile = await session.scalar(
+            select(GameProfile).where(GameProfile.user_id == 7, GameProfile.chat_id == -100)
+        )
+        refunds = list(
+            await session.scalars(
+                select(PointTransaction).where(
+                    PointTransaction.reference_type == "gacha_refund",
+                    PointTransaction.reference_id == str(approval_id),
+                )
+            )
+        )
+
+    assert profile is not None and profile.points == GACHA_COST_POINTS
+    assert len(refunds) == 1
