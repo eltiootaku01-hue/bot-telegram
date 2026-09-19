@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 import pytest
-from aiogram.types import CallbackQuery, Chat, ChatMemberAdministrator, Message, Update, User
+from aiogram.types import CallbackQuery, Chat, Message, Update, User
 
 from app.core.config import Settings
 from app.core.identity import BotIdentity
@@ -183,12 +183,7 @@ async def test_unauthorized_group_allows_admin_chie_bootstrap_command() -> None:
 
     class BotStub:
         async def get_chat_member(self, chat_id, user_id):
-            return ChatMemberAdministrator(
-                user=User(id=user_id, is_bot=False, first_name="Admin"),
-                status="administrator",
-                can_manage_chat=True,
-                can_delete_messages=True,
-            )
+            return type("MemberStub", (), {"status": "administrator"})()
 
     async def handler(event, data):
         return data.get(ChatAccessMiddleware.BOOTSTRAP_FLAG, False)
