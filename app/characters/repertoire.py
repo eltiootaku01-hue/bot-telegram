@@ -104,4 +104,12 @@ REPERTOIRE: tuple[DialogueScene, ...] = (
     DialogueScene("group-call-cari-chie", CharacterIntent.UNKNOWN_TOPIC, BotIdentity.CARI, "No molestes a Cari -_- ... Casi ven a tomar un juguito.", follow_up_speaker=BotIdentity.CHIE, follow_up_text="P-perdón... ella volverá en un momento. Por favor, no pregunten cosas fuera de sus posibilidades. *sonrisa nerviosa*"),
     DialogueScene("group-call-cami-sunna", CharacterIntent.UNKNOWN_TOPIC, BotIdentity.CAMI, "Sunna, si quieres podemos revisarlo juntas. Sin prisa.", follow_up_speaker=BotIdentity.SUNNA, follow_up_text="Sí... me gustaría."),
     DialogueScene("group-call-sunna-chie", CharacterIntent.UNKNOWN_TOPIC, BotIdentity.SUNNA, "Chie... ¿puedo quedarme aquí un rato?", follow_up_speaker=BotIdentity.CHIE, follow_up_text="S-sí. Claro. Puedes quedarte todo el tiempo que necesites."),
+    DialogueScene("cari-called-1", CharacterIntent.CALLED, BotIdentity.CARI, "¿Sí? ¡Te escucho! ☕✨"),
+    DialogueScene("cari-called-2", CharacterIntent.CALLED, BotIdentity.CARI, "¿Me llamabas? Vení, decime qué pasó."),
+    DialogueScene("sunna-called-1", CharacterIntent.CALLED, BotIdentity.SUNNA, "¿Sí?"),
+    DialogueScene("sunna-called-2", CharacterIntent.CALLED, BotIdentity.SUNNA, "Te escucho."),
+    DialogueScene("cami-called-1", CharacterIntent.CALLED, BotIdentity.CAMI, "¿Sí? Decime qué necesitás."),
+    DialogueScene("cami-called-2", CharacterIntent.CALLED, BotIdentity.CAMI, "Te escucho. Dame el dato concreto."),
+    DialogueScene("chie-called-1", CharacterIntent.CALLED, BotIdentity.CHIE, "¿S-sí? ¿Necesitás algo?"),
+    DialogueScene("chie-called-2", CharacterIntent.CALLED, BotIdentity.CHIE, "Te escucho... p-podemos verlo juntas."),
 )
