@@ -61,6 +61,7 @@ class SystemModule(BotModule):
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
                 BotCommand(command="configurar", description="Configurar la comunidad"),
                 BotCommand(command="comandos", description="Abrir el panel de comandos"),
+                BotCommand(command="reglas", description="Ver las reglas de la comunidad"),
                 BotCommand(command="mundo", description="Ver métricas de Ciudad Animals"),
             ),
         }[self.identity]
