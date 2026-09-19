@@ -183,3 +183,65 @@ async def test_failed_round_can_be_reactivated_for_publication_retry(database):
     assert retry.round.id == started.round.id
     assert retry.round.status == "active"
     assert retry.round.message_id is None
+
+
+@pytest.mark.asyncio
+async def test_concurrent_correct_answers_have_one_winner_and_one_reward(tmp_path):
+    database_a = Database(f"sqlite+aiosqlite:///{tmp_path / 'mystery-race.db'}")
+    database_b = Database(f"sqlite+aiosqlite:///{tmp_path / 'mystery-race.db'}")
+    await database_a.create_schema()
+
+    async with database_a.session() as session:
+        session.add_all(
+            [
+                User(id=17, first_name="Player A"),
+                User(id=18, first_name="Player B"),
+                Chat(id=-100, type="supergroup", title="Café Otaku"),
+            ]
+        )
+
+    service = MysteryService()
+    async with database_a.session(write=True) as session:
+        started = await service.start_round(
+            session,
+            chat_id=-100,
+            day_key="2026-09-22",
+        )
+    answer = started.case.answer_index
+
+    async def solve(database, user_id):
+        async with database.session(write=True) as session:
+            return await service.answer(
+                session,
+                round_id=started.round.id,
+                user_id=user_id,
+                option_index=answer,
+                chat_id=-100,
+            )
+
+    first, second = await asyncio.gather(
+        solve(database_a, 17),
+        solve(database_b, 18),
+    )
+
+    results = {first[0], second[0]}
+    assert results == {"correct", "already_won"}
+
+    async with database_a.session() as session:
+        row = await session.get(MysteryRound, started.round.id)
+        rewards = list(
+            await session.scalars(
+                select(PointTransaction).where(
+                    PointTransaction.chat_id == -100,
+                    PointTransaction.reference_type == "mystery",
+                    PointTransaction.reference_id == str(started.round.id),
+                )
+            )
+        )
+
+    assert row is not None
+    assert row.status == "won"
+    assert len(rewards) == 1
+
+    await database_a.close()
+    await database_b.close()
