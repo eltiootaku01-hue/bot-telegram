@@ -11,7 +11,7 @@ from app.services.world_catalog import WORLD_CATALOG
 
 
 class ChatModule(BotModule):
-    """Deterministic community conversation surface for Cari."""
+    """Deterministic character conversation surface shared by all identities."""
 
     name = "chat"
 
