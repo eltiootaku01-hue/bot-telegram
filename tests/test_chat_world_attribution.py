@@ -122,7 +122,7 @@ async def test_non_cari_character_chat_requires_explicit_address(database: Datab
 
     message = SimpleNamespace(
         from_user=SimpleNamespace(id=12),
-        chat=SimpleNamespace(id=44),
+        chat=SimpleNamespace(id=39),
         text="Sunna",
         answer=answer,
     )
