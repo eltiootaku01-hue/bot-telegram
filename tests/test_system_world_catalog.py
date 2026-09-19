@@ -10,7 +10,7 @@ from app.modules.system.module import SystemModule
 
 
 @pytest.mark.asyncio
-async def test_system_startup_seeds_shared_world_catalog(database=None):
+async def test_system_startup_seeds_shared_world_catalog():
     db = Database("sqlite+aiosqlite:///:memory:")
     await db.create_schema()
     bot = AsyncMock()
