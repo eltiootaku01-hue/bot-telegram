@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 import pytest
-from aiogram.types import Chat, Message, Update, User
+from aiogram.types import CallbackQuery, Chat, Message, Update, User
 
 from app.core.config import Settings
 from app.core.identity import BotIdentity
@@ -117,3 +117,29 @@ async def test_social_runtime_skips_unauthorized_chat_before_database_work() -> 
     result = await runtime._tick_chat(bot=None, chat_id=-100999, now=datetime.now(timezone.utc))
 
     assert result is False
+
+
+
+@pytest.mark.asyncio
+async def test_private_callback_uses_clicking_user_not_message_author() -> None:
+    settings = Settings(admin_user_id=77, allow_admin_private_chat=True)
+    middleware = ChatAccessMiddleware(settings)
+
+    async def handler(event, data):
+        return "handled"
+
+    message = Message(
+        message_id=2,
+        date=datetime.now(timezone.utc),
+        chat=Chat(id=77, type="private"),
+        from_user=User(id=999, is_bot=True, first_name="Sunna"),
+    )
+    callback = CallbackQuery(
+        id="callback-1",
+        from_user=User(id=77, is_bot=False, first_name="Admin"),
+        chat_instance="chat-instance",
+        message=message,
+    )
+    update = Update(update_id=2, callback_query=callback)
+
+    assert await middleware(handler, update, {"event_update": update}) == "handled"
