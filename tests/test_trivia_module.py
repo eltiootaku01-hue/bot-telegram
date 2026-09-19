@@ -129,6 +129,7 @@ async def test_ranking_command_lists_only_configured_community(tmp_path) -> None
         session.add(Chat(id=-200, type="supergroup", title="Other"))
         session.add_all(
             [
+                User(id=1, first_name="Admin"),
                 User(id=7, first_name="Ana"),
                 User(id=8, first_name="<Beto>"),
                 User(id=9, first_name="Otro"),
