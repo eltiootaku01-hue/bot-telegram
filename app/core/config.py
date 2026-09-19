@@ -99,6 +99,9 @@ class Settings(BaseSettings):
             )
         if chat_type in {"group", "supergroup"}:
             return chat_id in self.authorized_chat_ids_set
+        if chat_type == "channel":
+            # Channel posts are accepted only from the explicitly configured media vault.
+            return chat_id == self.media_storage_chat_id and chat_id != 0
         return False
 
     def token_for(self, identity: str) -> str:
