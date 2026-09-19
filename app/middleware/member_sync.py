@@ -33,6 +33,11 @@ class MemberSyncMiddleware(BaseMiddleware):
             await self._sync_membership_event(event)
             return await handler(event, data)
 
+        if data.get("chat_access_bootstrap"):
+            # The onboarding command is intentionally handled without creating
+            # ordinary member activity in an unauthorized chat.
+            return await handler(event, data)
+
         user = getattr(event, "from_user", None)
         chat = getattr(event, "chat", None)
         if isinstance(event, CallbackQuery) and event.message is not None:
