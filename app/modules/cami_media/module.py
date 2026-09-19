@@ -67,7 +67,11 @@ class CamiMediaModule(BotModule):
     def setup(self) -> None:
         self.router.message.register(self.receive_photo, F.photo)
         self.router.message.register(self.recovery_command, Command("recuperar_publicaciones"))
-        self.router.message.register(self.receive_schedule_or_tags, F.text)
+        self.router.message.register(
+            self.receive_schedule_or_tags,
+            CamiMediaStates.waiting_tags,
+            CamiMediaStates.waiting_schedule,
+        )
         self.router.callback_query.register(self.media_action, F.data.startswith("cami:media:"))
         self.router.callback_query.register(self.link_request, F.data.startswith("cami:req:link:"))
         self.router.callback_query.register(self.recover_publication, F.data.startswith("cami:recovery:"))
