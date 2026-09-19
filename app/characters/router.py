@@ -48,6 +48,25 @@ class CharacterIntentRouter:
         ),
     )
 
+    _TARGETS: tuple[tuple[BotIdentity, tuple[str, ...]], ...] = (
+        (BotIdentity.CARI, ("cari",)),
+        (BotIdentity.SUNNA, ("sunna",)),
+        (BotIdentity.CAMI, ("cami",)),
+        (BotIdentity.CHIE, ("chie",)),
+    )
+
+    @classmethod
+    def target_identity(cls, text: str) -> BotIdentity | None:
+        normalized = " ".join(text.casefold().strip().split())
+        if not normalized:
+            return None
+        for identity, aliases in cls._TARGETS:
+            if any(
+                re.search(rf"(?<!\\w){re.escape(alias)}(?!\\w)", normalized)
+                for alias in aliases
+            ):
+                return identity
+        return None
     def __init__(self, director: CharacterDirector | None = None) -> None:
         self.director = director or CharacterDirector()
 
