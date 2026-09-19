@@ -277,7 +277,7 @@ class GameModule(BotModule):
             return
 
         await callback.answer("Respuesta inválida.", show_alert=True)
-    async def mystery(self, message: Message) -> None:
+    async def mystery(self, message: Message, bot: Bot) -> None:
         if message.chat.type not in {"group", "supergroup"} or message.from_user is None:
             return
         day_key = world_now(self.settings.bot_world_timezone).date().isoformat()
