@@ -18,6 +18,33 @@ async def database():
 
 
 @pytest.mark.asyncio
+async def test_has_active_encounter_retires_stale_active_row(database):
+    bot = AsyncMock()
+    scheduler = WildWaifuScheduler(bot, database)
+
+    async with database.session() as session:
+        session.add(
+            GameEncounter(
+                id="stale-1",
+                chat_id=-100,
+                character_id="taiga",
+                rarity="D",
+                answer="taiga",
+                expires_at=utc_now() - timedelta(seconds=1),
+                status="active",
+            )
+        )
+
+    assert await scheduler._has_active_encounter(-100) is False
+
+    async with database.session() as session:
+        encounter = await session.get(GameEncounter, "stale-1")
+
+    assert encounter is not None
+    assert encounter.status == "expired"
+
+
+@pytest.mark.asyncio
 async def test_expire_does_not_overwrite_captured_encounter(database):
     bot = AsyncMock()
     scheduler = WildWaifuScheduler(bot, database)
