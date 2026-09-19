@@ -125,6 +125,30 @@ class WorldService:
                 scope_type="user_chat",
                 scope_id=f"{user_id}:{chat_id}",
             )
+    async def seed_catalog(self, session: AsyncSession) -> None:
+        """Ensure all approved world entries exist before the first observation."""
+        from app.characters.repertoire import REPERTOIRE
+        from app.services.world_catalog import WORLD_CATALOG
+
+        for item in WORLD_CATALOG:
+            await self.register_catalog_entry(
+                session,
+                bot_identity=item.bot_identity,
+                entry_type=item.entry_type,
+                entry_key=item.entry_key,
+                label=item.label,
+                priority=item.priority,
+            )
+        for scene in REPERTOIRE:
+            await self.register_catalog_entry(
+                session,
+                bot_identity=scene.speaker,
+                entry_type="scene",
+                entry_key=scene.key,
+                label=scene.text,
+                priority=scene.weight,
+            )
+
     async def register_catalog_entry(
         self,
         session: AsyncSession,
