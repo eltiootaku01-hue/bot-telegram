@@ -1,3 +1,4 @@
+from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,8 +39,19 @@ class EncounterStore:
             return None
         return attempt.correct
 
-    async def finish(self, session: AsyncSession, encounter_id: str, status: str = "expired") -> None:
-        encounter = await session.get(GameEncounter, encounter_id)
-        if encounter is not None and encounter.status == "active":
-            encounter.status = status
-            await session.commit()
+    async def finish(self, session: AsyncSession, encounter_id: str, status: str = "expired") -> bool:
+        """Move an active encounter to one terminal state exactly once."""
+        if status not in {"expired", "cancelled", "captured"}:
+            raise ValueError(f"Unsupported encounter terminal status: {status}")
+        result = await session.execute(
+            update(GameEncounter)
+            .where(
+                GameEncounter.id == encounter_id,
+                GameEncounter.status == "active",
+            )
+            .values(status=status)
+        )
+        changed = result.rowcount == 1
+        if changed:
+            await session.flush()
+        return changed
