@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import RareDropApproval
+from app.db.models import GameGachaRoll, RareDropApproval
 from app.db.repositories import MemberRepository
 from app.game.catalog import CHARACTERS
 from app.game.engine import GameEngine
@@ -42,9 +45,27 @@ class GachaService:
         if not candidates:
             raise RuntimeError("No characters are configured for the current gacha catalog")
         highest_available = max(_RARITY_ORDER[candidate.rarity] for candidate in candidates)
-        top = [candidate for candidate in candidates if _RARITY_ORDER[candidate.rarity] == highest_available]
-        index = abs(hash(seed)) % len(top)
-        return sorted(top, key=lambda character: character.id)[index]
+        top = sorted(
+            [
+                candidate
+                for candidate in candidates
+                if _RARITY_ORDER[candidate.rarity] == highest_available
+            ],
+            key=lambda character: character.id,
+        )
+        digest = hashlib.sha256(seed.encode("utf-8")).digest()
+        index = int.from_bytes(digest[:8], "big") % len(top)
+        return top[index]
+
+    @staticmethod
+    def _restore_result(roll: GameGachaRoll, approval: RareDropApproval | None, balance: int) -> GachaResult:
+        return GachaResult(
+            rolled_rarity=Rarity(roll.rolled_rarity),
+            character=CHARACTERS[roll.character_id],
+            remaining_points=balance,
+            approval=approval,
+            granted=roll.granted,
+        )
 
     async def roll(
         self,
@@ -54,7 +75,54 @@ class GachaService:
         chat_id: int,
         seed: str,
     ) -> GachaResult | None:
-        reference_id = seed
+        existing = await session.scalar(
+            select(GameGachaRoll).where(GameGachaRoll.roll_id == seed)
+        )
+        if existing is not None:
+            approval = (
+                await session.get(RareDropApproval, existing.approval_id)
+                if existing.approval_id is not None
+                else None
+            )
+            profile = await MemberRepository().get_or_create_game_profile(
+                session, user_id, chat_id, commit=False
+            )
+            await session.refresh(profile)
+            return self._restore_result(existing, approval, profile.points)
+
+        try:
+            async with session.begin_nested():
+                roll = GameGachaRoll(
+                    roll_id=seed,
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    rolled_rarity=self.engine.roll_gacha(seed=seed).value,
+                    character_id="",
+                    granted=False,
+                )
+                session.add(roll)
+                await session.flush()
+        except IntegrityError:
+            existing = await session.scalar(
+                select(GameGachaRoll).where(GameGachaRoll.roll_id == seed)
+            )
+            if existing is None:
+                raise
+            approval = (
+                await session.get(RareDropApproval, existing.approval_id)
+                if existing.approval_id is not None
+                else None
+            )
+            profile = await MemberRepository().get_or_create_game_profile(
+                session, user_id, chat_id, commit=False
+            )
+            await session.refresh(profile)
+            return self._restore_result(existing, approval, profile.points)
+
+        rolled = Rarity(roll.rolled_rarity)
+        character = self._candidate_for_roll(rolled, seed)
+        roll.character_id = character.id
+
         balance = await MemberRepository().spend_points(
             session,
             user_id=user_id,
@@ -62,14 +130,13 @@ class GachaService:
             amount=GACHA_COST_POINTS,
             reason="Tirada de gacha",
             reference_type="gacha",
-            reference_id=reference_id,
+            reference_id=seed,
             commit=False,
         )
         if balance is None:
+            await session.delete(roll)
+            await session.flush()
             return None
-
-        rolled = self.engine.roll_gacha(seed=seed)
-        character = self._candidate_for_roll(rolled, seed)
 
         if _RARITY_ORDER[character.rarity] > _RARITY_ORDER[Rarity.C]:
             approval = await propose(
@@ -80,6 +147,7 @@ class GachaService:
                 target_chat_id=chat_id,
                 commit=False,
             )
+            roll.approval_id = approval.id
             await session.flush()
             return GachaResult(
                 rolled_rarity=rolled,
@@ -98,6 +166,7 @@ class GachaService:
             character_id=character.id,
             rarity=character.rarity.value,
         )
+        roll.granted = True
         await session.flush()
         return GachaResult(
             rolled_rarity=rolled,
@@ -105,3 +174,61 @@ class GachaService:
             remaining_points=balance,
             granted=True,
         )
+
+    async def finalize_approval(
+        self,
+        session: AsyncSession,
+        approval: RareDropApproval,
+    ) -> tuple[bool, int]:
+        """Grant an approved rare drop, or leave it untouched when already finalized."""
+        roll = await session.scalar(
+            select(GameGachaRoll).where(GameGachaRoll.approval_id == approval.id)
+        )
+        if approval.status != "approved":
+            if approval.status == "rejected":
+                from app.game.gacha import GACHA_COST_POINTS  # pragma: no cover
+                balance = await MemberRepository().add_points(
+                    session,
+                    user_id=approval.target_user_id,
+                    chat_id=approval.target_chat_id,
+                    amount=GACHA_COST_POINTS,
+                    reason="Reembolso de gacha rechazado",
+                    reference_type="gacha_refund",
+                    reference_id=str(approval.id),
+                    commit=False,
+                )
+                return False, balance
+            return False, (
+                await MemberRepository().get_or_create_game_profile(
+                    session,
+                    approval.target_user_id,
+                    approval.target_chat_id,
+                    commit=False,
+                )
+            ).points
+
+        profile = await MemberRepository().get_or_create_game_profile(
+            session,
+            approval.target_user_id,
+            approval.target_chat_id,
+            commit=False,
+        )
+        if roll is not None and roll.granted:
+            await session.refresh(profile)
+            return True, profile.points
+
+        await apply_capture_progression(
+            session,
+            profile_id=profile.id,
+            character_id=approval.character_id,
+            rarity=approval.rarity,
+        )
+        if roll is not None:
+            await session.execute(
+                update(GameGachaRoll)
+                .where(GameGachaRoll.id == roll.id, GameGachaRoll.granted.is_(False))
+                .values(granted=True)
+            )
+        await session.flush()
+        await session.refresh(profile)
+        return True, profile.points
