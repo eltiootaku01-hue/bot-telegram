@@ -206,28 +206,39 @@ class GachaService:
                 )
             ).points
 
+        if roll is None:
+            raise RuntimeError("Approved gacha drop has no persistent roll")
+
+        claimed = await session.execute(
+            update(GameGachaRoll)
+            .where(
+                GameGachaRoll.id == roll.id,
+                GameGachaRoll.granted.is_(False),
+            )
+            .values(granted=True)
+        )
+        if claimed.rowcount != 1:
+            profile = await MemberRepository().get_or_create_game_profile(
+                session,
+                approval.target_user_id,
+                approval.target_chat_id,
+                commit=False,
+            )
+            await session.refresh(profile)
+            return True, profile.points
+
         profile = await MemberRepository().get_or_create_game_profile(
             session,
             approval.target_user_id,
             approval.target_chat_id,
             commit=False,
         )
-        if roll is not None and roll.granted:
-            await session.refresh(profile)
-            return True, profile.points
-
         await apply_capture_progression(
             session,
             profile_id=profile.id,
             character_id=approval.character_id,
             rarity=approval.rarity,
         )
-        if roll is not None:
-            await session.execute(
-                update(GameGachaRoll)
-                .where(GameGachaRoll.id == roll.id, GameGachaRoll.granted.is_(False))
-                .values(granted=True)
-            )
         await session.flush()
         await session.refresh(profile)
         return True, profile.points
