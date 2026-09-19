@@ -203,6 +203,9 @@ class GameModule(BotModule):
         await callback.answer("¡Evolución completada! ✨")
 
     async def game_hub(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer("Este panel solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
+            return
         if callback.message is not None:
             await callback.message.edit_text("🎮 <b>Zona de juegos</b>", reply_markup=game_hub_keyboard())
         await self._observe_action("game_hub", callback.from_user.id)
@@ -214,6 +217,9 @@ class GameModule(BotModule):
         await self._show_combat(message)
 
     async def combat_open(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer("Este panel solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
+            return
         if callback.message is not None:
             await self._show_combat(callback.message)
         await self._observe_action("combat_open", callback.from_user.id)
@@ -228,11 +234,17 @@ class GameModule(BotModule):
         )
 
     async def gacha_roll(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer("Este panel solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
+            return
         rarity = self.engine.roll_gacha(seed=str(callback.id))
         await self._observe_action("gacha_roll", callback.from_user.id)
         await callback.answer(f"¡Salió {rarity.value}!", show_alert=True)
 
     async def combat_action(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer("Este panel solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
+            return
         action_key = callback.data.rsplit(":", 1)[-1]
         if action_key not in self.engine.ACTIONS:
             await callback.answer("Acción inválida.", show_alert=True)
