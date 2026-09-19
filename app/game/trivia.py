@@ -40,6 +40,15 @@ class TriviaService:
 
     async def start_round(self, session: AsyncSession, chat_id: int, *, duration_seconds: int = 90) -> tuple[TriviaRound, TriviaQuestion] | None:
         now = utc_now()
+        await session.execute(
+            update(TriviaRound)
+            .where(
+                TriviaRound.chat_id == chat_id,
+                TriviaRound.status == "active",
+                TriviaRound.expires_at <= now,
+            )
+            .values(status="expired")
+        )
         active = await session.scalar(select(TriviaRound).where(
             TriviaRound.chat_id == chat_id,
             TriviaRound.status == "active",
