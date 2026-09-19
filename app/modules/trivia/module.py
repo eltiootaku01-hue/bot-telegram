@@ -9,6 +9,8 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
 
+from app.core.access import is_authorized_community
+from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.community_models import SetupSession
@@ -26,9 +28,10 @@ class TriviaModule(BotModule):
 
     name = "trivia"
 
-    def __init__(self, database: Database) -> None:
+    def __init__(self, database: Database, settings: Settings | None = None) -> None:
         super().__init__()
         self.database = database
+        self.settings = settings or get_settings()
         self.service = TriviaService()
         self._bot: Bot | None = None
 
@@ -48,12 +51,23 @@ class TriviaModule(BotModule):
         await message.answer("🧠 La trivia pública aparece sola. Acá podés consultar su estado.")
 
     async def _publish(self, chat_id: int, source: Message | None = None) -> bool:
+        if not is_authorized_community(self.settings, chat_id):
+            return False
+
         async with self.database.session() as session:
             created = await self.service.start_round(session, chat_id)
         if created is None:
             return False
         round_row, question = created
         text = f"🧠 <b>TRIVIA ANIME</b>\n\n{question.question}\n\n⏱️ 90 segundos · 🏆 +{question.points} puntos"
+        if not is_authorized_community(self.settings, chat_id):
+            async with self.database.session() as session:
+                await session.execute(
+                    update(TriviaRound)
+                    .where(TriviaRound.id == round_row.id, TriviaRound.status == "active")
+                    .values(status="cancelled")
+                )
+            return False
         try:
             if source is not None:
                 await source.answer(text, reply_markup=trivia_keyboard(round_row.id, question.options))
