@@ -9,7 +9,7 @@ The project runs as four separate Telegram bots that share one authoritative dat
 1. **Cari** — community presence, social interaction and moderation.
 2. **Sunna** — WaifuMon, encounters, collection, progression, combat and trivia.
 3. **Cami** — media catalog, requests, publication, analytics and diagnostics.
-4. **Chie** — onboarding, forum setup, welcome/verification, rules and coordination.
+4. **Chie** — onboarding, forum setup, welcome/verification, rules, world metrics and coordination.
 
 The bots are intentionally separate Telegram identities, while the local Core remains authoritative for shared state, points, requests, media and configuration.
 
@@ -84,6 +84,8 @@ The GitHub Actions Windows workflow builds the five executables, verifies every 
 7. Optionally choose the preferred provider and model, then add the admin Telegram ID and media-vault chat ID.
 8. Press **Guardar configuración** and then **Comenzar**.
 9. BotManager starts the four bot processes and gives each one its own start/stop control.
+
+Dentro de la comunidad, Chie expone `/reglas` para las normas operativas y `/mundo` en privado para el administrador para consultar las señales agregadas de Ciudad Animals.
 
 Secrets are saved only in the local `.env` file. `.env` and runtime data are ignored by Git.
 
