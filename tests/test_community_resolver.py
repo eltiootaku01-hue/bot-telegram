@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pytest
 
+from app.core.config import Settings
 from app.core.identity import BotIdentity
 from app.db.community_models import SetupSession
 from app.db.database import Database
@@ -57,7 +58,7 @@ async def test_private_user_resolves_to_recent_configured_membership(tmp_path) -
         )
 
     async with database.session() as session:
-        resolved = await CommunityResolver().for_user(session, 7)
+        resolved = await CommunityResolver(Settings(authorized_chat_ids='-100,-200')).for_user(session, 7)
 
     assert resolved == -200
     await database.close()
@@ -130,7 +131,46 @@ async def test_configured_returns_unique_communities(tmp_path) -> None:
         )
 
     async with database.session() as session:
-        rows = await CommunityResolver().configured(session)
+        rows = await CommunityResolver(Settings(authorized_chat_ids='-100,-200')).configured(session)
 
     assert rows == [-100, -200]
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_private_user_ignores_configured_community_removed_from_allowlist(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'revoked.db'}")
+    await database.create_schema()
+
+    async with database.session() as session:
+        session.add_all(
+            [
+                SetupSession(
+                    user_id=1,
+                    chat_id=-100,
+                    bot_identity="chie",
+                    status="configured",
+                ),
+                SetupSession(
+                    user_id=2,
+                    chat_id=-200,
+                    bot_identity="chie",
+                    status="configured",
+                ),
+            ]
+        )
+
+    async with database.session() as session:
+        resolved = await CommunityResolver(
+            Settings(authorized_chat_ids="-200")
+        ).for_user(session, 7)
+
+    assert resolved is None
+
+    async with database.session() as session:
+        rows = await CommunityResolver(
+            Settings(authorized_chat_ids="-200")
+        ).configured(session)
+
+    assert rows == [-200]
     await database.close()
