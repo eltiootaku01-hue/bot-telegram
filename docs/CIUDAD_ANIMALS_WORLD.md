@@ -98,6 +98,7 @@ Implementado:
 - detección de entradas catalogadas todavía no usadas;
 - observación de escenas de diálogo y de acciones reales de Cari, Sunna, Cami y Chie;
 - consulta de `/mundo` desde el panel privado de Chie para señales agregadas;
+- comando privado `/borrar_mi_memoria` para que cada integrante pueda eliminar sus estadísticas de usuario y usuario+chat;
 - panel privado de Chie para revisar señales agregadas;
 - pruebas de agregación, separación de ámbitos y cobertura del catálogo;
 - conversación determinista de las cuatro identidades sin dependencia del LLM;
