@@ -9,6 +9,7 @@ from aiogram.types import BotCommand, CallbackQuery, ChatMemberUpdated, Message
 
 from app.core.identity import BotIdentity, get_profile
 from app.core.module import BotModule
+from app.db.world_models import WorldUsageStat
 from app.db.database import Database
 from app.services.world import WorldService
 from app.ui.control_keyboards import chie_start_keyboard
@@ -33,6 +34,8 @@ class SystemModule(BotModule):
         self.router.message.register(self.start, CommandStart())
         self.router.message.register(self.ping, Command("ping"))
         self.router.message.register(self.ping, F.text.casefold() == "ping")
+        if self.identity is BotIdentity.CHIE:
+            self.router.message.register(self.world_command, Command("mundo"))
         if self.identity is BotIdentity.SUNNA:
             self.router.callback_query.register(self.game_hub, F.data == "game:hub")
         self.router.my_chat_member.register(self.bot_added)
@@ -76,6 +79,29 @@ class SystemModule(BotModule):
             await bot.set_my_commands(list(commands))
         except TelegramAPIError:
             logger.exception("Could not publish Telegram command menu identity=%s", self.identity.value)
+
+
+    async def world_command(self, message: Message) -> None:
+        if message.chat.type not in {"group", "supergroup"}:
+            return
+        if self.database is None:
+            return
+        async with self.database.session() as session:
+            insight = await self.world.insights(session, bot_identity=self.identity, limit=5)
+        lines = ["🌍 <b>Ciudad Animals</b>", "", "🔥 <b>Más usado</b>"]
+        lines.extend(
+            f"• {key}: {uses}" for key, uses in insight.hot
+        )
+        if not insight.hot:
+            lines.append("• Todavía no hay actividad registrada.")
+        lines.append("")
+        lines.append("🧊 <b>Menos usado</b>")
+        lines.extend(f"• {key}: {uses}" for key, uses in insight.cold)
+        if insight.unseen:
+            lines.append("")
+            lines.append("👀 <b>Definido pero todavía no usado</b>")
+            lines.extend(f"• {label} (<code>{key}</code>)" for key, label in insight.unseen)
+        await message.answer("\n".join(lines[:25]))
 
     async def start(self, message: Message) -> None:
         text = (
