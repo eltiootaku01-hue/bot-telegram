@@ -80,6 +80,19 @@ class CharacterIntentRouter:
                 "hay lugar",
             ),
         ),
+        (
+            CharacterIntent.CONFUSION,
+            (
+                "no entiendo",
+                "no comprendo",
+                "no sé qué pasó",
+                "no se que paso",
+                "que pasó",
+                "que paso",
+                "qué está pasando",
+                "que esta pasando",
+            ),
+        ),
     )
 
     _TARGETS: tuple[tuple[BotIdentity, tuple[str, ...]], ...] = (
