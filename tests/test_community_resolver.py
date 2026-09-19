@@ -80,7 +80,7 @@ async def test_private_user_gets_single_configured_community_without_membership(
         )
 
     async with database.session() as session:
-        resolved = await CommunityResolver().for_user(session, 7)
+        resolved = await CommunityResolver(Settings(authorized_chat_ids='-100')).for_user(session, 7)
 
     assert resolved == -100
     await database.close()
