@@ -63,3 +63,30 @@ async def test_capture_callback_persists_progression(tmp_path) -> None:
     assert edits
     assert answers == ["¡CAPTURADA! 🎉"]
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_private_game_callbacks_reject_group_context(database) -> None:
+    module = GameModule(database)
+    answers = []
+
+    async def answer(text, **kwargs):
+        answers.append(text)
+
+    callback = SimpleNamespace(
+        id="cb-1",
+        data="game:gacha:roll",
+        from_user=SimpleNamespace(id=7, first_name="Jugador"),
+        message=SimpleNamespace(
+            chat=SimpleNamespace(id=-100, type="supergroup"),
+        ),
+        answer=answer,
+    )
+
+    await module.gacha_roll(callback)
+    await module.combat_action(callback)
+    await module.game_hub(callback)
+    await module.combat_open(callback)
+
+    assert len(answers) == 4
+    assert all("privado" in text for text in answers)
