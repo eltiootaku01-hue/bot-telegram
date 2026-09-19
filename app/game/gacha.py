@@ -175,6 +175,19 @@ class GachaService:
             granted=True,
         )
 
+    @staticmethod
+    async def _claim_reward(session: AsyncSession, roll_id: int) -> bool:
+        """Atomically move a persisted gacha roll from ungranted to granted."""
+        result = await session.execute(
+            update(GameGachaRoll)
+            .where(
+                GameGachaRoll.id == roll_id,
+                GameGachaRoll.granted.is_(False),
+            )
+            .values(granted=True)
+        )
+        return result.rowcount == 1
+
     async def finalize_approval(
         self,
         session: AsyncSession,
@@ -209,15 +222,7 @@ class GachaService:
         if roll is None:
             raise RuntimeError("Approved gacha drop has no persistent roll")
 
-        claimed = await session.execute(
-            update(GameGachaRoll)
-            .where(
-                GameGachaRoll.id == roll.id,
-                GameGachaRoll.granted.is_(False),
-            )
-            .values(granted=True)
-        )
-        if claimed.rowcount != 1:
+        if not await self._claim_reward(session, roll.id):
             profile = await MemberRepository().get_or_create_game_profile(
                 session,
                 approval.target_user_id,
