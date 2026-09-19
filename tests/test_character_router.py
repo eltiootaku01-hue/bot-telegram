@@ -32,3 +32,12 @@ def test_router_does_not_match_keywords_inside_other_words():
     assert router.classify("gracioso") is None
     assert router.classify("chaucha") is None
     assert router.classify("hey! hola") is CharacterIntent.GREETING
+
+
+def test_router_detects_exact_character_addressing() -> None:
+    router = CharacterIntentRouter()
+
+    assert router.target_identity("Sunna") is BotIdentity.SUNNA
+    assert router.target_identity("hola, Cami") is BotIdentity.CAMI
+    assert router.target_identity("Chie, una pregunta") is BotIdentity.CHIE
+    assert router.target_identity("cariños") is None
