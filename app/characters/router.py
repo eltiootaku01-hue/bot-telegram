@@ -46,6 +46,40 @@ class CharacterIntentRouter:
                 "me podés ayudar",
             ),
         ),
+        (
+            CharacterIntent.AFFECTION,
+            (
+                "te quiero",
+                "te aprecio",
+                "te extraño",
+                "te extrano",
+                "me importas",
+                "me importás",
+            ),
+        ),
+        (
+            CharacterIntent.REASSURANCE,
+            (
+                "estás bien",
+                "estas bien",
+                "todo bien",
+                "cómo estás",
+                "como estas",
+                "como está todo",
+            ),
+        ),
+        (
+            CharacterIntent.BELONGING,
+            (
+                "puedo quedarme",
+                "me quedo",
+                "puedo estar aquí",
+                "puedo estar aqui",
+                "quédate",
+                "quedate",
+                "hay lugar",
+            ),
+        ),
     )
 
     _TARGETS: tuple[tuple[BotIdentity, tuple[str, ...]], ...] = (
