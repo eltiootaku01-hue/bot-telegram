@@ -103,3 +103,19 @@ async def test_expire_transitions_only_an_expired_active_encounter(database):
         text="😭 La waifu se fue",
         reply_markup=None,
     )
+
+
+@pytest.mark.asyncio
+async def test_spawn_skips_unauthorized_community(database):
+    from app.core.config import Settings
+
+    bot = AsyncMock()
+    scheduler = WildWaifuScheduler(
+        bot,
+        database,
+        Settings(authorized_chat_ids="-100123"),
+    )
+
+    await scheduler.spawn(-100999)
+
+    bot.send_message.assert_not_awaited()
