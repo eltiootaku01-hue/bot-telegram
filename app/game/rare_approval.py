@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time import utc_now
@@ -33,11 +33,28 @@ async def propose(
     return request
 
 
-async def decide(session: AsyncSession, approval_id: int, approved: bool) -> RareDropApproval | None:
-    request = await session.scalar(select(RareDropApproval).where(RareDropApproval.id == approval_id))
-    if request is None or request.status != "pending":
+async def decide(
+    session: AsyncSession,
+    approval_id: int,
+    approved: bool,
+) -> RareDropApproval | None:
+    """Resolve a pending approval exactly once, even under concurrent callbacks."""
+    decided_at = utc_now()
+    result = await session.execute(
+        update(RareDropApproval)
+        .where(
+            RareDropApproval.id == approval_id,
+            RareDropApproval.status == "pending",
+        )
+        .values(
+            status="approved" if approved else "rejected",
+            decided_at=decided_at,
+        )
+    )
+    if result.rowcount != 1:
         return None
-    request.status = "approved" if approved else "rejected"
-    request.decided_at = utc_now()
     await session.commit()
+    request = await session.get(RareDropApproval, approval_id)
+    if request is not None:
+        await session.refresh(request)
     return request
