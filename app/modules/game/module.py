@@ -66,36 +66,20 @@ class GameModule(BotModule):
         user_id: int,
         chat_id: int | None = None,
     ) -> None:
-        """Record lightweight world usage without making telemetry part of gameplay."""
+        """Record world usage outside the gameplay transaction."""
         try:
             async with self.database.session() as session:
-                await self.world.observe(
+                await self.world.observe_action(
                     session,
                     bot_identity=BotIdentity.SUNNA,
-                    entry_type="action",
-                    entry_key=action_key,
+                    action_key=action_key,
+                    user_id=user_id,
+                    chat_id=chat_id,
                 )
-                await self.world.observe(
-                    session,
-                    bot_identity=BotIdentity.SUNNA,
-                    entry_type="action",
-                    entry_key=action_key,
-                    scope_type="user",
-                    scope_id=str(user_id),
-                )
-                if chat_id is not None:
-                    await self.world.observe(
-                        session,
-                        bot_identity=BotIdentity.SUNNA,
-                        entry_type="action",
-                        entry_key=action_key,
-                        scope_type="user_chat",
-                        scope_id=f"{user_id}:{chat_id}",
-                    )
         except Exception:
             logger.exception("World observation failed for Sunna action=%s user=%s", action_key, user_id)
 
-    async def _community_chat_id(self) -> int | None:
+        async def _community_chat_id(self) -> int | None:
         async with self.database.session() as session:
             setup = await session.scalar(
                 select(SetupSession.chat_id)
