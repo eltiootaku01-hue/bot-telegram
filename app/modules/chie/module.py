@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from html import escape
+import logging
 
 from aiogram import Bot, F
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
@@ -18,6 +19,8 @@ from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
 from app.services.world import WorldService
+
+logger = logging.getLogger(__name__)
 from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard
 
 
@@ -92,11 +95,25 @@ class ChieModule(BotModule):
         text += "\n\nCuando tengas la imagen, mandásela a Cami y ella la asociará con este pedido."
         await self.bot.send_message(self.settings.admin_user_id, text)
 
+    async def _observe_action(self, action_key: str, user_id: int, chat_id: int | None = None) -> None:
+        """Record Chie coordination activity without affecting the main workflow."""
+        try:
+            async with self.database.session() as session:
+                await self.world.observe_action(
+                    session,
+                    bot_identity=BotIdentity.CHIE,
+                    action_key=action_key,
+                    user_id=user_id,
+                    chat_id=chat_id,
+                )
+        except Exception:
+            logger.exception("World observation failed for Chie action=%s user=%s", action_key, user_id)
     async def start_setup(self, callback: CallbackQuery) -> None:
         if not callback.message or callback.message.chat.type != "private":
             await callback.answer("Abrime en privado para iniciar la configuración.", show_alert=True)
             return
         await callback.answer()
+        await self._observe_action("onboarding_start", callback.from_user.id)
         await callback.message.answer(
             "😰 O-okay... primero necesito saber <b>qué grupo</b> voy a cuidar.\n\n"
             "1. Agregame como administradora al grupo.\n"
@@ -136,6 +153,7 @@ class ChieModule(BotModule):
                 ))
             await session.commit()
         await message.answer("✅ Permisos comprobados. Volvé al chat privado conmigo y tocá <b>Ya me agregaste de admin</b>.")
+        await self._observe_action("onboarding_group_configured", message.from_user.id, message.chat.id)
 
     async def check_setup(self, callback: CallbackQuery, bot: Bot) -> None:
         if not callback.from_user or not callback.message:
@@ -188,6 +206,7 @@ class ChieModule(BotModule):
         if failures:
             text += "\n\n⚠️ Me detuve porque Telegram rechazó una operación. Revisá permisos y que el grupo sea un supergrupo con Foro activado."
         await callback.message.edit_text(text, reply_markup=command_hub_keyboard())
+        await self._observe_action("onboarding_confirmed" if not failures else "onboarding_partial", callback.from_user.id, chat_id)
 
     async def cancel_setup(self, callback: CallbackQuery) -> None:
         if callback.message:
