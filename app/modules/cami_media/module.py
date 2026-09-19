@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
 import logging
+from datetime import datetime
 
 from aiogram import Bot, F
 from aiogram.filters import Command
@@ -18,14 +18,14 @@ from app.db.database import Database
 from app.db.models import FanRequest, MediaAsset, RequestStatus
 from app.services.forum_topics import ForumTopicService
 from app.services.world import WorldService
-logger = logging.getLogger(__name__)
-
 from app.ui.media_keyboards import (
     cami_media_actions,
     cami_pending_requests,
     cami_publish_destination,
     cami_publication_recovery,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class CamiMediaModule(BotModule):
