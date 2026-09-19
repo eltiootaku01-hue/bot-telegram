@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy import select
 
-
 from app.core.config import Settings
 from app.db.community_models import SetupSession
 from app.db.database import Database
@@ -27,8 +26,8 @@ def test_cami_publisher_builds_a_safe_caption() -> None:
 
 
 @pytest.mark.asyncio
-async def test_publish_claim_allows_only_one_concurrent_sender() -> None:
-    database = Database("sqlite+aiosqlite:///:memory:")
+async def test_publish_claim_allows_only_one_concurrent_sender(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'publisher.db'}")
     await database.create_schema()
     bot = AsyncMock()
     bot.send_photo.return_value = SimpleNamespace(message_id=123)
@@ -59,9 +58,7 @@ async def test_publish_claim_allows_only_one_concurrent_sender() -> None:
         )
 
     async with database.session() as session:
-        asset = await session.scalar(
-            select(MediaAsset)
-        )
+        asset = await session.scalar(select(MediaAsset))
         assert asset is not None
         asset_id = asset.id
 
