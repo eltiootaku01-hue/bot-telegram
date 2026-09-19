@@ -3,8 +3,11 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy import select
+
 
 from app.core.config import Settings
+from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import MediaAsset
 from app.modules.cami_media.publisher import CamiMediaPublisher
@@ -37,7 +40,7 @@ async def test_publish_claim_allows_only_one_concurrent_sender() -> None:
 
     async with database.session() as session:
         session.add(
-            __import__("app.db.community_models", fromlist=["SetupSession"]).SetupSession(
+            SetupSession(
                 user_id=1,
                 chat_id=-100,
                 bot_identity="chie",
@@ -57,7 +60,7 @@ async def test_publish_claim_allows_only_one_concurrent_sender() -> None:
 
     async with database.session() as session:
         asset = await session.scalar(
-            __import__("sqlalchemy", fromlist=["select"]).select(MediaAsset)
+            select(MediaAsset)
         )
         assert asset is not None
         asset_id = asset.id
