@@ -146,6 +146,7 @@ async def test_request_publication_ignores_archived_asset(tmp_path) -> None:
         )
         session.add(User(id=7, first_name="Test"))
         session.add(Chat(id=-100, type="supergroup", title="Community"))
+        await session.flush()
         request = FanRequest(
             user_id=7,
             chat_id=-100,
