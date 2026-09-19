@@ -14,6 +14,8 @@ def localize_utc(utc_datetime: datetime, timezone_name: str) -> datetime:
 
     Storage remains UTC-naive; scheduling may use an explicit IANA timezone.
     """
+    if utc_datetime.tzinfo is not None:
+        raise ValueError("utc_datetime must be timezone-naive")
     if not timezone_name.strip():
         raise ValueError("timezone_name must not be empty")
     aware_utc = utc_datetime.replace(tzinfo=timezone.utc)
@@ -27,6 +29,8 @@ def world_now(timezone_name: str) -> datetime:
 
 def local_to_utc(local_datetime: datetime, timezone_name: str) -> datetime:
     """Convert a naive world-local datetime into a naive UTC datetime for storage."""
+    if local_datetime.tzinfo is not None:
+        raise ValueError("local_datetime must be timezone-naive")
     if not timezone_name.strip():
         raise ValueError("timezone_name must not be empty")
     aware_local = local_datetime.replace(tzinfo=ZoneInfo(timezone_name))
