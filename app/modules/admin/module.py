@@ -1,11 +1,10 @@
 from aiogram import F
 from aiogram.types import CallbackQuery
-from sqlalchemy import select
 
 from app.core.config import Settings, get_settings
 from app.core.module import BotModule
 from app.db.database import Database
-from app.db.models import GameGachaRoll, RareDropApproval
+from app.db.models import RareDropApproval
 from app.game.gacha import GachaService
 from app.game.rare_approval import decide
 
@@ -28,14 +27,21 @@ class AdminModule(BotModule):
         )
 
     def _is_owner(self, callback: CallbackQuery) -> bool:
-        return bool(self.settings.admin_user_id) and callback.from_user.id == self.settings.admin_user_id
+        return (
+            bool(self.settings.admin_user_id)
+            and callback.from_user.id == self.settings.admin_user_id
+        )
 
     async def rare_decision(self, callback: CallbackQuery) -> None:
         if not self._is_owner(callback):
             await callback.answer("No autorizado.", show_alert=True)
             return
         parts = (callback.data or "").split(":")
-        if len(parts) != 4 or not parts[3].isdigit() or parts[2] not in {"approve", "reject"}:
+        if (
+            len(parts) != 4
+            or not parts[3].isdigit()
+            or parts[2] not in {"approve", "reject"}
+        ):
             await callback.answer("Solicitud inválida.", show_alert=True)
             return
 
@@ -47,17 +53,13 @@ class AdminModule(BotModule):
                 await callback.answer("Solicitud ya resuelta o inexistente.", show_alert=True)
                 return
 
-            if approved:
-                _, balance = await self.gacha.finalize_approval(session, request)
-            else:
-                _, balance = await self.gacha.finalize_approval(session, request)
+            _, balance = await self.gacha.finalize_approval(session, request)
             await session.commit()
 
         if callback.message is not None:
             status = "APROBADA ✅" if approved else "RECHAZADA ❌"
             await callback.message.edit_text(
-                f"Solicitud #{request.id}: {request.rarity} · {status}
-"
+                f"Solicitud #{request.id}: {request.rarity} · {status}\n"
                 f"Saldo del jugador: {balance}"
             )
         await callback.answer("Decisión guardada.")
