@@ -35,3 +35,14 @@ def test_local_to_utc_rejects_empty_timezone() -> None:
         assert "timezone_name" in str(exc)
     else:
         raise AssertionError("expected ValueError")
+
+def test_localize_utc_rejects_timezone_aware_input() -> None:
+    aware = datetime(2026, 1, 15, 12, tzinfo=timezone.utc)
+    with pytest.raises(ValueError, match="timezone-naive"):
+        localize_utc(aware, "America/Argentina/Buenos_Aires")
+
+
+def test_local_to_utc_rejects_timezone_aware_input() -> None:
+    aware = datetime(2026, 1, 15, 12, tzinfo=timezone.utc)
+    with pytest.raises(ValueError, match="timezone-naive"):
+        local_to_utc(aware, "America/Argentina/Buenos_Aires")
