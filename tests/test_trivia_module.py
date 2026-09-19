@@ -111,7 +111,7 @@ async def test_ranking_command_lists_only_configured_community(tmp_path) -> None
 
     from app.core.time import utc_now
     from app.db.community_models import SetupSession
-    from app.db.models import GameProfile, User
+    from app.db.models import Chat, GameProfile, User
 
     database = Database(f"sqlite+aiosqlite:///{tmp_path / 'ranking.db'}")
     await database.create_schema()
@@ -125,6 +125,8 @@ async def test_ranking_command_lists_only_configured_community(tmp_path) -> None
                 status="configured",
             )
         )
+        session.add(Chat(id=-100, type="supergroup", title="Community"))
+        session.add(Chat(id=-200, type="supergroup", title="Other"))
         session.add_all(
             [
                 User(id=7, first_name="Ana"),
