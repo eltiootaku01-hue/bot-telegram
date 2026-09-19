@@ -214,7 +214,7 @@ class CamiMediaPublisher(BotModule):
                 asset.updated_at = utc_now()
                 await session.commit()
                 return
-            if request.status != RequestStatus.PROCESSING.value or asset.status == "publishing_request":
+            if request.status != RequestStatus.PROCESSING.value or asset.status not in {"request_ready", "delivery_unknown"}:
                 return
 
             setup = await session.scalar(
