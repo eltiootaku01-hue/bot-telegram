@@ -7,7 +7,6 @@ from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.database import Database
 from app.services.world import WorldService
-from app.services.world_catalog import WORLD_CATALOG
 
 
 class ChatModule(BotModule):
@@ -26,7 +25,6 @@ class ChatModule(BotModule):
         self.identity = identity
         self.characters = CharacterIntentRouter()
         self.world = world or WorldService()
-        self._catalog_seeded = False
 
     def setup(self) -> None:
         self.router.message.register(
@@ -49,35 +47,6 @@ class ChatModule(BotModule):
             and (intent is not None or normalized == self.identity.value)
         )
 
-    async def _seed_catalog(self) -> None:
-        if self._catalog_seeded:
-            return
-        async with self.database.session() as session:
-            from app.characters.repertoire import REPERTOIRE
-
-            for item in WORLD_CATALOG:
-                await self.world.register_catalog_entry(
-                    session,
-                    bot_identity=item.bot_identity,
-                    entry_type=item.entry_type,
-                    entry_key=item.entry_key,
-                    label=item.label,
-                    priority=item.priority,
-                )
-            for scene in REPERTOIRE:
-                await self.world.register_catalog_entry(
-                    session,
-                    bot_identity=scene.speaker,
-                    entry_type="scene",
-                    entry_key=scene.key,
-                    label=scene.text,
-                    priority=scene.weight,
-                )
-        self._catalog_seeded = True
-
-    async def on_startup(self, bot) -> None:
-        await self._seed_catalog()
-
     async def _observe_scene(
         self,
         message: Message,
@@ -87,7 +56,6 @@ class ChatModule(BotModule):
         text: str,
         priority: int = 1,
     ) -> None:
-        await self._seed_catalog()
         async with self.database.session() as session:
             await self.world.register_catalog_entry(
                 session,
