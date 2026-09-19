@@ -1,7 +1,6 @@
 import re
 
 from aiogram import F
-from aiogram.filters import Command
 from aiogram.types import Message
 
 from app.core.config import Settings, get_settings
@@ -9,11 +8,10 @@ from app.core.module import BotModule
 from app.db.database import Database
 from app.db.models import MediaAsset
 from app.media.library import MediaLibrary
-from app.services.requests import DEFAULT_REQUEST_COST, RequestService
 
 
 class MediaModule(BotModule):
-    """Media inbox and fan-request intake; web administration controls the queue."""
+    """Sunna-side media vault capture; fan requests are owned by Chie."""
 
     name = "media"
 
@@ -22,48 +20,18 @@ class MediaModule(BotModule):
         self.database = database
         self.settings = settings or get_settings()
         self.library = MediaLibrary()
-        self.requests = RequestService()
 
     def setup(self) -> None:
-        self.router.message.register(self.request, Command("pedido"))
         self.router.message.register(self.capture_message_photo, F.photo)
         self.router.message.register(self.capture_message_document, F.document)
         self.router.channel_post.register(self.capture_channel_photo, F.photo)
         self.router.channel_post.register(self.capture_channel_document, F.document)
 
-    async def request(self, message: Message) -> None:
-        if message.from_user is None:
-            return
-        raw = (message.text or "").partition(" ")[2].strip()
-        if not raw:
-            await message.answer(
-                f"📝 Usá <code>/pedido personaje + detalle</code>.\n"
-                f"Costo provisional: ⭐ {DEFAULT_REQUEST_COST} puntos."
-            )
-            return
-        async with self.database.session() as session:
-            result = await self.requests.create_paid(
-                session,
-                user_id=message.from_user.id,
-                chat_id=message.chat.id,
-                description=raw,
-                points_cost=DEFAULT_REQUEST_COST,
-                source_message_id=message.message_id,
-            )
-            if result is None:
-                await message.answer(
-                    f"❌ Necesitás ⭐ {DEFAULT_REQUEST_COST} puntos para hacer un pedido."
-                )
-                return
-            request, balance = result
-        await message.answer(
-            f"📥 <b>Pedido #{request.id} recibido.</b>\n"
-            f"⭐ -{DEFAULT_REQUEST_COST} puntos · saldo: {balance}\n"
-            "El pedido quedó en la cola privada para revisión."
-        )
-
     def _allowed_storage_chat(self, message: Message) -> bool:
-        return bool(self.settings.media_storage_chat_id) and message.chat.id == self.settings.media_storage_chat_id
+        return (
+            bool(self.settings.media_storage_chat_id)
+            and message.chat.id == self.settings.media_storage_chat_id
+        )
 
     @staticmethod
     def _tags_from_caption(caption: str | None) -> str:
@@ -81,7 +49,12 @@ class MediaModule(BotModule):
             return
         if not (message.document.mime_type or "").startswith("image/"):
             return
-        await self._store(message.document.file_id, message.document.file_unique_id, message, "document")
+        await self._store(
+            message.document.file_id,
+            message.document.file_unique_id,
+            message,
+            "document",
+        )
 
     async def capture_channel_photo(self, message: Message) -> None:
         if not self._allowed_storage_chat(message) or not message.photo:
@@ -94,9 +67,20 @@ class MediaModule(BotModule):
             return
         if not (message.document.mime_type or "").startswith("image/"):
             return
-        await self._store(message.document.file_id, message.document.file_unique_id, message, "document")
+        await self._store(
+            message.document.file_id,
+            message.document.file_unique_id,
+            message,
+            "document",
+        )
 
-    async def _store(self, file_id: str, unique_id: str, message: Message, media_type: str) -> None:
+    async def _store(
+        self,
+        file_id: str,
+        unique_id: str,
+        message: Message,
+        media_type: str,
+    ) -> None:
         async with self.database.session() as session:
             existing = await self.library.find_by_file_id(session, file_id)
             if existing is not None:
