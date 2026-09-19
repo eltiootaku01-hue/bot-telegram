@@ -4,11 +4,17 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
 
+from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.database import Database
 from app.db.models import GameProfile
 from app.services.requests import DEFAULT_REQUEST_COST, RequestService
+from app.services.world import WorldService
 from app.ui.control_keyboards import chie_request_cancel_keyboard
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RequestStates(StatesGroup):
@@ -24,11 +30,25 @@ class RequestModule(BotModule):
         super().__init__()
         self.database = database
         self.service = RequestService()
+        self.world = WorldService()
 
     def setup(self) -> None:
         self.router.callback_query.register(self.start_request, F.data == "chie:request:start")
         self.router.callback_query.register(self.cancel_request, F.data == "chie:request:cancel")
         self.router.message.register(self.receive_description, RequestStates.waiting_description)
+
+    async def _observe_action(self, action_key: str, user_id: int, chat_id: int) -> None:
+        try:
+            async with self.database.session() as session:
+                await self.world.observe_action(
+                    session,
+                    bot_identity=BotIdentity.CHIE,
+                    action_key=action_key,
+                    user_id=user_id,
+                    chat_id=chat_id,
+                )
+        except Exception:
+            logger.exception("World observation failed for Chie request action=%s user=%s", action_key, user_id)
 
     async def start_request(self, callback: CallbackQuery, state: FSMContext) -> None:
         if callback.message is None or callback.from_user is None:
@@ -60,6 +80,7 @@ class RequestModule(BotModule):
             reply_markup=chie_request_cancel_keyboard(),
         )
         await callback.answer()
+        await self._observe_action("request_start", callback.from_user.id, callback.message.chat.id)
 
     async def receive_description(self, message: Message, state: FSMContext) -> None:
         if message.chat.type not in {"group", "supergroup"} or message.from_user is None or not message.text:
@@ -80,6 +101,7 @@ class RequestModule(BotModule):
         await state.clear()
         if result is None:
             await message.answer("😰 No pude cobrar el pedido: ya no tenés suficientes puntos.")
+            await self._observe_action("request_rejected_no_points", message.from_user.id, message.chat.id)
             return
         request = result.request
         if not result.created:
@@ -87,12 +109,14 @@ class RequestModule(BotModule):
                 f"ℹ️ <b>Pedido #{request.id} ya estaba registrado.</b>\n"
                 f"No se volvieron a descontar puntos. Saldo actual: <b>{result.remaining_points}</b>."
             )
+            await self._observe_action("request_replay", message.from_user.id, message.chat.id)
             return
         await message.answer(
             f"✅ <b>Pedido #{request.id} registrado.</b>\n"
             f"💰 Se descontaron {DEFAULT_REQUEST_COST} puntos. Saldo restante: <b>{result.remaining_points}</b>.\n\n"
             "Chie ya avisó al encargado. Cuando la imagen esté lista, Cami la llevará a #pedidos y te etiquetará.",
         )
+        await self._observe_action("request_created", message.from_user.id, message.chat.id)
 
     async def cancel_request(self, callback: CallbackQuery, state: FSMContext) -> None:
         await state.clear()
