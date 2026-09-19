@@ -105,10 +105,11 @@ async def test_member_joined_welcomes_human_member_in_configured_community(datab
     await module.member_joined(event, bot)
 
     bot.send_message.assert_awaited_once()
+    args = bot.send_message.await_args.args
     kwargs = bot.send_message.await_args.kwargs
-    assert kwargs["chat_id"] == -100123
+    assert args[0] == -100123
     assert kwargs["message_thread_id"] == 456
-    assert "Nuevo Integrante" in kwargs["text"]
+    assert "Nuevo Integrante" in args[1]
 
 
 @pytest.mark.asyncio
