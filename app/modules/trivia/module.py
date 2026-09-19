@@ -184,7 +184,7 @@ class TriviaModule(BotModule):
     async def points_command(self, message: Message) -> None:
         if message.chat.type != "private" or message.from_user is None:
             return
-        community_chat_id = await self._community_chat_id(message.from_user.id)
+        community_chat_id = await self._community_chat_id(callback.from_user.id)
         if community_chat_id is None:
             await message.answer("😰 Chie todavía no configuró la comunidad.")
             return
