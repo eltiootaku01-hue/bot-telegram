@@ -98,14 +98,14 @@ async def test_set_membership_can_join_caller_transaction(session):
     ) is None
 
 
-def membership_update(*, status: str, is_member: bool | None = None) -> ChatMemberUpdated:
+def membership_update(*, status: str, old_status: str = "left", is_member: bool | None = None) -> ChatMemberUpdated:
     user = TgUser(id=42, is_bot=False, first_name="Member")
     return ChatMemberUpdated.model_construct(
         update_id=1,
         chat=TgChat(id=-100123, type="supergroup", title="Community"),
         from_user=TgUser(id=99, is_bot=False, first_name="Actor"),
         date=datetime.now(timezone.utc),
-        old_chat_member=SimpleNamespace(status="left"),
+        old_chat_member=SimpleNamespace(status=old_status),
         new_chat_member=SimpleNamespace(
             status=status,
             user=user,
@@ -137,8 +137,7 @@ async def test_member_sync_persists_join_and_leave(database: Database) -> None:
     assert joined.joined_at is not None
     assert joined.left_at is None
 
-    event = membership_update(status="left")
-    event.old_chat_member = SimpleNamespace(status="member")
+    event = membership_update(status="left", old_status="member")
     assert await middleware(handler, event, {}) == "handled"
 
     async with database.session() as session:
