@@ -195,4 +195,4 @@ def test_cross_character_scenes_remain_authored_and_deterministic() -> None:
     assert first == second
     assert first is not None
     assert first.follow_up is not None
-    assert "Gracias por esperarme" in first.scene.text
+    assert first.scene.text == "Cari... gracias por esperarme."
