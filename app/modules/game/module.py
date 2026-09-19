@@ -253,7 +253,7 @@ class GameModule(BotModule):
             reply_markup=combat_keyboard(),
         )
 
-    async def gacha_roll(self, callback: CallbackQuery, bot: Bot) -> None:
+    async def gacha_roll(self, callback: CallbackQuery, bot: Bot | None = None) -> None:
         if not self._private_callback(callback):
             await callback.answer("Este panel solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
             return
@@ -281,7 +281,7 @@ class GameModule(BotModule):
 
         if result.approval is not None:
             admin_id = self.settings.admin_user_id
-            if admin_id:
+            if admin_id and bot is not None:
                 try:
                     await bot.send_message(
                         admin_id,
