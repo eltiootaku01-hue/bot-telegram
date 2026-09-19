@@ -50,3 +50,15 @@ class CommunityResolver:
         if len(configured) == 1:
             return int(configured[0])
         return None
+
+    async def configured(self, session: AsyncSession) -> list[int]:
+        """Return every currently configured Chie community."""
+        rows = await session.scalars(
+            select(SetupSession.chat_id)
+            .where(
+                SetupSession.bot_identity == "chie",
+                SetupSession.status == "configured",
+            )
+            .order_by(SetupSession.id.asc())
+        )
+        return list(dict.fromkeys(int(chat_id) for chat_id in rows))
