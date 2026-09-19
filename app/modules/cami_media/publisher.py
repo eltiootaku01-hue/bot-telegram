@@ -132,17 +132,24 @@ class CamiMediaPublisher(BotModule):
                 return
             group_id = asset.publish_group_chat_id
             if group_id is None:
-                setup = await session.scalar(
-                    select(SetupSession)
-                    .where(
-                        SetupSession.bot_identity == BotIdentity.CHIE.value,
-                        SetupSession.status == "configured",
+                configured = list(
+                    await session.scalars(
+                        select(SetupSession.chat_id)
+                        .where(
+                            SetupSession.bot_identity == BotIdentity.CHIE.value,
+                            SetupSession.status == "configured",
+                        )
+                        .order_by(SetupSession.id.desc())
+                        .limit(2)
                     )
-                    .order_by(SetupSession.id.desc())
                 )
-                if setup is None:
+                if not configured:
                     raise RuntimeError("No configured Chie community")
-                group_id = setup.chat_id
+                if len(configured) > 1:
+                    raise RuntimeError(
+                        "Scheduled media has no target community and multiple Chie communities are configured"
+                    )
+                group_id = int(configured[0])
                 asset.publish_group_chat_id = group_id
             if not is_authorized_community(self.settings, group_id):
                 raise RuntimeError("Configured community is not authorized for media publishing")
