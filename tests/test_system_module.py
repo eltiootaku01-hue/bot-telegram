@@ -2,7 +2,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.core.config import Settings
 from app.core.identity import BotIdentity
 from app.modules.system.module import SystemModule
 
