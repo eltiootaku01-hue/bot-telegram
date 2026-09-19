@@ -302,7 +302,7 @@ class CamiMediaModule(BotModule):
         if callback.message is None or callback.data is None:
             await callback.answer("Acción inválida.", show_alert=True)
             return
-        if not self._is_media_staff(callback.message):
+        if not self._is_media_staff(callback.message, user_id=callback.from_user.id):
             await callback.answer("Esta bandeja es privada.", show_alert=True)
             return
         parts = callback.data.split(":")
@@ -414,7 +414,7 @@ class CamiMediaModule(BotModule):
         await callback.answer("Acción no implementada.", show_alert=True)
 
     async def link_request(self, callback: CallbackQuery, bot: Bot) -> None:
-        if callback.message is None or callback.data is None or not self._is_media_staff(callback.message):
+        if callback.message is None or callback.data is None or not self._is_media_staff(callback.message, user_id=callback.from_user.id):
             await callback.answer("Acción inválida.", show_alert=True)
             return
         parts = callback.data.split(":")
