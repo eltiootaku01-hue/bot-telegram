@@ -38,7 +38,7 @@ class TriviaModule(BotModule):
         self.service = TriviaService()
         self._bot: Bot | None = None
         self.world = WorldService()
-        self.community = CommunityResolver()
+        self.community = CommunityResolver(self.settings)
 
     def setup(self) -> None:
         self.router.message.register(self.start_command, Command("trivia"))
