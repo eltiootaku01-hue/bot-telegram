@@ -189,8 +189,8 @@ def test_cross_character_cafe_scenes_cover_the_four_friendships() -> None:
 
 def test_cross_character_scenes_remain_authored_and_deterministic() -> None:
     director = CharacterDirector()
-    first = director.choose(BotIdentity.SUNNA, CharacterIntent.AFFECTION, roll=3)
-    second = director.choose(BotIdentity.SUNNA, CharacterIntent.AFFECTION, roll=3)
+    first = director.choose(BotIdentity.SUNNA, CharacterIntent.AFFECTION, roll=2)
+    second = director.choose(BotIdentity.SUNNA, CharacterIntent.AFFECTION, roll=2)
 
     assert first == second
     assert first is not None
