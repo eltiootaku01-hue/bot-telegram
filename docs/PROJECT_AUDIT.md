@@ -1,6 +1,6 @@
 # Auditoría viva del proyecto
 
-Fecha de referencia: 2026-09-16
+Fecha de referencia: 2026-09-19
 
 Este documento separa el estado técnico comprobable del avance hacia la visión completa de Ciudad Animals. Los porcentajes son estimaciones de alcance, no métricas automáticas de cobertura.
 
@@ -56,7 +56,7 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 13. CI no se considera verde solo por una corrección local: cada cambio debe tener una ejecución posterior concluida con éxito.
 14. La trivia tenía llamadas directas a `datetime.utcnow()` y defaults de modelo basados en ese reloj, fuera de la abstracción temporal central. Esto se corrigió para usar `app.core.time.utc_now()`, manteniendo el almacenamiento UTC-naive coherente con el resto de la plataforma.
 15. La auditoría de solicitudes detectó una segunda frontera transaccional que debe vigilarse: `RequestService.create_paid()` hace `commit()` y `rollback()` internos aunque el llamador usa `Database.session()` como frontera transaccional. Esto funciona en el flujo actual, pero reduce la composabilidad del servicio y puede confirmar o deshacer trabajo ajeno si el mismo `AsyncSession` se reutiliza. SQLAlchemy recomienda una `AsyncSession` por tarea y una transacción claramente delimitada; la siguiente corrección debe preservar la atomicidad del cobro y de la solicitud sin romper la frontera superior.
-16. `FanRequest` y `PointTransaction` tienen restricciones únicas y el servicio ya intenta resolver carreras de mensajes duplicados mediante `source_message_id` y referencias de puntos. Falta una prueba de integración que ejerza explícitamente dos intentos concurrentes y compruebe que solo uno cobra y crea la solicitud.
+16. `FanRequest` y `PointTransaction` tienen restricciones únicas y el servicio resuelve carreras de mensajes duplicados mediante `source_message_id` y referencias de puntos. Existe una regresión de integración que ejecuta dos intentos concurrentes y verifica que solo uno cobra y crea la solicitud.
 
 ## Canon de personajes incorporado
 
