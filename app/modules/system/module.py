@@ -8,7 +8,8 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import BotCommand, CallbackQuery, ChatMemberUpdated, Message
 
 from app.core.identity import BotIdentity, get_profile
-from app.core.module import BotModulefrom app.db.database import Database
+from app.core.module import BotModule
+from app.db.database import Database
 from app.services.world import WorldService
 from app.ui.control_keyboards import chie_start_keyboard
 from app.ui.game_keyboards import game_hub_keyboard
