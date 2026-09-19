@@ -78,7 +78,8 @@ The GitHub Actions Windows workflow builds the five executables, verifies every 
 
 1. Open **Bot Manager**.
 2. Enter the Telegram link/username and token for **Cari, Sunna, Cami and Chie**.
-3. AI is **optional**. You can leave all AI controls disabled and run the deterministic bot features without an LLM.
+3. Add Chie to the target group as an administrator. Even when the group is not yet in `AUTHORIZED_CHAT_IDS`, Chie accepts only the exact `/configurar` bootstrap command from a real group administrator; that one onboarding update does not enter normal member activity. After configuration, keep the group ID in `AUTHORIZED_CHAT_IDS` so normal bot traffic is fail-closed.
+4. AI is **optional**. You can leave all AI controls disabled and run the deterministic bot features without an LLM.
 4. If AI is enabled, choose Ollama for the local-first path or configure one or more external providers (Gemini, Groq, Cerebras or OpenRouter). Cloud credentials are only needed for the providers you actually enable/configure.
 5. Optionally choose the preferred provider and model, then add the admin Telegram ID and media-vault chat ID.
 6. Press **Guardar configuración** and then **Comenzar**.
