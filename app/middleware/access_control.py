@@ -3,12 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 
 from aiogram import BaseMiddleware
-from aiogram.types import (
-    ChatMemberAdministrator,
-    ChatMemberOwner,
-    TelegramObject,
-    Update,
-)
+from aiogram.types import TelegramObject, Update
 
 from app.core.config import Settings
 
@@ -90,4 +85,5 @@ class ChatAccessMiddleware(BaseMiddleware):
             member = await bot.get_chat_member(message.chat.id, message.from_user.id)
         except Exception:
             return False
-        return isinstance(member, (ChatMemberAdministrator, ChatMemberOwner))
+        status = getattr(member.status, "value", member.status)
+        return status in {"administrator", "creator"}
