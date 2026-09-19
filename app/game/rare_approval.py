@@ -41,6 +41,7 @@ async def decide(
     session: AsyncSession,
     approval_id: int,
     approved: bool,
+    commit: bool = True,
 ) -> RareDropApproval | None:
     """Resolve a pending approval exactly once, even under concurrent callbacks."""
     decided_at = utc_now()
@@ -57,7 +58,8 @@ async def decide(
     )
     if result.rowcount != 1:
         return None
-    await session.commit()
+    if commit:
+        await session.commit()
     request = await session.get(RareDropApproval, approval_id)
     if request is not None:
         await session.refresh(request)
