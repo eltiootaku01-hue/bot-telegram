@@ -119,3 +119,62 @@ async def test_publish_rejects_unauthorized_group_before_claim(tmp_path) -> None
     assert saved is not None
     assert saved.status == "scheduled"
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_request_publication_ignores_archived_asset(tmp_path) -> None:
+    from app.db.models import FanRequest
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'archived-request.db'}")
+    await database.create_schema()
+    bot = AsyncMock()
+    publisher = CamiMediaPublisher(
+        database,
+        Settings(authorized_chat_ids="-100", publish_page_chat_id=0),
+    )
+
+    async with database.session() as session:
+        session.add(
+            SetupSession(
+                user_id=1,
+                chat_id=-100,
+                bot_identity="chie",
+                status="configured",
+            )
+        )
+        request = FanRequest(
+            user_id=7,
+            chat_id=-100,
+            description="test",
+            points_cost=50,
+            status="processing",
+        )
+        session.add(request)
+        await session.flush()
+        asset = MediaAsset(
+            telegram_file_id="file-archived-request",
+            source_chat_id=-200,
+            source_message_id=2,
+            request_id=request.id,
+            status="archived",
+            publish_group=True,
+            publish_page=False,
+        )
+        session.add(asset)
+        await session.flush()
+        asset_id = asset.id
+        request_id = request.id
+
+    await publisher.publish_request(
+        bot,
+        {"asset_id": asset_id, "request_id": request_id},
+    )
+
+    bot.send_photo.assert_not_awaited()
+
+    async with database.session() as session:
+        saved = await session.get(MediaAsset, asset_id)
+
+    assert saved is not None
+    assert saved.status == "archived"
+    await database.close()
