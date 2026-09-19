@@ -85,5 +85,6 @@ class ChatAccessMiddleware(BaseMiddleware):
             member = await bot.get_chat_member(message.chat.id, message.from_user.id)
         except Exception:
             return False
-        status = getattr(member.status, "value", member.status)
-        return status in {"administrator", "creator"}
+        status = getattr(member, "status", None)
+        status = getattr(status, "value", status)
+        return str(status).casefold() in {"administrator", "creator"}
