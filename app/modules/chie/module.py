@@ -66,6 +66,7 @@ class ChieModule(BotModule):
         self.router.message.register(self.command_hub_command, Command("comandos"))
         self.router.message.register(self.rules_command, Command("reglas"))
         self.router.message.register(self.world_command, Command("mundo"))
+        self.router.message.register(self.clear_my_world_data, Command("borrar_mi_memoria"))
         self.router.chat_member.register(self.member_joined)
 
     async def on_startup(self, bot: Bot) -> None:
@@ -293,6 +294,21 @@ class ChieModule(BotModule):
                     lines.append("· sin datos todavía")
                 lines.append("")
         await message.answer("\n".join(lines))
+
+    async def clear_my_world_data(self, message: Message) -> None:
+        """Let a user erase their private world-usage statistics."""
+        if message.chat.type != "private" or message.from_user is None:
+            return
+        async with self.database.session() as session:
+            deleted = await self.world.clear_user_statistics(
+                session,
+                user_id=message.from_user.id,
+            )
+        await message.answer(
+            "🧹 <b>Memoria estadística borrada.</b>\n"
+            f"Se eliminaron {deleted} registros privados de uso de Ciudad Animals.\n"
+            "Los agregados globales no se pueden reconstruir hacia vos y no se modificaron."
+        )
 
     async def command_hub_command(self, message: Message, bot: Bot) -> None:
         if message.chat.type != "private" and not await is_chat_staff(message, bot):
