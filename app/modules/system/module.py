@@ -9,6 +9,8 @@ from aiogram.types import BotCommand, CallbackQuery, ChatMemberUpdated, Message
 
 from app.core.identity import BotIdentity, get_profile
 from app.core.module import BotModule
+from app.db.database import Database
+from app.services.world import WorldService
 from app.ui.control_keyboards import chie_start_keyboard
 from app.ui.game_keyboards import game_hub_keyboard
 
@@ -20,9 +22,11 @@ class SystemModule(BotModule):
 
     name = "system"
 
-    def __init__(self, identity: BotIdentity) -> None:
+    def __init__(self, identity: BotIdentity, database: Database) -> None:
         self.identity = identity
         self.profile = get_profile(identity)
+        self.database = database
+        self.world = WorldService()
         super().__init__()
 
     def setup(self) -> None:
@@ -34,7 +38,9 @@ class SystemModule(BotModule):
         self.router.my_chat_member.register(self.bot_added)
 
     async def on_startup(self, bot: Bot) -> None:
-        """Publish only the commands supported by this identity in Telegram's menu."""
+        """Seed shared world state and publish this identity's Telegram menu."""
+        async with self.database.session() as session:
+            await self.world.seed_catalog(session)
         commands = {
             BotIdentity.CARI: (
                 BotCommand(command="start", description="Presentación de Cari"),
