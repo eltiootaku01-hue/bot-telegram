@@ -32,11 +32,14 @@ REQUIRED_ADMIN_PERMISSIONS = {
 
 COMMUNITY_RULES = (
     "📜 <b>Reglas de Ciudad Animals</b>\n\n"
-    "1. Respeto entre integrantes.\n"
-    "2. Nada de spam, flood o contenido malicioso.\n"
-    "3. Los pedidos y publicaciones deben usar los canales correspondientes.\n"
-    "4. Las decisiones de moderación buscan mantener el espacio ordenado y seguro.\n"
-    "5. Ante una duda, preguntá a Chie o a una persona administradora."
+    "1. Respeto entre integrantes: nada de acoso, amenazas o ataques personales.\n"
+    "2. Nada de spam, flood o contenido diseñado para molestar.\n"
+    "3. No compartas datos personales de otras personas sin permiso.\n"
+    "4. Usa cada tema del foro para su propósito y evita desviar conversaciones constantemente.\n"
+    "5. Los juegos, puntos y pedidos deben usarse de forma honesta; no intentes explotar errores.\n"
+    "6. Respeta las indicaciones de los moderadores y de Chie.\n"
+    "7. El material ilegal o que infrinja las reglas de Telegram no tiene lugar en la comunidad.\n\n"
+    "Estas reglas son operativas y pueden ampliarse cuando la comunidad defina nuevas normas."
 )
 
 
