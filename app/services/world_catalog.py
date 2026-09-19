@@ -84,8 +84,10 @@ WORLD_CATALOG: tuple[WorldCatalogDefinition, ...] = (
         90,
     ),
     WorldCatalogDefinition(BotIdentity.CHIE, "action", "onboarding", "Bienvenida y configuración", 80),
+    WorldCatalogDefinition(BotIdentity.CHIE, "action", "welcome", "Bienvenida de nuevos integrantes", 75),
     WorldCatalogDefinition(BotIdentity.CHIE, "action", "moderation", "Moderación y permisos", 80),
     WorldCatalogDefinition(BotIdentity.CHIE, "topic", "rules", "Reglas de la comunidad", 70),
+    WorldCatalogDefinition(BotIdentity.CHIE, "topic", "welcome", "Tema de bienvenida", 65),
     WorldCatalogDefinition(
         BotIdentity.CARI,
         "relationship",
