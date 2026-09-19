@@ -1,10 +1,14 @@
 from aiogram import Bot
+import logging
+
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.db.community_models import ForumTopic
 from app.db.database import Database
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_TOPICS = {
@@ -85,6 +89,19 @@ class ForumTopicService:
             except IntegrityError:
                 await session.rollback()
                 existing = await self.get_thread_id(chat_id, topic_key)
+                try:
+                    await bot.delete_forum_topic(
+                        chat_id=chat_id,
+                        message_thread_id=topic.message_thread_id,
+                    )
+                except (TelegramBadRequest, TelegramForbiddenError) as exc:
+                    logger.warning(
+                        "Could not remove orphan forum topic chat=%s key=%s thread=%s: %s",
+                        chat_id,
+                        topic_key,
+                        topic.message_thread_id,
+                        exc,
+                    )
                 if existing is not None:
                     return existing
                 raise
