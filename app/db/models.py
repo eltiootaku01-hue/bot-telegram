@@ -139,7 +139,7 @@ class GameGachaRoll(Base):
     chat_id: Mapped[int] = mapped_column(BigInteger)
     rolled_rarity: Mapped[str] = mapped_column(String(32))
     character_id: Mapped[str] = mapped_column(String(100))
-    approval_id: Mapped[int | None] = mapped_column()
+    approval_id: Mapped[int | None] = mapped_column(ForeignKey("rare_drop_approvals.id", ondelete="SET NULL"))
     granted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
