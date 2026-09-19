@@ -52,7 +52,12 @@ class ChatAccessMiddleware(BaseMiddleware):
             message = callback.message
             actor = callback.from_user
         else:
-            message = update.message or update.edited_message
+            message = (
+                update.message
+                or update.edited_message
+                or update.channel_post
+                or update.edited_channel_post
+            )
             actor = message.from_user if message is not None else None
 
         if message is None:
