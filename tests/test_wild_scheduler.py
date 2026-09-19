@@ -119,3 +119,35 @@ async def test_spawn_skips_unauthorized_community(database):
     await scheduler.spawn(-100999)
 
     bot.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_group_ids_returns_only_authorized_configured_communities(database) -> None:
+    from app.core.config import Settings
+    from app.db.community_models import SetupSession
+
+    async with database.session() as session:
+        session.add_all(
+            [
+                SetupSession(
+                    user_id=1,
+                    chat_id=-100,
+                    bot_identity="chie",
+                    status="configured",
+                ),
+                SetupSession(
+                    user_id=2,
+                    chat_id=-200,
+                    bot_identity="chie",
+                    status="configured",
+                ),
+            ]
+        )
+
+    scheduler = WildWaifuScheduler(
+        AsyncMock(),
+        database,
+        Settings(authorized_chat_ids="-100"),
+    )
+
+    assert await scheduler._group_ids() == [-100]
