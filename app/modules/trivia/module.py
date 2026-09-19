@@ -17,7 +17,6 @@ from app.services.community import CommunityResolver
 from app.services.world import WorldService
 from app.core.module import BotModule
 from app.core.time import utc_now
-from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import GameProfile, User
 from app.db.trivia_models import TriviaRound
@@ -61,7 +60,7 @@ class TriviaModule(BotModule):
         if callback.message is None or callback.message.chat.type != "private":
             await callback.answer("La consulta de trivia se hace desde tu chat privado con Sunna.", show_alert=True)
             return
-        community_chat_id = await self._community_chat_id(message.from_user.id)
+        community_chat_id = await self._community_chat_id(callback.from_user.id)
         if community_chat_id is None:
             await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
             return
