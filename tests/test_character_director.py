@@ -125,3 +125,12 @@ def test_cross_character_follow_ups_are_authored_dialogue_scenes():
     for scene in interaction_scenes:
         assert scene.follow_up_text
         assert scene.follow_up_speaker is not scene.speaker
+
+
+def test_every_identity_has_authored_emotional_interaction_scenes():
+    director = CharacterDirector()
+
+    for identity in BotIdentity:
+        assert director.choose(identity, CharacterIntent.AFFECTION) is not None
+        assert director.choose(identity, CharacterIntent.REASSURANCE) is not None
+        assert director.choose(identity, CharacterIntent.BELONGING) is not None
