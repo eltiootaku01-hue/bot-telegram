@@ -77,3 +77,18 @@ async def test_cami_metadata_text_targets_selected_asset_not_latest_pending(tmp_
     assert answers
     assert state.cleared is True
     await database.close()
+
+
+def test_cami_media_staff_uses_callback_actor_not_message_sender() -> None:
+    from app.core.config import Settings
+
+    module = CamiMediaModule.__new__(CamiMediaModule)
+    module.settings = Settings(admin_user_id=77)
+
+    callback_message = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=77),
+        from_user=SimpleNamespace(id=999, is_bot=True),
+    )
+
+    assert module._is_media_staff(callback_message, user_id=77) is True
+    assert module._is_media_staff(callback_message, user_id=88) is False
