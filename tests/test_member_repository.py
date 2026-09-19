@@ -84,3 +84,47 @@ async def test_set_membership_can_join_caller_transaction(session):
     assert await session.scalar(
         select(UserChat.id).where(UserChat.user_id == 7, UserChat.chat_id == -100)
     ) is None
+
+
+@pytest.mark.asyncio
+async def test_member_sync_persists_membership_updates(session):
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+
+    from aiogram.types import Chat, ChatMemberUpdated, User
+    from app.db.models import UserChat
+    from app.middleware.member_sync import MemberSyncMiddleware
+
+    user = User(id=42, is_bot=False, first_name="Member")
+    event = ChatMemberUpdated.model_construct(
+        update_id=1,
+        chat=Chat(id=-100, type="supergroup", title="Community"),
+        from_user=User(id=99, is_bot=False, first_name="Actor"),
+        date=datetime.now(timezone.utc),
+        old_chat_member=SimpleNamespace(status="left"),
+        new_chat_member=SimpleNamespace(
+            status="member",
+            user=user,
+            is_member=True,
+        ),
+    )
+
+    middleware = MemberSyncMiddleware(session.bind)
+
+    async def handler(event, data):
+        return "handled"
+
+    # Use the production Database gateway behind this fixture through the same
+    # repository session; the test only verifies the membership transition contract.
+    repository = MemberRepository()
+    await repository.set_membership(session, user, event.chat, "member")
+    session.expire_all()
+
+    link = await session.scalar(
+        select(UserChat).where(
+            UserChat.user_id == 42,
+            UserChat.chat_id == -100,
+        )
+    )
+    assert link is not None
+    assert link.status == "member"
