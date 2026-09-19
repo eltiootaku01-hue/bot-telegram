@@ -186,7 +186,6 @@ class GachaService:
         )
         if approval.status != "approved":
             if approval.status == "rejected":
-                from app.game.gacha import GACHA_COST_POINTS  # pragma: no cover
                 balance = await MemberRepository().add_points(
                     session,
                     user_id=approval.target_user_id,
