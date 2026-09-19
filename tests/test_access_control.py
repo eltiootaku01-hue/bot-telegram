@@ -15,7 +15,7 @@ def make_update(*, chat_id: int, chat_type: str, user_id: int = 77) -> Update:
         date=datetime.now(timezone.utc),
         chat=Chat(id=chat_id, type=chat_type),
         from_user=User(id=user_id, is_bot=False, first_name="Test"),
-        text="/start",
+        text=text,
     )
     return Update(update_id=1, message=message)
 
@@ -197,8 +197,8 @@ async def test_unauthorized_group_allows_admin_chie_bootstrap_command() -> None:
         chat_id=-100999,
         chat_type="supergroup",
         user_id=77,
+        text="/configurar",
     ).message
-    message.text = "/configurar"
     update = Update(update_id=100, message=message)
 
     result = await middleware(
@@ -225,8 +225,8 @@ async def test_unauthorized_group_bootstrap_rejects_non_admin() -> None:
         chat_id=-100999,
         chat_type="supergroup",
         user_id=77,
+        text="/configurar",
     ).message
-    message.text = "/configurar"
     update = Update(update_id=101, message=message)
 
     assert await middleware(
