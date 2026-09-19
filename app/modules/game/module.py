@@ -312,8 +312,6 @@ class GameModule(BotModule):
             owned, progress = await apply_capture_progression(
                 session,
                 profile_id=profile.id,
-                user_id=callback.from_user.id,
-                chat_id=encounter.chat_id,
                 character_id=character.id,
                 rarity=encounter.rarity,
             )
