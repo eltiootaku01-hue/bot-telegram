@@ -13,6 +13,7 @@ from sqlalchemy import select, update
 from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
+from app.services.community import CommunityResolver
 from app.services.world import WorldService
 from app.core.module import BotModule
 from app.core.time import utc_now
@@ -38,6 +39,7 @@ class TriviaModule(BotModule):
         self.service = TriviaService()
         self._bot: Bot | None = None
         self.world = WorldService()
+        self.community = CommunityResolver()
 
     def setup(self) -> None:
         self.router.message.register(self.start_command, Command("trivia"))
@@ -59,7 +61,7 @@ class TriviaModule(BotModule):
         if callback.message is None or callback.message.chat.type != "private":
             await callback.answer("La consulta de trivia se hace desde tu chat privado con Sunna.", show_alert=True)
             return
-        community_chat_id = await self._community_chat_id()
+        community_chat_id = await self._community_chat_id(message.from_user.id)
         if community_chat_id is None:
             await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
             return
@@ -176,21 +178,14 @@ class TriviaModule(BotModule):
                 )
         except Exception:
             logger.exception("World observation failed for Trivia action=%s user=%s", action_key, user_id)
-    async def _community_chat_id(self) -> int | None:
+    async def _community_chat_id(self, user_id: int) -> int | None:
         async with self.database.session() as session:
-            return await session.scalar(
-                select(SetupSession.chat_id)
-                .where(
-                    SetupSession.bot_identity == BotIdentity.CHIE.value,
-                    SetupSession.status == "configured",
-                )
-                .order_by(SetupSession.id.desc())
-            )
+            return await self.community.for_user(session, user_id)
 
     async def points_command(self, message: Message) -> None:
         if message.chat.type != "private" or message.from_user is None:
             return
-        community_chat_id = await self._community_chat_id()
+        community_chat_id = await self._community_chat_id(message.from_user.id)
         if community_chat_id is None:
             await message.answer("😰 Chie todavía no configuró la comunidad.")
             return
@@ -246,7 +241,7 @@ class TriviaModule(BotModule):
         await asyncio.sleep(random.randint(60, 180))
         while True:
             try:
-                community_chat_id = await self._community_chat_id()
+                community_chat_id = await self._community_chat_id(self._bot.id if self._bot is not None else 0)
                 if community_chat_id is not None:
                     await self._publish(community_chat_id)
             except Exception:
