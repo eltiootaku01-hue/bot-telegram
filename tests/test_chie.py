@@ -16,6 +16,7 @@ async def test_chie_rules_command_returns_operational_community_rules() -> None:
 
     message = SimpleNamespace(
         chat=SimpleNamespace(type="supergroup"),
+        from_user=None,
         answer=answer,
     )
 
