@@ -8,7 +8,7 @@ from html import escape
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
@@ -144,8 +144,13 @@ class CamiMediaPublisher(BotModule):
             caption = self._caption(asset)
             group_message_id = asset.published_group_message_id
             page_message_id = asset.published_page_message_id
-            asset.status = "publishing"
-            asset.updated_at = utc_now()
+            claimed = await session.execute(
+                update(MediaAsset)
+                .where(MediaAsset.id == asset_id, MediaAsset.status == "scheduled")
+                .values(status="publishing", updated_at=utc_now())
+            )
+            if claimed.rowcount != 1:
+                return
             await session.commit()
 
         try:
@@ -225,8 +230,17 @@ class CamiMediaPublisher(BotModule):
             file_id = asset.telegram_file_id
             description = request.description
             group_id = setup.chat_id
-            asset.status = "publishing_request"
-            asset.updated_at = utc_now()
+            claimed = await session.execute(
+                update(MediaAsset)
+                .where(
+                    MediaAsset.id == asset_id,
+                    MediaAsset.status != "publishing_request",
+                    MediaAsset.published_request_message_id.is_(None),
+                )
+                .values(status="publishing_request", updated_at=utc_now())
+            )
+            if claimed.rowcount != 1:
+                return
             await session.commit()
 
         try:
