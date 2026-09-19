@@ -76,13 +76,15 @@ class CamiMediaModule(BotModule):
         self.router.callback_query.register(self.link_request, F.data.startswith("cami:req:link:"))
         self.router.callback_query.register(self.recover_publication, F.data.startswith("cami:recovery:"))
 
-    def _is_media_staff(self, message: Message) -> bool:
+    def _is_media_staff(self, message: Message, *, user_id: int | None = None) -> bool:
         """Only the explicitly configured owner may operate Cami's private media desk."""
+        actor_id = user_id if user_id is not None else (
+            message.from_user.id if message.from_user is not None else None
+        )
         return bool(
             message.chat.type == "private"
-            and message.from_user is not None
             and self.settings.admin_user_id
-            and message.from_user.id == self.settings.admin_user_id
+            and actor_id == self.settings.admin_user_id
         )
 
     async def receive_photo(self, message: Message) -> None:
@@ -214,7 +216,7 @@ class CamiMediaModule(BotModule):
             )
 
     async def recover_publication(self, callback: CallbackQuery) -> None:
-        if callback.message is None or callback.data is None or not self._is_media_staff(callback.message):
+        if callback.message is None or callback.data is None or not self._is_media_staff(callback.message, user_id=callback.from_user.id):
             await callback.answer("Esta recuperación es privada.", show_alert=True)
             return
         parts = callback.data.split(":")
