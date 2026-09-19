@@ -17,8 +17,8 @@ class CharacterDirector:
     """Deterministic selector for the characters' authored repertoire.
 
     It never generates text. The caller supplies the intent and a stable roll so
-    the same runtime can be deterministic while still offering several authored
-    variants.
+    the same runtime is deterministic while still offering several authored
+    variants. Scene weights are honored as authored selection weights.
     """
 
     def __init__(self, repertoire: tuple[DialogueScene, ...] = REPERTOIRE) -> None:
@@ -37,7 +37,8 @@ class CharacterDirector:
         scenes = self._by_key.get((identity, intent), ())
         if not scenes:
             return None
-        scene = scenes[abs(roll) % len(scenes)]
+
+        scene = self._weighted_scene(scenes, roll)
         follow_up = None
         if scene.follow_up_speaker is not None and scene.follow_up_text:
             follow_up = DialogueScene(
@@ -47,3 +48,16 @@ class CharacterDirector:
                 text=scene.follow_up_text,
             )
         return CharacterResponse(scene=scene, follow_up=follow_up)
+
+    @staticmethod
+    def _weighted_scene(
+        scenes: tuple[DialogueScene, ...],
+        roll: int,
+    ) -> DialogueScene:
+        total_weight = sum(scene.weight for scene in scenes)
+        cursor = abs(roll) % total_weight
+        for scene in scenes:
+            if cursor < scene.weight:
+                return scene
+            cursor -= scene.weight
+        return scenes[-1]
