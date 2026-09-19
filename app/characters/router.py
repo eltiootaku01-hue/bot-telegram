@@ -61,11 +61,9 @@ class CharacterIntentRouter:
         if not normalized:
             return None
         for identity, aliases in cls._TARGETS:
-            if any(
-                re.search(rf"\\b{re.escape(alias)}\\b", normalized)
-                for alias in aliases
-            ):
-                return identity
+            for alias in aliases:
+                if re.search(rf"\b{re.escape(alias)}\b", normalized):
+                    return identity
         return None
 
     def __init__(self, director: CharacterDirector | None = None) -> None:
@@ -76,7 +74,10 @@ class CharacterIntentRouter:
         if not normalized:
             return None
         for intent, keywords in self._KEYWORDS:
-            if any(re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", normalized) for keyword in keywords):
+            if any(
+                re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", normalized)
+                for keyword in keywords
+            ):
                 return intent
         return None
 
