@@ -163,6 +163,7 @@ class MediaAsset(Base):
     publish_page: Mapped[bool] = mapped_column(default=False)
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime)
     publish_destination: Mapped[str | None] = mapped_column(String(32))
+    publish_group_chat_id: Mapped[int | None] = mapped_column(BigInteger)
     published_group_message_id: Mapped[int | None] = mapped_column(BigInteger)
     published_page_message_id: Mapped[int | None] = mapped_column(BigInteger)
     published_request_message_id: Mapped[int | None] = mapped_column(BigInteger)
