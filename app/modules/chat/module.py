@@ -7,6 +7,7 @@ from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.database import Database
 from app.services.world import WorldService
+from app.services.world_catalog import WORLD_CATALOG
 
 
 class ChatModule(BotModule):
@@ -42,6 +43,15 @@ class ChatModule(BotModule):
         async with self.database.session() as session:
             from app.characters.repertoire import REPERTOIRE
 
+            for item in WORLD_CATALOG:
+                await self.world.register_catalog_entry(
+                    session,
+                    bot_identity=item.bot_identity,
+                    entry_type=item.entry_type,
+                    entry_key=item.entry_key,
+                    label=item.label,
+                    priority=item.priority,
+                )
             for scene in REPERTOIRE:
                 await self.world.register_catalog_entry(
                     session,
@@ -52,6 +62,9 @@ class ChatModule(BotModule):
                     priority=scene.weight,
                 )
         self._catalog_seeded = True
+
+    async def on_startup(self, bot) -> None:
+        await self._seed_catalog()
 
     async def _observe_scene(
         self,
