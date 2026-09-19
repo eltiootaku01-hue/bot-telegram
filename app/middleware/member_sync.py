@@ -4,6 +4,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, ChatMemberUpdated, Message, TelegramObject
 
 from app.core.social_wake import WakeReason
+from app.core.social_wake_store import SocialWakeStore
 from app.core.time import utc_now
 from app.db.database import Database
 from app.db.repositories import MemberRepository
@@ -16,11 +17,11 @@ class MemberSyncMiddleware(BaseMiddleware):
         self,
         database: Database,
         repository: MemberRepository | None = None,
-        wake_store=None,
+        wake_store: SocialWakeStore | None = None,
     ) -> None:
         self.database = database
         self.repository = repository or MemberRepository()
-        self.wake_store = wake_store
+        self.wake_store = wake_store or SocialWakeStore()
 
     async def __call__(
         self,
@@ -54,13 +55,7 @@ class MemberSyncMiddleware(BaseMiddleware):
                     and not user.is_bot
                     and chat.type in {"group", "supergroup"}
                 ):
-                    if self.wake_store is None:
-                        from app.core.social_wake_store import SocialWakeStore
-
-                        wake_store = SocialWakeStore()
-                    else:
-                        wake_store = self.wake_store
-                    await wake_store.request_wake(
+                    await self.wake_store.request_wake(
                         session,
                         chat.id,
                         utc_now(),
