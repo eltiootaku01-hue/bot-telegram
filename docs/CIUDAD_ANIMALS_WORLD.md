@@ -106,3 +106,7 @@ Implementado:
 - Chie mantiene personalidad operativa sin inventar una biblia narrativa que todavía no existe.
 
 El mundo sigue siendo deliberadamente pequeño y curado: las métricas describen uso real, pero la IA no puede convertir esas métricas en canon automáticamente. La expansión del libreto, nuevas relaciones y hechos narrativos continúan siendo cambios autorales explícitos.
+
+## Juego del Café Otaku
+
+Sunna dispone ahora de un **Misterio diario** local y determinista. Cada comunidad recibe una única ronda por día de mundo, con cinco casos authored, intentos únicos por jugador, ganador único bajo concurrencia y recompensa de puntos protegida por el ledger. La mecánica es un juego del café y no constituye canon narrativo por sí misma.
