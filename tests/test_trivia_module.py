@@ -103,3 +103,61 @@ async def test_trivia_panel_rejects_group_context() -> None:
     await module.start_panel(callback)
 
     assert answers == ["La consulta de trivia se hace desde tu chat privado con Sunna."]
+
+
+@pytest.mark.asyncio
+async def test_ranking_command_lists_only_configured_community(tmp_path) -> None:
+    from types import SimpleNamespace
+
+    from app.core.time import utc_now
+    from app.db.community_models import SetupSession
+    from app.db.models import GameProfile, User
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'ranking.db'}")
+    await database.create_schema()
+
+    async with database.session() as session:
+        session.add(
+            SetupSession(
+                user_id=1,
+                chat_id=-100,
+                bot_identity="chie",
+                status="configured",
+            )
+        )
+        session.add_all(
+            [
+                User(id=7, first_name="Ana"),
+                User(id=8, first_name="<Beto>"),
+                User(id=9, first_name="Otro"),
+            ]
+        )
+        session.add_all(
+            [
+                GameProfile(user_id=7, chat_id=-100, points=100, experience=400, level=2),
+                GameProfile(user_id=8, chat_id=-100, points=100, experience=300, level=1),
+                GameProfile(user_id=9, chat_id=-200, points=900, experience=900, level=9),
+            ]
+        )
+        _ = utc_now()
+
+    module = TriviaModule(database, Settings(authorized_chat_ids="-100"))
+    answers = []
+
+    async def answer(text="", **kwargs):
+        answers.append(text)
+
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=7),
+        chat=SimpleNamespace(id=7, type="private"),
+        answer=answer,
+    )
+
+    await module.ranking_command(message)
+
+    assert len(answers) == 1
+    assert "Ana" in answers[0]
+    assert "&lt;Beto&gt;" in answers[0]
+    assert "Otro" not in answers[0]
+    assert answers[0].index("Ana") < answers[0].index("&lt;Beto&gt;")
+    await database.close()
