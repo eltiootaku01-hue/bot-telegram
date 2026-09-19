@@ -120,8 +120,6 @@ class ChieModule(BotModule):
         except Exception:
             logger.exception("World observation failed for Chie action=%s user=%s", action_key, user_id)
     async def member_joined(self, event: ChatMemberUpdated, bot: Bot) -> None:
-        if self.bot is None:
-            return
         old_status = event.old_chat_member.status
         new_member = event.new_chat_member
         if old_status not in {"left", "kicked"}:
