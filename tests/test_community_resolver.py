@@ -100,7 +100,7 @@ async def test_private_user_gets_no_community_when_multiple_exist_and_no_members
                     status="configured",
                 ),
                 SetupSession(
-                    user_id=1,
+                    user_id=2,
                     chat_id=-200,
                     bot_identity="chie",
                     status="configured",
