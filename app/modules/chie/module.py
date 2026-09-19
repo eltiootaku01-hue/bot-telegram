@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from html import escape
 import logging
+from html import escape
 
 from aiogram import Bot, F
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
@@ -19,9 +19,9 @@ from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
 from app.services.world import WorldService
+from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard
 
 logger = logging.getLogger(__name__)
-from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard
 
 
 REQUIRED_ADMIN_PERMISSIONS = {
