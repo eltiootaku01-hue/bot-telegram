@@ -35,14 +35,13 @@ class BrainChatModule(BotModule):
 
         reply = message.reply_to_message
         current_bot = getattr(message, "bot", None)
-        if (
-            reply is not None
-            and reply.from_user is not None
-            and current_bot is not None
-            and reply.from_user.is_bot
-            and reply.from_user.id == current_bot.id
-        ):
-            return True
+        if reply is not None and reply.from_user is not None:
+            if not reply.from_user.is_bot:
+                reply = None
+            elif current_bot is not None and reply.from_user.id == current_bot.id:
+                return True
+            else:
+                return False
 
         text = (message.text or "").casefold().strip()
         display_name = get_profile(self.identity).display_name.casefold()
