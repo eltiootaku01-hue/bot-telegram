@@ -82,6 +82,15 @@ class WildWaifuScheduler:
     async def _has_active_encounter(self, chat_id: int) -> bool:
         now = utc_now()
         async with self.database.session() as session:
+            await session.execute(
+                update(GameEncounter)
+                .where(
+                    GameEncounter.chat_id == chat_id,
+                    GameEncounter.status == "active",
+                    GameEncounter.expires_at <= now,
+                )
+                .values(status="expired")
+            )
             encounter = await session.scalar(
                 select(GameEncounter.id)
                 .where(
