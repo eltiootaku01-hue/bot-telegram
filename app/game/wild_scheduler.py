@@ -85,7 +85,11 @@ class WildWaifuScheduler:
                 )
                 .order_by(SetupSession.id.desc())
             )
-            return list(dict.fromkeys(result))
+            return [
+                chat_id
+                for chat_id in dict.fromkeys(result)
+                if is_authorized_community(self.settings, chat_id)
+            ]
 
     async def _has_active_encounter(self, chat_id: int) -> bool:
         now = utc_now()
@@ -184,11 +188,17 @@ class WildWaifuScheduler:
                     await session.commit()
             return
 
-        async with self.database.session() as session:
-            saved = await session.get(GameEncounter, encounter.id)
-            if saved is not None:
-                saved.message_id = sent.message_id
-                await session.commit()
+        try:
+            async with self.database.session() as session:
+                saved = await session.get(GameEncounter, encounter.id)
+                if saved is not None:
+                    saved.message_id = sent.message_id
+                    await session.commit()
+        except Exception:
+            logger.exception(
+                "Could not persist Telegram message id for encounter %s",
+                encounter.id,
+            )
 
         await asyncio.sleep(max(0, (expires - utc_now()).total_seconds()))
         await self.expire(encounter.id, chat_id, sent.message_id)
