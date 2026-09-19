@@ -228,7 +228,56 @@ class GameModule(BotModule):
         await self._observe_action("game_hub", callback.from_user.id)
         await callback.answer()
 
-    async def mystery_answer(self, callback: CallbackQuery) -> None:,        parts = (callback.data or "").split(":"),        if len(parts) != 4 or parts[0] != "game" or parts[1] != "mystery" or not parts[2].isdigit() or not parts[3].isdigit():,            await callback.answer("Misterio inválido.", show_alert=True),            return,        if callback.message is None or callback.message.chat.type not in {"group", "supergroup"}:,            await callback.answer("Este misterio solo funciona en la comunidad.", show_alert=True),            return,        round_id = int(parts[2]),        option_index = int(parts[3]),        async with self.database.session(write=True) as session:,            result, balance = await self.mystery_service.answer(,                session,,                round_id=round_id,,                user_id=callback.from_user.id,,                option_index=option_index,,                chat_id=callback.message.chat.id,,            ),            row = await session.get(MysteryRound, round_id),        if result == "correct":,            await self._observe_action("mystery_answer_correct", callback.from_user.id, callback.message.chat.id),            await callback.message.edit_text(,                f"🕵️ <b>Misterio resuelto</b>\n\n",                f"🎉 <b>{callback.from_user.first_name}</b> encontró la respuesta.\n",                f"🏆 +{row.points if row is not None else 15} puntos · 💰 saldo: {balance}",            ),            await callback.answer("¡Correcto! Ganaste el misterio. 🎉", show_alert=True),            return,        if result == "wrong":,            await self._observe_action("mystery_answer_wrong", callback.from_user.id, callback.message.chat.id),            await callback.answer("❌ No era esa. Esta ronda todavía sigue.", show_alert=True),            return,        if result == "already_answered":,            await callback.answer("Ya respondiste este misterio.", show_alert=True),            return,        if result == "already_won":,            await callback.answer("Alguien ya resolvió el misterio. 😭", show_alert=True),            return,        if result == "expired":,            await callback.answer("Este misterio ya terminó. 😭", show_alert=True),            return,        await callback.answer("Respuesta inválida.", show_alert=True),    async def mystery(self, message: Message) -> None:
+    async def mystery_answer(self, callback: CallbackQuery) -> None:
+        parts = (callback.data or "").split(":")
+        if len(parts) != 4 or parts[0] != "game" or parts[1] != "mystery" or not parts[2].isdigit() or not parts[3].isdigit():
+            await callback.answer("Misterio inválido.", show_alert=True)
+            return
+        if callback.message is None or callback.message.chat.type not in {"group", "supergroup"}:
+            await callback.answer("Este misterio solo funciona en la comunidad.", show_alert=True)
+            return
+
+        round_id = int(parts[2])
+        option_index = int(parts[3])
+        async with self.database.session(write=True) as session:
+            result, balance = await self.mystery_service.answer(
+                session,
+                round_id=round_id,
+                user_id=callback.from_user.id,
+                option_index=option_index,
+                chat_id=callback.message.chat.id,
+            )
+            row = await session.get(MysteryRound, round_id)
+
+        if result == "correct":
+            await self._observe_action("mystery_answer_correct", callback.from_user.id, callback.message.chat.id)
+            await callback.message.edit_text(
+                f"🕵️ <b>Misterio resuelto</b>\n\n"
+                f"🎉 <b>{callback.from_user.first_name}</b> encontró la respuesta.\n"
+                f"🏆 +{row.points if row is not None else 15} puntos · 💰 saldo: {balance}"
+            )
+            await callback.answer("¡Correcto! Ganaste el misterio. 🎉", show_alert=True)
+            return
+
+        if result == "wrong":
+            await self._observe_action("mystery_answer_wrong", callback.from_user.id, callback.message.chat.id)
+            await callback.answer("❌ No era esa. Esta ronda todavía sigue.", show_alert=True)
+            return
+
+        if result == "already_answered":
+            await callback.answer("Ya respondiste este misterio.", show_alert=True)
+            return
+
+        if result == "already_won":
+            await callback.answer("Alguien ya resolvió el misterio. 😭", show_alert=True)
+            return
+
+        if result == "expired":
+            await callback.answer("Este misterio ya terminó. 😭", show_alert=True)
+            return
+
+        await callback.answer("Respuesta inválida.", show_alert=True)
+    async def mystery(self, message: Message) -> None:
         if message.chat.type not in {"group", "supergroup"} or message.from_user is None:
             return
         day_key = world_now(self.settings.bot_world_timezone).date().isoformat()
