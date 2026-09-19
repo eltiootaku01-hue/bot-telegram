@@ -252,3 +252,35 @@ async def test_gacha_reward_claim_is_single_use(database):
     assert first is True
     assert second is False
 
+
+
+@pytest.mark.asyncio
+async def test_gacha_reference_cannot_be_replayed_for_another_player_or_community(database):
+    async with database.session() as session:
+        session.add_all([
+            User(id=8, first_name="Other"),
+            Chat(id=-200, type="supergroup", title="Other Community"),
+            GameProfile(user_id=8, chat_id=-200, points=GACHA_COST_POINTS),
+        ])
+
+    service = GachaService(FixedEngine(Rarity.D))
+
+    async with database.session() as session:
+        first = await service.roll(
+            session,
+            user_id=7,
+            chat_id=-100,
+            seed="owned-by-7",
+        )
+        await session.commit()
+
+    assert first is not None
+
+    async with database.session() as session:
+        with pytest.raises(ValueError, match="another player or community"):
+            await service.roll(
+                session,
+                user_id=8,
+                chat_id=-200,
+                seed="owned-by-7",
+            )
