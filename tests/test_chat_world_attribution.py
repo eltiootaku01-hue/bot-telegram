@@ -129,3 +129,20 @@ async def test_non_cari_character_chat_requires_explicit_address(database: Datab
     await sunna.handle_text(message)
 
     assert answers == ["¿Sí?"]
+
+
+@pytest.mark.asyncio
+async def test_chat_startup_seeds_world_catalog(database: Database) -> None:
+    module = ChatModule(database)
+    await module.on_startup(None)
+
+    async with database.session() as session:
+        rows = list(await session.scalars(select(WorldUsageStat)))
+        from app.db.world_models import WorldCatalogEntry
+        catalog = list(await session.scalars(select(WorldCatalogEntry)))
+
+    assert rows == []
+    assert any(entry.entry_key == "cafe_otaku" for entry in catalog)
+    assert any(entry.entry_key == "waifumon" for entry in catalog)
+    assert any(entry.entry_key == "cari-cami" for entry in catalog)
+    assert any(entry.entry_key == "chie-sunna" for entry in catalog)
