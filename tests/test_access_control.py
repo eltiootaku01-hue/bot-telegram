@@ -143,3 +143,11 @@ async def test_private_callback_uses_clicking_user_not_message_author() -> None:
     update = Update(update_id=2, callback_query=callback)
 
     assert await middleware(handler, update, {"event_update": update}) == "handled"
+
+
+def test_authorized_community_requires_allowlisted_group_or_supergroup() -> None:
+    from app.core.access import is_authorized_community
+
+    settings = Settings(authorized_chat_ids="-100123")
+    assert is_authorized_community(settings, -100123) is True
+    assert is_authorized_community(settings, -100999) is False
