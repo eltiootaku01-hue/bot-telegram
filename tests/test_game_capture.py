@@ -90,3 +90,32 @@ async def test_private_game_callbacks_reject_group_context() -> None:
 
     assert len(answers) == 4
     assert all("privado" in text for text in answers)
+
+
+@pytest.mark.asyncio
+async def test_gacha_open_callback_renders_gacha_panel() -> None:
+    module = GameModule(None)
+    edits = []
+    answers = []
+
+    async def edit_text(text, **kwargs):
+        edits.append((text, kwargs))
+
+    async def answer(text="", **kwargs):
+        answers.append(text)
+
+    callback = SimpleNamespace(
+        id="cb-gacha",
+        from_user=SimpleNamespace(id=7),
+        message=SimpleNamespace(
+            chat=SimpleNamespace(id=7, type="private"),
+            edit_text=edit_text,
+        ),
+        answer=answer,
+    )
+
+    await module.gacha_open(callback)
+
+    assert edits
+    assert edits[0][0] == "🎰 <b>Gacha de personajes</b>"
+    assert answers == [""]
