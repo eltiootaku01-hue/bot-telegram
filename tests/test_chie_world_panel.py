@@ -72,3 +72,78 @@ async def test_world_command_reports_aggregate_signals(database: Database) -> No
     assert "Ciudad Animals" in answers[0]
     assert "anime (3)" in answers[0]
     assert "Cami" in answers[0]
+
+
+@pytest.mark.asyncio
+async def test_member_joined_welcomes_human_member_in_configured_community(database: Database) -> None:
+    module = ChieModule(database, Settings(admin_user_id=77, authorized_chat_ids="-100123"))
+    bot = AsyncMock()
+
+    async with database.session() as session:
+        from app.db.community_models import SetupSession
+
+        session.add(
+            SetupSession(
+                user_id=77,
+                chat_id=-100123,
+                bot_identity=BotIdentity.CHIE.value,
+                status="configured",
+            )
+        )
+
+    event = SimpleNamespace(
+        chat=SimpleNamespace(id=-100123, type="supergroup"),
+        old_chat_member=SimpleNamespace(status="left"),
+        new_chat_member=SimpleNamespace(
+            status="member",
+            user=SimpleNamespace(id=99, is_bot=False, full_name="Nuevo Integrante"),
+        ),
+    )
+    module.topics.get_thread_id = AsyncMock(return_value=456)
+
+    await module.member_joined(event, bot)
+
+    bot.send_message.assert_awaited_once()
+    kwargs = bot.send_message.await_args.kwargs
+    assert kwargs["chat_id"] == -100123
+    assert kwargs["message_thread_id"] == 456
+    assert "Nuevo Integrante" in kwargs["text"]
+
+
+@pytest.mark.asyncio
+async def test_member_joined_ignores_bots(database: Database) -> None:
+    module = ChieModule(database, Settings(admin_user_id=77))
+    bot = AsyncMock()
+    event = SimpleNamespace(
+        chat=SimpleNamespace(id=-100123, type="supergroup"),
+        old_chat_member=SimpleNamespace(status="left"),
+        new_chat_member=SimpleNamespace(
+            status="member",
+            user=SimpleNamespace(id=99, is_bot=True, full_name="Bot"),
+        ),
+    )
+
+    await module.member_joined(event, bot)
+
+    bot.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_rules_command_publishes_deterministic_rules(database: Database) -> None:
+    module = ChieModule(database, Settings(admin_user_id=77))
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="group", id=-100123),
+        from_user=SimpleNamespace(id=77),
+        answer=answer,
+    )
+
+    await module.rules_command(message)
+
+    assert answers
+    assert "Reglas de Ciudad Animals" in answers[0]
+    assert "respeto" in answers[0].casefold()
