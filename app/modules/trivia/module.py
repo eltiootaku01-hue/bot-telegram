@@ -241,9 +241,11 @@ class TriviaModule(BotModule):
         await asyncio.sleep(random.randint(60, 180))
         while True:
             try:
-                community_chat_id = await self._community_chat_id(self._bot.id if self._bot is not None else 0)
-                if community_chat_id is not None:
-                    await self._publish(community_chat_id)
+                async with self.database.session() as session:
+                    community_chat_ids = await self.community.configured(session)
+                for community_chat_id in community_chat_ids:
+                    if is_authorized_community(self.settings, community_chat_id):
+                        await self._publish(community_chat_id)
             except Exception:
                 logger.exception("Trivia scheduler tick failed")
             await asyncio.sleep(random.randint(1200, 2400))
