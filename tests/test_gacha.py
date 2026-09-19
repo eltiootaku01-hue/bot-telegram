@@ -262,6 +262,7 @@ async def test_gacha_reference_cannot_be_replayed_for_another_player_or_communit
             Chat(id=-200, type="supergroup", title="Other Community"),
         ])
         await session.flush()
+        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS))
         session.add(GameProfile(user_id=8, chat_id=-200, points=GACHA_COST_POINTS))
 
     service = GachaService(FixedEngine(Rarity.D))
