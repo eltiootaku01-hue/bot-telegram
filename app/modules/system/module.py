@@ -22,7 +22,7 @@ class SystemModule(BotModule):
 
     name = "system"
 
-    def __init__(self, identity: BotIdentity, database: Database) -> None:
+    def __init__(self, identity: BotIdentity, database: Database | None = None) -> None:
         self.identity = identity
         self.profile = get_profile(identity)
         self.database = database
@@ -39,8 +39,9 @@ class SystemModule(BotModule):
 
     async def on_startup(self, bot: Bot) -> None:
         """Seed shared world state and publish this identity's Telegram menu."""
-        async with self.database.session() as session:
-            await self.world.seed_catalog(session)
+        if self.database is not None:
+            async with self.database.session() as session:
+                await self.world.seed_catalog(session)
         commands = {
             BotIdentity.CARI: (
                 BotCommand(command="start", description="Presentación de Cari"),
