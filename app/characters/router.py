@@ -62,11 +62,12 @@ class CharacterIntentRouter:
             return None
         for identity, aliases in cls._TARGETS:
             if any(
-                re.search(rf"(?<!\\w){re.escape(alias)}(?!\\w)", normalized)
+                re.search(rf"\\b{re.escape(alias)}\\b", normalized)
                 for alias in aliases
             ):
                 return identity
         return None
+
     def __init__(self, director: CharacterDirector | None = None) -> None:
         self.director = director or CharacterDirector()
 
