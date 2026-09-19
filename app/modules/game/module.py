@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from aiogram import Bot, F
 from aiogram.filters import Command
@@ -20,7 +21,10 @@ from app.game.engine import GameEngine
 from app.game.fusion import fuse_collection
 from app.game.progression import apply_capture_progression, collection_status
 from app.game.wild_scheduler import WildWaifuScheduler
+from app.services.world import WorldService
 from app.ui.game_keyboards import combat_keyboard, fusion_keyboard, game_hub_keyboard, gacha_keyboard
+
+logger = logging.getLogger(__name__)
 
 
 class GameModule(BotModule):
@@ -32,6 +36,7 @@ class GameModule(BotModule):
         self.engine = GameEngine()
         self.encounters = EncounterStore()
         self.wild: WildWaifuScheduler | None = None
+        self.world = WorldService()
 
     def setup(self) -> None:
         self.router.message.register(self.game, Command("juego"))
@@ -55,6 +60,40 @@ class GameModule(BotModule):
             await self.wild.stop()
         await super().on_shutdown()
 
+    async def _observe_action(
+        self,
+        action_key: str,
+        user_id: int,
+        chat_id: int | None = None,
+    ) -> None:
+        """Record lightweight world usage without making telemetry part of gameplay."""
+        try:
+            async with self.database.session() as session:
+                await self.world.observe(
+                    session,
+                    bot_identity=BotIdentity.SUNNA,
+                    entry_type="action",
+                    entry_key=action_key,
+                )
+                await self.world.observe(
+                    session,
+                    bot_identity=BotIdentity.SUNNA,
+                    entry_type="action",
+                    entry_key=action_key,
+                    scope_type="user",
+                    scope_id=str(user_id),
+                )
+                if chat_id is not None:
+                    await self.world.observe(
+                        session,
+                        bot_identity=BotIdentity.SUNNA,
+                        entry_type="action",
+                        entry_key=action_key,
+                        scope_type="user_chat",
+                        scope_id=f"{user_id}:{chat_id}",
+                    )
+        except Exception:
+            logger.exception("World observation failed for Sunna action=%s user=%s", action_key, user_id)
     async def _community_chat_id(self) -> int | None:
         async with self.database.session() as session:
             setup = await session.scalar(
@@ -81,11 +120,15 @@ class GameModule(BotModule):
         if message.chat.type != "private":
             return
         await message.answer("🎮 <b>Zona de juegos</b>", reply_markup=game_hub_keyboard())
+        if message.from_user is not None:
+            await self._observe_action("game_hub", message.from_user.id)
 
     async def gacha(self, message: Message) -> None:
         if message.chat.type != "private":
             return
         await message.answer("🎰 <b>Gacha de personajes</b>", reply_markup=gacha_keyboard())
+        if message.from_user is not None:
+            await self._observe_action("gacha_open", message.from_user.id)
 
     async def inventory_callback(self, callback: CallbackQuery) -> None:
         if not self._private_callback(callback):
@@ -171,11 +214,13 @@ class GameModule(BotModule):
             f"✨ <b>{character.name} evolucionó!</b>\n{result.from_rarity} → <b>{result.to_rarity}</b>\n"
             f"Se usaron {result.consumed} copias y quedaron ×{result.remaining}."
         )
+        await self._observe_action("fusion", callback.from_user.id, chat_id)
         await callback.answer("¡Evolución completada! ✨")
 
     async def game_hub(self, callback: CallbackQuery) -> None:
         if callback.message is not None:
             await callback.message.edit_text("🎮 <b>Zona de juegos</b>", reply_markup=game_hub_keyboard())
+        await self._observe_action("game_hub", callback.from_user.id)
         await callback.answer()
 
     async def combat(self, message: Message) -> None:
@@ -186,6 +231,7 @@ class GameModule(BotModule):
     async def combat_open(self, callback: CallbackQuery) -> None:
         if callback.message is not None:
             await self._show_combat(callback.message)
+        await self._observe_action("combat_open", callback.from_user.id)
         await callback.answer()
 
     async def _show_combat(self, message: Message) -> None:
@@ -198,6 +244,7 @@ class GameModule(BotModule):
 
     async def gacha_roll(self, callback: CallbackQuery) -> None:
         rarity = self.engine.roll_gacha(seed=str(callback.id))
+        await self._observe_action("gacha_roll", callback.from_user.id)
         await callback.answer(f"¡Salió {rarity.value}!", show_alert=True)
 
     async def combat_action(self, callback: CallbackQuery) -> None:
@@ -208,6 +255,7 @@ class GameModule(BotModule):
         taiga = get_character("taiga")
         result = self.engine.combat(taiga, taiga, action_key, callback.id)
         critical = " 💥 CRÍTICO" if result.critical else ""
+        await self._observe_action("combat_action", callback.from_user.id)
         await callback.answer(f"{result.action.label}: {result.damage} daño{critical}", show_alert=True)
 
     async def encounter_answer(self, callback: CallbackQuery) -> None:
@@ -255,6 +303,7 @@ class GameModule(BotModule):
                 return
             if not attempt.correct:
                 await session.commit()
+                await self._observe_action("encounter_attempt_wrong", callback.from_user.id, encounter.chat_id)
                 await callback.answer("❌ Fallaste. Esta oportunidad era solo tuya.", show_alert=True)
                 return
 
@@ -298,4 +347,5 @@ class GameModule(BotModule):
             f"🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n"
             f"✨ Clase {encounter.rarity} · colección ×{owned.copies}\n⭐ +{progress.points_gained} puntos · saldo: {balance}"
         )
+        await self._observe_action("encounter_capture", callback.from_user.id, encounter.chat_id)
         await callback.answer("¡CAPTURADA! 🎉", show_alert=True)
