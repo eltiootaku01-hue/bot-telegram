@@ -27,9 +27,11 @@ def test_cafe_keyboard_keeps_local_recommendation_and_configured_bot_links() -> 
     urls = {button.url for button in buttons if button.url}
 
     assert "🍿 Recomendación" in labels
+    assert "🕵️ Misterio" in labels
     assert "🎮 Abrir Sunna" in labels
     assert "📚 Abrir Cami" in labels
     assert "📋 Abrir Chie" not in labels
+    assert "cafe:mystery:open" in {button.callback_data for button in buttons}
     assert urls == {"https://t.me/SunnaBot", "https://t.me/CamiBot"}
 
 
