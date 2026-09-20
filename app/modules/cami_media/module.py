@@ -85,6 +85,7 @@ class CamiMediaModule(BotModule):
         self.router.message.register(self.anime_command, Command("anime"))
         self.router.message.register(self.anime_detail_command, Command("anime_ficha"))
         self.router.message.register(self.request_queue_command, Command("cola_pedidos"))
+        self.router.message.register(self.media_queue_command, Command("cola_media"))
         self.router.message.register(
             self.receive_schedule_or_tags,
             CamiMediaStates.waiting_tags,
@@ -500,6 +501,50 @@ class CamiMediaModule(BotModule):
         ]
         await message.answer("\n".join(lines))
         await self._observe_action("request_queue_view", message.from_user.id)
+
+    async def media_queue_command(self, message: Message) -> None:
+        """Show the current media pipeline so an operator can act before backlog grows."""
+        if not self._is_media_staff(message):
+            return
+
+        async with self.database.session() as session:
+            summary = await self.library.queue_summary(session)
+
+        age_text = "sin material pendiente"
+        if summary.oldest_actionable_at is not None:
+            age_minutes = max(
+                0,
+                int((utc_now() - summary.oldest_actionable_at).total_seconds() // 60),
+            )
+            if age_minutes < 60:
+                age_text = f"{age_minutes} min"
+            elif age_minutes < 1440:
+                age_text = f"{age_minutes // 60} h {age_minutes % 60} min"
+            else:
+                age_text = f"{age_minutes // 1440} d"
+
+        lines = [
+            "🗂️ <b>Cola de medios de Cami</b>",
+            "",
+            f"📥 Bandeja: <b>{summary.inbox}</b>",
+            f"🏷️ Esperando tags: <b>{summary.needs_tag}</b>",
+            f"🕒 Esperando programación: <b>{summary.waiting_schedule}</b>",
+            f"📅 Programados: <b>{summary.scheduled}</b>",
+            f"📤 Publicando: <b>{summary.publishing}</b>",
+            f"⚠️ Entrega ambigua: <b>{summary.delivery_unknown}</b>",
+            f"✅ Publicados: <b>{summary.published}</b>",
+            f"⏱️ Antigüedad del trabajo pendiente más antiguo: <b>{age_text}</b>",
+        ]
+        if summary.delivery_unknown:
+            lines.extend(
+                (
+                    "",
+                    "⚠️ Hay entregas ambiguas que requieren revisión humana antes de reintentar.",
+                    "Usá <code>/recuperar_publicaciones</code> para abrir sus decisiones.",
+                )
+            )
+        await message.answer("\n".join(lines))
+        await self._observe_action("media_queue_view", message.from_user.id)
 
     async def recovery_command(self, message: Message) -> None:
         if not self._is_media_staff(message):
