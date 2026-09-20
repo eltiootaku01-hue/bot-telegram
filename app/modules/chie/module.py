@@ -946,14 +946,11 @@ class ChieModule(BotModule):
             ),
             "games": (
                 "🎮 <b>Juegos</b>\n\n"
-                "En el bot de Sunna:\n"
-                "• <code>/juego</code> — panel de juegos.\n"
-                "• <code>/gacha</code> — tirada local.\n"
-                "• <code>/inventario</code> — colección y evolución.\n"
-                "• <code>/combate</code> — combate.\n"
-                "• <code>/trivia</code> — estado de trivia.\n"
-                "• <code>/puntos</code> / <code>/ranking</code> — economía comunitaria.\n\n"
-                "La aparición pública de WaifuMon ocurre solo en la comunidad configurada."
+                "• <b>Cari</b> — Trivia de anime (<code>/trivia</code>).\n"
+                "• <b>Sunna</b> — WaifuMon, gacha, colección y combate.\n"
+                "• <b>Cami</b> — Misterios cotidianos con pistas (<code>/misterio</code>).\n"
+                "• <b>Chie</b> — bienvenida, despedida y verificación humana.\n\n"
+                "Los juegos públicos solo funcionan en comunidades autorizadas."
             ),
             "content": (
                 "📰 <b>Contenido</b>\n\n"
