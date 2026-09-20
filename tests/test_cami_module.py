@@ -318,6 +318,11 @@ async def test_cami_request_queue_dashboard_aggregates_authorized_communities(tm
                 User(id=8, first_name="Operator"),
                 Chat(id=-100, type="supergroup", title="One"),
                 Chat(id=-200, type="supergroup", title="Two"),
+            ]
+        )
+        await session.flush()
+        session.add_all(
+            [
                 SetupSession(
                     user_id=7,
                     chat_id=-100,
