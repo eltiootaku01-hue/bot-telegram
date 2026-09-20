@@ -3,7 +3,7 @@
 **Repositorio:** `eltiootaku01-hue/bot-telegram`  
 **Rama operativa:** `main`  
 **Fecha de corte:** 2026-09-20  
-**Último checkpoint:** ver sección 23; el encabezado histórico no sustituye ese checkpoint.  
+**Último checkpoint operativo:** ver la sección 25; main y el último código funcional se registran por separado.  
 **Objetivo:** evitar trabajo repetido, conservar evidencia de errores/pruebas y dirigir cada nueva sesión hacia áreas todavía incompletas.
 
 ---
@@ -32,10 +32,9 @@ La bitácora es una **memoria técnica**, no una lista de intenciones.
 
 ## 2.1 Evidencia de GitHub
 
-**SHA actual:** `a79fb778eb9d677ee41d8f9a5d979d31323f402b`
+**SHA actual histórico:** `a79fb778eb9d677ee41d8f9a5d979d31323f402b`
 
-**CI #1194:** SUCCESS  
-**Windows Build #824:** SUCCESS
+**Checkpoint histórico:** CI #1194 SUCCESS / Windows Build #824 SUCCESS
 
 ### CI #1194
 
@@ -1062,3 +1061,92 @@ Cuando `main` tenga un commit solo documental posterior al último código:
 - no declarar un SHA documental como si fuera una nueva versión funcional;
 - no recalcular el porcentaje global por cambios puramente documentales.
 
+
+---
+
+# 25. RECONCILIACIÓN OPERATIVA — 2026-09-20
+
+## Fuente de verdad
+
+La rama main avanzó desde el antiguo snapshot c13da707... hasta:
+
+- main actual: 6a25b0dd95ea02737135b8b8a50dbf1a8e198531
+- commit main: docs: reconcile master log current and functional SHAs
+- El commit de main es documental y no cambia la lógica funcional.
+
+### Último código funcional certificado
+
+- SHA funcional: 9244bf7ed818a0ec899b8f2dbcbfe65cc0f3c903
+- CI #1208: SUCCESS
+- Windows Build #838: SUCCESS
+- Pytest: 412 passed, 52 warnings
+- Windows verificó los cinco ejecutables, smoke test de BotManager, instalador, ZIP portable, checksums y artefactos.
+
+### Estado inmediatamente posterior
+
+- CI #1210: SUCCESS sobre 6a25b0dd95ea02737135b8b8a50dbf1a8e198531.
+- Windows Build #840: ejecución iniciada sobre el mismo SHA; debe usarse como validación documental hasta que termine.
+- No debe contarse 6a25... como una nueva versión funcional mientras el árbol no cambie código.
+
+## Corrección del problema de continuidad
+
+La bitácora contenía referencias a a79fb... que ya no representaban la punta de main. Se confirma mediante comparación de commits que a79fb... pertenece a una línea descendiente del código actual, pero no es la referencia operativa de main.
+
+Regla nueva:
+
+- main SHA = última referencia efectiva de la rama.
+- functional SHA = último commit que modificó código y obtuvo CI + Windows SUCCESS.
+- Un commit documental posterior no reemplaza el SHA funcional.
+- Una rama experimental no se considera integrada hasta que el commit esté ancestral a main.
+
+## No repetir
+
+No volver a implementar ni auditar desde cero:
+
+- TaskSupervisor;
+- Event/Job lease fencing;
+- MemberSync transaction ownership;
+- RequestService transaction ownership;
+- callbacks privados;
+- allowlist;
+- puntos/gacha idempotentes;
+- WildWaifu/trivia lifecycle fencing;
+- Cami publication fencing;
+- Misterio diario;
+- catálogo base de Ciudad Animals;
+- catálogo anime/manga;
+- /ayuda;
+- transporte multi-identidad;
+- Tío Otaku inbox/claim/respuesta manual;
+- validación de BotManager;
+- empaquetado Windows.
+
+Solo reabrirlos ante regresión, nuevo requisito o evidencia de producción.
+
+## Trabajo que sí queda abierto
+
+1. Interacciones contextuales authored: escenas que reaccionen a eventos de juego/Café sin generar texto libre.
+2. Ciudad Animals vivo: eventos cotidianos deterministas que utilicen el catálogo y observaciones.
+3. Superficies: reducir caminos descriptivos en Cari/Cami/Chie.
+4. Tío Otaku: mejorar navegación operativa e historial.
+5. Curación IA: continuar snapshot -> propuesta -> aprobación sin autoescritura del canon.
+6. Release: etiquetado final deliberado, con una única línea de código certificada.
+
+## Porcentaje
+
+Estimación global conservadora: 82%.
+
+No se incrementa por commits documentales ni por un pipeline Windows todavía en ejecución.
+
+## Regla de actualización
+
+Cada nueva sesión debe:
+
+1. leer la sección 25;
+2. consultar main;
+3. consultar CI y Windows;
+4. comparar con functional SHA;
+5. elegir una deuda abierta concreta;
+6. implementar código + regresión;
+7. validar;
+8. añadir una entrada con errores, causa, corrección y evidencia.
