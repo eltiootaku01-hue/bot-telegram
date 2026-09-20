@@ -102,7 +102,7 @@ async def test_trivia_panel_rejects_group_context() -> None:
 
     await module.start_panel(callback)
 
-    assert answers == ["La consulta de trivia se hace desde tu chat privado con Sunna."]
+    assert answers == ["La consulta de trivia se hace desde tu chat privado con Cari."]
 
 
 @pytest.mark.asyncio
