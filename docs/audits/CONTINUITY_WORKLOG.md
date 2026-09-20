@@ -6,7 +6,7 @@ Este archivo existe para evitar repetir auditorías, correcciones o funcionalida
 
 Fecha de esta nota: 2026-09-20
 Rama: `main`
-Último trabajo en esta sesión: flujo de respuesta humana de Tío Otaku + precisión del detector de vocativos.
+Último trabajo en esta sesión: flujo de respuesta humana de Tío Otaku, detector de vocativos y bandeja recuperable de aprobaciones Gacha.
 
 ## Progreso estimado
 
@@ -59,6 +59,7 @@ El 82% global no significa “82% del código escrito”. Representa cuánto de 
 - Encuentros vencidos se retiran antes de crear otro.
 - Trivia vence limpiamente y no bloquea la siguiente ronda.
 - Drop raro requiere aprobación humana de un solo uso.
+- Bandeja privada \`/gacha_pendientes\` permite recuperar aprobaciones si se perdió la notificación inicial.
 - Misterio diario: ronda única por día, intento único, ganador único y recompensa idempotente.
 
 ### Cami Publisher
