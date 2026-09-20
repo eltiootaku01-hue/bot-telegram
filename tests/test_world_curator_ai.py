@@ -65,7 +65,8 @@ async def test_ai_curator_uses_only_review_snapshot_and_persists_pending_proposa
     assert brain.requests
     assert brain.requests[0].persona == CURATOR_PERSONA
     assert "No hables como personaje" in brain.requests[0].persona
-    assert "review" not in brain.requests[0].user_text
+    assert "user_text" not in brain.requests[0].user_text
+    assert "conversation" not in brain.requests[0].user_text
 
     async with database.session() as session:
         rows = list(await session.scalars(select(WorldProposal)))
