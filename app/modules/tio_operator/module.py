@@ -113,7 +113,7 @@ class TioOperatorModule(BotModule):
             await message.answer("La respuesta no puede estar vacía.")
             return
 
-        async with self.database.session() as session:
+        async with self.database.session(write=True) as session:
             request = await session.get(TioOperatorRequest, request_id)
             if request is None or request.status not in {"pending", "acknowledged"}:
                 await message.answer("Esa solicitud no está pendiente de respuesta.")
@@ -125,6 +125,14 @@ class TioOperatorModule(BotModule):
                 )
                 return
 
+            if not await self.service.claim_response(
+                session,
+                request_id=request_id,
+            ):
+                await message.answer(
+                    f"⏳ La solicitud #{request_id} ya está siendo respondida o procesada.",
+                )
+                return
             destination = request.chat_id
             source_user = request.user_id
 
@@ -134,18 +142,29 @@ class TioOperatorModule(BotModule):
                 f"💬 <b>Tío Otaku (operador humano)</b>\n\n{escape(reply_text)}",
             )
         except Exception:
+            async with self.database.session(write=True) as session:
+                await self.service.release_response(
+                    session,
+                    request_id=request_id,
+                )
             await message.answer(
                 f"❌ No pude entregar la respuesta de la solicitud #{request_id}. "
-                "La solicitud permanece pendiente."
+                "La solicitud volvió a quedar disponible."
             )
             raise
 
-        async with self.database.session() as session:
-            await self.service.decide(
+        async with self.database.session(write=True) as session:
+            resolved = await self.service.decide(
                 session,
                 request_id=request_id,
                 status="resolved",
             )
+            if not resolved:
+                await message.answer(
+                    f"⚠️ La respuesta de la solicitud #{request_id} fue enviada, "
+                    "pero el estado quedó para revisión manual.",
+                )
+                return
 
         await message.answer(
             f"✅ Respuesta de la solicitud #{request_id} enviada a la comunidad "
