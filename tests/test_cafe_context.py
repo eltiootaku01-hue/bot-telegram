@@ -190,3 +190,52 @@ async def test_contextual_surface_uses_authored_service_without_llm(database):
     assert answers
     assert "Momento contextual del Café" in answers[0]
     assert "canon" in answers[0]
+
+
+def test_choose_supports_multiple_authored_variants_for_same_state() -> None:
+    service = CafeContextService()
+    snapshot = CafeContextSnapshot(
+        chat_id=-100,
+        active_encounter=False,
+        active_trivia=False,
+        pending_requests=0,
+        recent_new_members=0,
+        recent_human_activity=True,
+        observed_at=datetime(2026, 9, 20, 15, 0),
+    )
+
+    first = service.choose(snapshot, local_hour=15, variant_seed=0)
+    second = service.choose(snapshot, local_hour=15, variant_seed=1)
+    third = service.choose(snapshot, local_hour=15, variant_seed=2)
+
+    assert {first.key, second.key, third.key} == {
+        "context-human-activity-1",
+        "context-human-activity-2",
+        "context-human-activity-3",
+    }
+    assert len({first.text, second.text, third.text}) == 3
+
+
+@pytest.mark.asyncio
+async def test_moment_is_stable_for_same_chat_and_world_day(database) -> None:
+    service = CafeContextService()
+    now = datetime(2026, 9, 20, 15, 0)
+
+    async with database.session() as session:
+        session.add(Chat(id=-100, type="supergroup", title="Cafe"))
+
+    async with database.session() as session:
+        first = await service.moment(
+            session,
+            chat_id=-100,
+            timezone_name="America/Argentina/Buenos_Aires",
+            now=now,
+        )
+        second = await service.moment(
+            session,
+            chat_id=-100,
+            timezone_name="America/Argentina/Buenos_Aires",
+            now=now,
+        )
+
+    assert first == second
