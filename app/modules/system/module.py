@@ -56,6 +56,7 @@ class SystemModule(BotModule):
                 BotCommand(command="cafe", description="Abrir el Café Otaku"),
                 BotCommand(command="menu", description="Ver el menú del Café Otaku"),
                 BotCommand(command="recomendacion", description="Pedir una recomendación del día"),
+                BotCommand(command="momento", description="Ver un momento contextual del Café"),
                 BotCommand(command="tio_pendientes", description="Ver solicitudes para Tío Otaku"),
                 BotCommand(command="tio_historial", description="Ver el historial del operador"),
                 BotCommand(command="tio_responder", description="Enviar una respuesta humana a una solicitud"),
