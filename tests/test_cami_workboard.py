@@ -65,7 +65,7 @@ async def test_workboard_prioritizes_ambiguous_delivery_and_overdue_requests(dat
     assert items[0].priority > items[1].priority
     assert items[1].overdue is True
     assert items[0].next_action.startswith("Resolver la entrega")
-    assert items[-1].title == "Pedido #2" or items[-1].title == "Material #4"
+    assert items[-1].title == "Material #2"
 
 
 @pytest.mark.asyncio
