@@ -39,6 +39,7 @@ class CamiMediaPublisher(BotModule):
         self.topics = ForumTopicService(database)
         self.settings = settings or get_settings()
         self.worker: DurableWorker | None = None
+        self._publish_lock = asyncio.Lock()
 
     def setup(self) -> None:
         pass
@@ -119,6 +120,11 @@ class CamiMediaPublisher(BotModule):
             await asyncio.sleep(60)
 
     async def publish(self, bot: Bot, payload: dict) -> None:
+        """Serialize local publisher work while retaining DB-level fencing."""
+        async with self._publish_lock:
+            await self._publish_locked(bot, payload)
+
+    async def _publish_locked(self, bot: Bot, payload: dict) -> None:
         asset_id = int(payload["asset_id"])
         destination = str(payload.get("destination", "both"))
         if destination not in {"both", "group"}:
@@ -237,6 +243,11 @@ class CamiMediaPublisher(BotModule):
                 await session.commit()
 
     async def publish_request(self, bot: Bot, payload: dict) -> None:
+        """Serialize local request publication work too."""
+        async with self._publish_lock:
+            await self._publish_request_locked(bot, payload)
+
+    async def _publish_request_locked(self, bot: Bot, payload: dict) -> None:
         asset_id = int(payload["asset_id"])
         request_id = int(payload["request_id"])
 
