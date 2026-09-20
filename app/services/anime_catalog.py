@@ -134,6 +134,8 @@ class AnimeCatalogService:
             raise ValueError("year_end is outside the supported range")
         if episodes is not None and episodes < 0:
             raise ValueError("episodes cannot be negative")
+        if year_start is not None and year_end is not None and year_end < year_start:
+            raise ValueError("year_end cannot be earlier than year_start")
 
         values = {
             "title": title.strip(),
