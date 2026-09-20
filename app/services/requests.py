@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +12,7 @@ from app.db.repositories import MemberRepository
 
 
 DEFAULT_REQUEST_COST = 50
+DEFAULT_REQUEST_SLA_HOURS = 48
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,11 +58,16 @@ class RequestService:
         character_id: str | None = None,
         special_details: str | None = None,
         source_message_id: int | None = None,
+        sla_hours: int = DEFAULT_REQUEST_SLA_HOURS,
     ) -> PaidRequestResult | None:
         if not description.strip():
             raise ValueError("Request description cannot be empty")
         if points_cost <= 0:
             raise ValueError("Request cost must be positive")
+        if sla_hours <= 0:
+            raise ValueError("Request SLA must be positive")
+
+        due_at = utc_now() + timedelta(hours=sla_hours)
 
         if source_message_id is not None:
             existing = await session.scalar(
@@ -95,6 +101,7 @@ class RequestService:
                 points_cost=points_cost,
                 source_message_id=source_message_id,
                 status=RequestStatus.PENDING_ADMIN.value,
+                due_at=due_at,
             )
             session.add(request)
             await session.flush()
