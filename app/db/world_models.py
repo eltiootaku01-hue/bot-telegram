@@ -48,3 +48,22 @@ class WorldUsageStat(Base):
     count: Mapped[int] = mapped_column(Integer, default=0)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class WorldReview(Base):
+    """Persisted aggregate review snapshot; contains no raw conversation text."""
+
+    __tablename__ = "world_reviews"
+    __table_args__ = (
+        UniqueConstraint(
+            "review_type",
+            "period_key",
+            name="uq_world_review_period",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    review_type: Mapped[str] = mapped_column(String(32))
+    period_key: Mapped[str] = mapped_column(String(64))
+    generated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    report_json: Mapped[str] = mapped_column(String(20000))
