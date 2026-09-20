@@ -599,6 +599,7 @@ async def test_operator_history_supports_pagination(database: Database) -> None:
     assert "tio:history:page:2" in first_callbacks
 
     callback_message = _owner_message("historial")
+    callback_message.edit_text = AsyncMock()
     callback = SimpleNamespace(
         message=callback_message,
         from_user=SimpleNamespace(id=77),
