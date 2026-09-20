@@ -114,10 +114,13 @@ class SystemModule(BotModule):
 
 
     async def start(self, message: Message) -> None:
+        start_parts = message.text.casefold().strip().split(maxsplit=1) if message.text else []
         if (
             self.identity is BotIdentity.CHIE
-            and message.text
-            and message.text.casefold().strip() in {"/start miid", "/start@chiebot miid"}
+            and message.chat.type == "private"
+            and len(start_parts) == 2
+            and start_parts[0].startswith("/start")
+            and start_parts[1] == "miid"
             and message.from_user is not None
         ):
             await message.answer(
