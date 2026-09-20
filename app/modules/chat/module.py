@@ -5,6 +5,7 @@ from app.characters.models import CharacterIntent
 from app.characters.router import CharacterIntentRouter
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.core.operator import is_tio_addressed
 from app.db.database import Database
 from app.services.world import WorldService
 
@@ -33,7 +34,7 @@ class ChatModule(BotModule):
         )
 
     def _should_handle_text(self, text: str) -> bool:
-        if not text:
+        if not text or is_tio_addressed(text):
             return False
         normalized = text.casefold().strip().strip("!?.,:;")
         intent = self.characters.classify(text)
