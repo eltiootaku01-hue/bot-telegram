@@ -1,5 +1,4 @@
 import pytest
-from sqlalchemy import select
 
 from app.core.identity import BotIdentity
 from app.db.community_models import SetupSession
