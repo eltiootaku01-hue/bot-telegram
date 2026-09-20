@@ -116,3 +116,46 @@ def test_validate_setup_allows_token_only_bot_configuration() -> None:
     assert result.valid
     assert not result.errors
     assert all("enlace" in warning.casefold() for warning in result.warnings)
+
+
+def test_validate_setup_rejects_invalid_chie_verification_controls() -> None:
+    result = validate_setup(
+        bots=_bots(),
+        authorized_chat_ids="-100123",
+        admin_user_id="123456",
+        allow_admin_private_chat=True,
+        allow_user_private_chat=True,
+        media_storage_chat_id="0",
+        publish_page_chat_id="0",
+        base_group_chat_id="-100123",
+        human_verification_timeout_seconds="29",
+        human_verification_raid_window_seconds="0",
+        human_verification_raid_threshold="nope",
+        human_verification_raid_timeout_seconds="10",
+    )
+
+    assert not result.valid
+    assert any("HUMAN_VERIFICATION_TIMEOUT_SECONDS" in error for error in result.errors)
+    assert any("HUMAN_VERIFICATION_RAID_WINDOW_SECONDS" in error for error in result.errors)
+    assert any("HUMAN_VERIFICATION_RAID_THRESHOLD" in error for error in result.errors)
+    assert any("HUMAN_VERIFICATION_RAID_TIMEOUT_SECONDS" in error for error in result.errors)
+
+
+def test_validate_setup_warns_when_raid_timeout_is_longer_than_normal() -> None:
+    result = validate_setup(
+        bots=_bots(),
+        authorized_chat_ids="-100123",
+        admin_user_id="123456",
+        allow_admin_private_chat=True,
+        allow_user_private_chat=True,
+        media_storage_chat_id="0",
+        publish_page_chat_id="0",
+        base_group_chat_id="-100123",
+        human_verification_timeout_seconds="60",
+        human_verification_raid_window_seconds="60",
+        human_verification_raid_threshold="5",
+        human_verification_raid_timeout_seconds="90",
+    )
+
+    assert result.valid
+    assert any("TTL" in warning for warning in result.warnings)
