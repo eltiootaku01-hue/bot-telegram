@@ -118,6 +118,16 @@ El 82% global no significa “82% del código escrito”. Representa cuánto de 
 - El catálogo de Ciudad Animals, el ledger, el curador, el puente de Tío Otaku y las interacciones authored ya existen en `main`.
 - No repetir sus implementaciones salvo que una nueva auditoría encuentre un defecto concreto.
 
+## ÚLTIMO BLOQUE IA — 2026-09-20
+
+### Corrección local-first del Brain
+- Cuando `LLM_PROVIDER` queda vacío, Ollama se intenta antes que Gemini/Groq/Cerebras/OpenRouter.
+- Un proveedor explícito conserva prioridad sobre el fallback local.
+- Esto mantiene la política de ahorro de API: la nube solo entra como fallback si existe una credencial/configuración válida.
+- Commit de implementación: `ae4240083ca85458c00c4d7adbe033c1d3161b9d`.
+- Regresión de prioridad: `1fe4c48538167d729263ff603b1cb232eb20c059`.
+- El último SHA de código de este bloque es `1fe4c48538167d729263ff603b1cb232eb20c059`.
+
 ## TRABAJO PENDIENTE / PRÓXIMOS OBJETIVOS
 
 1. Profundizar canon y repertorio solamente usando material autoral confirmado; no inventar hechos narrativos.
