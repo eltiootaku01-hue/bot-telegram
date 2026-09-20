@@ -45,6 +45,11 @@ def _ensure_compatibility(connection) -> None:
     job_columns = {column["name"] for column in inspect(connection).get_columns("durable_jobs")}
     _add_column_if_missing(connection, "durable_jobs", "heartbeat_at", "DATETIME", job_columns)
 
+    verification_columns = {
+        column["name"] for column in inspect(connection).get_columns("human_verifications")
+    }
+    _add_column_if_missing(connection, "human_verifications", "expires_at", "DATETIME", verification_columns)
+
     connection.execute(text(
         "CREATE INDEX IF NOT EXISTS idx_media_asset_unique_id "
         "ON media_assets(telegram_unique_id) "
