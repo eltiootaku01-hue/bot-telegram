@@ -80,12 +80,12 @@ The GitHub Actions Windows workflow builds the five executables, verifies every 
 2. Enter the Telegram link/username and token for **Cari, Sunna, Cami and Chie**.
 3. Add Chie to the target group as an administrator. Even when the group is not yet in `AUTHORIZED_CHAT_IDS`, Chie accepts only the exact `/configurar` bootstrap command from a real group administrator; that one onboarding update does not enter normal member activity. After configuration, keep the group ID in `AUTHORIZED_CHAT_IDS` so normal bot traffic is fail-closed.
 4. AI is **optional**. You can leave all AI controls disabled and run the deterministic bot features without an LLM.
-6. If AI is enabled, choose Ollama for the local-first path or configure one or more external providers (Gemini, Groq, Cerebras or OpenRouter). Cloud credentials are only needed for the providers you actually enable/configure.
-7. Optionally choose the preferred provider and model, then add the admin Telegram ID and media-vault chat ID.
-8. Press **Guardar configuración** and then **Comenzar**.
-9. BotManager starts the four bot processes and gives each one its own start/stop control.
+5. If AI is enabled, choose Ollama for the local-first path or configure one or more external providers (Gemini, Groq, Cerebras or OpenRouter). Cloud credentials are only needed for the providers you actually enable/configure.
+6. Optionally choose the preferred provider and model, then add the admin Telegram ID and media-vault chat ID.
+7. Press **Guardar configuración** and then **Comenzar**.
+8. BotManager starts the four bot processes and gives each one its own start/stop control.
 
-Dentro de la comunidad, Chie expone `/reglas` para las normas operativas y `/mundo` en privado para el administrador para consultar las señales agregadas de Ciudad Animals.
+Dentro de la comunidad, Chie expone `/reglas` para las normas operativas. En privado, `/mundo` consulta las señales agregadas de Ciudad Animals y `/salud` muestra un diagnóstico de solo lectura de comunidades, jobs, eventos, misterios, catálogo y estados de las identidades.
 En privado, `/borrar_mi_memoria` permite eliminar tus estadísticas de uso identificables de Ciudad Animals; los agregados globales anónimos no se modifican.
 
 Secrets are saved only in the local `.env` file. `.env` and runtime data are ignored by Git.
