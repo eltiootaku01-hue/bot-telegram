@@ -49,10 +49,12 @@ def validate_setup(
     warnings: list[str] = []
 
     for key, fields in bots.items():
-        if not fields.get("link", "").strip():
-            errors.append(f"Falta el enlace de {key.title()}.")
         if not fields.get("token", "").strip():
             errors.append(f"Falta el token de {key.title()}.")
+        elif not fields.get("link", "").strip():
+            warnings.append(
+                f"El enlace de {key.title()} todavía no está cargado; Verificar token puede obtener su @username."
+            )
 
     authorized, id_errors = parse_numeric_ids(
         authorized_chat_ids,
