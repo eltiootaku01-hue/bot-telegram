@@ -24,7 +24,13 @@ from app.game.fusion import fuse_collection
 from app.game.gacha import GACHA_COST_POINTS, GachaService
 from app.game.mystery import MysteryService
 from app.game.progression import apply_capture_progression, collection_status
-from app.game.waifu_browser import WaifuFilter, WaifuFilterField, page_for, render_page
+from app.game.waifu_browser import (
+    WaifuFilter,
+    WaifuFilterField,
+    page_for,
+    render_detail,
+    render_page,
+)
 from app.game.wild_scheduler import WildWaifuScheduler
 from app.services.community import CommunityResolver
 from app.services.world import WorldService
@@ -35,6 +41,7 @@ from app.ui.game_keyboards import (
     game_hub_keyboard,
     gacha_keyboard,
     mystery_keyboard,
+    waifu_catalog_detail_keyboard,
     waifu_catalog_keyboard,
     waifu_filter_categories_keyboard,
     waifu_filter_options_keyboard,
@@ -75,6 +82,7 @@ class GameModule(BotModule):
         self.router.callback_query.register(self.encounter_answer, F.data.startswith("game:encounter:"))
         self.router.callback_query.register(self.mystery_open, F.data == "game:mystery:open")
         self.router.callback_query.register(self.mystery_answer, F.data.startswith("game:mystery:"))
+        self.router.callback_query.register(self.waifu_detail, F.data.startswith("game:waifu:d:"))
         self.router.callback_query.register(self.waifu_catalog_filters, F.data == "game:waifus:filters")
         self.router.callback_query.register(self.waifu_catalog_filter_options, F.data.startswith("game:waifus:filter:"))
         self.router.callback_query.register(self.waifu_catalog_filter_set, F.data.startswith("game:waifus:set:"))
@@ -166,6 +174,7 @@ class GameModule(BotModule):
                 page.page,
                 page.total_pages,
                 page.active_filter,
+                page.characters,
             ),
         )
         if message.from_user is not None:
@@ -281,6 +290,48 @@ class GameModule(BotModule):
                 ),
             )
         await self._observe_action("waifu_catalog_page", callback.from_user.id)
+        await callback.answer()
+
+    async def waifu_detail(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer(
+                "Este catálogo solo funciona en tu chat privado con Sunna. 😰",
+                show_alert=True,
+            )
+            return
+        parts = (callback.data or "").split(":")
+        if len(parts) not in {5, 7}:
+            await callback.answer("Ficha inválida.", show_alert=True)
+            return
+        character_id = parts[3]
+        try:
+            page_number = int(parts[4])
+        except ValueError:
+            await callback.answer("Ficha inválida.", show_alert=True)
+            return
+
+        active_filter = None
+        if len(parts) == 7:
+            active_filter = WaifuFilter.from_code(parts[5], parts[6])
+            if active_filter is None:
+                await callback.answer("Filtro inválido.", show_alert=True)
+                return
+
+        try:
+            character = get_character(character_id)
+        except KeyError:
+            await callback.answer("No encuentro esa waifu.", show_alert=True)
+            return
+
+        if callback.message is not None:
+            await callback.message.edit_text(
+                render_detail(character),
+                reply_markup=waifu_catalog_detail_keyboard(
+                    page_number,
+                    active_filter,
+                ),
+            )
+        await self._observe_action("waifu_detail", callback.from_user.id)
         await callback.answer()
 
     async def inventory_callback(self, callback: CallbackQuery) -> None:
