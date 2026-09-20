@@ -273,14 +273,18 @@ class AnimeCatalogService:
             pattern = f"%{query}%"
             rows = await session.scalars(
                 select(AnimeWork)
+                .outerjoin(AnimeCharacter, AnimeCharacter.work_id == AnimeWork.id)
                 .where(
                     or_(
                         AnimeWork.title.ilike(pattern),
                         AnimeWork.titles_json.ilike(pattern),
                         AnimeWork.genres_json.ilike(pattern),
                         AnimeWork.themes_json.ilike(pattern),
+                        AnimeCharacter.name.ilike(pattern),
+                        AnimeCharacter.aliases_json.ilike(pattern),
                     )
                 )
+                .distinct()
                 .order_by(AnimeWork.title.asc())
                 .limit(limit)
             )
