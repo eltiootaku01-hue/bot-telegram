@@ -52,6 +52,33 @@ class ChatModule(BotModule):
             )
         )
 
+    async def _observe_interaction(self, message: Message, speaker: BotIdentity, partner: BotIdentity) -> None:
+        """Record a lightweight relationship-use signal after authored dialogue."""
+        async with self.database.session() as session:
+            relationship_key = f"{speaker.value}-{partner.value}"
+            await self.world.observe(
+                session,
+                bot_identity=speaker,
+                entry_type="relationship",
+                entry_key=relationship_key,
+            )
+            await self.world.observe(
+                session,
+                bot_identity=speaker,
+                entry_type="relationship",
+                entry_key=relationship_key,
+                scope_type="user",
+                scope_id=str(message.from_user.id),
+            )
+            await self.world.observe(
+                session,
+                bot_identity=speaker,
+                entry_type="relationship",
+                entry_key=relationship_key,
+                scope_type="user_chat",
+                scope_id=f"{message.from_user.id}:{message.chat.id}",
+            )
+
     async def _observe_scene(
         self,
         message: Message,
@@ -142,6 +169,11 @@ class ChatModule(BotModule):
         )
         if response.follow_up is not None:
             await message.answer(response.follow_up.text)
+            await self._observe_interaction(
+                message,
+                response.scene.speaker,
+                response.follow_up.speaker,
+            )
             await self._observe_scene(
                 message,
                 response.follow_up.key,
