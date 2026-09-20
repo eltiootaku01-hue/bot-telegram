@@ -7,6 +7,38 @@ from app.core.identity import BotIdentity
 from app.knowledge.catalog import ARTICLES
 from app.knowledge.models import HandoffDecision, KnowledgeAnswer
 
+_STOPWORDS = {
+    "a",
+    "al",
+    "con",
+    "como",
+    "cuando",
+    "de",
+    "del",
+    "el",
+    "en",
+    "es",
+    "esta",
+    "este",
+    "hay",
+    "la",
+    "las",
+    "lo",
+    "los",
+    "me",
+    "mi",
+    "para",
+    "por",
+    "que",
+    "qué",
+    "se",
+    "si",
+    "un",
+    "una",
+    "y",
+    "yo",
+}
+
 
 def normalize(text: str) -> str:
     value = unicodedata.normalize("NFKD", text.casefold())
@@ -20,10 +52,18 @@ def is_question_like(text: str) -> bool:
         return True
     return bool(
         re.search(
-            r"(?<!\w)(que|como|cuando|donde|quien|por que|para que|puedo|podemos|sabes|tenes|tienes)\b",
+            r"(?<!\w)(que|como|cuando|donde|quien|por que|para que|puedo|podes|podemos|sabes|tenes|tienes)\b",
             normalized,
         )
     )
+
+
+def _meaningful_tokens(value: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9_]+", normalize(value))
+        if token not in _STOPWORDS
+    }
 
 
 def _phrase_score(normalized: str, phrase: str) -> int:
@@ -31,11 +71,19 @@ def _phrase_score(normalized: str, phrase: str) -> int:
     if not candidate:
         return 0
     if candidate in normalized:
-        return 5 + len(candidate.split())
-    tokens = set(candidate.split())
-    message_tokens = set(re.findall(r"[a-z0-9_]+", normalized))
-    overlap = len(tokens & message_tokens)
-    return overlap * 2
+        return 8 + len(_meaningful_tokens(candidate)) * 3
+
+    candidate_tokens = _meaningful_tokens(candidate)
+    message_tokens = _meaningful_tokens(normalized)
+    if not candidate_tokens:
+        return 0
+
+    overlap = len(candidate_tokens & message_tokens)
+    if len(candidate_tokens) == 1:
+        return 6 if overlap == 1 else 0
+    if overlap < 2:
+        return 0
+    return overlap * 3
 
 
 class LocalKnowledgeResponder:
@@ -49,28 +97,33 @@ class LocalKnowledgeResponder:
         if not normalized:
             return None
 
-        candidates: list[tuple[int, int, str, object]] = []
+        candidates: list[tuple[int, int, str, KnowledgeAnswer]] = []
         for article in self._articles:
             if article.identity is not identity:
                 continue
             score = sum(_phrase_score(normalized, keyword) for keyword in article.keywords)
             if score:
-                candidates.append((score + article.priority // 20, article.priority, article.key, article))
+                candidates.append(
+                    (
+                        score + article.priority // 20,
+                        article.priority,
+                        article.key,
+                        KnowledgeAnswer(article=article, score=score),
+                    )
+                )
 
         if not candidates:
             return None
 
         candidates.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
-        score, _, _, article = candidates[0]
-        minimum = 6 if is_question_like(text) else 10
+        score, _, _, result = candidates[0]
+        minimum = 6 if is_question_like(text) else 8
         if score < minimum:
             return None
-        return KnowledgeAnswer(article=article, score=score)
+        return result
 
     def should_handoff(self, identity: BotIdentity, text: str) -> HandoffDecision:
         normalized = normalize(text)
-        if not is_question_like(text):
-            return HandoffDecision(False, "not_a_question")
 
         if any(
             marker in normalized
@@ -85,6 +138,9 @@ class LocalKnowledgeResponder:
             )
         ):
             return HandoffDecision(True, "possible_safety_or_abuse_issue")
+
+        if not is_question_like(text):
+            return HandoffDecision(False, "not_a_question")
 
         if self.answer(identity, text) is None:
             return HandoffDecision(True, "knowledge_not_found")
