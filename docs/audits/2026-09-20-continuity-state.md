@@ -276,3 +276,34 @@ Estimación global conservadora del proyecto: 77%. No es una métrica de CI; es 
 ### No repetir sin evidencia nueva
 
 No reauditar desde cero los bloques ya marcados como corregidos arriba. Una nueva pasada debe buscar solo regresiones, consumidores nuevos o requisitos nuevos.
+
+## Cierre de continuidad — Bot Manager + Telegram setup — 2026-09-20
+
+### Mejora entregada
+- Se añadió un checklist local visible en Bot Manager con estados ✓ / ⚠ / ✗.
+- La pantalla principal mantiene tokens por identidad y ahora incluye Maestro/Jefe, grupo base y ayuda directa para obtener el ID.
+- El enlace de cada bot ya no es requisito de arranque: el token es la credencial operativa y la verificación con Telegram puede obtener el username.
+- Se añadió deep-link de Chie para devolver el ID numérico del usuario mediante `/start miid`.
+- El asistente Telegram permite verificar tokens con `getMe`, abrir el chat privado y generar enlaces `startgroup` oficiales para incorporar bots.
+- El grupo base puede fijarse como hogar y guardarse directamente en `AUTHORIZED_CHAT_IDS`.
+- La revisión del asistente comprueba presencia y permisos de Chie, Cari, Sunna y Cami.
+- Se añadió `docs/TELEGRAM_OPERATIONS_MANUAL.md` con el procedimiento completo de BotFather, privacidad, grupo base, Maestro/Jefe y diagnóstico.
+- El README enlaza explícitamente este flujo.
+- El catálogo inicial de Ciudad Animals quedó centralizado en `WorldService.seed_catalog()` y ya no se mantiene un segundo seeder en ChatModule.
+
+### Decisión técnica
+- El número telefónico no se usa como credencial de autorización; el sistema conserva el ID numérico de Telegram.
+- La incorporación de un bot a un grupo sigue el flujo oficial de Telegram: Bot Manager abre el selector mediante `startgroup`, mientras la acción del usuario/admin confirma la incorporación.
+- Los bots que necesitan recibir mensajes ordinarios en grupos deben ser administradores o tener Group Privacy Mode desactivado según las necesidades del sistema.
+
+### Evidencia
+- CI #1378: SUCCESS.
+- Windows Build #1000: SUCCESS.
+- SHA validado y empaquetado: `b12524ca6ae3ecf66e0fada20c4d0905319b6889`.
+- Artefacto instalador: `bot-telegram-windows-installer`, digest `sha256:4d15df86cb43146d55a5f9daf974c13ba3ba5aa834d55e2338a089186e3495f3`.
+- Artefacto portable: `bot-telegram-windows-portable`, digest `sha256:09a034e78a169f8ec88108b895cab8564cb69c49e9e606ae14dea415056320cc`.
+
+### Próximo foco
+- Profundidad autoral y superficies funcionales todavía simples.
+- No reabrir componentes ya cubiertos por concurrencia, seguridad y empaquetado salvo evidencia nueva.
+
