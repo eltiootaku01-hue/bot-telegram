@@ -193,6 +193,10 @@ class HumanVerificationService:
                 HumanVerification.chat_id == chat_id,
                 HumanVerification.user_id == user_id,
                 HumanVerification.status == "pending",
+                (
+                    HumanVerification.expires_at.is_(None)
+                    | (HumanVerification.expires_at > current)
+                ),
             )
             .values(
                 status=status,
