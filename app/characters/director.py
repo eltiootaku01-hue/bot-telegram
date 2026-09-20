@@ -14,18 +14,23 @@ class CharacterResponse:
 
 
 class CharacterDirector:
-    """Deterministic selector for the characters' authored repertoire.
-
-    It never generates text. The caller supplies the intent and a stable roll so
-    the same runtime is deterministic while still offering several authored
-    variants. Scene weights are honored as authored selection weights.
-    """
+    """Deterministic selector for authored character scenes and interactions."""
 
     def __init__(self, repertoire: tuple[DialogueScene, ...] = REPERTOIRE) -> None:
         self._by_key: dict[tuple[BotIdentity, CharacterIntent], tuple[DialogueScene, ...]] = {}
+        self._interactions: dict[
+            tuple[BotIdentity, BotIdentity, CharacterIntent],
+            tuple[DialogueScene, ...],
+        ] = {}
         for scene in repertoire:
             key = (scene.speaker, scene.intent)
             self._by_key[key] = (*self._by_key.get(key, ()), scene)
+            if scene.follow_up_speaker is not None and scene.follow_up_text:
+                interaction_key = (scene.speaker, scene.follow_up_speaker, scene.intent)
+                self._interactions[interaction_key] = (
+                    *self._interactions.get(interaction_key, ()),
+                    scene,
+                )
 
     def choose(
         self,
@@ -37,8 +42,29 @@ class CharacterDirector:
         scenes = self._by_key.get((identity, intent), ())
         if not scenes:
             return None
+        return self._response(self._weighted_scene(scenes, roll), intent)
 
-        scene = self._weighted_scene(scenes, roll)
+    def choose_interaction(
+        self,
+        identity: BotIdentity,
+        partner: BotIdentity,
+        intent: CharacterIntent,
+        *,
+        roll: int = 0,
+    ) -> CharacterResponse | None:
+        """Choose an authored two-character scene when one exists for the pair."""
+        scenes = self._interactions.get((identity, partner, intent), ())
+        if not scenes and intent is not CharacterIntent.UNKNOWN_TOPIC:
+            scenes = self._interactions.get(
+                (identity, partner, CharacterIntent.UNKNOWN_TOPIC),
+                (),
+            )
+        if not scenes:
+            return None
+        return self._response(self._weighted_scene(scenes, roll), scenes[0].intent)
+
+    @staticmethod
+    def _response(scene: DialogueScene, intent: CharacterIntent) -> CharacterResponse:
         follow_up = None
         if scene.follow_up_speaker is not None and scene.follow_up_text:
             follow_up = DialogueScene(
