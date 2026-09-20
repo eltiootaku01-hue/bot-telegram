@@ -14,6 +14,7 @@ from app.core.module import BotModule
 from app.db.database import Database
 from app.services.world import WorldService
 from app.ui.control_keyboards import chie_start_keyboard
+from app.ui.help_keyboards import help_keyboard
 from app.ui.game_keyboards import game_hub_keyboard
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class SystemModule(BotModule):
     def setup(self) -> None:
         self.router.message.register(self.start, CommandStart())
         self.router.message.register(self.help, Command("ayuda"))
+        self.router.callback_query.register(self.help_navigation, F.data.startswith("help:"))
         self.router.message.register(self.ping, Command("ping"))
         self.router.message.register(self.ping, F.text.casefold() == "ping")
         if self.identity is BotIdentity.SUNNA:
@@ -159,7 +161,105 @@ class SystemModule(BotModule):
                 "💡 <code>/revisar_mundo</code> y <code>/proponer_mundo</code> — revisión/propuestas del mundo."
             ),
         }
-        await message.answer(help_texts[self.identity])
+        await message.answer(help_texts[self.identity], reply_markup=help_keyboard(self.identity))
+
+    async def help_navigation(self, callback: CallbackQuery) -> None:
+        if callback.message is None or callback.from_user is None or not callback.data:
+            await callback.answer("Ayuda inválida.", show_alert=True)
+            return
+        parts = callback.data.split(":")
+        if len(parts) != 3 or parts[1] != self.identity.value:
+            await callback.answer("Esta ayuda pertenece a otra identidad.", show_alert=True)
+            return
+
+        section = parts[2]
+        details = {
+            BotIdentity.CARI: {
+                "cafe": (
+                    "☕ <b>Café Otaku</b>\n\n"
+                    "Usá <code>/cafe</code> para ver los servicios del café.\n"
+                    "También podés usar <code>/menu</code> para repetir el menú."
+                ),
+                "recommendation": (
+                    "🍿 <b>Recomendación</b>\n\n"
+                    "<code>/recomendacion</code> entrega una recomendación determinista del día."
+                ),
+                "conversation": (
+                    "💬 <b>Conversación</b>\n\n"
+                    "Cari responde de forma authored-only a interacciones reconocidas. "
+                    "No necesita un LLM para su comportamiento cotidiano."
+                ),
+                "moderation": (
+                    "🛡️ <b>Moderación</b>\n\n"
+                    "Las herramientas de moderación están disponibles para administradores del grupo y respetan la allowlist central."
+                ),
+            },
+            BotIdentity.SUNNA: {
+                "games": (
+                    "🎮 <b>Juegos</b>\n\n"
+                    "Abrí <code>/juego</code> para entrar al panel. Desde ahí tenés gacha, inventario, combate y trivia."
+                ),
+                "gacha": (
+                    "🎰 <b>Gacha</b>\n\n"
+                    "Usá <code>/gacha</code> para abrirlo. La tirada se resuelve localmente."
+                ),
+                "inventory": (
+                    "🎒 <b>Inventario</b>\n\n"
+                    "<code>/inventario</code> muestra tu colección y las evoluciones disponibles."
+                ),
+                "points": (
+                    "💰 <b>Puntos</b>\n\n"
+                    "<code>/puntos</code> consulta tu saldo y <code>/ranking</code> muestra el estado comunitario."
+                ),
+            },
+            BotIdentity.CAMI: {
+                "catalog": (
+                    "📚 <b>Catálogo</b>\n\n"
+                    "<code>/catalogo</code> busca material local. Cami no inventa registros que no existan."
+                ),
+                "anime": (
+                    "📖 <b>Anime y manga</b>\n\n"
+                    "<code>/anime</code> busca fichas locales y <code>/anime_ficha</code> abre una ficha concreta."
+                ),
+                "recovery": (
+                    "🔁 <b>Recuperación</b>\n\n"
+                    "<code>/recuperar_publicaciones</code> permite revisar entregas ambiguas como administradora."
+                ),
+                "archive": (
+                    "📊 <b>Archivo</b>\n\n"
+                    "Cami mantiene catálogo, publicaciones, pedidos y estadísticas sin convertir la IA en autoridad del archivo."
+                ),
+            },
+            BotIdentity.CHIE: {
+                "configure": (
+                    "⚙️ <b>Configurar</b>\n\n"
+                    "<code>/configurar</code> verifica permisos de administradora y prepara los temas de la comunidad."
+                ),
+                "commands": (
+                    "📌 <b>Comandos</b>\n\n"
+                    "<code>/comandos</code> abre el panel comunitario con accesos a las áreas principales."
+                ),
+                "rules": (
+                    "📜 <b>Reglas</b>\n\n"
+                    "<code>/reglas</code> consulta las reglas locales de la comunidad."
+                ),
+                "world": (
+                    "🌍 <b>Ciudad Animals</b>\n\n"
+                    "<code>/mundo</code> muestra métricas agregadas y <code>/revisar_mundo</code> revisa tendencias sin reescribir el canon."
+                ),
+            },
+        }
+
+        text = details.get(self.identity, {}).get(section)
+        if text is None:
+            await callback.answer("Sección no disponible.", show_alert=True)
+            return
+
+        await callback.message.edit_text(
+            text,
+            reply_markup=help_keyboard(self.identity, section),
+        )
+        await callback.answer()
 
     async def ping(self, message: Message) -> None:
         await message.answer(f"{self.profile.display_name}: pong")
