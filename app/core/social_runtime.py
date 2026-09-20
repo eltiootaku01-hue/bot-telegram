@@ -15,6 +15,7 @@ from app.core.module import BotModule
 from app.core.presence import PresenceService
 from app.core.social_activity import SocialActivityService
 from app.core.social_director import SocialDirector
+from app.core.social_memory import SocialMemory
 from app.core.social_turn import SocialTurnArbiter
 from app.core.social_wake import SocialWakeController
 from app.core.social_wake_store import SocialWakeStore
@@ -158,7 +159,12 @@ class SocialRuntime:
                 return True
 
             observed = await self.activity.observe(session, chat_id, now=now)
-            snapshot = observed.to_snapshot(memory=_RuntimeMemory())
+            snapshot = observed.to_snapshot(
+                memory=SocialMemory(
+                    last_bot_message_at=observed.last_bot_message_at,
+                    last_event_at=observed.last_social_event_at,
+                )
+            )
             fatigue = await self._fatigue_map(session)
             decision = self.director.decide(
                 snapshot,
@@ -213,7 +219,14 @@ class SocialRuntime:
                 await self.turns.abandon(session, turn, reason=str(exc))
             raise
 
-        async with self.database.session() as session:
+        async with self.database.session(write=True) as session:
+            chat = await session.get(Chat, chat_id)
+            if chat is None:
+                chat = Chat(id=chat_id, type="unknown")
+                session.add(chat)
+                await session.flush()
+            chat.last_bot_message_at = now
+            chat.last_social_event_at = now
             await self.turns.complete(session, turn)
             next_state = self.wakes.after_check(
                 wake,
@@ -235,16 +248,6 @@ class SocialRuntime:
 
     def stop(self) -> None:
         self._stopping.set()
-
-
-class _RuntimeMemory:
-    """Zero-cost memory adapter; durable wake state supplies the runtime cooldown."""
-
-    def minutes_since_last_bot_message(self, now) -> int:
-        return 10_000
-
-    def minutes_since_last_event(self, now) -> int:
-        return 10_000
 
 
 class SocialRuntimeModule(BotModule):
