@@ -166,6 +166,7 @@ class CamiMediaPublisher(BotModule):
                 .values(status="publishing", updated_at=utc_now())
             )
             if claimed.rowcount != 1:
+                await session.rollback()
                 return
             await session.commit()
 
