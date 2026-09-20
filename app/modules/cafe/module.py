@@ -49,8 +49,8 @@ class CafeModule(BotModule):
     ) -> None:
         super().__init__()
         self.database = database
-        self.timezone_name = timezone_name
         self.settings = settings or Settings(bot_world_timezone=timezone_name)
+        self.timezone_name = self.settings.bot_world_timezone
         self.world = WorldService()
 
     def setup(self) -> None:
