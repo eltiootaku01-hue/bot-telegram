@@ -270,3 +270,27 @@ async def test_operator_reply_keeps_request_open_when_delivery_fails(database: D
     assert stored is not None
     assert stored.status == "pending"
     message.answer.assert_awaited_once()
+
+
+
+@pytest.mark.asyncio
+async def test_operator_ignores_bot_authored_vocative(database: Database) -> None:
+    module = TioOperatorModule(
+        database,
+        Settings(admin_user_id=77, authorized_chat_ids="-100"),
+    )
+    bot = AsyncMock()
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=99, full_name="Another Bot", is_bot=True),
+        chat=SimpleNamespace(id=-100, type="supergroup", title="Café Otaku"),
+        message_id=48,
+        text="Tío Otaku, responde.",
+    )
+
+    await module.capture_message(message, bot)
+
+    bot.send_message.assert_not_awaited()
+    async with database.session() as session:
+        rows = list(await session.scalars(select(TioOperatorRequest)))
+
+    assert rows == []
