@@ -2,12 +2,14 @@ from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from html import escape
 from sqlalchemy import select
 
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.database import Database
 from app.db.models import GameProfile
+from app.db.models import RequestStatus
 from app.services.requests import DEFAULT_REQUEST_COST, RequestService
 from app.services.world import WorldService
 from app.ui.control_keyboards import chie_request_cancel_keyboard
@@ -36,6 +38,7 @@ class RequestModule(BotModule):
         self.router.callback_query.register(self.start_request, F.data == "chie:request:start")
         self.router.callback_query.register(self.cancel_request, F.data == "chie:request:cancel")
         self.router.message.register(self.receive_description, RequestStates.waiting_description)
+        self.router.message.register(self.my_requests, Command("mis_pedidos"))
 
     async def _observe_action(self, action_key: str, user_id: int, chat_id: int) -> None:
         try:
@@ -81,6 +84,46 @@ class RequestModule(BotModule):
         )
         await callback.answer()
         await self._observe_action("request_start", callback.from_user.id, callback.message.chat.id)
+
+    async def my_requests(self, message: Message) -> None:
+        if message.chat.type != "private" or message.from_user is None:
+            return
+
+        async with self.database.session() as session:
+            requests = await self.service.for_user(
+                session,
+                user_id=message.from_user.id,
+                limit=10,
+            )
+
+        if not requests:
+            await message.answer("📭 Todavía no tenés pedidos registrados.")
+            return
+
+        labels = {
+            RequestStatus.NEW.value: "nuevo",
+            RequestStatus.NEEDS_INFO.value: "necesita datos",
+            RequestStatus.PENDING_ADMIN.value: "en cola",
+            RequestStatus.APPROVED.value: "aprobado",
+            RequestStatus.SCHEDULED.value: "programado",
+            RequestStatus.PROCESSING.value: "procesando",
+            RequestStatus.COMPLETED.value: "completado",
+            RequestStatus.REJECTED.value: "rechazado",
+            RequestStatus.CANCELLED.value: "cancelado",
+        }
+        lines = ["📋 <b>Tus últimos pedidos</b>", ""]
+        for request in requests:
+            status = labels.get(request.status, request.status)
+            due = (
+                request.due_at.strftime("%d/%m %H:%M")
+                if request.due_at is not None
+                else "sin fecha"
+            )
+            description = escape(request.description[:90])
+            lines.append(f"• <b>#{request.id}</b> · {status} · vence: {due}")
+            lines.append(f"  {description}")
+        lines.extend(("", "Podés consultar esta lista cuando quieras; el historial se conserva aunque el bot se reinicie."))
+        await message.answer("\n".join(lines))
 
     async def receive_description(self, message: Message, state: FSMContext) -> None:
         if message.chat.type not in {"group", "supergroup"} or message.from_user is None or not message.text:
