@@ -56,7 +56,7 @@ async def test_capture_callback_persists_progression(tmp_path) -> None:
         transaction = await session.scalar(select(PointTransaction))
 
     assert encounter.status == "captured"
-    assert profile.points == 10
+    assert profile.points == 30
     assert collection.character_id == "anya"
     assert collection.copies == 1
     assert collection.experience == 25
