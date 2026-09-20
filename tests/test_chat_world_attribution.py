@@ -159,3 +159,29 @@ async def test_non_cari_character_chat_leaves_complex_addressed_prompt_for_brain
 
     assert sunna._should_handle_text("Sunna, explicame cómo funciona el gacha") is False
     assert sunna._should_handle_text("Sunna") is True
+
+
+@pytest.mark.asyncio
+async def test_chat_uses_authored_pair_scene_without_generating_a_second_independent_reply(
+    database: Database,
+) -> None:
+    module = ChatModule(database, identity=BotIdentity.CAMI)
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=42),
+        chat=SimpleNamespace(id=99),
+        text="Cami y Sunna, una pregunta",
+        answer=answer,
+    )
+
+    assert module._should_handle_text(message.text) is True
+    await module.handle_text(message)
+
+    assert answers == [
+        "Sunna, si quieres podemos revisarlo juntas. Sin prisa.",
+        "Sí... me gustaría.",
+    ]
