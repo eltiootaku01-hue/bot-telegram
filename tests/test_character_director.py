@@ -222,7 +222,7 @@ def test_director_can_fallback_to_pair_unknown_scene() -> None:
     response = director.choose_interaction(
         BotIdentity.SUNNA,
         BotIdentity.CARI,
-        CharacterIntent.THANKS,
+        CharacterIntent.AFFECTION,
         roll=0,
     )
 
