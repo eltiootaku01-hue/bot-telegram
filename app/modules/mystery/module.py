@@ -109,7 +109,7 @@ class MysteryModule(BotModule):
         )
 
         try:
-            thread_id = await self.topics.get_thread_id(chat_id, "trivia")
+            thread_id = await self.topics.get_thread_id(chat_id, "misterios")
             if source is not None and source.chat.id == chat_id:
                 sent = await source.answer(
                     text,
