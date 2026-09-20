@@ -13,6 +13,7 @@ class DummyRoot:
 def test_env_defaults_include_chat_access_policy() -> None:
     assert launcher.ENV_DEFAULTS["AUTHORIZED_CHAT_IDS"] == ""
     assert launcher.ENV_DEFAULTS["ALLOW_ADMIN_PRIVATE_CHAT"] == "true"
+    assert launcher.ENV_DEFAULTS["ALLOW_USER_PRIVATE_CHAT"] == "true"
 
 
 def test_save_config_persists_chat_access_policy(monkeypatch, tmp_path: Path) -> None:
@@ -65,5 +66,6 @@ def test_save_config_persists_chat_access_policy(monkeypatch, tmp_path: Path) ->
     values = dict(calls)
     assert values["AUTHORIZED_CHAT_IDS"] == "-100111,-100222"
     assert values["ALLOW_ADMIN_PRIVATE_CHAT"] == "false"
+    assert values["ALLOW_USER_PRIVATE_CHAT"] == "true"
     assert values["ADMIN_USER_ID"] == "123"
     assert values["PUBLISH_PAGE_CHAT_ID"] == "-100333"
