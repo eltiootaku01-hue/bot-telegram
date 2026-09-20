@@ -113,6 +113,7 @@ class CafeModule(BotModule):
                 "",
                 "🎀 Podés usar <code>/recomendacion</code> para pedir una recomendación del día.",
                 "🎮 Los juegos y WaifuMon se abren desde Sunna.",
+                "🌤️ <code>/momento</code> muestra una escena contextual según el estado del Café.",
                 "📚 El archivo de material se consulta con Cami.",
             )
         )
