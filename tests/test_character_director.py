@@ -228,3 +228,29 @@ def test_director_can_fallback_to_pair_unknown_scene() -> None:
 
     assert response is not None
     assert response.scene.key == "group-call-sunna-cari"
+
+
+
+def test_director_covers_additional_cafe_interaction_pairs() -> None:
+    director = CharacterDirector()
+    expected = (
+        (BotIdentity.CARI, BotIdentity.CHIE, CharacterIntent.HELP),
+        (BotIdentity.CHIE, BotIdentity.CARI, CharacterIntent.HELP),
+        (BotIdentity.CARI, BotIdentity.CAMI, CharacterIntent.CONFUSION),
+        (BotIdentity.CAMI, BotIdentity.CARI, CharacterIntent.CONFUSION),
+        (BotIdentity.SUNNA, BotIdentity.CARI, CharacterIntent.BELONGING),
+        (BotIdentity.CARI, BotIdentity.SUNNA, CharacterIntent.BELONGING),
+        (BotIdentity.CAMI, BotIdentity.SUNNA, CharacterIntent.UNKNOWN_TOPIC),
+        (BotIdentity.SUNNA, BotIdentity.CAMI, CharacterIntent.UNKNOWN_TOPIC),
+    )
+
+    for speaker, partner, intent in expected:
+        response = director.choose_interaction(
+            speaker,
+            partner,
+            intent,
+            roll=0,
+        )
+        assert response is not None
+        assert response.follow_up is not None
+        assert response.follow_up.speaker is partner
