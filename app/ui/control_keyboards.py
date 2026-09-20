@@ -102,3 +102,17 @@ def tio_operator_resolve_keyboard(request_id: int) -> InlineKeyboardMarkup:
         ),
     )
     return builder.as_markup()
+
+
+def tio_operator_history_keyboard(request_ids: list[int]) -> InlineKeyboardMarkup:
+    """Compact navigation for the operator's recent request history."""
+    builder = InlineKeyboardBuilder()
+    for request_id in request_ids:
+        builder.add(
+            InlineKeyboardButton(
+                text=f"📋 #{request_id}",
+                callback_data=f"tio:request:view:{request_id}",
+            )
+        )
+    builder.adjust(4)
+    return builder.as_markup()
