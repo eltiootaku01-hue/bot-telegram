@@ -197,7 +197,6 @@ class ChieModule(BotModule):
                 window_seconds=raid_window,
             )
         verification_timeout = raid_timeout if recent_joins + 1 >= raid_threshold else base_timeout
-        raid_mode = recent_joins + 1 >= raid_threshold
 
         try:
             chat_info = await bot.get_chat(chat_id)
