@@ -6,7 +6,7 @@ Modular Telegram bot platform built around one rule: **local code first, AI seco
 
 The project runs as four separate Telegram bots that share one authoritative database/services layer:
 
-1. **Cari** — community presence, social interaction and moderation.
+1. **Cari** — community presence, social interaction and explicit administrator moderation.
 2. **Sunna** — WaifuMon, encounters, collection, progression, combat and trivia.
 3. **Cami** — media catalog, requests, publication, analytics and diagnostics.
 4. **Chie** — onboarding, forum setup, welcome/verification, rules, world metrics and coordination.
@@ -126,6 +126,10 @@ Cami, una pregunta
 Chie, necesito ayuda
 → Te escucho... p-podemos verlo juntas.
 ```
+
+## Cari: moderation tools
+
+Cari incluye moderación explícita y determinista. Un administrador del grupo puede responder al mensaje de un integrante con `/advertir`, `/silenciar`, `/desilenciar` o `/expulsar`; no existe clasificación automática por IA en esta ruta. Las acciones sensibles vuelven a comprobar los roles de Telegram y no permiten actuar sobre administradores, el propio moderador ni cuentas de bots. Las acciones se registran en SQLite para auditoría.
 
 ## WaifuMon gacha
 
