@@ -29,6 +29,8 @@ async def test_chie_command_menu_exposes_world_metrics_command() -> None:
     names = {command.command for command in commands}
 
     assert "mundo" in names
+    assert "revisar_mundo" in names
+    assert "proponer_mundo" in names
     assert "comandos" in names
     assert "configurar" in names
 
