@@ -1281,3 +1281,141 @@ Este commit de bitácora es únicamente documental.
 Regla: el commit documental no se considera una nueva versión funcional ni cambia el porcentaje.
 
 Esta sección existe para que una sesión futura no confunda el HEAD de main con el último SHA que modificó código.
+
+
+# 29. Snapshot operativo — 2026-09-20 10:44 ART
+
+## 29.1 Identidad exacta del estado actual
+
+- Rama: `main`.
+- SHA actual: `d3e5a67ac795eb7770453e53f1d117ec567520bf`.
+- Este SHA contiene una corrección documental sobre el encabezado/checkpoint; las capacidades funcionales que lo preceden también forman parte de la cadena actual de `main`.
+- No existe un SHA funcional separado que deba tratarse como entrega final.
+
+## 29.2 Evidencia de validación del SHA actual
+
+### CI #1231 — SUCCESS
+
+- Ruff: SUCCESS.
+- Pytest: SUCCESS.
+- Resultado exacto: **416 passed, 52 warnings**.
+- Python: 3.12.
+- No hubo pruebas fallidas.
+- Los warnings restantes no bloquearon CI.
+
+### Windows Build #861 — SUCCESS
+
+El mismo SHA completó instalación de dependencias, pruebas nativas de media/encoder, Inno Setup, resolución de versión, compilación de Cari/Sunna/Cami/Chie/BotManager, verificación de ejecutables, smoke test de BotManager, instalador, manifest, ZIP portable, SHA-256 y subida de artefactos.
+
+Artefactos actuales:
+
+- `bot-telegram-windows-installer` — 98,781,626 bytes — digest `sha256:799cfad31e0a657492c58aeeb92cf2b1d6018710bc47344b664f5797a1536bb7`.
+- `bot-telegram-windows-portable` — 96,924,348 bytes — digest `sha256:8be3c8f3b200c6040e2ea196b1232a692da6d2cd734d09fb3b9582c3a504f486`.
+
+## 29.3 Capacidades funcionales presentes en main desde el checkpoint anterior
+
+### Ciudad Animals / Café
+
+- Catálogo persistente formalizado en `app/services/world_catalog.py`.
+- Inicializador `WorldCatalogModule` ejecutado por las cuatro identidades.
+- Registro idempotente del catálogo y del repertorio authored.
+- Lugares, roles, acciones y relaciones confirmadas declaradas como entradas del mundo.
+- Café Otaku con recomendación diaria determinista.
+- Misterio diario del Café con resolución authored y caducidad por día.
+- El misterio cotidiano está explícitamente fuera del canon narrativo.
+- Telemetría agregada en ámbitos world/user/user_chat.
+- El mundo no almacena texto libre de conversación para sus métricas.
+
+### Sunna / WaifuMon
+
+- Reacciones authored para éxito/error de juego.
+- Reacciones contextuales de misterio y gacha.
+- Expresividad de Sunna ampliada sin convertirla en generación libre.
+- Continuidad de interacciones conserva el uso acumulado del par/personaje donde está disponible.
+
+### Interacciones multi-identidad
+
+- `CharacterDirector.choose_interaction()` selecciona únicamente escenas authored.
+- El segundo hablante se transporta con la identidad Telegram correspondiente.
+- El seguimiento conserva `message_thread_id` cuando corresponde.
+- Si falta el token del personaje compañero, el sistema no finge identidad.
+
+## 29.4 Errores y correcciones de este tramo
+
+1. **Checkpoint documental desfasado.** La bitácora mantenía un SHA funcional histórico distinto de `main`. Se corrigió el encabezado para distinguir el checkpoint histórico del estado operativo real.
+2. **Módulo de mundo no empaquetable/descubrible de forma consistente.** Se añadió `app/modules/world/__init__.py` para tratar el módulo como paquete Python explícito.
+3. **Siembra del catálogo no garantizada en todos los procesos.** Se incorporó `WorldCatalogModule` a la composición compartida y se probó su inicialización.
+4. **Cobertura insuficiente de escenas/reacciones de Sunna.** Se añadieron reacciones authored para resultados de juego y se verificaron sus formatos.
+5. **Pruebas sucesivas canceladas por pushes posteriores.** Los runs cancelados se conservaron como evidencia histórica; el cierre usa únicamente el último SHA con CI y Windows SUCCESS.
+
+## 29.5 Nuevos bloques que NO deben repetirse
+
+No recrear sin evidencia nueva:
+
+- siembra del catálogo base de Ciudad Animals;
+- `WorldCatalogModule` y su montaje en las cuatro identidades;
+- misterio diario del Café;
+- navegación básica del Café;
+- recomendación diaria determinista;
+- reacciones authored de Sunna para resultados básicos de juego;
+- matriz de interacciones authored ya existente;
+- transporte multi-identidad del follow-up;
+- auditorías de concurrencia, leases y Cami publisher ya cerradas;
+- `/ranking`, `/ayuda` y paneles básicos ya implementados.
+
+Reabrir solamente ante regresión, cambio de requisitos o nueva evidencia de producción.
+
+## 29.6 Porcentaje actual revisado
+
+**Estimación global conservadora: 81%.**
+
+No es una métrica de CI ni de líneas de código. Se incrementa solo por capacidades funcionales nuevas verificadas y reducción demostrable de deuda de producto.
+
+| Área | Estado estimado |
+| --- | ---: |
+| Arquitectura Core | 92% |
+| Persistencia / SQLite / transacciones | 97% |
+| Telegram / seguridad / runtime | 96% |
+| BotManager / Windows / empaquetado | 98% |
+| Módulos funcionales | 94% |
+| WaifuMon / progresión / trivia | 95% |
+| Personajes / canon | 81% |
+| Director / repertorio / rutinas | 80% |
+| Ciudad Animals / Café Otaku | 83% |
+| Interacciones / continuidad | 86% |
+| IA secundaria / curación | 40% |
+| GUI / experiencia de operador | 48% |
+
+### Por qué sigue sin ser 100%
+
+Queda trabajo real de producto en:
+
+- mayor profundidad del repertorio y de los estados cotidianos;
+- eventos persistentes del mundo y del Café más allá de catálogo/misterios;
+- herramientas avanzadas para Tío Otaku como operador humano;
+- curación IA periódica desacoplada del runtime;
+- GUI de administración más completa;
+- superficies de Cami/Chie/Cari todavía simples frente a la visión final;
+- ampliación documental local y su integración como fuente de referencia.
+
+## 29.7 Próximo bloque obligatorio
+
+La siguiente tanda debe evitar infraestructura de bajo valor. La prioridad es una capacidad de producto con efecto observable.
+
+**Objetivo:** ampliar el comportamiento cotidiano del Café Otaku mediante eventos authored y estado ligero, conectados al WorldService y probados de extremo a extremo.
+
+Criterio de cierre:
+
+- código en GitHub;
+- prueba específica;
+- persistencia verificada;
+- CI SUCCESS;
+- Windows SUCCESS si afecta runtime/empaquetado;
+- bitácora actualizada;
+- no repetir bloques ya cerrados.
+
+## 29.8 Fuente de verdad
+
+La fuente de continuidad sigue siendo este archivo: `docs/audits/BITACORA_CONTINUA.md`.
+
+Antes de tocar código, comparar siempre: SHA actual de `main`, último CI SUCCESS, último Windows SUCCESS, sección de errores, lista de no repetición y pendientes de producto.
