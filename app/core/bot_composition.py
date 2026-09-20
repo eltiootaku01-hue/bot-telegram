@@ -14,6 +14,7 @@ from app.modules.chat.module import ChatModule
 from app.modules.chie.module import ChieModule
 from app.modules.game.module import GameModule
 from app.modules.media.module import MediaModule
+from app.modules.moderation.module import ModerationModule
 from app.modules.requests.module import RequestModule
 from app.modules.system.module import SystemModule
 from app.modules.trivia.module import TriviaModule
@@ -36,6 +37,7 @@ def build_bot_modules(
     )
     identity_specific = (
         _spec("chat", lambda: ChatModule(database, identity=identity), *BotIdentity),
+        _spec("moderation", lambda: ModerationModule(database), BotIdentity.CARI),
         _spec("game", lambda: GameModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("trivia", lambda: TriviaModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("media", lambda: MediaModule(database, settings=settings), BotIdentity.SUNNA),
