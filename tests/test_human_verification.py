@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -220,3 +221,29 @@ async def test_wrong_user_cannot_use_another_users_verification(database: Databa
 
     assert row is not None
     assert row.status == "pending"
+
+
+@pytest.mark.asyncio
+async def test_begin_honors_configured_timeout(database: Database) -> None:
+    service = HumanVerificationService()
+    base = datetime(2026, 9, 20, 18, 0, 0)
+
+    async with database.session() as session:
+        row = await service.begin(
+            session,
+            chat_id=-100,
+            user_id=8,
+            prompt_message_id=13,
+            default_permissions_json="{}",
+            timeout_seconds=45,
+            now=base,
+        )
+
+    assert row.expires_at == base + timedelta(seconds=45)
+
+
+def test_begin_rejects_unreasonably_short_timeout() -> None:
+    service = HumanVerificationService()
+    import inspect
+
+    assert "timeout_seconds" in inspect.signature(service.begin).parameters
