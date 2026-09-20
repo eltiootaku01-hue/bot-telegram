@@ -86,6 +86,8 @@ class BrainClient:
             available.append("ollama")
         if preferred in available:
             return [preferred] + [name for name in available if name != preferred]
+        if "ollama" in available:
+            return ["ollama"] + [name for name in available if name != "ollama"]
         return available
 
     def _uses_custom_settings(self, provider: str) -> bool:
