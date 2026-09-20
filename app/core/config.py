@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # Optional daily AI world-curation pass; when false, AI remains manual-only.
     ai_curator_auto: bool = False
 
+    # Chie human verification timeout for newly joined members.
+    human_verification_timeout_seconds: int = 120
+
     # World time is explicit for schedules; persistence remains UTC.
     bot_world_timezone: str = "America/Argentina/Buenos_Aires"
 
