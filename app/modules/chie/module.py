@@ -18,7 +18,7 @@ from app.core.module import BotModule
 from app.core.time import world_now
 from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
-from app.db.world_models import WorldReview
+from app.db.world_models import WorldProposal, WorldReview
 from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
 from app.services.operator_health import OperatorHealthService, format_operator_health
@@ -341,12 +341,62 @@ class ChieModule(BotModule):
                         )
                     last_day = report.period_key
                     logger.info("Ciudad Animals daily review ready: day=%s", day_key)
+                    await self._maybe_generate_daily_world_proposal(
+                        day_key=day_key,
+                        report=report,
+                    )
+                except asyncio.CancelledError:
+                    raise
                 except Exception:
                     logger.exception(
                         "Failed to build Ciudad Animals daily review: day=%s",
                         day_key,
                     )
             await asyncio.sleep(900)
+
+    async def _maybe_generate_daily_world_proposal(
+        self,
+        *,
+        day_key: str,
+        report,
+    ) -> None:
+        """Generate an optional daily proposal from aggregate data only."""
+        if not self.settings.ai_curator_auto:
+            return
+        if not self.settings.ai_for(BotIdentity.CHIE):
+            return
+        if not self.settings.admin_user_id or self.bot is None:
+            return
+
+        async with self.database.session() as session:
+            review_row = await session.scalar(
+                select(WorldReview).where(
+                    WorldReview.review_type == self.curator.DAILY,
+                    WorldReview.period_key == day_key,
+                )
+            )
+            if review_row is None:
+                raise RuntimeError("Daily world review was not persisted")
+            existing = await session.scalar(
+                select(WorldProposal).where(
+                    WorldProposal.review_id == review_row.id,
+                    WorldProposal.generator == self.curator_ai._generator_name(),
+                )
+            )
+            if existing is not None:
+                return
+            review_id = review_row.id
+
+        proposals = await self.curator_ai.propose_for_database(
+            self.database,
+            review_id=review_id,
+            report=report,
+        )
+        await self.bot.send_message(
+            self.settings.admin_user_id,
+            format_world_proposals(proposals),
+            reply_markup=world_proposal_keyboard(proposals.proposal_id),
+        )
 
     async def world_review_command(self, message: Message) -> None:
         if (
