@@ -436,9 +436,9 @@ async def test_operator_inbox_exposes_responding_request_for_manual_resolution(d
     assert message.answer.await_count == 1
     call = message.answer.await_args
     assert "respondiendo" in call.args[0]
-    assert call.kwargs["reply_markup"].inline_keyboard[0][0].callback_data == (
-        f"tio:request:resolve:{request_id}"
-    )
+    keyboard = call.kwargs["reply_markup"].inline_keyboard
+    assert keyboard[0][0].callback_data == f"tio:request:view:{request_id}"
+    assert keyboard[1][0].callback_data == f"tio:request:resolve:{request_id}"
 
 
 def _owner_message(text: str):
