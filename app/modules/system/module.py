@@ -80,6 +80,7 @@ class SystemModule(BotModule):
                 BotCommand(command="gacha", description="Abrir el gacha"),
                 BotCommand(command="inventario", description="Ver tu inventario"),
                 BotCommand(command="combate", description="Abrir combate"),
+                BotCommand(command="misiones", description="Ver tus misiones diarias"),
                 BotCommand(command="puntos", description="Consultar tus puntos"),
                 BotCommand(command="ranking", description="Consultar el ranking"),
                 BotCommand(command="gacha_pendientes", description="Revisar drops raros pendientes"),
@@ -171,7 +172,7 @@ class SystemModule(BotModule):
                 "🎰 <code>/gacha</code> — abre el gacha.\n"
                 "🎒 <code>/inventario</code> — muestra tu colección.\n"
                 "⚔️ <code>/combate</code> — abre combate.\n"
-                "🧠 <code>/trivia</code> — consulta la trivia.\n"
+                "📋 <code>/misiones</code> — ver tus misiones diarias.\n"
                 "💰 <code>/puntos</code> y <code>/ranking</code> — progreso comunitario.\n"
                 "🌟 WaifuMon aparece en la comunidad configurada."
             ),
