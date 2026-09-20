@@ -86,6 +86,7 @@ The GitHub Actions Windows workflow builds the five executables, verifies every 
 8. BotManager starts the four bot processes and gives each one its own start/stop control.
 
 Dentro de la comunidad, Chie expone `/reglas` para las normas operativas. En privado, `/mundo` consulta las señales agregadas de Ciudad Animals y `/salud` muestra un diagnóstico de solo lectura de comunidades, jobs, eventos, misterios, catálogo y estados de las identidades.
+El operador humano de Tío Otaku dispone de `/tio_pendientes` para revisar solicitudes y `/tio_responder ID mensaje` para enviar manualmente una respuesta al grupo. El sistema no genera esa respuesta por IA.
 En privado, `/borrar_mi_memoria` permite eliminar tus estadísticas de uso identificables de Ciudad Animals; los agregados globales anónimos no se modifican.
 
 Secrets are saved only in the local `.env` file. `.env` and runtime data are ignored by Git.
