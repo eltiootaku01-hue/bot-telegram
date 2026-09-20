@@ -211,6 +211,22 @@ class CafeModule(BotModule):
                 chat_id=message.chat.id,
                 day_key=day_key,
             )
+            if started.round.status == "published" and started.round.message_id is not None:
+                await message.answer(
+                    "☀️ El evento de hoy ya fue publicado. Podés consultar el Café cuando quieras."
+                )
+                await self._observe("daily_event_view", message)
+                return
+            claimed = await self.events.claim_publication(
+                session,
+                round_id=started.round.id,
+            )
+            if not claimed:
+                await message.answer(
+                    "☀️ El evento de hoy ya se está publicando o quedó registrado."
+                )
+                await self._observe("daily_event_view", message)
+                return
 
         event_text = (
             f"☀️ <b>Evento del Café — {escape(started.event.title)}</b>\n\n"
@@ -224,10 +240,10 @@ class CafeModule(BotModule):
             sent = await message.answer(event_text)
         except Exception:
             async with self.database.session(write=True) as session:
-                row = await session.get(CafeDailyEventRound, started.round.id)
-                if row is not None and row.status == "active" and row.message_id is None:
-                    row.status = "failed"
-                    row.updated_at = utc_now()
+                await self.events.fail_publication(
+                    session,
+                    round_id=started.round.id,
+                )
             raise
 
         async with self.database.session(write=True) as session:
