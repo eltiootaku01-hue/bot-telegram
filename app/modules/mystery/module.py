@@ -205,16 +205,23 @@ class MysteryModule(BotModule):
         await asyncio.sleep(3600)
 
     async def _configured_communities(self) -> list[int]:
+        from app.db.community_models import SetupSession
+
         async with self.database.session() as session:
             rows = await session.scalars(
-                select(MysteryRound.chat_id).where(MysteryRound.status == "active").distinct()
+                select(SetupSession.chat_id)
+                .where(
+                    SetupSession.bot_identity == BotIdentity.CHIE.value,
+                    SetupSession.status == "configured",
+                )
+                .order_by(SetupSession.id.desc())
             )
-            ids = {int(value) for value in rows}
+            ids = list(dict.fromkeys(int(value) for value in rows))
         if self.settings.base_group_chat_id:
-            ids.add(self.settings.base_group_chat_id)
+            ids.insert(0, self.settings.base_group_chat_id)
         return [
             chat_id
-            for chat_id in ids
+            for chat_id in dict.fromkeys(ids)
             if is_authorized_community(self.settings, chat_id)
         ]
 
