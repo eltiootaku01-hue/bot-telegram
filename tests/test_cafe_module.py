@@ -34,7 +34,7 @@ async def test_cafe_menu_is_authored_and_contains_core_services() -> None:
     assert "Archivo y publicaciones" in text
     assert "Recepción y reglas" in text
     assert "/recomendacion" in text
-    assert "Misterio diario" in text
+    assert "Trivia" in text
 
     await database.close()
 
@@ -69,15 +69,15 @@ async def test_recommendation_is_deterministic_per_day_and_chat() -> None:
 
 
 @pytest.mark.asyncio
-async def test_cafe_mystery_publishes_authored_case_and_buttons() -> None:
+async def test_cafe_menu_announces_cari_trivia() -> None:
     database = Database("sqlite+aiosqlite:///:memory:")
     await database.create_schema()
     module = CafeModule(database)
 
-    answers: list[tuple[str, object]] = []
+    answers: list[str] = []
 
     async def answer(text: str, **kwargs) -> None:
-        answers.append((text, kwargs.get("reply_markup")))
+        answers.append(text)
 
     message = SimpleNamespace(
         chat=SimpleNamespace(id=-100, type="supergroup"),
@@ -85,22 +85,12 @@ async def test_cafe_mystery_publishes_authored_case_and_buttons() -> None:
         answer=answer,
     )
 
-    await module.mystery(message)
+    await module.cafe(message)
 
     assert answers
-    text, markup = answers[0]
-    assert "Misterio del Café" in text
-    assert "no añade hechos al canon" in text
-    assert markup is not None
-    assert len(markup.inline_keyboard) >= 2
-    assert all(
-        button.callback_data and button.callback_data.startswith("cafe:mystery:")
-        for row in markup.inline_keyboard
-        for button in row
-    )
-
+    assert "Trivia" in answers[0]
+    assert "Cari" in answers[0]
     await database.close()
-
 
 @pytest.mark.asyncio
 async def test_cafe_event_persists_and_reuses_daily_state() -> None:
