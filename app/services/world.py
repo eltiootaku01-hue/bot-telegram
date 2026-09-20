@@ -92,6 +92,28 @@ class WorldService:
 
         return await session.scalar(select(WorldUsageStat).where(*filters))  # type: ignore[return-value]
 
+    async def usage_count(
+        self,
+        session: AsyncSession,
+        *,
+        bot_identity: BotIdentity | str,
+        entry_type: str,
+        entry_key: str,
+        scope_type: str = "world",
+        scope_id: str = "global",
+    ) -> int:
+        """Return the durable aggregate count for one world signal."""
+        row = await session.scalar(
+            select(WorldUsageStat.count).where(
+                WorldUsageStat.bot_identity == str(bot_identity),
+                WorldUsageStat.entry_type == entry_type,
+                WorldUsageStat.entry_key == entry_key,
+                WorldUsageStat.scope_type == scope_type,
+                WorldUsageStat.scope_id == scope_id,
+            )
+        )
+        return int(row or 0)
+
     async def observe_action(
         self,
         session: AsyncSession,
