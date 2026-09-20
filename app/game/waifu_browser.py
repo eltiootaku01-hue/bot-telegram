@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from app.game.catalog import CHARACTERS
-from app.game.models import CardTier, Character, Element, Rarity
+from app.game.models import Character
 from app.game.waifu_catalog import ANIME_CORNER_2025_SOURCE, RANKER_2026_SOURCE
 
 
