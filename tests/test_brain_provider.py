@@ -101,3 +101,30 @@ def test_internal_request_can_raise_user_input_limit() -> None:
     )
     messages = client._messages(request)
     assert messages[-1]["content"] == payload
+
+
+
+def test_gemini_respects_internal_request_input_limit() -> None:
+    settings = Settings(llm_provider="gemini", gemini_api_key="secret-key")
+    client = BrainClient(settings)
+    captured: dict[str, object] = {}
+
+    def fake_post_json(url: str, headers: dict[str, str], payload: dict) -> dict:
+        captured.update(url=url, headers=headers, payload=payload)
+        return {"candidates": [{"content": {"parts": [{"text": "ok"}]}}]}
+
+    client._post_json = fake_post_json  # type: ignore[method-assign]
+    payload = "x" * 4000
+
+    result = client._gemini(
+        LLMRequest(
+            identity=BotIdentity.CHIE,
+            user_text=payload,
+            max_user_chars=3000,
+            persona="Curador interno",
+        )
+    )
+
+    assert result == "ok"
+    messages = captured["payload"]["contents"]  # type: ignore[index]
+    assert messages[-1]["parts"][0]["text"] == "x" * 3000  # type: ignore[index]
