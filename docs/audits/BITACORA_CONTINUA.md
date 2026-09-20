@@ -1027,3 +1027,38 @@ Antes de empezar un nuevo bloque:
 8. actualizar esta bitácora con SHA, workflows, errores y decisiones.
 
 La bitácora debe registrar tanto los éxitos como los fallos de CI que hayan provocado cambios.
+
+---
+
+# 24. CORRECCIÓN DE CONTINUIDAD — 2026-09-20
+
+## SHA realmente actual de `main`
+
+- `main`: `dd941d5e231e61d74b64917dc099cfec6ead210b`
+- Commit: `docs: refresh continuous development master log`
+- Este commit modifica únicamente la bitácora maestra; no modifica código funcional.
+
+## Último código funcional certificado
+
+- SHA funcional: `9244bf7ed818a0ec899b8f2dbcbfe65cc0f3c903`
+- CI #1208: **SUCCESS**
+- Windows Build #838: **SUCCESS**
+- Pytest: **412 passed, 52 warnings**
+- Windows: cinco ejecutables + smoke test + instalador + ZIP portable + checksums + artifacts.
+
+## Validación del cambio documental
+
+- CI #1209: **SUCCESS** sobre `dd941d5e231e61d74b64917dc099cfec6ead210b`.
+- Windows Build #839 fue disparado por el cambio documental. Su resultado debe tratarse como validación del repositorio/documentación; la certificación funcional del código sigue siendo Windows #838 sobre `9244bf7...` mientras no exista un cambio de código posterior.
+
+## Regla corregida
+
+La palabra **“actual”** en esta bitácora siempre debe referirse al SHA de `main` más reciente.
+
+Cuando `main` tenga un commit solo documental posterior al último código:
+
+- registrar ambos SHAs;
+- identificar explícitamente cuál es el último código funcional;
+- no declarar un SHA documental como si fuera una nueva versión funcional;
+- no recalcular el porcentaje global por cambios puramente documentales.
+
