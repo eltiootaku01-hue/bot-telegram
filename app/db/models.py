@@ -376,3 +376,25 @@ class DurableJob(Base):
     last_error: Mapped[str | None] = mapped_column(String(4000))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class TioOperatorRequest(Base):
+    """Human-operated inbox item for messages explicitly addressed to Tío Otaku."""
+
+    __tablename__ = "tio_operator_requests"
+    __table_args__ = (
+        UniqueConstraint(
+            "chat_id",
+            "source_message_id",
+            name="uq_tio_operator_request_source",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    user_id: Mapped[int] = mapped_column(BigInteger)
+    source_message_id: Mapped[int] = mapped_column(BigInteger)
+    text: Mapped[str] = mapped_column(String(4000))
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
