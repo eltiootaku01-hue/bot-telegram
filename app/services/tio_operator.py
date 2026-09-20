@@ -67,6 +67,40 @@ class TioOperatorService:
 
         return TioOperatorResult(row, True)
 
+    async def claim_response(
+        self,
+        session: AsyncSession,
+        *,
+        request_id: int,
+    ) -> bool:
+        """Claim an operator response exactly once before sending it."""
+        result = await session.execute(
+            update(TioOperatorRequest)
+            .where(
+                TioOperatorRequest.id == request_id,
+                TioOperatorRequest.status.in_(("pending", "acknowledged", "responding")),
+            )
+            .values(status="responding", updated_at=utc_now())
+        )
+        return result.rowcount == 1
+
+    async def release_response(
+        self,
+        session: AsyncSession,
+        *,
+        request_id: int,
+    ) -> bool:
+        """Return a claimed response to the acknowledged state after delivery failure."""
+        result = await session.execute(
+            update(TioOperatorRequest)
+            .where(
+                TioOperatorRequest.id == request_id,
+                TioOperatorRequest.status == "responding",
+            )
+            .values(status="acknowledged", updated_at=utc_now())
+        )
+        return result.rowcount == 1
+
     async def decide(
         self,
         session: AsyncSession,
