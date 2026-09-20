@@ -762,3 +762,57 @@ Un bloque está terminado cuando:
 **Bloque de producto:** continúa en profundidad autoral, mundo vivo, superficies avanzadas, operador e IA curadora.
 
 **Regla inmediata para la siguiente sesión:** no rehacer infraestructura cerrada; comenzar por una capacidad de producto nueva que pueda ser probada y observada.
+
+
+# 21. Bloque adicional — Misterio diario del Café Otaku (2026-09-20)
+
+## Motivo
+
+Se detectó una superficie declarada pero incompleta: el menú del Café mostraba “Misterio diario”, aunque no existía una función ejecutable asociada.
+
+## Implementación realizada
+
+- Nuevo motor determinista: `app/services/cafe_mystery.py`.
+- Cinco minicasos authored con opciones y resolución.
+- Selección estable por `fecha + chat_id`; no depende de estado aleatorio del proceso.
+- Los casos se consideran cotidianos/no canónicos y no añaden hechos narrativos.
+- `CafeModule` expone `/misterio`.
+- Se añadió botón inline `🕵️ Misterio` al menú del Café.
+- El callback diferencia correctamente entre abrir el caso y responder una opción.
+- Botones de un día anterior se rechazan como vencidos.
+- Las aperturas y resoluciones alimentan el world observation ledger.
+- `cafe_mystery` quedó declarado también en `WORLD_CATALOG`.
+
+## Regresiones
+
+- `tests/test_cafe_mystery.py`: valida catálogo, determinismo y selección por chat.
+- `tests/test_cafe_module.py`: valida que el menú anuncie el misterio y que publique un caso con botones.
+- `tests/test_cafe_surface.py`: valida el botón `cafe:mystery:open`.
+
+## Error detectado antes de CI
+
+El primer diseño utilizó el mismo prefijo de callback para abrir el misterio y para responderlo, pero el botón de apertura tenía tres segmentos y el parser de respuesta esperaba cuatro. La implementación se separó en:
+
+- `cafe:mystery:open` para abrir;
+- `cafe:mystery:<case_index>:<option_index>` para responder.
+
+La regresión quedó cubierta antes de considerar el bloque terminado.
+
+## Evidencia de validación
+
+- SHA validado del código: `b10a94af7d81a5b9316ee18180bb005a5805833c`.
+- CI #1207: SUCCESS.
+- Windows Build #837: SUCCESS.
+- El empaquetado Windows completó ejecutables, smoke test, instalador, ZIP portable, checksums y artifacts.
+
+## Decisión de no repetición
+
+No volver a auditar el misterio diario ni el botón de navegación salvo regresión. El siguiente trabajo debe crear una capacidad diferente que aporte comportamiento nuevo al producto.
+
+# 22. Estado de corte de esta bitácora
+
+- Código funcional validado: `b10a94af7d81a5b9316ee18180bb005a5805833c`.
+- Última suite conocida: 408 pruebas pasadas en CI #1194 antes de este bloque; el CI del bloque actual también terminó SUCCESS.
+- Porcentaje global conservador: **79%**.
+- El incremento de este bloque mejora principalmente Ciudad Animals/Café Otaku, pero no justifica elevar artificialmente el global.
+- Próximo foco: situaciones authored nuevas e interacción contextual; no reabrir infraestructura ya cerrada.
