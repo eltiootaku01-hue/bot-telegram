@@ -13,6 +13,7 @@ from sqlalchemy import select, update
 from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
+from app.services.world import WorldService
 from app.services.community import CommunityResolver
 from app.services.world import WorldService
 from app.core.module import BotModule
@@ -40,6 +41,7 @@ class TriviaModule(BotModule):
         self.missions = DailyMissionService()
         self._bot: Bot | None = None
         self.world = WorldService()
+        self.world = WorldService()
         self.community = CommunityResolver(self.settings)
 
     def setup(self) -> None:
@@ -47,6 +49,7 @@ class TriviaModule(BotModule):
         self.router.message.register(self.points_command, Command("puntos"))
         self.router.message.register(self.ranking_command, Command("ranking"))
         self.router.callback_query.register(self.start_panel, F.data == "game:trivia:start")
+        self.router.callback_query.register(self.open_callback, F.data == "cafe:trivia:open")
         self.router.callback_query.register(self.answer, F.data.startswith("game:trivia:"))
         self.router.callback_query.register(self.start_callback, F.data == "game:trivia:start")
 
@@ -65,38 +68,22 @@ class TriviaModule(BotModule):
         await callback.answer()
 
     async def start_command(self, message: Message) -> None:
-        if message.chat.type != "private":
+        if message.chat.type in {"group", "supergroup"}:
+            if await self._publish(message.chat.id, source=message):
+                return
+            await message.answer("🧠 Ya hay una trivia activa en esta comunidad.")
             return
-        await message.answer("🧠 La trivia pública aparece sola. Acá podés consultar su estado.")
+        await message.answer("🧠 La Trivia de Cari se juega en la comunidad. Desde acá podés consultar el estado.")
 
-    async def start_panel(self, callback: CallbackQuery) -> None:
-        if callback.message is None or callback.message.chat.type != "private":
-            await callback.answer("La consulta de trivia se hace desde tu chat privado con Sunna.", show_alert=True)
+    async def open_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None:
+            await callback.answer("No pude abrir la trivia.", show_alert=True)
             return
-        community_chat_id = await self._community_chat_id(callback.from_user.id)
-        if community_chat_id is None:
-            await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
+        if not is_authorized_community(self.settings, callback.message.chat.id):
+            await callback.answer("Esta comunidad no está autorizada.", show_alert=True)
             return
-        async with self.database.session() as session:
-            round_row = await session.scalar(
-                select(TriviaRound)
-                .where(
-                    TriviaRound.chat_id == community_chat_id,
-                    TriviaRound.status == "active",
-                )
-                .order_by(TriviaRound.id.desc())
-            )
-        if round_row is None or utc_now() >= round_row.expires_at:
-            await callback.answer("No hay una trivia activa ahora. Aparecerá automáticamente en la comunidad.", show_alert=True)
-            return
-        await callback.message.edit_text(
-            "🧠 <b>Trivia activa</b>\n\n"
-            f"{round_row.question}\n\n"
-            f"⏱️ Termina pronto · 🏆 +{round_row.points} puntos\n"
-            "Respondé directamente en la publicación de trivia del grupo."
-        )
-        await self._observe_action("trivia_status", callback.from_user.id)
-        await callback.answer()
+        published = await self._publish(callback.message.chat.id, source=callback.message)
+        await callback.answer("Trivia lista." if published else "Ya hay una trivia activa.")
 
     async def _publish(self, chat_id: int, source: Message | None = None) -> bool:
         if not is_authorized_community(self.settings, chat_id):
@@ -131,6 +118,18 @@ class TriviaModule(BotModule):
                 )
                 await session.commit()
             return False
+        try:
+            if source is not None and source.from_user is not None:
+                async with self.database.session() as session:
+                    await self.world.observe_action(
+                        session,
+                        bot_identity=BotIdentity.CARI,
+                        action_key="trivia_publish",
+                        user_id=source.from_user.id,
+                        chat_id=chat_id,
+                    )
+        except Exception:
+            logger.exception("World observation failed for Cari trivia publish")
         return True
 
     async def answer(self, callback: CallbackQuery) -> None:
