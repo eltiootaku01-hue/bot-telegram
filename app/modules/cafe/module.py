@@ -13,6 +13,7 @@ from app.core.module import BotModule
 from app.core.time import world_now
 from app.db.database import Database
 from app.services.cafe_events import CafeEventService
+from app.services.cafe_context import CafeContextService
 from app.services.cafe_mystery import CAFE_MYSTERIES, mystery_for
 from app.services.world import WorldService
 from app.ui.cafe_keyboards import cafe_menu_keyboard
@@ -55,6 +56,7 @@ class CafeModule(BotModule):
         self.timezone_name = self.settings.bot_world_timezone
         self.world = WorldService()
         self.events = CafeEventService()
+        self.context = CafeContextService()
 
     def setup(self) -> None:
         self.router.message.register(self.cafe, Command("cafe"))
@@ -78,6 +80,8 @@ class CafeModule(BotModule):
             F.data == "cafe:event:open",
         )
         self.router.message.register(self.event_command, Command("evento"))
+        self.router.callback_query.register(self.context_callback, F.data == "cafe:context:open")
+        self.router.message.register(self.context_command, Command("momento"))
 
     async def _observe(self, action_key: str, message: Message) -> None:
         if message.from_user is None:
