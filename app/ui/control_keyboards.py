@@ -116,3 +116,13 @@ def tio_operator_history_keyboard(request_ids: list[int]) -> InlineKeyboardMarku
         )
     builder.adjust(4)
     return builder.as_markup()
+
+
+def command_hub_detail_keyboard() -> InlineKeyboardMarkup:
+    """Navigation controls for a Chie hub section."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="⬅️ Panel principal", callback_data="chie:hub:home"),
+        InlineKeyboardButton(text="📖 Ayuda de Chie", callback_data="help:chie:commands"),
+    )
+    return builder.as_markup()
