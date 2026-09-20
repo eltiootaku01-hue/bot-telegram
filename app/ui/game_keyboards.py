@@ -13,10 +13,6 @@ def game_hub_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="⚔️ Combate", callback_data="game:combat:open"),
         InlineKeyboardButton(text="🎯 Misiones", callback_data="game:missions:open"),
     )
-    builder.row(
-        InlineKeyboardButton(text="🧠 Trivia", callback_data="game:trivia:start"),
-        InlineKeyboardButton(text="🕵️ Misterio", callback_data="game:mystery:open"),
-    )
     return builder.as_markup()
 
 
