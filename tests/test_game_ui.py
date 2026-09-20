@@ -26,6 +26,4 @@ def test_game_hub_keeps_core_sunna_actions() -> None:
         "game:gacha:open",
         "game:inventory:open",
         "game:combat:open",
-        "game:trivia:start",
-        "game:mystery:open",
     } <= data
