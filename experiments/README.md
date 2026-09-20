@@ -1,12 +1,19 @@
-# Experiments
+# Experimentos
 
-This directory is reserved for ideas, prototypes, integrations, and algorithms that are not yet trusted enough for the main bot runtime.
+Solo se conserva aquí una línea experimental: **local-first**.
 
-## Rules
+## Regla de promoción
 
-- Nothing here is imported by `app/` unless explicitly promoted.
-- Experimental code must include a short note explaining its purpose, risks, and what would make it production-ready.
-- Prefer small, reversible experiments over replacing stable components.
-- When an experiment proves useful, move the smallest proven part into `app/`, add tests, and remove or archive the prototype.
+Toda funcionalidad que ya tenga contrato claro, pruebas y comportamiento seguro debe vivir en `app/`, ejecutarse desde `main` y validarse en CI. Esta carpeta no debe convertirse en una segunda aplicación.
 
-The goal is to let the bot learn from external patterns without destabilizing the working core.
+## Experimento vigente
+
+`experiments/local_first/` estudia la política de escalado de IA local con Ollama antes de proveedores externos.
+
+Cuando una parte del experimento cumpla sus criterios, se promueve a producción y se elimina su prototipo de aquí.
+
+## Prohibiciones
+
+- No importar módulos experimentales desde `app/`.
+- No dejar implementaciones duplicadas entre `experiments/` y `app/`.
+- No contar prototipos como funciones terminadas.
