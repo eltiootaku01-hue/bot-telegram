@@ -272,7 +272,7 @@ def test_everyday_mystery_cases_are_nonviolent_and_have_valid_answers(case_key: 
     assert case.clues
     assert any(
         term in " ".join((case.title, case.question, *case.clues)).casefold()
-        for term in ("pastel", "cargador", "teléfono", "cable", "notificación", "auricular", "heladera", "manga")
+        for term in ("pastel", "cargador", "teléfono", "cable", "notificación", "auricular", "heladera", "manga", "azúcar")
     )
     forbidden = ("asesin", "homicid", "cadáver", "matar", "muert")
     assert not any(term in " ".join((case.title, case.question, *case.clues)).casefold() for term in forbidden)
