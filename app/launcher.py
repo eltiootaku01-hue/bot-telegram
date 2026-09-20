@@ -45,6 +45,9 @@ ENV_DEFAULTS = {
     "ALLOW_ADMIN_PRIVATE_CHAT": "true",
     "ALLOW_USER_PRIVATE_CHAT": "true",
     "AI_ENABLED": "false",
+    "MASTER_TELEGRAM_ID": "0",
+    "MASTER_USERNAME": "",
+    "BASE_GROUP_CHAT_ID": "0",
 }
 
 AI_FIELDS = (
@@ -207,8 +210,6 @@ class BotLauncher(tk.Tk):
         ttk.Entry(infra, textvariable=self.master_username_var, width=18).grid(row=0, column=3, sticky="w", padx=8)
         ttk.Label(infra, text="Grupo general / bienvenida").grid(row=1, column=0, sticky="w", pady=(8, 0))
         ttk.Entry(infra, textvariable=self.base_group_var, width=16).grid(row=1, column=1, sticky="w", padx=8, pady=(8, 0))
-        ttk.Label(infra, text="Media vault chat ID").grid(row=0, column=2, sticky="w", padx=(20, 0))
-        ttk.Entry(infra, textvariable=self.media_var, width=16).grid(row=0, column=3, sticky="w", padx=8)
         ttk.Label(infra, text="Media vault chat ID").grid(row=0, column=4, sticky="w", padx=(18, 0))
         ttk.Entry(infra, textvariable=self.media_var, width=16).grid(row=0, column=5, sticky="w", padx=8)
         ttk.Label(infra, text="Página/Canal de publicaciones").grid(row=1, column=2, sticky="w", pady=(8, 0))
