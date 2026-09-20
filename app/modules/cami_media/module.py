@@ -418,8 +418,7 @@ class CamiMediaModule(BotModule):
                 "ℹ️ Esta ficha pertenece al catálogo local. Cami no completa datos faltantes con IA.",
             )
         )
-        await message.answer("
-".join(lines))
+        await message.answer("\n".join(lines))
         await self._observe_action(
             "anime_detail",
             message.from_user.id,
