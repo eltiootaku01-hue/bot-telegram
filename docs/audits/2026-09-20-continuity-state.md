@@ -131,6 +131,27 @@ Primero profundizar superficies y continuidad de interacción; después cerrar u
 ### Regla de no repetición reforzada
 No volver a implementar otra capa de validación de configuración dentro de Tkinter ni duplicar `parse_numeric_ids`. Cualquier nueva superficie de configuración debe reutilizar `validate_setup()`.
 
+
+## Registro posterior — superficies de operación
+
+### Mejora entregada
+- Bot Manager ahora valida configuración antes de iniciar procesos mediante `app/services/setup_validation.py`.
+- Chie ahora presenta un panel comunitario accionable por sección, con comandos concretos y navegación de retorno.
+- Se añadieron regresiones para la validación de configuración y las cinco secciones del panel.
+- El panel no asume que Chie sea Sunna/Cami: remite explícitamente al bot responsable cuando una acción pertenece a otra identidad.
+
+### Errores y correcciones
+- El test de concurrencia de Cami inicialmente no declaraba el chat en la allowlist después de endurecer el publisher. Se corrigió el fixture; la protección de producción se mantuvo.
+- No se detectaron errores funcionales nuevos en la implementación del panel antes de subirla.
+- Los runs intermedios de CI/Windows cancelados por nuevos pushes no se consideran fallos funcionales; el SHA más reciente es la fuente de verdad.
+
+### Validación pendiente de este bloque
+- CI #1183 y Windows #813 deben terminar SUCCESS sobre `0ca6b5bab05199f8931cf7faea23e5a5eaf7bcc8`.
+- No marcar esta mejora como cerrada por existencia del commit solamente.
+
+### Próximo foco
+Después de validar este bloque, priorizar superficies aún simples de Cari/Cami y la experiencia histórica de Tío Otaku, sin reabrir componentes de concurrencia ya cubiertos.
+
 ## Snapshot 2026-09-20 — actualización posterior
 
 Estado global conservador: 79%. Esta cifra estima cobertura frente a la visión completa del proyecto; no es una métrica de CI.
