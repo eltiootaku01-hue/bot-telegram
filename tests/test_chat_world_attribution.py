@@ -14,6 +14,20 @@ from app.modules.chat.module import ChatModule
 from app.modules.system.module import SystemModule
 
 
+class FakeTargetSession:
+    async def close(self) -> None:
+        return None
+
+
+class FakeTargetBot:
+    def __init__(self) -> None:
+        self.session = FakeTargetSession()
+        self.sent: list[tuple[int, str, int | None]] = []
+
+    async def send_message(self, chat_id: int, text: str, message_thread_id: int | None = None) -> None:
+        self.sent.append((chat_id, text, message_thread_id))
+
+
 @pytest.fixture
 async def database():
     database = Database("sqlite+aiosqlite:///:memory:")
@@ -166,7 +180,12 @@ async def test_non_cari_character_chat_leaves_complex_addressed_prompt_for_brain
 async def test_chat_uses_authored_pair_scene_without_generating_a_second_independent_reply(
     database: Database,
 ) -> None:
-    module = ChatModule(database, identity=BotIdentity.CAMI)
+    module = ChatModule(
+        database,
+        identity=BotIdentity.CAMI,
+        settings=__import__('app.core.config', fromlist=['Settings']).Settings(bot_token_sunna='sunna-test-token'),
+        bot_factory=lambda token: FakeTargetBot(),
+    )
     answers: list[str] = []
 
     async def answer(text: str) -> None:
@@ -191,7 +210,18 @@ async def test_chat_uses_authored_pair_scene_without_generating_a_second_indepen
 
 @pytest.mark.asyncio
 async def test_interaction_usage_is_recorded_as_relationship(database: Database) -> None:
-    module = ChatModule(database)
+    target_bots: list[FakeTargetBot] = []
+
+    def factory(token: str) -> FakeTargetBot:
+        bot = FakeTargetBot()
+        target_bots.append(bot)
+        return bot
+
+    module = ChatModule(
+        database,
+        settings=__import__('app.core.config', fromlist=['Settings']).Settings(bot_token_cami='cami-test-token'),
+        bot_factory=factory,
+    )
 
     async def answer(text: str) -> None:
         return None
@@ -203,7 +233,9 @@ async def test_interaction_usage_is_recorded_as_relationship(database: Database)
         answer=answer,
     )
 
-    await module.handle_text(message)
+    await module.handle_text(message, AsyncMock())
+
+    assert target_bots
 
     async with database.session() as session:
         rows = list(await session.scalars(
