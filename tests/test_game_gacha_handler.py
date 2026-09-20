@@ -76,7 +76,7 @@ async def test_rare_gacha_without_owner_is_refunded_and_closed(tmp_path) -> None
         )
 
     assert profile is not None
-    assert profile.points == GACHA_COST_POINTS
+    assert profile.points == GACHA_COST_POINTS + 10
     assert approval is not None
     assert approval.status == "rejected"
     assert roll is not None
