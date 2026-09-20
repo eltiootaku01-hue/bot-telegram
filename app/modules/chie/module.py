@@ -18,11 +18,13 @@ from app.core.module import BotModule
 from app.core.time import world_now
 from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
+from app.db.world_models import WorldReview
 from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
 from app.services.operator_health import OperatorHealthService, format_operator_health
 from app.services.world import WorldService
 from app.services.world_curator import WorldCuratorService, format_world_review
+from app.services.world_curator_ai import WorldCuratorAIService, format_world_proposals
 from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard
 
 logger = logging.getLogger(__name__)
@@ -58,6 +60,7 @@ class ChieModule(BotModule):
         self.settings = settings or get_settings()
         self.world = WorldService()
         self.curator = WorldCuratorService(self.world)
+        self.curator_ai = WorldCuratorAIService(self.settings)
         self.health = OperatorHealthService()
         self.worker = DurableWorker(database, event_bus=EventBus(), poll_seconds=1.0)
         self.bot: Bot | None = None
@@ -73,6 +76,7 @@ class ChieModule(BotModule):
         self.router.message.register(self.rules_command, Command("reglas"))
         self.router.message.register(self.world_command, Command("mundo"))
         self.router.message.register(self.world_review_command, Command("revisar_mundo"))
+        self.router.message.register(self.world_proposal_command, Command("proponer_mundo"))
         self.router.message.register(self.health_command, Command("salud"))
         self.router.message.register(self.clear_my_world_data, Command("borrar_mi_memoria"))
         self.router.chat_member.register(self.member_joined)
@@ -349,6 +353,37 @@ class ChieModule(BotModule):
                 day_key=day_key,
             )
         await message.answer(format_world_review(report))
+    async def world_proposal_command(self, message: Message) -> None:
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or message.from_user.id != self.settings.admin_user_id
+        ):
+            return
+        day_key = world_now(self.settings.bot_world_timezone).date().isoformat()
+        try:
+            async with self.database.session() as session:
+                report = await self.curator.build_daily(
+                    session,
+                    day_key=day_key,
+                )
+                review_row = await session.scalar(
+                    select(WorldReview).where(
+                        WorldReview.review_type == self.curator.DAILY,
+                        WorldReview.period_key == day_key,
+                    )
+                )
+                if review_row is None:
+                    raise RuntimeError("Daily world review was not persisted")
+                proposals = await self.curator_ai.propose(
+                    session,
+                    review_row=review_row,
+                    report=report,
+                )
+            await message.answer(format_world_proposals(proposals))
+        except Exception as exc:
+            logger.exception("Failed to generate world proposals")
+            await message.answer(f"⚠️ No se pudieron generar propuestas: {exc}")
     async def health_command(self, message: Message) -> None:
         """Show a read-only system health snapshot to the configured owner."""
         if (
