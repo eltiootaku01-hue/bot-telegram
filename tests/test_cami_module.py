@@ -315,6 +315,7 @@ async def test_cami_request_queue_dashboard_aggregates_authorized_communities(tm
         session.add_all(
             [
                 User(id=7, first_name="Master"),
+                User(id=8, first_name="Operator"),
                 Chat(id=-100, type="supergroup", title="One"),
                 Chat(id=-200, type="supergroup", title="Two"),
                 SetupSession(
@@ -324,7 +325,7 @@ async def test_cami_request_queue_dashboard_aggregates_authorized_communities(tm
                     status="configured",
                 ),
                 SetupSession(
-                    user_id=7,
+                    user_id=8,
                     chat_id=-200,
                     bot_identity="chie",
                     status="configured",
@@ -337,7 +338,7 @@ async def test_cami_request_queue_dashboard_aggregates_authorized_communities(tm
                     status="pending_admin",
                 ),
                 FanRequest(
-                    user_id=7,
+                    user_id=8,
                     chat_id=-200,
                     description="two",
                     points_cost=50,
