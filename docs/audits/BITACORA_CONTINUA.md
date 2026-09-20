@@ -3,7 +3,7 @@
 **Repositorio:** `eltiootaku01-hue/bot-telegram`  
 **Rama operativa:** `main`  
 **Fecha de corte:** 2026-09-20  
-**Último checkpoint operativo:** ver la sección 28; el SHA de main y el último SHA funcional se registran por separado.  
+**Último checkpoint operativo:** sección 32; el SHA de main y la evidencia CI/Windows se registran en el cierre más reciente.  
 **Objetivo:** evitar trabajo repetido, conservar evidencia de errores/pruebas y dirigir cada nueva sesión hacia áreas todavía incompletas.
 
 ---
@@ -1676,3 +1676,178 @@ En cada nueva sesión:
 6. implementar código + regresión;
 7. validar;
 8. añadir aquí el error encontrado, la causa, la corrección y la evidencia.
+
+
+# 32. CONTINUIDAD — CHECKPOINT REAL DE MAIN — 2026-09-20
+
+## 32.1 Estado verificado
+
+- main actual: c7d9f855e8c72d3610e88eda170a12bba5a64a47
+- Commit: docs: record continuous development state after contextual cafe and curator work
+- Este commit consolida documentación después de los bloques de Café contextual, historial de Tío Otaku y curación IA.
+- El árbol de GitHub fue consultado directamente antes de esta actualización.
+
+## 32.2 Validación CI
+
+CI #1270 — SUCCESS.
+
+- SHA validado: c7d9f855e8c72d3610e88eda170a12bba5a64a47.
+- Ruff: SUCCESS.
+- Pytest: SUCCESS.
+- Resultado exacto: 437 passed, 52 warnings.
+- Python de CI: 3.12.
+- No hubo fallos de tests en este checkpoint.
+
+Warnings observados: proceden principalmente de SQLAlchemy por un uso interno de datetime.utcnow() dentro de la dependencia; no fueron fallos del proyecto.
+
+## 32.3 Validación Windows / empaquetado
+
+Windows Build #897 — SUCCESS.
+
+- SHA validado: c7d9f855e8c72d3610e88eda170a12bba5a64a47.
+- Pruebas nativas de media/encoder: SUCCESS.
+- Cinco ejecutables: compilados y verificados.
+- Smoke test de BotManager: SUCCESS.
+- Instalador Inno Setup: SUCCESS.
+- Manifest: SUCCESS.
+- ZIP portable: SUCCESS.
+- Checksums SHA-256: SUCCESS.
+- Ambos artefactos fueron subidos correctamente.
+
+Artefactos del checkpoint:
+- bot-telegram-windows-installer: 98,852,648 bytes.
+- digest: sha256:650fc9691c5cd1656df8550319baee1801ec45d4e4f1298cac74d936a32861af.
+- bot-telegram-windows-portable: 96,992,379 bytes.
+- digest: sha256:62d298f8d90e47a76988b8643c1154a3c2065a1b46ea4df53eda70d4e711c927.
+
+## 32.4 Bloques confirmados como existentes
+
+### Contexto del Café
+
+- app/services/cafe_context.py.
+- app/modules/cafe/module.py.
+- app/ui/cafe_keyboards.py.
+- selección por estado real.
+- prioridad por WaifuMon, trivia, pedidos, nuevos humanos, actividad y hora.
+- authored-only.
+- sin modificación automática del canon.
+
+### Misterio diario
+
+- motor determinista.
+- una ronda por comunidad/día.
+- cuatro pistas y cuatro opciones.
+- primer acierto obtiene 15 puntos.
+- intentos persistentes.
+- claim single-winner.
+- recompensa idempotente.
+- manejo de publicación fallida.
+
+### Tío Otaku
+
+- operador humano.
+- historial paginado.
+- /tio_historial.
+- navegación por página.
+- respuestas siempre manuales.
+- no existe generación automática de su voz.
+
+### Curación IA
+
+- revisión agregada persistente.
+- WorldCuratorAIService.
+- llamada de red desacoplada de la sesión SQLite.
+- AI_CURATOR_AUTO=false por defecto.
+- propuesta almacenada como pending/no confiable.
+- aprobación humana.
+- no escribe automáticamente canon, personajes ni repertorio.
+
+## 32.5 Errores que deben permanecer como memoria
+
+1. Fixtures relacionales incompletos en pruebas del Café: corregidos para respetar FK.
+2. Conteo inicial de nuevos integrantes incluía bots: corregido con filtro de usuarios humanos.
+3. Mock de navegación histórica sin edit_text: provocó un CI fallido del PR #18; corregido en el test.
+4. Sesión SQLite mantenida durante llamada de red del curator: desacoplada DB/LLM.
+5. Callback privado autenticado con actor equivocado: corregido para usar callback_query.from_user.
+6. Test concurrente de Cami con SQLite :memory:: cambiado a SQLite respaldado por archivo temporal.
+7. Expiración de encuentros podía pisar estados terminales: transición condicionada.
+8. Trivia vencida podía bloquear la siguiente ronda: limpieza de estado expirado.
+9. Tests de timezone con imports incompletos: corregidos.
+10. Jobs/events stale recovery: lease fencing por los valores exactos del claim.
+11. TaskSupervisor: callback tardío no puede borrar una tarea nueva con el mismo nombre.
+12. MemberSync, RequestService y Trivia: propiedad transaccional devuelta al llamador donde era necesaria.
+
+## 32.6 No repetir
+
+No reiniciar auditorías completas de:
+- SQLite/WAL/transactions.
+- EventBus/JobQueue fencing.
+- TaskSupervisor.
+- MemberSync.
+- RequestService.
+- acceso Telegram y callbacks.
+- puntos/gacha/WaifuMon/trivia.
+- Cami Publisher.
+- contexto básico del Café.
+- misterio diario.
+- transporte multi-identidad.
+- historial básico de Tío Otaku.
+- infraestructura básica de curación IA.
+
+Reabrirlos únicamente por regresión, requisito nuevo o evidencia nueva.
+
+## 32.7 Porcentaje actual
+
+Estimación global conservadora: 85%.
+
+La cifra permanece en 85% porque este checkpoint es principalmente de consolidación y validación; no corresponde inflar el porcentaje solo porque CI y Windows estén verdes.
+
+| Área | Estado |
+| --- | ---: |
+| Arquitectura Core | 93% |
+| Persistencia / SQLite / transacciones | 97% |
+| Telegram / seguridad / runtime | 97% |
+| BotManager / Windows / empaquetado | 98% |
+| Módulos funcionales | 95% |
+| WaifuMon / progresión / trivia | 95% |
+| Personajes / canon | 82% |
+| Director / repertorio / rutinas | 82% |
+| Ciudad Animals / Café Otaku | 90% |
+| Interacciones / continuidad | 88% |
+| IA secundaria / curación | 65% |
+| GUI / experiencia de operador | 52% |
+
+## 32.8 Qué falta para acercarse al 100%
+
+- más profundidad autoral de Cari, Cami, Sunna y Chie.
+- más escenas y relaciones authored con variedad real.
+- más vida cotidiana del Café y Ciudad Animals.
+- herramientas avanzadas del operador Tío Otaku.
+- revisión y edición humana de propuestas de curación.
+- superficies adicionales de Cami, Chie y Cari.
+- GUI de operador más completa.
+- estrategia de release final versionado.
+
+## 32.9 Siguiente bloque
+
+Una sola deuda funcional abierta por ciclo.
+
+Flujo obligatorio:
+código -> prueba/regresión -> CI -> Windows si aplica -> bitácora.
+
+Primer candidato: ampliar escenas authored e interacciones contextuales de Cari, Cami, Sunna y Chie usando el estado real del Café, sin introducir IA en la ruta crítica.
+
+## 32.10 Regla de continuidad permanente
+
+1. leer esta sección 32.
+2. consultar main.
+3. comprobar el último CI SUCCESS.
+4. comprobar el último Windows SUCCESS.
+5. leer la lista No repetir.
+6. escoger un pendiente real.
+7. implementar.
+8. probar.
+9. documentar errores reales.
+10. actualizar esta sección.
+
+Este documento es la memoria operativa principal del proyecto.
