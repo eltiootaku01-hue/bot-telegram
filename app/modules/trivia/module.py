@@ -122,6 +122,9 @@ class TriviaModule(BotModule):
 
     async def answer(self, callback: CallbackQuery) -> None:
         parts = (callback.data or "").split(":")
+        if len(parts) == 3 and parts[2] == "start":
+            await callback.answer("La trivia aparece automáticamente en la comunidad configurada. 🧠", show_alert=True)
+            return
         if len(parts) != 4 or not parts[2].isdigit() or not parts[3].isdigit() or callback.message is None:
             await callback.answer("Trivia inválida.", show_alert=True)
             return
