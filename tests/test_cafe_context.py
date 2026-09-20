@@ -1,14 +1,12 @@
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock
 
 import pytest
-from sqlalchemy import select
 
 from app.core.identity import BotIdentity
 from app.db.database import Database
-from app.db.models import FanRequest, GameEncounter, UserChat
+from app.db.models import Chat, FanRequest, GameEncounter, User, UserChat
 from app.db.trivia_models import TriviaRound
-from app.services.cafe_context import CafeContextService
+from app.services.cafe_context import CafeContextService, CafeContextSnapshot
 
 
 @pytest.fixture
@@ -19,15 +17,8 @@ async def database():
     await database.close()
 
 
-def test_choose_is_deterministic_for_the_same_snapshot():
-    service = CafeContextService()
-    snapshot = service.__class__.__annotations__  # type: ignore[attr-defined]
-    assert snapshot
-
-
 def test_choose_prefers_live_game_state():
     service = CafeContextService()
-    from app.services.cafe_context import CafeContextSnapshot
 
     live = CafeContextSnapshot(
         chat_id=-100,
@@ -43,12 +34,11 @@ def test_choose_prefers_live_game_state():
 
     assert moment.speaker is BotIdentity.SUNNA
     assert moment.key == "context-active-waifumon"
+    assert moment.reason == "active_wild_encounter"
 
 
 def test_choose_uses_pending_requests_when_no_game_is_active():
     service = CafeContextService()
-    from app.services.cafe_context import CafeContextSnapshot
-
     snapshot = CafeContextSnapshot(
         chat_id=-100,
         active_encounter=False,
@@ -71,28 +61,30 @@ async def test_snapshot_reads_live_cafe_state(database):
     now = datetime(2026, 9, 20, 15, 0)
 
     async with database.session() as session:
-        session.add_all(
-            [
-                GameEncounter(
-                    id="ctx-game",
-                    chat_id=-100,
-                    character_id="asuna",
-                    rarity="D",
-                    answer="asuna",
-                    expires_at=now + timedelta(minutes=5),
-                    status="active",
-                ),
-                TriviaRound(
-                    chat_id=-100,
-                    question="Q",
-                    options='["a","b"]',
-                    answer_index=0,
-                    explanation="",
-                    points=10,
-                    status="active",
-                    expires_at=now + timedelta(minutes=5),
-                ),
-            ]
+        session.add(User(id=1, first_name="A"))
+        session.add(Chat(id=-100, type="supergroup", title="Cafe"))
+        session.add(
+            GameEncounter(
+                id="ctx-game",
+                chat_id=-100,
+                character_id="asuna",
+                rarity="D",
+                answer="asuna",
+                expires_at=now + timedelta(minutes=5),
+                status="active",
+            )
+        )
+        session.add(
+            TriviaRound(
+                chat_id=-100,
+                question="Q",
+                options='["a","b"]',
+                answer_index=0,
+                explanation="",
+                points=10,
+                status="active",
+                expires_at=now + timedelta(minutes=5),
+            )
         )
 
     async with database.session() as session:
@@ -108,6 +100,14 @@ async def test_snapshot_counts_pending_requests_and_recent_members(database):
     now = datetime(2026, 9, 20, 15, 0)
 
     async with database.session() as session:
+        session.add_all(
+            [
+                User(id=1, first_name="A"),
+                User(id=2, first_name="B"),
+            ]
+        )
+        session.add(Chat(id=-100, type="supergroup", title="Cafe"))
+        await session.flush()
         session.add_all(
             [
                 FanRequest(
@@ -143,14 +143,37 @@ async def test_snapshot_counts_pending_requests_and_recent_members(database):
 
 
 @pytest.mark.asyncio
+async def test_expired_live_state_does_not_trigger_active_context(database):
+    service = CafeContextService()
+    now = datetime(2026, 9, 20, 15, 0)
+
+    async with database.session() as session:
+        session.add(Chat(id=-100, type="supergroup", title="Cafe"))
+        session.add(
+            GameEncounter(
+                id="ctx-expired",
+                chat_id=-100,
+                character_id="asuna",
+                rarity="D",
+                answer="asuna",
+                expires_at=now - timedelta(seconds=1),
+                status="active",
+            )
+        )
+
+    async with database.session() as session:
+        snapshot = await service.snapshot(session, chat_id=-100, now=now)
+
+    assert snapshot.active_encounter is False
+
+
+@pytest.mark.asyncio
 async def test_contextual_surface_uses_authored_service_without_llm(database):
     from types import SimpleNamespace
 
     from app.modules.cafe.module import CafeModule
 
     module = CafeModule(database)
-    module.context = CafeContextService()
-
     answers = []
 
     async def answer(text, **kwargs):
