@@ -324,6 +324,7 @@ class BotLauncher(tk.Tk):
             allow_user_private_chat=self.allow_user_private_var.get(),
             media_storage_chat_id=self.media_var.get(),
             publish_page_chat_id=self.publish_page_var.get(),
+            base_group_chat_id=self.base_group_var.get(),
         )
         if result.errors:
             messagebox.showerror(
