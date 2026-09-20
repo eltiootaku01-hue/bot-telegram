@@ -4,6 +4,7 @@ import re
 from html import escape
 
 from aiogram import Bot, F
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 from app.core.access import is_authorized_community
@@ -29,6 +30,7 @@ class TioOperatorModule(BotModule):
         self.service = TioOperatorService()
 
     def setup(self) -> None:
+        self.router.message.register(self.pending_command, Command("tio_pendientes"))
         self.router.message.register(
             self.capture_message,
             F.text.func(self._should_capture),
@@ -50,6 +52,39 @@ class TioOperatorModule(BotModule):
             and message.chat.id == settings.admin_user_id
             and message.from_user.id == settings.admin_user_id
         )
+
+    async def pending_command(self, message: Message) -> None:
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or message.chat.id != self.settings.admin_user_id
+            or message.from_user.id != self.settings.admin_user_id
+        ):
+            return
+
+        async with self.database.session() as session:
+            requests = await self.service.recent_pending(session, limit=10)
+            if not requests:
+                await message.answer("📭 No hay solicitudes pendientes para Tío Otaku.")
+                return
+
+            lines = ["📨 <b>Bandeja pendiente de Tío Otaku</b>", ""]
+            for request in requests:
+                user, chat = await self.service.context(session, request)
+                user_name = escape(
+                    user.first_name or str(request.user_id)
+                ) if user else str(request.user_id)
+                chat_name = escape(
+                    chat.title or str(request.chat_id)
+                ) if chat else str(request.chat_id)
+                lines.append(
+                    f"• <b>#{request.id}</b> · {user_name} · {chat_name}
+"
+                    f"  {escape(request.text[:500])}"
+                )
+
+        await message.answer("
+".join(lines))
 
     async def capture_message(self, message: Message, bot: Bot) -> None:
         if (
