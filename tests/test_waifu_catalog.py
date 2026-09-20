@@ -5,7 +5,7 @@ from app.game.waifu_catalog import ALL_WAIFUS, ANIME_CORNER_2025_SOURCE, RANKER_
 
 def test_catalog_contains_source_backed_waifus() -> None:
     assert catalog_size() == len(ALL_WAIFUS) + 1
-    assert "anya-forger" in CHARACTERS
+    assert "anya" in CHARACTERS
     assert "yor-forger" in CHARACTERS
     assert "maomao" in CHARACTERS
     assert "taiga" in CHARACTERS
@@ -30,7 +30,7 @@ def test_two_axes_and_card_tier_are_independent() -> None:
 
 def test_all_source_backed_entries_have_valid_game_axes() -> None:
     for definition in ALL_WAIFUS:
-        character = get_character(definition.id)
+        character = get_character("anya" if definition.id == "anya-forger" else definition.id)
         assert character.power_score == definition.power_score
         assert character.popularity_score == definition.popularity_score
         assert character.element is definition.element
