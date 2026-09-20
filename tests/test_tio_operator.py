@@ -345,3 +345,65 @@ async def test_operator_response_claim_can_be_released(database: Database) -> No
 
     assert stored is not None
     assert stored.status == "responding"
+
+
+@pytest.mark.asyncio
+async def test_operator_concurrent_replies_produce_one_delivery(tmp_path) -> None:
+    from app.db.database import Database
+
+    db_path = tmp_path / "tio-concurrent.sqlite3"
+    seed = Database(f"sqlite+aiosqlite:///{db_path}")
+    await seed.create_schema()
+
+    async with seed.session() as session:
+        captured = await TioOperatorService().capture(
+            session,
+            chat_id=-100,
+            user_id=7,
+            source_message_id=51,
+            text="Tío Otaku, respondeme cuando puedas.",
+        )
+        request_id = captured.request.id
+
+    await seed.close()
+    database_a = Database(f"sqlite+aiosqlite:///{db_path}")
+    database_b = Database(f"sqlite+aiosqlite:///{db_path}")
+    bot = AsyncMock()
+
+    module_a = TioOperatorModule(
+        database_a,
+        Settings(admin_user_id=77, authorized_chat_ids="-100"),
+    )
+    module_b = TioOperatorModule(
+        database_b,
+        Settings(admin_user_id=77, authorized_chat_ids="-100"),
+    )
+
+    def operator_message(text: str):
+        return SimpleNamespace(
+            chat=SimpleNamespace(type="private", id=77),
+            from_user=SimpleNamespace(id=77),
+            text=text,
+            answer=AsyncMock(),
+        )
+
+    try:
+        await __import__("asyncio").gather(
+            module_a.respond_command(
+                operator_message(f"/tio_responder {request_id} Primera respuesta."),
+                bot,
+            ),
+            module_b.respond_command(
+                operator_message(f"/tio_responder {request_id} Segunda respuesta."),
+                bot,
+            ),
+        )
+    finally:
+        async with database_a.session() as session:
+            stored = await session.get(TioOperatorRequest, request_id)
+        await database_b.close()
+        await database_a.close()
+
+    assert bot.send_message.await_count == 1
+    assert stored is not None
+    assert stored.status == "resolved"
