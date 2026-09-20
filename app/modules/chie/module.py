@@ -152,11 +152,14 @@ class ChieModule(BotModule):
         except Exception:
             logger.exception("World observation failed for Chie action=%s user=%s", action_key, user_id)
     async def member_joined(self, event: ChatMemberUpdated, bot: Bot) -> None:
-        old_status = event.old_chat_member.status
+        old_status = getattr(event.old_chat_member.status, "value", event.old_chat_member.status)
         new_member = event.new_chat_member
+        new_status = getattr(new_member.status, "value", new_member.status)
         if old_status not in {"left", "kicked"}:
             return
-        if new_member.status not in {"member", "administrator"}:
+        if new_status == "administrator":
+            return
+        if new_status != "member":
             return
         if new_member.user.is_bot:
             return
@@ -256,6 +259,16 @@ class ChieModule(BotModule):
                 chat_id,
                 user_id,
             )
+            if permissions is not None:
+                try:
+                    await bot.restrict_chat_member(
+                        chat_id,
+                        user_id,
+                        permissions=permissions,
+                        use_independent_chat_permissions=True,
+                    )
+                except (TelegramBadRequest, TelegramForbiddenError):
+                    logger.exception("Could not restore permissions after verification prompt failure")
             return
 
         async with self.database.session() as session:
