@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from html import escape
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
@@ -68,6 +69,9 @@ class WorldCuratorAIService:
     ) -> StoredWorldProposals:
         if not self.settings.ai_for(BotIdentity.CHIE):
             raise LLMProviderError("AI curator is disabled for Chie")
+
+        if report.review_type != review_row.review_type or report.period_key != review_row.period_key:
+            raise ValueError("World review report does not match persisted review")
 
         generator = self._generator_name()
         existing = await session.scalar(
@@ -257,7 +261,7 @@ class WorldCuratorAIService:
 
 def format_world_proposals(stored: StoredWorldProposals) -> str:
     lines = [
-        f"💡 <b>Propuestas de Ciudad Animals</b> · {stored.generator}",
+        f"💡 <b>Propuestas de Ciudad Animals</b> · {escape(stored.generator)} · {escape(stored.status)}",
         "",
         "Estas ideas son no confiables y requieren revisión humana.",
         "No modifican automáticamente canon, personajes ni catálogo.",
@@ -269,9 +273,9 @@ def format_world_proposals(stored: StoredWorldProposals) -> str:
         )
         lines.extend(
             (
-                f"<b>{index}. {item.title}</b>",
-                item.idea,
-                f"Motivo: {item.reason}",
+                f"<b>{index}. {escape(item.title)}</b>",
+                escape(item.idea),
+                f"Motivo: {escape(item.reason)}",
                 f"Personajes relacionados: {identities or 'ninguno indicado'}",
                 "",
             )
