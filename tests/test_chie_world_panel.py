@@ -192,3 +192,32 @@ async def test_health_command_is_admin_private_only_and_returns_aggregate_report
     assert "Salud de Ciudad Animals" in answers[-1]
     assert "Comunidades configuradas: <b>1</b>" in answers[-1]
     assert "Comunidades autorizadas: <b>1</b>" in answers[-1]
+
+@pytest.mark.asyncio
+async def test_member_joined_skips_unauthorized_configured_community(database: Database) -> None:
+    module = ChieModule(database, Settings(admin_user_id=77, authorized_chat_ids="-100123"))
+    bot = AsyncMock()
+
+    async with database.session() as session:
+        from app.db.community_models import SetupSession
+        session.add(
+            SetupSession(
+                user_id=77,
+                chat_id=-100999,
+                bot_identity=BotIdentity.CHIE.value,
+                status="configured",
+            )
+        )
+
+    event = SimpleNamespace(
+        chat=SimpleNamespace(id=-100999, type="supergroup"),
+        old_chat_member=SimpleNamespace(status="left"),
+        new_chat_member=SimpleNamespace(
+            status="member",
+            user=SimpleNamespace(id=99, is_bot=False, full_name="Nuevo"),
+        ),
+    )
+
+    await module.member_joined(event, bot)
+
+    bot.send_message.assert_not_awaited()
