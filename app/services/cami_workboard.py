@@ -22,10 +22,7 @@ class CamiWorkItem:
     next_action: str
     due_at: datetime | None = None
     created_at: datetime | None = None
-
-    @property
-    def overdue(self) -> bool:
-        return self.due_at is not None and self.due_at < utc_now()
+    overdue: bool = False
 
 
 class CamiWorkboardService:
@@ -127,6 +124,7 @@ class CamiWorkboardService:
             next_action=next_action,
             due_at=request.due_at,
             created_at=request.created_at,
+            overdue=request.due_at is not None and request.due_at < now,
         )
 
     @staticmethod
@@ -164,6 +162,7 @@ class CamiWorkboardService:
             next_action=next_action,
             due_at=asset.scheduled_at if status == "scheduled" else None,
             created_at=created,
+            overdue=False,
         )
 
 
