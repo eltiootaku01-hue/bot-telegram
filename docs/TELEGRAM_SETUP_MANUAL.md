@@ -19,7 +19,7 @@ En **Bot Manager → Maestro / Jefe · ID Telegram** poner el ID numérico de la
 
 El campo **@usuario** es solamente una referencia visual. El permiso real utiliza el ID numérico.
 
-El teléfono no es un identificador de autorización equivalente para este sistema: la aplicación usa el ID de usuario de Telegram que recibe la API.
+El teléfono no es un identificador de autorización equivalente para este sistema: la aplicación usa el ID de usuario de Telegram que recibe la API. También podés usar `/id` en cualquiera de los bots para ver tu ID y el ID del chat actual.
 
 ## 3. Grupo base
 
