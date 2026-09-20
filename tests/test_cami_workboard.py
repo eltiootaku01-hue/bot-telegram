@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from app.db.database import Database
-from app.db.models import FanRequest, MediaAsset, RequestStatus, User
+from app.db.models import Chat, FanRequest, MediaAsset, RequestStatus, User
 from app.services.cami_workboard import CamiWorkboardService, format_cami_workboard
 
 
@@ -24,6 +24,7 @@ async def test_workboard_prioritizes_ambiguous_delivery_and_overdue_requests(dat
         session.add_all(
             [
                 User(id=7, first_name="Operator"),
+                Chat(id=-100, type="supergroup", title="Community"),
                 FanRequest(
                     user_id=7,
                     chat_id=-100,
