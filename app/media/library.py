@@ -6,7 +6,6 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.time import utc_now
 from app.db.models import MediaAsset
 
 
