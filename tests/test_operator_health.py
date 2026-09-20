@@ -3,7 +3,7 @@ import pytest
 from app.core.identity import BotIdentity
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import BotPresenceState, Chat, DurableJob, DomainEvent, UserChat
+from app.db.models import BotPresenceState, Chat, DurableJob, DomainEvent, User, UserChat
 from app.db.world_models import WorldCatalogEntry, WorldUsageStat
 from app.services.operator_health import OperatorHealthService, format_operator_health
 
@@ -16,6 +16,7 @@ async def test_operator_health_reports_only_aggregate_runtime_counts(tmp_path) -
     async with database.session() as session:
         session.add_all(
             [
+                User(id=77, first_name="Owner"),
                 Chat(id=-100, type="supergroup", title="Café Otaku"),
                 SetupSession(
                     user_id=77,
@@ -98,7 +99,7 @@ async def test_operator_health_does_not_count_unauthorized_communities(tmp_path)
                     status="configured",
                 ),
                 SetupSession(
-                    user_id=77,
+                    user_id=78,
                     chat_id=-200,
                     bot_identity=BotIdentity.CHIE.value,
                     status="configured",
