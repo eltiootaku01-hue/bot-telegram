@@ -222,19 +222,7 @@ class WorldCuratorAIService:
         if existing is not None:
             return self._decode(existing)
 
-        request = LLMRequest(
-            identity=BotIdentity.CHIE,
-            user_text=json.dumps(
-                report.to_payload(),
-                ensure_ascii=False,
-                separators=(",", ":"),
-            ),
-            persona=CURATOR_PERSONA,
-            system_extra=CURATOR_RULES,
-            max_tokens=600,
-            max_user_chars=8000,
-            temperature=0.2,
-        )
+        request = self._request_for_report(report)
         raw = await self.brain.generate(request)
         items = self._parse(raw)
         payload = {
