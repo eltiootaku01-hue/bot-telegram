@@ -34,6 +34,7 @@ class SystemModule(BotModule):
 
     def setup(self) -> None:
         self.router.message.register(self.start, CommandStart())
+        self.router.message.register(self.help, Command("ayuda"))
         self.router.message.register(self.ping, Command("ping"))
         self.router.message.register(self.ping, F.text.casefold() == "ping")
         if self.identity is BotIdentity.SUNNA:
@@ -48,6 +49,7 @@ class SystemModule(BotModule):
         commands = {
             BotIdentity.CARI: (
                 BotCommand(command="start", description="Presentación de Cari"),
+                BotCommand(command="ayuda", description="Ver qué puede hacer Cari"),
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
                 BotCommand(command="cafe", description="Abrir el Café Otaku"),
                 BotCommand(command="menu", description="Ver el menú del Café Otaku"),
@@ -62,6 +64,7 @@ class SystemModule(BotModule):
             ),
             BotIdentity.SUNNA: (
                 BotCommand(command="start", description="Abrir la zona de Sunna"),
+                BotCommand(command="ayuda", description="Ver qué puede hacer Sunna"),
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
                 BotCommand(command="juego", description="Abrir los juegos"),
                 BotCommand(command="gacha", description="Abrir el gacha"),
@@ -75,6 +78,7 @@ class SystemModule(BotModule):
             ),
             BotIdentity.CAMI: (
                 BotCommand(command="start", description="Presentación de Cami"),
+                BotCommand(command="ayuda", description="Ver qué puede hacer Cami"),
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
                 BotCommand(command="catalogo", description="Buscar material publicado"),
                 BotCommand(command="anime", description="Buscar fichas locales de anime/manga"),
@@ -82,6 +86,7 @@ class SystemModule(BotModule):
             ),
             BotIdentity.CHIE: (
                 BotCommand(command="start", description="Abrir el panel de Chie"),
+                BotCommand(command="ayuda", description="Ver qué puede hacer Chie"),
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
                 BotCommand(command="configurar", description="Configurar la comunidad"),
                 BotCommand(command="comandos", description="Abrir el panel de comandos"),
@@ -116,6 +121,45 @@ class SystemModule(BotModule):
             await message.answer(text, reply_markup=chie_start_keyboard())
             return
         await message.answer(text)
+
+    async def help(self, message: Message) -> None:
+        help_texts = {
+            BotIdentity.CARI: (
+                "👋 <b>Ayuda de Cari</b>\n\n"
+                "☕ <code>/cafe</code> — abre el Café Otaku.\n"
+                "🍿 <code>/recomendacion</code> — recomendación diaria.\n"
+                "💬 Podés hablarme de forma natural sobre anime, manga o pedir ayuda.\n"
+                "🛡️ En grupos, las herramientas de moderación solo funcionan para administradores."
+            ),
+            BotIdentity.SUNNA: (
+                "🎮 <b>Ayuda de Sunna</b>\n\n"
+                "🎲 <code>/juego</code> — abre la zona de juegos.\n"
+                "🎰 <code>/gacha</code> — abre el gacha.\n"
+                "🎒 <code>/inventario</code> — muestra tu colección.\n"
+                "⚔️ <code>/combate</code> — abre combate.\n"
+                "🧠 <code>/trivia</code> — consulta la trivia.\n"
+                "💰 <code>/puntos</code> y <code>/ranking</code> — progreso comunitario.\n"
+                "🌟 WaifuMon aparece en la comunidad configurada."
+            ),
+            BotIdentity.CAMI: (
+                "📚 <b>Ayuda de Cami</b>\n\n"
+                "🗂️ <code>/catalogo</code> — buscar material publicado.\n"
+                "📖 <code>/anime</code> — buscar fichas locales de anime/manga.\n"
+                "🔎 <code>/anime_ficha</code> — abrir una ficha concreta.\n"
+                "🔁 <code>/recuperar_publicaciones</code> — revisar entregas ambiguas como administradora.\n"
+                "ℹ️ El archivo local no completa datos faltantes con IA."
+            ),
+            BotIdentity.CHIE: (
+                "📋 <b>Ayuda de Chie</b>\n\n"
+                "⚙️ <code>/configurar</code> — preparar la comunidad y sus temas.\n"
+                "📌 <code>/comandos</code> — abrir el panel comunitario.\n"
+                "📜 <code>/reglas</code> — consultar las reglas.\n"
+                "🌍 <code>/mundo</code> — métricas de Ciudad Animals.\n"
+                "🩺 <code>/salud</code> — estado técnico para el administrador.\n"
+                "💡 <code>/revisar_mundo</code> y <code>/proponer_mundo</code> — revisión/propuestas del mundo."
+            ),
+        }
+        await message.answer(help_texts[self.identity])
 
     async def ping(self, message: Message) -> None:
         await message.answer(f"{self.profile.display_name}: pong")
