@@ -154,9 +154,16 @@ class CamiMediaModule(BotModule):
                 await session.flush()
                 if album is not None:
                     await self.albums.add_item(session, album.id, asset_id=asset.id)
-            elif media_group_id and asset.media_group_id != str(media_group_id):
-                asset.media_group_id = str(media_group_id)
-                await session.flush()
+            else:
+                changed = False
+                if asset.telegram_file_id != photo.file_id:
+                    asset.telegram_file_id = photo.file_id
+                    changed = True
+                if media_group_id and asset.media_group_id != str(media_group_id):
+                    asset.media_group_id = str(media_group_id)
+                    changed = True
+                if changed:
+                    await session.flush()
 
             if album is not None and created:
                 album_prompt = await self.albums.claim_prompt(session, album.id)
