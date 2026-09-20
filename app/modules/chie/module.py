@@ -189,6 +189,202 @@ class ChieModule(BotModule):
             "Pasá por el tema de <b>reglas</b> antes de empezar. 💛",
         )
         await self._observe_action("welcome", new_member.user.id, event.chat.id)
+        await self._start_human_verification(event, bot)
+
+    async def _start_human_verification(self, event: ChatMemberUpdated, bot: Bot) -> None:
+        user_id = event.new_chat_member.user.id
+        chat_id = event.chat.id
+        try:
+            chat_info = await bot.get_chat(chat_id)
+            permissions = getattr(chat_info, "permissions", None)
+        except (TelegramBadRequest, TelegramForbiddenError):
+            permissions = None
+
+        if permissions is not None:
+            try:
+                await bot.restrict_chat_member(
+                    chat_id,
+                    user_id,
+                    permissions=ChatPermissions(
+                        can_send_messages=False,
+                        can_send_audios=False,
+                        can_send_documents=False,
+                        can_send_photos=False,
+                        can_send_videos=False,
+                        can_send_video_notes=False,
+                        can_send_voice_notes=False,
+                        can_send_polls=False,
+                        can_send_other_messages=False,
+                        can_add_web_page_previews=False,
+                    ),
+                    use_independent_chat_permissions=True,
+                )
+            except (TelegramBadRequest, TelegramForbiddenError) as exc:
+                logger.warning(
+                    "Human verification restriction unavailable: chat=%s user=%s error=%s",
+                    chat_id,
+                    user_id,
+                    exc,
+                )
+                permissions = None
+
+        name = escape(event.new_chat_member.user.full_name)
+        prompt = (
+            f"🤖 <b>Verificación de {name}</b>\n\n"
+            "<b>¿Sos un bot?</b>\n"
+            "Elegí una respuesta para habilitar tu participación en la comunidad."
+        )
+        thread_id = await self.topics.get_thread_id(chat_id, "bienvenida")
+        try:
+            if thread_id is not None:
+                sent = await bot.send_message(
+                    chat_id,
+                    prompt,
+                    message_thread_id=thread_id,
+                    reply_markup=chie_human_verification_keyboard(user_id),
+                )
+            else:
+                sent = await bot.send_message(
+                    chat_id,
+                    prompt,
+                    reply_markup=chie_human_verification_keyboard(user_id),
+                )
+        except (TelegramBadRequest, TelegramForbiddenError):
+            logger.exception(
+                "Could not send human verification prompt: chat=%s user=%s",
+                chat_id,
+                user_id,
+            )
+            return
+
+        async with self.database.session() as session:
+            await self.verification.begin(
+                session,
+                chat_id=chat_id,
+                user_id=user_id,
+                prompt_message_id=sent.message_id,
+                default_permissions_json=permissions_to_json(permissions) if permissions is not None else "{}",
+            )
+        await self._observe_action("verification_prompt", user_id, chat_id)
+
+    async def human_verification(self, callback: CallbackQuery, bot: Bot) -> None:
+        if callback.message is None or callback.from_user is None or not callback.data:
+            await callback.answer("Verificación inválida.", show_alert=True)
+            return
+        parts = callback.data.split(":")
+        if len(parts) != 4 or parts[1] != "verify" or parts[2] not in {"yes", "no"}:
+            await callback.answer("Verificación inválida.", show_alert=True)
+            return
+        try:
+            target_user_id = int(parts[3])
+        except ValueError:
+            await callback.answer("Verificación inválida.", show_alert=True)
+            return
+        if callback.from_user.id != target_user_id:
+            await callback.answer("Este botón no es para vos.", show_alert=True)
+            return
+
+        chat_id = callback.message.chat.id
+        async with self.database.session() as session:
+            verification = await session.scalar(
+                select(HumanVerification).where(
+                    HumanVerification.chat_id == chat_id,
+                    HumanVerification.user_id == target_user_id,
+                )
+            )
+        if verification is None or verification.status != "pending":
+            await callback.answer("Esta verificación ya fue resuelta.", show_alert=True)
+            return
+
+        if parts[2] == "yes":
+            try:
+                await bot.ban_chat_member(chat_id, target_user_id)
+                await bot.unban_chat_member(chat_id, target_user_id)
+            except (TelegramBadRequest, TelegramForbiddenError):
+                await callback.answer(
+                    "No pude expulsarte. Chie necesita permiso para restringir miembros.",
+                    show_alert=True,
+                )
+                return
+            async with self.database.session() as session:
+                await self.verification.decide(
+                    session,
+                    chat_id=chat_id,
+                    user_id=target_user_id,
+                    status="rejected",
+                )
+            await callback.message.edit_text(
+                "🤖 <b>Verificación rechazada.</b>\n"
+                "Fuiste expulsado/a de la comunidad. Podés volver a entrar mediante una invitación "
+                "y completar la verificación nuevamente."
+            )
+            await self._observe_action("verification_rejected", target_user_id, chat_id)
+            await callback.answer("Expulsión realizada.")
+            return
+
+        async with self.database.session() as session:
+            decided = await self.verification.decide(
+                session,
+                chat_id=chat_id,
+                user_id=target_user_id,
+                status="verified",
+            )
+        if decided is None:
+            await callback.answer("Esta verificación ya fue resuelta.", show_alert=True)
+            return
+
+        permissions = permissions_from_json(decided.default_permissions_json)
+        if permissions:
+            try:
+                await bot.restrict_chat_member(
+                    chat_id,
+                    target_user_id,
+                    permissions=ChatPermissions(**permissions),
+                    use_independent_chat_permissions=True,
+                )
+            except (TelegramBadRequest, TelegramForbiddenError):
+                logger.exception(
+                    "Could not restore verified member permissions: chat=%s user=%s",
+                    chat_id,
+                    target_user_id,
+                )
+
+        await callback.message.edit_text(
+            "✅ <b>Verificación completada.</b>\n"
+            "Ya podés participar en Ciudad Animals. ¡Bienvenido/a! 💛"
+        )
+        await self._observe_action("verification_verified", target_user_id, chat_id)
+        await callback.answer("Verificado/a. ✅")
+
+    async def member_left(self, event: ChatMemberUpdated, bot: Bot) -> None:
+        old_status = getattr(event.old_chat_member.status, "value", event.old_chat_member.status)
+        new_status = getattr(event.new_chat_member.status, "value", event.new_chat_member.status)
+        if old_status not in {"member", "administrator", "restricted"} or new_status != "left":
+            return
+        if event.new_chat_member.user.is_bot:
+            return
+        if not is_authorized_community(self.settings, event.chat.id):
+            return
+        async with self.database.session() as session:
+            verification = await session.scalar(
+                select(HumanVerification).where(
+                    HumanVerification.chat_id == event.chat.id,
+                    HumanVerification.user_id == event.new_chat_member.user.id,
+                )
+            )
+        if verification is not None and verification.status == "rejected":
+            return
+        name = escape(event.new_chat_member.user.full_name)
+        thread_id = await self.topics.get_thread_id(event.chat.id, "bienvenida")
+        text = (
+            f"👋 <b>Hasta luego, {name}.</b>\n"
+            "La puerta del Café Otaku queda abierta si algún día querés volver."
+        )
+        if thread_id is not None:
+            await bot.send_message(event.chat.id, text, message_thread_id=thread_id)
+        else:
+            await bot.send_message(event.chat.id, text)
+        await self._observe_action("farewell", event.new_chat_member.user.id, event.chat.id)
 
     async def rules_command(self, message: Message) -> None:
         if message.chat.type not in {"group", "supergroup"}:
