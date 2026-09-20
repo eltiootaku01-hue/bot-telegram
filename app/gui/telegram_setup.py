@@ -4,7 +4,6 @@ import tkinter as tk
 import webbrowser
 from threading import Thread
 from tkinter import messagebox, ttk
-from typing import Callable
 
 from app.services.telegram_setup import (
     TelegramBotIdentity,
