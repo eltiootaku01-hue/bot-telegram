@@ -155,3 +155,54 @@ async def test_catalog_command_exposes_only_published_matching_assets(tmp_path) 
     assert "Otra obra" in answers[0]
     assert "file-" not in answers[0]
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_catalog_search_records_user_chat_world_scope(tmp_path) -> None:
+    from app.db.world_models import WorldUsageStat
+    from sqlalchemy import select
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'cami-catalog-scope.db'}")
+    await database.create_schema()
+    module = CamiMediaModule(database, Settings(admin_user_id=7))
+
+    async with database.session() as session:
+        session.add(
+            MediaAsset(
+                telegram_file_id="published-scope",
+                source_chat_id=7,
+                source_message_id=20,
+                status="published",
+                character_id="asuna",
+                anime="Sword Art Online",
+                tags="azul",
+                category="waifu",
+            )
+        )
+
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="supergroup", id=-100),
+        from_user=SimpleNamespace(id=7),
+        text="/catalogo asuna",
+        answer=answer,
+    )
+    await module.catalog_command(message)
+
+    async with database.session() as session:
+        rows = list(
+            await session.scalars(
+                select(WorldUsageStat).where(
+                    WorldUsageStat.entry_key == "catalog_search",
+                    WorldUsageStat.scope_type == "user_chat",
+                )
+            )
+        )
+
+    assert rows
+    assert rows[0].scope_id == "7:-100"
+    await database.close()
