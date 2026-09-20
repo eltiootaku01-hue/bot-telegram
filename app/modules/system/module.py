@@ -7,6 +7,8 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command, CommandStart
 from aiogram.types import BotCommand, CallbackQuery, ChatMemberUpdated, Message
 
+from app.core.access import is_authorized_community
+from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity, get_profile
 from app.core.module import BotModule
 from app.db.database import Database
@@ -22,10 +24,11 @@ class SystemModule(BotModule):
 
     name = "system"
 
-    def __init__(self, identity: BotIdentity, database: Database | None = None) -> None:
+    def __init__(self, identity: BotIdentity, database: Database | None = None, settings: Settings | None = None) -> None:
         self.identity = identity
         self.profile = get_profile(identity)
         self.database = database
+        self.settings = settings or get_settings()
         self.world = WorldService()
         super().__init__()
 
@@ -115,6 +118,8 @@ class SystemModule(BotModule):
         new_status = event.new_chat_member.status
         joined = new_status in {"member", "administrator"} and old_status in {"left", "kicked"}
         if not joined or event.chat.type not in {"group", "supergroup"}:
+            return
+        if not is_authorized_community(self.settings, event.chat.id):
             return
         if self.identity is BotIdentity.SUNNA:
             await bot.send_message(
