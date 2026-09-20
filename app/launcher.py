@@ -182,7 +182,6 @@ class BotLauncher(tk.Tk):
             )
         self.ai_global_var.set(values.get("AI_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"})
         self._sync_ai_controls()
-        self.refresh_setup_checklist()
 
         options = ttk.Frame(outer)
         options.pack(fill="x", pady=(16, 0))
@@ -240,6 +239,7 @@ class BotLauncher(tk.Tk):
         self.setup_checklist_var = tk.StringVar()
         ttk.Label(checklist, textvariable=self.setup_checklist_var, justify="left").pack(anchor="w")
         ttk.Button(checklist, text="Actualizar estado", command=self.refresh_setup_checklist).pack(anchor="e", pady=(8, 0))
+        self.refresh_setup_checklist()
 
         actions = ttk.Frame(outer)
         actions.pack(fill="x", pady=(4, 0))
