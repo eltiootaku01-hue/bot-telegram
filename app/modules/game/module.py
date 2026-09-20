@@ -258,17 +258,31 @@ class GameModule(BotModule):
 
         if result == "correct":
             await self._observe_action("mystery_answer_correct", callback.from_user.id, callback.message.chat.id)
-            await callback.message.edit_text(
+            reaction = self._game_reaction(
+                CharacterIntent.GAME_SUCCESS,
+                callback.from_user.id + callback.message.chat.id + round_id,
+            )
+            text = (
                 f"🕵️ <b>Misterio resuelto</b>\n\n"
                 f"🎉 <b>{callback.from_user.first_name}</b> encontró la respuesta.\n"
                 f"🏆 +{row.points if row is not None else 15} puntos · 💰 saldo: {balance}"
             )
+            if reaction:
+                text += f"\n\n🐍 <b>Sunna:</b> {reaction}"
+            await callback.message.edit_text(text)
             await callback.answer("¡Correcto! Ganaste el misterio. 🎉", show_alert=True)
             return
 
         if result == "wrong":
             await self._observe_action("mystery_answer_wrong", callback.from_user.id, callback.message.chat.id)
-            await callback.answer("❌ No era esa. Esta ronda todavía sigue.", show_alert=True)
+            reaction = self._game_reaction(
+                CharacterIntent.GAME_MISS,
+                callback.from_user.id + callback.message.chat.id + round_id,
+            )
+            text = "❌ No era esa. Esta ronda todavía sigue."
+            if reaction:
+                text += f"\n\n🐍 Sunna: {reaction}"
+            await callback.answer(text, show_alert=True)
             return
 
         if result == "already_answered":
@@ -426,11 +440,17 @@ class GameModule(BotModule):
             )
             return
 
-        await callback.answer(
-            f"🎉 ¡Salió {result.character.name} ({result.character.rarity.value})! "
-            f"Saldo: {result.remaining_points}",
-            show_alert=True,
+        reaction = self._game_reaction(
+            CharacterIntent.GAME_SUCCESS,
+            callback.from_user.id + chat_id,
         )
+        result_text = (
+            f"🎉 ¡Salió {result.character.name} ({result.character.rarity.value})! "
+            f"Saldo: {result.remaining_points}"
+        )
+        if reaction:
+            result_text += f"\n\n🐍 Sunna: {reaction}"
+        await callback.answer(result_text, show_alert=True)
 
     async def combat_action(self, callback: CallbackQuery) -> None:
         if not self._private_callback(callback):
