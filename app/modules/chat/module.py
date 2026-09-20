@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 from aiogram import Bot, F
 from aiogram.types import Message
@@ -28,6 +29,7 @@ class ChatModule(BotModule):
         identity: BotIdentity = BotIdentity.CARI,
         world: WorldService | None = None,
         settings: Settings | None = None,
+        bot_factory: Callable[[str], Bot] | None = None,
     ) -> None:
         super().__init__()
         self.database = database
@@ -35,6 +37,7 @@ class ChatModule(BotModule):
         self.characters = CharacterIntentRouter()
         self.world = world or WorldService()
         self.settings = settings or get_settings()
+        self.bot_factory = bot_factory or (lambda token: Bot(token=token))
 
     def setup(self) -> None:
         self.router.message.register(
@@ -154,7 +157,7 @@ class ChatModule(BotModule):
             )
             return False
 
-        target_bot = Bot(token=token)
+        target_bot = self.bot_factory(token)
         try:
             await target_bot.send_message(
                 chat_id=message.chat.id,
