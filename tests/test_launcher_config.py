@@ -36,6 +36,7 @@ def test_save_config_persists_chat_access_policy(monkeypatch, tmp_path: Path) ->
         def __init__(self) -> None:
             self.authorized_chats_var = FakeVar("-100111,-100222")
             self.allow_admin_private_var = FakeVar(False)
+            self.allow_user_private_var = FakeVar(True)
             self.provider_var = FakeVar("")
             self.model_var = FakeVar("llama3.2:1b")
             self.admin_var = FakeVar("123")
