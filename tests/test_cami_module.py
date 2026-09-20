@@ -364,3 +364,67 @@ async def test_cami_request_queue_dashboard_aggregates_authorized_communities(tm
     assert "Procesando: <b>1</b>" in answers[0]
     assert "Comunidades activas: <b>2</b>" in answers[0]
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_cami_media_queue_dashboard_reports_pipeline_counts(tmp_path) -> None:
+    from types import SimpleNamespace
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'cami-media-queue.db'}")
+    await database.create_schema()
+    module = CamiMediaModule(
+        database,
+        Settings(master_telegram_id=7, authorized_chat_ids="-100"),
+    )
+
+    async with database.session() as session:
+        session.add_all(
+            [
+                MediaAsset(
+                    telegram_file_id="mq1",
+                    source_chat_id=7,
+                    source_message_id=1,
+                    status="cami_inbox",
+                ),
+                MediaAsset(
+                    telegram_file_id="mq2",
+                    source_chat_id=7,
+                    source_message_id=2,
+                    status="needs_tag",
+                ),
+                MediaAsset(
+                    telegram_file_id="mq3",
+                    source_chat_id=7,
+                    source_message_id=3,
+                    status="delivery_unknown",
+                ),
+                MediaAsset(
+                    telegram_file_id="mq4",
+                    source_chat_id=7,
+                    source_message_id=4,
+                    status="published",
+                ),
+            ]
+        )
+
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=7),
+        from_user=SimpleNamespace(id=7),
+        answer=answer,
+    )
+
+    await module.media_queue_command(message)
+
+    assert answers
+    assert "Bandeja: <b>1</b>" in answers[0]
+    assert "Esperando tags: <b>1</b>" in answers[0]
+    assert "Entrega ambigua: <b>1</b>" in answers[0]
+    assert "Publicados: <b>1</b>" in answers[0]
+    assert "/recuperar_publicaciones" in answers[0]
+    await database.close()
+
