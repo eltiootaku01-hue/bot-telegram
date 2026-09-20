@@ -69,16 +69,16 @@ class TioOperatorModule(BotModule):
         return (
             message.chat.type == "private"
             and message.from_user is not None
-            and message.chat.id == settings.admin_user_id
-            and message.from_user.id == settings.admin_user_id
+            and message.chat.id == settings.master_user_id
+            and message.from_user.id == settings.master_user_id
         )
 
     async def pending_command(self, message: Message) -> None:
         if (
             message.chat.type != "private"
             or message.from_user is None
-            or message.chat.id != self.settings.admin_user_id
-            or message.from_user.id != self.settings.admin_user_id
+            or message.chat.id != self.settings.master_user_id
+            or message.from_user.id != self.settings.master_user_id
         ):
             return
 
@@ -365,7 +365,7 @@ class TioOperatorModule(BotModule):
             or not message.text
             or message.chat.type not in {"group", "supergroup"}
             or not is_authorized_community(self.settings, message.chat.id)
-            or not self.settings.admin_user_id
+            or not self.settings.master_user_id
         ):
             return
 
@@ -385,7 +385,7 @@ class TioOperatorModule(BotModule):
         chat_title = escape(message.chat.title or str(message.chat.id))
         source_text = escape(message.text)
         await bot.send_message(
-            self.settings.admin_user_id,
+            self.settings.master_user_id,
             (
                 "📨 <b>Solicitud para Tío Otaku</b>\n\n"
                 f"👤 {user_name} · <code>{message.from_user.id}</code>\n"
@@ -401,7 +401,7 @@ class TioOperatorModule(BotModule):
         if (
             callback.message is None
             or callback.from_user is None
-            or callback.from_user.id != self.settings.admin_user_id
+            or callback.from_user.id != self.settings.master_user_id
             or not self._is_owner_private(callback.message, self.settings)
         ):
             await callback.answer("No autorizado.", show_alert=True)
