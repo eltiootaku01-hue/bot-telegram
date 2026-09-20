@@ -26,7 +26,6 @@ CAFE_MENU: tuple[tuple[str, str], ...] = (
     ("🎮 Zona de juegos", "Sunna mantiene la zona de juegos y WaifuMon."),
     ("📦 Archivo y publicaciones", "Cami mantiene el material y las publicaciones."),
     ("📋 Recepción y reglas", "Chie organiza avisos, permisos y coordinación."),
-    ("🕵️ Misterio diario", "Cada día el Café Otaku tiene un caso pequeño para resolver."),
     ("🎨 Pedidos", "La comunidad puede usar puntos para solicitar material mediante Chie."),
 )
 
@@ -63,19 +62,12 @@ class CafeModule(BotModule):
         self.router.message.register(self.cafe, Command("cafe"))
         self.router.message.register(self.cafe, Command("menu"))
         self.router.message.register(self.recommendation, Command("recomendacion"))
-        self.router.message.register(self.mystery, Command("misterio"))
         self.router.callback_query.register(
             self.recommendation_callback,
             F.data == "cafe:recommendation",
         )
         self.router.callback_query.register(
-            self.mystery_open_callback,
-            F.data == "cafe:mystery:open",
-        )
         self.router.callback_query.register(
-            self.mystery_callback,
-            F.data.startswith("cafe:mystery:"),
-        )
         self.router.callback_query.register(
             self.event_callback,
             F.data == "cafe:event:open",
