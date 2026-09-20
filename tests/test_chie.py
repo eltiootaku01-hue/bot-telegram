@@ -107,19 +107,11 @@ async def test_chie_group_setup_message_exposes_community_id() -> None:
         id = 999
 
         async def get_chat_member(self, chat_id, user_id):
-            return ChatMemberAdministrator(
+            return ChatMemberAdministrator.model_construct(
                 user=User(id=999, is_bot=True, first_name="Chie"),
                 status="administrator",
-                can_manage_chat=True,
                 can_delete_messages=True,
-                can_manage_video_chats=True,
                 can_restrict_members=True,
-                can_promote_members=False,
-                can_change_info=True,
-                can_invite_users=True,
-                can_post_messages=True,
-                can_edit_messages=True,
-                can_pin_messages=True,
                 can_manage_topics=True,
             )
 
