@@ -1,13 +1,20 @@
-from aiogram import F
+from __future__ import annotations
+
+import logging
+
+from aiogram import Bot, F
 from aiogram.types import Message
 
 from app.characters.models import CharacterIntent
 from app.characters.router import CharacterIntentRouter
+from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.core.operator import is_tio_addressed
 from app.db.database import Database
 from app.services.world import WorldService
+
+logger = logging.getLogger(__name__)
 
 
 class ChatModule(BotModule):
@@ -20,12 +27,14 @@ class ChatModule(BotModule):
         database: Database,
         identity: BotIdentity = BotIdentity.CARI,
         world: WorldService | None = None,
+        settings: Settings | None = None,
     ) -> None:
         super().__init__()
         self.database = database
         self.identity = identity
         self.characters = CharacterIntentRouter()
         self.world = world or WorldService()
+        self.settings = settings or get_settings()
 
     def setup(self) -> None:
         self.router.message.register(
@@ -52,7 +61,12 @@ class ChatModule(BotModule):
             )
         )
 
-    async def _observe_interaction(self, message: Message, speaker: BotIdentity, partner: BotIdentity) -> None:
+    async def _observe_interaction(
+        self,
+        message: Message,
+        speaker: BotIdentity,
+        partner: BotIdentity,
+    ) -> None:
         """Record a lightweight relationship-use signal after authored dialogue."""
         async with self.database.session() as session:
             relationship_key = f"{speaker.value}-{partner.value}"
@@ -120,7 +134,38 @@ class ChatModule(BotModule):
                 scope_id=f"{message.from_user.id}:{message.chat.id}",
             )
 
-    async def handle_text(self, message: Message) -> None:
+    async def _send_authored_text(
+        self,
+        message: Message,
+        bot: Bot,
+        speaker: BotIdentity,
+        text: str,
+    ) -> bool:
+        """Send a scene through the Telegram identity that authored it."""
+        if speaker is self.identity:
+            await message.answer(text)
+            return True
+
+        token = self.settings.token_for(speaker.value)
+        if not token:
+            logger.warning(
+                "Cannot send authored follow-up: token missing for identity=%s",
+                speaker.value,
+            )
+            return False
+
+        target_bot = Bot(token=token)
+        try:
+            await target_bot.send_message(
+                chat_id=message.chat.id,
+                text=text,
+                message_thread_id=getattr(message, "message_thread_id", None),
+            )
+            return True
+        finally:
+            await target_bot.session.close()
+
+    async def handle_text(self, message: Message, bot: Bot) -> None:
         if message.from_user is None or not message.text:
             return
         text = message.text.strip()
@@ -168,7 +213,12 @@ class ChatModule(BotModule):
         if response is None:
             return
 
-        await message.answer(response.scene.text)
+        await self._send_authored_text(
+            message,
+            bot,
+            response.scene.speaker,
+            response.scene.text,
+        )
         await self._observe_scene(
             message,
             response.scene.key,
@@ -178,17 +228,23 @@ class ChatModule(BotModule):
             response.scene.weight,
         )
         if response.follow_up is not None:
-            await message.answer(response.follow_up.text)
-            await self._observe_interaction(
+            sent = await self._send_authored_text(
                 message,
-                response.scene.speaker,
-                response.follow_up.speaker,
-            )
-            await self._observe_scene(
-                message,
-                response.follow_up.key,
-                intent,
+                bot,
                 response.follow_up.speaker,
                 response.follow_up.text,
-                response.follow_up.weight,
             )
+            if sent:
+                await self._observe_interaction(
+                    message,
+                    response.scene.speaker,
+                    response.follow_up.speaker,
+                )
+                await self._observe_scene(
+                    message,
+                    response.follow_up.key,
+                    intent,
+                    response.follow_up.speaker,
+                    response.follow_up.text,
+                    response.follow_up.weight,
+                )
