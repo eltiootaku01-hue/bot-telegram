@@ -1419,3 +1419,94 @@ Criterio de cierre:
 La fuente de continuidad sigue siendo este archivo: `docs/audits/BITACORA_CONTINUA.md`.
 
 Antes de tocar código, comparar siempre: SHA actual de `main`, último CI SUCCESS, último Windows SUCCESS, sección de errores, lista de no repetición y pendientes de producto.
+
+
+# 30. Snapshot operativo — 2026-09-20 — evento cotidiano persistente del Café Otaku
+
+## Estado
+
+- Bloque: evento cotidiano persistente del Café Otaku / Ciudad Animals.
+- Estado: IMPLEMENTADO Y VALIDADO.
+- SHA funcional validado: ea0712a2fade9ab18217e52bda08d721ae9ee72c.
+- CI: #1251 SUCCESS.
+- Windows Build: #881 SUCCESS.
+
+## Implementación
+
+- app/db/models.py: CafeDailyEventRound con unicidad por chat_id + day_key.
+- app/services/cafe_events.py: selección determinista, creación idempotente, expiración, claim de publicación y transiciones publishing/published/failed.
+- app/modules/cafe/module.py: comando /evento, botón, persistencia, publicación y telemetría.
+- app/ui/cafe_keyboards.py: botón Evento del Café.
+- app/services/world_catalog.py: capacidad cafe_daily_event.
+
+## Errores reales encontrados
+
+1. Primer intento de event_text: string inválido por una comilla extra y saltos de línea fuera de la cadena. CI #1243/#1244 lo detectó con Ruff.
+2. Tras corregir la cadena, faltaba el import de utc_now. El siguiente CI detectó F821.
+3. El refactor de fallo movió la actualización a CafeEventService y dejó utc_now sin uso. CI #1248 detectó F401.
+4. CafeDailyEventRound quedó importado en el módulo aunque la persistencia ya estaba encapsulada. CI #1250 detectó otro F401.
+5. La primera integración mantenía una sesión SQLite abierta durante message.answer en ramas de estado. Se refactorizó para cerrar la transacción antes de I/O de Telegram.
+6. La creación idempotente por día no era suficiente para evitar dos envíos simultáneos. Se añadió claim atómico y prueba con dos conexiones SQLite.
+
+## Pruebas nuevas
+
+- tests/test_cafe_events.py: determinismo, idempotencia de creación, siguiente día, expiración, mark_published idempotente y claim concurrente single-winner.
+- tests/test_cafe_module.py: integración del evento persistente y atribución del callback al usuario que pulsa.
+- La suite general pasó en CI #1251 con Ruff SUCCESS y Pytest SUCCESS.
+
+## Evidencia de empaquetado
+
+Windows #881 sobre ea0712a2fade9ab18217e52bda08d721ae9ee72c terminó SUCCESS.
+- Cinco ejecutables construidos y verificados.
+- Smoke test de BotManager SUCCESS.
+- Instalador Inno Setup SUCCESS.
+- Manifest SUCCESS.
+- ZIP portable SUCCESS.
+- Checksums SUCCESS.
+- Ambos artefactos fueron subidos.
+
+Artefactos:
+- bot-telegram-windows-installer — 98,811,901 bytes — sha256:b7eb55279b97bcc90fd9d864c4749c2936a1f06bbcc61490cc275788dc3b6ea9.
+- bot-telegram-windows-portable — 96,952,501 bytes — sha256:ed6122ee538a1e50dd4ac93cba4daeb92998ba1a7f86098a798c777bd0bea696.
+
+## No repetir
+
+No rehacer sin regresión, cambio de requisitos o evidencia nueva:
+- evento cotidiano persistente del Café;
+- claim single-winner de publicación;
+- persistencia diaria por comunidad;
+- misterio diario;
+- catálogo base de Ciudad Animals;
+- transporte multi-identidad;
+- fencing de concurrencia ya documentado;
+- /ranking, /ayuda y paneles básicos.
+
+## Porcentaje actual
+
+Estimación global conservadora: 82%.
+
+El 82% representa cobertura funcional aproximada frente a la visión completa. No es una métrica de CI ni de líneas de código.
+
+| Área | Estado estimado |
+| --- | ---: |
+| Arquitectura Core | 92% |
+| Persistencia / SQLite / transacciones | 97% |
+| Telegram / seguridad / runtime | 96% |
+| BotManager / Windows / empaquetado | 98% |
+| Módulos funcionales | 94% |
+| WaifuMon / progresión / trivia | 95% |
+| Personajes / canon | 81% |
+| Director / repertorio / rutinas | 80% |
+| Ciudad Animals / Café Otaku | 86% |
+| Interacciones / continuidad | 86% |
+| IA secundaria / curación | 40% |
+| GUI / experiencia de operador | 48% |
+
+## Siguiente punto
+
+1. Más eventos cotidianos contextualizados sin duplicar el sistema diario.
+2. Herramientas avanzadas de Tío Otaku como operador humano.
+3. Primer informe de curación IA desacoplado del runtime.
+4. Ampliación de superficies de Cami, Chie y Cari.
+
+Regla: no volver a tocar infraestructura cerrada solo para aumentar porcentaje. Cada avance debe aportar capacidad observable y quedar cubierto por regresión y CI.
