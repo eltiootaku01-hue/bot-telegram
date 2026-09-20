@@ -94,3 +94,34 @@ No volver a “auditar desde cero” TaskSupervisor, leases, access middleware, 
 ## Próximo objetivo
 
 Primero profundizar superficies y continuidad de interacción; después cerrar una tanda funcional suficientemente grande para preparar el release final.
+## Snapshot 2026-09-20
+
+Estimación global conservadora del proyecto: 77%. No es una métrica de CI; es una estimación de cobertura funcional frente a la visión completa del proyecto.
+
+| Área | Estado estimado |
+| --- | ---: |
+| Arquitectura Core | 92% |
+| Persistencia / SQLite / transacciones | 97% |
+| Telegram / seguridad / runtime | 95% |
+| BotManager / Windows / empaquetado | 98% |
+| Módulos funcionales | 92% |
+| WaifuMon / progresión / trivia | 94% |
+| Personajes / canon | 79% |
+| Director / repertorio / rutinas | 75% |
+| Ciudad Animals / Café Otaku | 70% |
+| Interacciones / continuidad | 72% |
+| IA secundaria / curación | 40% |
+| GUI / experiencia de operador | 45% |
+
+### Avance del checklist solicitado
+
+- Profundidad autoral: EN PROGRESO. Se amplió únicamente material compatible con Cari/Cami/Sunna confirmado; no se creó una biblia nueva para Chie.
+- Más interacciones: EN PROGRESO. La matriz ya cubre las 12 parejas dirigidas y ahora las relaciones confirmadas tienen variantes adicionales; el runtime ya usa choose_interaction con continuidad por uso.
+- Superficies de usuario: EN PROGRESO. Se añadieron /ayuda por identidad y navegación histórica de Tío Otaku; Cami/Cari/Chie todavía pueden recibir superficies más ricas.
+- Tío Otaku: AVANZADO. Captura explícita, inbox, contexto, respuesta humana, fencing y navegación histórica ya existen.
+- Concurrencia: AVANZADO. Se cerraron muchas rutas y se sigue tocando solo donde falta regresión específica.
+- Release final: PENDIENTE. No etiquetar todavía hasta cerrar el siguiente bloque funcional y obtener CI Ubuntu + Windows verdes sobre el mismo SHA.
+
+### No repetir sin evidencia nueva
+
+No reauditar desde cero los bloques ya marcados como corregidos arriba. Una nueva pasada debe buscar solo regresiones, consumidores nuevos o requisitos nuevos.
