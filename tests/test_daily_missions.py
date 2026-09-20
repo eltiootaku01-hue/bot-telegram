@@ -22,6 +22,7 @@ async def database(tmp_path):
     async with database.session() as session:
         session.add(User(id=7, first_name="Player"))
         session.add(Chat(id=-100, type="supergroup", title="Community"))
+        await session.flush()
         session.add(GameProfile(user_id=7, chat_id=-100, points=0))
     yield database
     await database.close()
