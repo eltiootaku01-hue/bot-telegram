@@ -194,3 +194,28 @@ Antes de modificar algo:
 
 ### NO REPETIR
 - No volver a implementar el ledger de Ciudad Animals, el catálogo persistente, el curador diario, el puente humano de Tío Otaku, Gacha idempotente, Misterio diario, publicación durable de Cami, control de acceso privado, allowlist de comunidades, fencing de leases ni las matrices authored de interacción salvo que una auditoría futura encuentre un defecto concreto.
+
+
+## ÚLTIMO BLOQUE EJECUTADO — UX DEL OPERADOR TÍO OTAKU — 2026-09-20
+
+### Cerrado
+- La bandeja de Tío Otaku ahora incluye Ver contexto para cada solicitud.
+- Se añadió /tio_ver ID para consultar desde el privado del operador el estado, usuario, comunidad, mensaje original, timestamps y texto capturado.
+- El contexto es estrictamente de solo lectura; no cambia el estado de la solicitud.
+- El callback tio:request:view:ID también es solo lectura y está restringido al propietario.
+- El flujo /tio_responder ID mensaje continúa siendo el único mecanismo para enviar una respuesta humana al grupo.
+- Commit de UI: 2668ea862b4747c26c69b4d7f9ec56744e3576e1.
+- Commit de módulo: f1594e93c1ab61fdfa5e7b21f3d7b3e094894cca.
+- Commit final de regresiones: 814995a7fd805b3fea76871d554e01b2b925d5ad.
+- CI #1132: SUCCESS sobre 814995a7fd805b3fea76871d554e01b2b925d5ad.
+- Windows #762 estaba pendiente al último registro de código; debe verificarse antes de afirmar que el empaquetado de este commit fue validado.
+
+### Corrección detectada durante validación
+- CI #1131 detectó que una aserción existente suponía que el botón Resolver era la primera fila.
+- Se actualizó el test para exigir simultáneamente el botón de contexto y el botón de resolución.
+- No hubo un defecto de producción asociado a ese fallo de test.
+
+### Estado actualizado
+- Tío Otaku UX pasa de pendiente a implementado y validado en CI, quedando pendiente únicamente la certificación Windows del SHA final.
+- No volver a implementar /tio_ver, el botón tio:request:view, ni el contexto read-only salvo que una auditoría futura encuentre un defecto concreto.
+- Progreso global se mantiene en 82%.
