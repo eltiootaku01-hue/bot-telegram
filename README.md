@@ -155,6 +155,7 @@ Cari incluye una superficie determinista del Café Otaku:
 - Las métricas del mundo registran el uso agregado de estas acciones sin guardar el texto completo del usuario.
 
 El catálogo público de Cami se consulta con `/catalogo` y solamente muestra material que ya fue publicado.
+El archivo local de anime/manga de Cami se consulta con `/anime`. Solo devuelve fichas almacenadas en SQLite; una ficha marcada como `unverified` no debe tratarse como un dato factual confirmado. El etiquetado de material crea automáticamente una ficha local de la obra con esa marca para facilitar una futura verificación y conserva separadas las fuentes, identificadores, resumen original y notas.
 
 ## Shared points
 
