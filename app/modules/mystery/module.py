@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+
 
 from aiogram import Bot, F
 from aiogram.filters import Command
@@ -13,7 +13,7 @@ from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
-from app.core.time import world_now
+from app.core.time import utc_now, world_now
 from app.db.database import Database
 from app.db.models import MysteryRound
 from app.game.mystery import MysteryService
@@ -81,7 +81,7 @@ class MysteryModule(BotModule):
                 row.status = "active"
                 row.winner_user_id = None
                 row.message_id = None
-                row.expires_at = datetime.utcnow() + timedelta(hours=24)
+                row.expires_at = utc_now()
 
             claimed = await session.execute(
                 update(MysteryRound)
@@ -128,7 +128,7 @@ class MysteryModule(BotModule):
                 await session.execute(
                     update(MysteryRound)
                     .where(MysteryRound.id == row.id, MysteryRound.status == "publishing")
-                    .values(status="failed", updated_at=datetime.utcnow())
+                    .values(status="failed", updated_at=utc_now())
                 )
             logger.exception("Mystery publication failed: chat=%s round=%s", chat_id, row.id)
             return False
@@ -139,7 +139,7 @@ class MysteryModule(BotModule):
                 return False
             current.message_id = sent.message_id
             current.status = "active"
-            current.updated_at = datetime.utcnow()
+            current.updated_at = utc_now()
         await self._observe("mystery_publish", getattr(source.from_user, "id", 0) if source and source.from_user else 0, chat_id)
         return True
 
