@@ -7,7 +7,7 @@ from html import escape
 from aiogram import Bot, F
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, ChatMemberAdministrator, ChatMemberOwner, ChatMemberUpdated, Message
+from aiogram.types import CallbackQuery, ChatMemberAdministrator, ChatMemberOwner, ChatMemberUpdated, ChatPermissions, Message
 from sqlalchemy import select
 
 from app.core.access import is_authorized_community, is_chat_staff
@@ -18,15 +18,18 @@ from app.core.module import BotModule
 from app.core.time import world_now
 from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
+from app.db.models import HumanVerification
 from app.db.world_models import WorldProposal, WorldReview
 from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
+from app.services.human_verification import HumanVerificationService, permissions_from_json, permissions_to_json
 from app.services.operator_health import OperatorHealthService, format_operator_health
 from app.services.world import WorldService
 from app.services.world_curator import WorldCuratorService, format_world_review
 from app.services.world_curator_ai import WorldCuratorAIService, format_world_proposals
 from app.ui.control_keyboards import (
     chie_setup_keyboard,
+    chie_human_verification_keyboard,
     command_hub_detail_keyboard,
     command_hub_keyboard,
     world_proposal_keyboard,
@@ -68,6 +71,7 @@ class ChieModule(BotModule):
         self.curator_ai = WorldCuratorAIService(self.settings)
         self.health = OperatorHealthService()
         self.worker = DurableWorker(database, event_bus=EventBus(), poll_seconds=1.0)
+        self.verification = HumanVerificationService()
         self.bot: Bot | None = None
         super().__init__()
 
@@ -89,6 +93,8 @@ class ChieModule(BotModule):
         self.router.message.register(self.health_command, Command("salud"))
         self.router.message.register(self.clear_my_world_data, Command("borrar_mi_memoria"))
         self.router.chat_member.register(self.member_joined)
+        self.router.chat_member.register(self.member_left)
+        self.router.callback_query.register(self.human_verification, F.data.startswith("chie:verify:"))
 
     async def on_startup(self, bot: Bot) -> None:
         self.bot = bot
