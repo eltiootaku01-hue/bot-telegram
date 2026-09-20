@@ -79,6 +79,7 @@ class GameModule(BotModule):
         self.router.callback_query.register(self.gacha_open, F.data == "game:gacha:open")
         self.router.callback_query.register(self.inventory_callback, F.data == "game:inventory:open")
         self.router.callback_query.register(self.combat_open, F.data == "game:combat:open")
+        self.router.callback_query.register(self.missions_open, F.data == "game:missions:open")
         self.router.callback_query.register(self.gacha_roll, F.data == "game:gacha:roll")
         self.router.callback_query.register(self.fusion, F.data.startswith("game:fusion:"))
         self.router.callback_query.register(self.combat_action, F.data.startswith("game:combat:"))
@@ -157,6 +158,32 @@ class GameModule(BotModule):
             mission_key=mission_key,
         )
         return claimed, balance, progress.progress, progress.target
+
+    async def missions_open(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer("Este panel solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
+            return
+        chat_id = await self._community_chat_id(callback.from_user.id)
+        if chat_id is None:
+            await callback.answer("Todavía no hay una comunidad asociada a tu cuenta.", show_alert=True)
+            return
+        day_key = self._mission_day_key()
+        async with self.database.session(write=True) as session:
+            rows = await self.missions.list_progress(
+                session,
+                user_id=callback.from_user.id,
+                chat_id=chat_id,
+                day_key=day_key,
+            )
+        lines = ["🎯 <b>Misiones diarias</b>", f"📅 {day_key}", ""]
+        for mission, progress in rows:
+            status = "✅ Completada" if progress.claimed else f"{min(progress.progress, progress.target)}/{progress.target}"
+            lines.append(f"• <b>{mission.label}</b> — {status} · +{mission.reward_points} pts")
+        lines.extend(("", "Las recompensas se acreditan una sola vez al completar el objetivo."))
+        if callback.message is not None:
+            await callback.message.edit_text("\n".join(lines), reply_markup=game_hub_keyboard())
+        await self._observe_action("missions_view", callback.from_user.id, chat_id)
+        await callback.answer()
 
     async def missions_command(self, message: Message) -> None:
         if message.chat.type != "private" or message.from_user is None:
