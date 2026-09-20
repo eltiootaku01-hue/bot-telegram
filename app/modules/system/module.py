@@ -71,6 +71,7 @@ class SystemModule(BotModule):
                 BotCommand(command="comandos", description="Abrir el panel de comandos"),
                 BotCommand(command="reglas", description="Ver las reglas de la comunidad"),
                 BotCommand(command="mundo", description="Ver métricas de Ciudad Animals"),
+                BotCommand(command="salud", description="Revisar la salud del sistema"),
                 BotCommand(command="borrar_mi_memoria", description="Borrar tus estadísticas privadas"),
             ),
         }[self.identity]
