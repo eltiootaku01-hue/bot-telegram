@@ -33,7 +33,7 @@ def build_bot_modules(
     """Compose shared and identity-specific bot capabilities from reusable modules."""
 
     shared = (
-        _spec("system", lambda: SystemModule(identity, database)),
+        _spec("system", lambda: SystemModule(identity, database, settings=settings)),
         _spec("social-runtime", lambda: SocialRuntimeModule(database, identity, settings=settings)),
     )
     identity_specific = (
