@@ -183,12 +183,24 @@ async def test_trivia_start_callback_is_handled_as_panel_guidance() -> None:
 
 
 @pytest.mark.asyncio
-async def test_trivia_start_callback_is_wired_for_game_hub() -> None:
-    from unittest.mock import AsyncMock
-
+async def test_trivia_start_callback_is_wired_for_game_hub(tmp_path) -> None:
     from types import SimpleNamespace
 
-    module = TriviaModule.__new__(TriviaModule)
+    from app.db.community_models import SetupSession
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'trivia-callback.db'}")
+    await database.create_schema()
+    async with database.session() as session:
+        session.add(
+            SetupSession(
+                user_id=7,
+                chat_id=-100,
+                bot_identity="chie",
+                status="configured",
+            )
+        )
+
+    module = TriviaModule(database, Settings(authorized_chat_ids="-100"))
     message = SimpleNamespace(
         chat=SimpleNamespace(id=7, type="private"),
         edit_text=AsyncMock(),
@@ -203,3 +215,4 @@ async def test_trivia_start_callback_is_wired_for_game_hub() -> None:
 
     message.edit_text.assert_awaited_once()
     callback.answer.assert_awaited_once()
+    await database.close()
