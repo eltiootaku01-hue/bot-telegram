@@ -407,3 +407,35 @@ async def test_operator_concurrent_replies_produce_one_delivery(tmp_path) -> Non
     assert bot.send_message.await_count == 1
     assert stored is not None
     assert stored.status == "resolved"
+
+
+@pytest.mark.asyncio
+async def test_operator_inbox_exposes_responding_request_for_manual_resolution(database: Database) -> None:
+    service = TioOperatorService()
+    module = TioOperatorModule(database, Settings(admin_user_id=77))
+
+    async with database.session() as session:
+        captured = await service.capture(
+            session,
+            chat_id=-100,
+            user_id=7,
+            source_message_id=52,
+            text="Tío Otaku, el mensaje pudo haber salido.",
+        )
+        request_id = captured.request.id
+        assert await service.claim_response(session, request_id=request_id) is True
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=77),
+        from_user=SimpleNamespace(id=77),
+        answer=AsyncMock(),
+    )
+
+    await module.pending_command(message)
+
+    assert message.answer.await_count == 1
+    call = message.answer.await_args
+    assert "respondiendo" in call.args[0]
+    assert call.kwargs["reply_markup"].inline_keyboard[0][0].callback_data == (
+        f"tio:request:resolve:{request_id}"
+    )
