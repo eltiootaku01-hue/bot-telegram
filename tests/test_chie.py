@@ -77,3 +77,60 @@ async def test_chie_setup_refuses_unallowlisted_community_before_topic_creation(
 
     assert answers
     assert "AUTHORIZED_CHAT_IDS" in answers[0]
+
+
+@pytest.mark.asyncio
+async def test_chie_group_setup_message_exposes_community_id() -> None:
+    module = ChieModule.__new__(ChieModule)
+    module.settings = type(
+        "SettingsStub",
+        (),
+        {"master_user_id": 77},
+    )()
+    module._observe_action = lambda *args, **kwargs: __import__("asyncio").sleep(0)
+
+    answers: list[str] = []
+
+    async def answer(text: str, **kwargs) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(id=-100123, type="supergroup"),
+        from_user=SimpleNamespace(id=77),
+        text="/configurar",
+        answer=answer,
+    )
+
+    class Member:
+        status = "administrator"
+        can_manage_topics = True
+        can_delete_messages = True
+        can_restrict_members = True
+
+    class Bot:
+        id = 999
+
+        async def get_chat_member(self, chat_id, user_id):
+            return Member()
+
+    class FakeSession:
+        async def scalar(self, statement):
+            return None
+
+        async def commit(self):
+            return None
+
+    class SessionContext:
+        async def __aenter__(self):
+            return FakeSession()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    module.database = type("DB", (), {"session": lambda self: SessionContext()})()
+
+    await module.configure_group(message, Bot())
+
+    assert answers
+    assert "-100123" in answers[0]
+    assert "Grupo general / bienvenida" not in answers[0]
