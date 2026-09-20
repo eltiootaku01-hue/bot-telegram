@@ -96,3 +96,29 @@ async def test_member_touch_records_real_human_messages(session: AsyncSession) -
     assert link.message_count == 1
     assert stored_chat is not None
     assert stored_chat.last_human_message_at is not None
+
+
+@pytest.mark.asyncio
+async def test_observe_uses_persisted_bot_and_social_event_recency(session: AsyncSession) -> None:
+    now = datetime(2026, 9, 11, 12, 0)
+    bot_at = now - timedelta(minutes=7)
+    event_at = now - timedelta(minutes=13)
+
+    session.add(
+        Chat(
+            id=-104,
+            type="supergroup",
+            title="community",
+            last_bot_message_at=bot_at,
+            last_social_event_at=event_at,
+        )
+    )
+    await session.commit()
+
+    activity = await SocialActivityService().observe(session, -104, now=now)
+    snapshot = activity.to_snapshot(SocialMemory())
+
+    assert activity.last_bot_message_at == bot_at
+    assert activity.last_social_event_at == event_at
+    assert snapshot.minutes_since_last_bot_message == 7
+    assert snapshot.minutes_since_last_event == 13
