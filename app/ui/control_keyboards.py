@@ -70,6 +70,12 @@ def tio_operator_request_keyboard(request_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
+            text="📋 Ver contexto",
+            callback_data=f"tio:request:view:{request_id}",
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
             text="📝 Recibido",
             callback_data=f"tio:request:ack:{request_id}",
         ),
@@ -83,6 +89,12 @@ def tio_operator_request_keyboard(request_id: int) -> InlineKeyboardMarkup:
 
 def tio_operator_resolve_keyboard(request_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="📋 Ver contexto",
+            callback_data=f"tio:request:view:{request_id}",
+        )
+    )
     builder.row(
         InlineKeyboardButton(
             text="✅ Resuelto",
