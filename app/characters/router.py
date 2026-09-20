@@ -103,15 +103,26 @@ class CharacterIntentRouter:
     )
 
     @classmethod
-    def target_identity(cls, text: str) -> BotIdentity | None:
+    def target_identities(cls, text: str) -> tuple[BotIdentity, ...]:
         normalized = " ".join(text.casefold().strip().split())
         if not normalized:
-            return None
+            return ()
+        found: list[tuple[int, BotIdentity]] = []
         for identity, aliases in cls._TARGETS:
-            for alias in aliases:
-                if re.search(rf"\b{re.escape(alias)}\b", normalized):
-                    return identity
-        return None
+            positions = [
+                match.start()
+                for alias in aliases
+                for match in re.finditer(rf"\b{re.escape(alias)}\b", normalized)
+            ]
+            if positions:
+                found.append((min(positions), identity))
+        found.sort(key=lambda item: (item[0], item[1].value))
+        return tuple(identity for _, identity in found)
+
+    @classmethod
+    def target_identity(cls, text: str) -> BotIdentity | None:
+        targets = cls.target_identities(text)
+        return targets[0] if targets else None
 
     def __init__(self, director: CharacterDirector | None = None) -> None:
         self.director = director or CharacterDirector()
