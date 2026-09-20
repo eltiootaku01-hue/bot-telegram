@@ -167,7 +167,11 @@ class TelegramSetupAssistant(tk.Toplevel):
         if str(group_id) not in existing:
             existing.append(str(group_id))
         self.authorized_chats_var.set(",".join(existing))
-        self.group_state_var.set("✓ grupo agregado a AUTHORIZED_CHAT_IDS")
+        save_config = getattr(self.master, "save_config", None)
+        if callable(save_config) and save_config():
+            self.group_state_var.set("✓ hogar fijado y guardado en AUTHORIZED_CHAT_IDS")
+        else:
+            self.group_state_var.set("✓ hogar agregado a AUTHORIZED_CHAT_IDS; falta guardar")
 
     def review_group(self) -> None:
         try:
