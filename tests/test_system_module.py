@@ -17,7 +17,9 @@ async def test_sunna_command_menu_does_not_advertise_removed_request_command() -
     names = {command.command for command in commands}
 
     assert "pedido" not in names
-    assert {"juego", "gacha", "inventario", "combate", "misterio", "trivia", "puntos", "ranking"} <= names
+    assert {"juego", "gacha", "inventario", "combate", "puntos", "ranking"} <= names
+    assert "misterio" not in names
+    assert "trivia" not in names
 
 
 @pytest.mark.asyncio
@@ -63,3 +65,25 @@ async def test_sunna_command_menu_exposes_daily_missions() -> None:
     names = {command.command for command in commands}
 
     assert "misiones" in names
+
+
+@pytest.mark.asyncio
+async def test_cari_command_menu_owns_trivia() -> None:
+    module = SystemModule(BotIdentity.CARI)
+    bot = AsyncMock()
+    await module.on_startup(bot)
+
+    names = {command.command for command in bot.set_my_commands.await_args.args[0]}
+
+    assert "trivia" in names
+
+
+@pytest.mark.asyncio
+async def test_cami_command_menu_owns_mystery() -> None:
+    module = SystemModule(BotIdentity.CAMI)
+    bot = AsyncMock()
+    await module.on_startup(bot)
+
+    names = {command.command for command in bot.set_my_commands.await_args.args[0]}
+
+    assert "misterio" in names
