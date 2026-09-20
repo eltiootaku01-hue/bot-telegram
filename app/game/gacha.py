@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import GameGachaRoll, RareDropApproval
 from app.db.repositories import MemberRepository
-from app.game.catalog import CHARACTERS
+from app.game.catalog import CHARACTERS, get_character
 from app.game.engine import GameEngine
 from app.game.models import Character, Rarity
 from app.game.progression import apply_capture_progression
@@ -61,7 +61,7 @@ class GachaService:
     def _restore_result(roll: GameGachaRoll, approval: RareDropApproval | None, balance: int) -> GachaResult:
         return GachaResult(
             rolled_rarity=Rarity(roll.rolled_rarity),
-            character=CHARACTERS[roll.character_id],
+            character=get_character(roll.character_id),
             remaining_points=balance,
             approval=approval,
             granted=roll.granted,
