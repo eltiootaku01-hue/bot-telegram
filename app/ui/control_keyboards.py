@@ -79,3 +79,14 @@ def tio_operator_request_keyboard(request_id: int) -> InlineKeyboardMarkup:
         ),
     )
     return builder.as_markup()
+
+
+def tio_operator_resolve_keyboard(request_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✅ Resuelto",
+            callback_data=f"tio:request:resolve:{request_id}",
+        ),
+    )
+    return builder.as_markup()
