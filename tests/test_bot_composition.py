@@ -51,6 +51,8 @@ def test_composition_uses_supplied_settings_instance() -> None:
     media = next(module for module in sunna_modules if module.name == "media")
     assert media.settings is settings
 
+    cami_modules = build_bot_modules(database, BotIdentity.CAMI, settings)
+
     cari_trivia = next(module for module in cari_modules if module.name == "trivia")
     assert cari_trivia.settings is settings
 
