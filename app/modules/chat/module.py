@@ -203,7 +203,6 @@ class ChatModule(BotModule):
             intent = CharacterIntent.UNKNOWN_TOPIC
         local_answer = self.knowledge.answer(self.identity, text)
         if local_answer is not None:
-        if local_answer is not None:
             await self._send_authored_text(
                 message,
                 bot,
