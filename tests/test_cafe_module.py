@@ -167,3 +167,33 @@ async def test_cafe_event_callback_attributes_observation_to_clicking_user() -> 
     assert observed == [("7", -100)]
     callback.answer.assert_awaited_once()
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_cafe_event_updates_persisted_social_event_recency() -> None:
+    from app.db.models import Chat
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    module = CafeModule(database)
+
+    async def answer(text: str, **kwargs):
+        return SimpleNamespace(message_id=777)
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(id=-100, type="supergroup"),
+        from_user=SimpleNamespace(id=7),
+        answer=answer,
+    )
+
+    async with database.session() as session:
+        session.add(Chat(id=-100, type="supergroup", title="Café"))
+
+    await module.event_command(message)
+
+    async with database.session() as session:
+        chat = await session.get(Chat, -100)
+
+    assert chat is not None
+    assert chat.last_social_event_at is not None
+    await database.close()
