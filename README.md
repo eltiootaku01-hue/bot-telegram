@@ -158,6 +158,30 @@ Cari incluye una superficie determinista del Café Otaku:
 El catálogo público de Cami se consulta con `/catalogo` y solamente muestra material que ya fue publicado.
 El archivo local de anime/manga de Cami se consulta con `/anime`. Solo devuelve fichas almacenadas en SQLite; una ficha marcada como `unverified` no debe tratarse como un dato factual confirmado. El etiquetado de material crea automáticamente una ficha local de la obra con esa marca para facilitar una futura verificación y conserva separadas las fuentes, identificadores, resumen original y notas.
 
+## Local Q&A sin IA
+
+Cari y las demás identidades pueden responder preguntas conocidas sin depender de un LLM.
+La búsqueda usa un catálogo determinista de conocimiento local, reglas operativas y
+repertorio redactado. Cuando no existe una fuente suficiente, el bot reconoce el límite
+antes que inventar. La capa incluye un playbook de conversación para Cari basado en
+principios de Psychological First Aid de la OMS y un procedimiento para convertir
+conversaciones humanas autorizadas en ejemplos revisados y pruebas de regresión.
+
+Archivos principales: `app/knowledge/`, `docs/playbooks/CARI_CONVERSATION_PLAYBOOK.md`.
+
+## Mensajería externa
+
+La plataforma también incluye adaptadores opcionales para enviar texto e imágenes desde
+WhatsApp Business Cloud API y Messenger/Facebook Page. Estas integraciones están aisladas
+del runtime de Telegram y se habilitan solo cuando las credenciales correspondientes están
+configuradas en `.env`.
+
+Archivos principales: `app/integrations/meta/messaging.py` y
+`docs/integrations/META_MESSAGING.md`.
+
+La recepción de mensajes externos requiere posteriormente webhooks públicos de Meta; el
+adaptador actual cubre el envío saliente.
+
 ## Shared points
 
 Every successful waifu capture can award community points. Points belong to the player + community and use an auditable transaction ledger. Fan requests and Gacha spend those same points.
