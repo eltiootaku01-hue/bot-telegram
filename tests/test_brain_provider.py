@@ -88,3 +88,16 @@ def test_llm_request_can_replace_character_persona_for_internal_curator() -> Non
     assert "curador interno" in prompt
     assert "No hables como Chie" in prompt
     assert "Café" not in prompt
+
+
+def test_internal_request_can_raise_user_input_limit() -> None:
+    client = BrainClient(Settings(ollama_model="test"))
+    payload = "x" * 2000
+    request = LLMRequest(
+        identity=BotIdentity.CHIE,
+        user_text=payload,
+        max_user_chars=2000,
+        persona="Curador interno",
+    )
+    messages = client._messages(request)
+    assert messages[-1]["content"] == payload
