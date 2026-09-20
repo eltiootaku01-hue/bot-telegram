@@ -19,6 +19,7 @@ from app.modules.moderation.module import ModerationModule
 from app.modules.requests.module import RequestModule
 from app.modules.system.module import SystemModule
 from app.modules.trivia.module import TriviaModule
+from app.modules.tio_operator.module import TioOperatorModule
 
 
 def _spec(name: str, factory, *identities: BotIdentity) -> ModuleSpec:
@@ -50,6 +51,7 @@ def build_bot_modules(
         _spec("chie", lambda: ChieModule(database, settings=settings), BotIdentity.CHIE),
         _spec("requests", lambda: RequestModule(database), BotIdentity.CHIE),
         _spec("brain-chat", lambda: BrainChatModule(identity, settings=settings)),
+        _spec("tio-operator", lambda: TioOperatorModule(database, settings=settings), BotIdentity.CARI),
     )
 
     composition = BotComposition((*shared, *identity_specific))
