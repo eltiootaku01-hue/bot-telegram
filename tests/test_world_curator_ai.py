@@ -65,6 +65,9 @@ async def test_ai_curator_uses_only_review_snapshot_and_persists_pending_proposa
     assert stored.items[0].affected_identities == (BotIdentity.SUNNA,)
     assert brain.requests
     assert brain.requests[0].persona == CURATOR_PERSONA
+    assert "cami.media.publish" in brain.requests[0].system_extra
+    assert "sunna.waifumon.capture" in brain.requests[0].system_extra
+    assert "No inventes process ids" in brain.requests[0].system_extra
     assert "No hables como personaje" in brain.requests[0].persona
     assert "user_text" not in brain.requests[0].user_text
     assert "conversation" not in brain.requests[0].user_text
