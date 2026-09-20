@@ -51,6 +51,25 @@ class UserChat(Base):
 
 
 
+class HumanVerification(Base):
+    """Durable human-verification state for community membership."""
+    __tablename__ = "human_verifications"
+    __table_args__ = (
+        UniqueConstraint("chat_id", "user_id", name="uq_human_verification_chat_user"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    user_id: Mapped[int] = mapped_column(BigInteger)
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    prompt_message_id: Mapped[int | None] = mapped_column(BigInteger)
+    default_permissions_json: Mapped[str] = mapped_column(String(4000), default="{}")
+    prompted_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class ModerationAction(Base):
     """Auditable explicit moderation action issued by a Telegram administrator."""
 
