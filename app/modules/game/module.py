@@ -24,7 +24,7 @@ from app.game.fusion import fuse_collection
 from app.game.gacha import GACHA_COST_POINTS, GachaService
 from app.game.mystery import MysteryService
 from app.game.progression import apply_capture_progression, collection_status
-from app.game.waifu_browser import page_for, render_page
+from app.game.waifu_browser import WaifuFilter, WaifuFilterField, page_for, render_page
 from app.game.wild_scheduler import WildWaifuScheduler
 from app.services.community import CommunityResolver
 from app.services.world import WorldService
@@ -36,6 +36,8 @@ from app.ui.game_keyboards import (
     gacha_keyboard,
     mystery_keyboard,
     waifu_catalog_keyboard,
+    waifu_filter_categories_keyboard,
+    waifu_filter_options_keyboard,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,6 +75,10 @@ class GameModule(BotModule):
         self.router.callback_query.register(self.encounter_answer, F.data.startswith("game:encounter:"))
         self.router.callback_query.register(self.mystery_open, F.data == "game:mystery:open")
         self.router.callback_query.register(self.mystery_answer, F.data.startswith("game:mystery:"))
+        self.router.callback_query.register(self.waifu_catalog_filters, F.data == "game:waifus:filters")
+        self.router.callback_query.register(self.waifu_catalog_filter_options, F.data.startswith("game:waifus:filter:"))
+        self.router.callback_query.register(self.waifu_catalog_filter_set, F.data.startswith("game:waifus:set:"))
+        self.router.callback_query.register(self.waifu_catalog_clear_filter, F.data == "game:waifus:clear")
         self.router.callback_query.register(self.waifu_catalog_page, F.data.startswith("game:waifus:page:"))
 
     async def on_startup(self, bot: Bot) -> None:
@@ -156,10 +162,96 @@ class GameModule(BotModule):
         page = page_for(1)
         await message.answer(
             render_page(page),
-            reply_markup=waifu_catalog_keyboard(page.page, page.total_pages),
+            reply_markup=waifu_catalog_keyboard(
+                page.page,
+                page.total_pages,
+                page.active_filter,
+            ),
         )
         if message.from_user is not None:
             await self._observe_action("waifu_catalog", message.from_user.id)
+
+    async def waifu_catalog_filters(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer(
+                "Este catálogo solo funciona en tu chat privado con Sunna. 😰",
+                show_alert=True,
+            )
+            return
+        if callback.message is not None:
+            await callback.message.edit_text(
+                "🔎 <b>Filtrar catálogo</b>\n\nElegí qué propiedad querés usar.",
+                reply_markup=waifu_filter_categories_keyboard(),
+            )
+        await callback.answer()
+
+    async def waifu_catalog_filter_options(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer(
+                "Este catálogo solo funciona en tu chat privado con Sunna. 😰",
+                show_alert=True,
+            )
+            return
+        parts = (callback.data or "").split(":")
+        if len(parts) != 4 or parts[3] not in {field.value for field in WaifuFilterField}:
+            await callback.answer("Filtro inválido.", show_alert=True)
+            return
+        if callback.message is not None:
+            await callback.message.edit_text(
+                "🔎 <b>Elegí un valor</b>",
+                reply_markup=waifu_filter_options_keyboard(parts[3]),
+            )
+        await callback.answer()
+
+    async def waifu_catalog_filter_set(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer(
+                "Este catálogo solo funciona en tu chat privado con Sunna. 😰",
+                show_alert=True,
+            )
+            return
+        parts = (callback.data or "").split(":")
+        if len(parts) != 5:
+            await callback.answer("Filtro inválido.", show_alert=True)
+            return
+        active_filter = WaifuFilter.from_code(parts[3], parts[4])
+        if active_filter is None:
+            await callback.answer("Filtro inválido.", show_alert=True)
+            return
+        page = page_for(1, active_filter=active_filter)
+        if callback.message is not None:
+            await callback.message.edit_text(
+                render_page(page),
+                reply_markup=waifu_catalog_keyboard(
+                    page.page,
+                    page.total_pages,
+                    page.active_filter,
+                ),
+            )
+        await self._observe_action(
+            f"waifu_filter_{active_filter.field.value}_{active_filter.value}",
+            callback.from_user.id,
+        )
+        await callback.answer("Filtro aplicado.")
+
+    async def waifu_catalog_clear_filter(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer(
+                "Este catálogo solo funciona en tu chat privado con Sunna. 😰",
+                show_alert=True,
+            )
+            return
+        page = page_for(1)
+        if callback.message is not None:
+            await callback.message.edit_text(
+                render_page(page),
+                reply_markup=waifu_catalog_keyboard(
+                    page.page,
+                    page.total_pages,
+                ),
+            )
+        await self._observe_action("waifu_catalog_clear", callback.from_user.id)
+        await callback.answer("Filtro quitado.")
 
     async def waifu_catalog_page(self, callback: CallbackQuery) -> None:
         if not self._private_callback(callback):
@@ -169,17 +261,28 @@ class GameModule(BotModule):
             )
             return
         parts = (callback.data or "").split(":")
-        if len(parts) != 4 or not parts[3].isdigit():
+        if len(parts) not in {4, 6} or not parts[3].isdigit():
             await callback.answer("Página inválida.", show_alert=True)
             return
-        page = page_for(int(parts[3]))
+        active_filter = None
+        if len(parts) == 6:
+            active_filter = WaifuFilter.from_code(parts[4], parts[5])
+            if active_filter is None:
+                await callback.answer("Filtro inválido.", show_alert=True)
+                return
+        page = page_for(int(parts[3]), active_filter=active_filter)
         if callback.message is not None:
             await callback.message.edit_text(
                 render_page(page),
-                reply_markup=waifu_catalog_keyboard(page.page, page.total_pages),
+                reply_markup=waifu_catalog_keyboard(
+                    page.page,
+                    page.total_pages,
+                    page.active_filter,
+                ),
             )
         await self._observe_action("waifu_catalog_page", callback.from_user.id)
         await callback.answer()
+
     async def inventory_callback(self, callback: CallbackQuery) -> None:
         if not self._private_callback(callback):
             await callback.answer("Este botón solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
