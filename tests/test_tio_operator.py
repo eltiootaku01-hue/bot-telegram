@@ -180,3 +180,14 @@ async def test_operator_request_can_progress_from_acknowledged_to_resolved(
 
     assert row is not None
     assert row.status == "resolved"
+
+
+def test_operator_trigger_requires_explicit_address() -> None:
+    module = TioOperatorModule.__new__(TioOperatorModule)
+
+    assert module._should_capture("Tío, necesito hablar con vos.") is True
+    assert module._should_capture("Tío Otaku: necesito ayuda.") is True
+    assert module._should_capture("@TioOtaku necesito ayuda.") is True
+    assert module._should_capture("Hola Tío Otaku, cuando puedas.") is True
+    assert module._should_capture("Mi tío vive en otra ciudad.") is False
+    assert module._should_capture("El tío de Juan vino ayer.") is False
