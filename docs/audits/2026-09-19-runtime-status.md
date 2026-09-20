@@ -2,15 +2,15 @@
 
 ## Estado verificable
 
-Commit de referencia: `3f2e4a1261a5ea4b2111e226a6e769e674e6b802`
+Commit de referencia: `578f0ba9144331b91b89dffdff6049b9899ff489`
 
-CI #938:
+CI #1028:
 - Ruff: OK
 - Pytest: OK
-- 312 pruebas pasadas
+- 345 pruebas pasadas
 - Sin fallos de Pytest en el SHA de referencia
 
-Windows Build #579:
+Windows Build #669:
 - dependencias: OK
 - pruebas nativas de media/encoder: OK
 - Inno Setup: OK
@@ -91,8 +91,11 @@ El mundo narrativo y las escenas pueden seguir creciendo, pero los cambios deben
 
 - El Café Otaku dispone de `/cafe`, `/menu` y `/recomendacion` mediante Cari, con selección diaria basada en la zona horaria del mundo.
 - Cami dispone de `/catalogo` para buscar únicamente material publicado.
+- Cami dispone de `/anime` para consultar exclusivamente el catálogo local de anime/manga.
+- El catálogo local admite importación JSON transaccional mediante `tools/import_anime_catalog.py`.
+- Las menciones de dos personajes pueden activar escenas de interacción authored-only por pareja y orden de mención.
 - Las nuevas acciones se registran en el catálogo agregado de Ciudad Animals.
 
 ## Evidencia
 
-El SHA de referencia quedó validado por CI #938 y Windows Build #579. La validación Windows cubrió compilación, verificación, smoke test, instalador, ZIP portable y checksums. Los artefactos permanecen asociados a esa ejecución de GitHub Actions.
+El SHA de referencia quedó validado por CI #1028 y Windows Build #669. La validación Windows cubrió compilación, verificación, smoke test, instalador, ZIP portable y checksums. Los artefactos permanecen asociados a esa ejecución de GitHub Actions.
