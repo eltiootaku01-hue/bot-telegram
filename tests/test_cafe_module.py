@@ -65,3 +65,37 @@ async def test_recommendation_is_deterministic_per_day_and_chat() -> None:
     assert "Sin spoilers" in first
 
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_cafe_mystery_publishes_authored_case_and_buttons() -> None:
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    module = CafeModule(database)
+
+    answers: list[tuple[str, object]] = []
+
+    async def answer(text: str, **kwargs) -> None:
+        answers.append((text, kwargs.get("reply_markup")))
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(id=-100, type="supergroup"),
+        from_user=SimpleNamespace(id=7),
+        answer=answer,
+    )
+
+    await module.mystery(message)
+
+    assert answers
+    text, markup = answers[0]
+    assert "Misterio del Café" in text
+    assert "no añade hechos al canon" in text
+    assert markup is not None
+    assert len(markup.inline_keyboard) >= 2
+    assert all(
+        button.callback_data and button.callback_data.startswith("cafe:mystery:")
+        for row in markup.inline_keyboard
+        for button in row
+    )
+
+    await database.close()
