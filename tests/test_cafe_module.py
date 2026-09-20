@@ -33,6 +33,7 @@ async def test_cafe_menu_is_authored_and_contains_core_services() -> None:
     assert "Archivo y publicaciones" in text
     assert "Recepción y reglas" in text
     assert "/recomendacion" in text
+    assert "Misterio diario" in text
 
     await database.close()
 
