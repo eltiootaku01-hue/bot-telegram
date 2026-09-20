@@ -173,6 +173,20 @@ class TelegramSetupAssistant(tk.Toplevel):
         else:
             self.group_state_var.set("✓ hogar agregado a AUTHORIZED_CHAT_IDS; falta guardar")
 
+    def open_chie_id_helper(self) -> None:
+        result = self.meta.get("chie")
+        if result is None or not result.ok or not result.username:
+            self.verify_one("chie")
+            messagebox.showinfo(
+                "ID del Maestro/Jefe",
+                "Primero verificá el token de Chie. Después volvé a pulsar este botón.",
+                parent=self,
+            )
+            return
+        webbrowser.open(build_start_link(result.username, "miid"))
+        self.group_state_var.set(
+            "⚠ Telegram abierto: pulsá Iniciar y copiá el ID que muestre Chie"
+        )
     def review_group(self) -> None:
         try:
             group_id = int(self.base_group_var.get().strip())
