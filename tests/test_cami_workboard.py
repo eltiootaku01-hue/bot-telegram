@@ -21,10 +21,11 @@ async def test_workboard_prioritizes_ambiguous_delivery_and_overdue_requests(dat
     now = datetime(2026, 9, 20, 15, 0, 0)
 
     async with database.session() as session:
+        session.add(User(id=7, first_name="Operator"))
+        session.add(Chat(id=-100, type="supergroup", title="Community"))
+        await session.flush()
         session.add_all(
             [
-                User(id=7, first_name="Operator"),
-                Chat(id=-100, type="supergroup", title="Community"),
                 FanRequest(
                     user_id=7,
                     chat_id=-100,
