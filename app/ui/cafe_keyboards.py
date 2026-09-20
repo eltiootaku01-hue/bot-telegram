@@ -20,6 +20,12 @@ def cafe_menu_keyboard(settings: Settings) -> InlineKeyboardMarkup:
             callback_data="cafe:mystery:open",
         ),
     )
+    builder.row(
+        InlineKeyboardButton(
+            text="☀️ Evento del Café",
+            callback_data="cafe:event:open",
+        ),
+    )
 
     links = (
         (BotIdentity.SUNNA, "🎮 Abrir Sunna"),
