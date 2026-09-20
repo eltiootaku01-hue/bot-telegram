@@ -5,7 +5,6 @@ import pytest
 from sqlalchemy import select
 
 from app.core.config import Settings
-from app.core.identity import BotIdentity
 from app.db.database import Database
 from app.db.models import Chat, GameCollection, GameGachaRoll, GameProfile, RareDropApproval, User
 from app.game.models import Rarity
