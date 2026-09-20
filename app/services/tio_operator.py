@@ -131,13 +131,17 @@ class TioOperatorService:
         session: AsyncSession,
         *,
         limit: int = 20,
+        offset: int = 0,
     ) -> list[TioOperatorRequest]:
-        """Return recent operator requests for a read-only history surface."""
+        """Return a deterministic read-only page of recent operator requests."""
         if limit <= 0:
             raise ValueError("limit must be positive")
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
         result = await session.scalars(
             select(TioOperatorRequest)
             .order_by(TioOperatorRequest.id.desc())
+            .offset(offset)
             .limit(limit)
         )
         return list(result)
