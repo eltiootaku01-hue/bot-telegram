@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.core.time import utc_now
 from app.db.database import Database
 from app.db.models import FanRequest, MediaAsset, RequestStatus, User
 from app.services.cami_workboard import CamiWorkboardService, format_cami_workboard
