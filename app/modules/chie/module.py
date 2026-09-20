@@ -25,7 +25,12 @@ from app.services.operator_health import OperatorHealthService, format_operator_
 from app.services.world import WorldService
 from app.services.world_curator import WorldCuratorService, format_world_review
 from app.services.world_curator_ai import WorldCuratorAIService, format_world_proposals
-from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard, world_proposal_keyboard
+from app.ui.control_keyboards import (
+    chie_setup_keyboard,
+    command_hub_detail_keyboard,
+    command_hub_keyboard,
+    world_proposal_keyboard,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -475,12 +480,65 @@ class ChieModule(BotModule):
         if not callback.message:
             return
         section = (callback.data or "").rsplit(":", 1)[-1]
-        labels = {
-            "community": "👋 Comunidad: bienvenida, verificación y moderación.",
-            "games": "🎮 Juegos: Sunna gestiona WaifuMon y trivia.",
-            "content": "📰 Contenido: noticias, recomendaciones, curiosidades y estrenos.",
-            "points": "💰 Puntos: consulta y canjes mediante las funciones autorizadas.",
-            "config": "⚙️ Configuración: Chie comprueba permisos y mantiene la estructura.",
+        if section == "home":
+            await callback.message.edit_text(
+                "🤖 <b>Panel de la comunidad</b>\nElegí un área para ver acciones concretas.",
+                reply_markup=command_hub_keyboard(),
+            )
+            await callback.answer()
+            return
+
+        details = {
+            "community": (
+                "👋 <b>Comunidad</b>\n\n"
+                "• <code>/reglas</code> — reglas operativas.\n"
+                "• <code>/salud</code> — diagnóstico del administrador.\n"
+                "• Chie da la bienvenida a nuevos integrantes autorizados.\n"
+                "• La moderación se ejecuta con permisos reales de Telegram."
+            ),
+            "games": (
+                "🎮 <b>Juegos</b>\n\n"
+                "En el bot de Sunna:\n"
+                "• <code>/juego</code> — panel de juegos.\n"
+                "• <code>/gacha</code> — tirada local.\n"
+                "• <code>/inventario</code> — colección y evolución.\n"
+                "• <code>/combate</code> — combate.\n"
+                "• <code>/trivia</code> — estado de trivia.\n"
+                "• <code>/puntos</code> / <code>/ranking</code> — economía comunitaria.\n\n"
+                "La aparición pública de WaifuMon ocurre solo en la comunidad configurada."
+            ),
+            "content": (
+                "📰 <b>Contenido</b>\n\n"
+                "En el bot de Cami:\n"
+                "• <code>/catalogo</code> — material local.\n"
+                "• <code>/anime</code> — fichas locales.\n"
+                "• <code>/anime_ficha</code> — detalle de una obra.\n"
+                "• <code>/recuperar_publicaciones</code> — recuperación para administración.\n\n"
+                "Cami no completa registros faltantes con IA."
+            ),
+            "points": (
+                "💰 <b>Puntos y pedidos</b>\n\n"
+                "• Consultá <code>/puntos</code> con Sunna.\n"
+                "• <code>/ranking</code> muestra la situación comunitaria.\n"
+                "• El botón <b>🎨 Pedir imagen</b> inicia el pedido desde este panel.\n"
+                "• Los pedidos cobran puntos dentro de una transacción idempotente."
+            ),
+            "config": (
+                "⚙️ <b>Configuración</b>\n\n"
+                "• <code>/configurar</code> verifica administración real y prepara los temas del foro.\n"
+                "• <code>/salud</code> muestra un diagnóstico agregado al administrador.\n"
+                "• <code>/mundo</code> y <code>/revisar_mundo</code> muestran el estado agregado de Ciudad Animals.\n"
+                "• <code>/proponer_mundo</code> puede usar IA como curadora, nunca como autoridad automática del canon."
+            ),
         }
-        await callback.message.edit_text(labels.get(section, "Panel de la comunidad."), reply_markup=command_hub_keyboard())
+        text = details.get(section)
+        if text is None:
+            await callback.answer("Sección no disponible.", show_alert=True)
+            return
+        await callback.message.edit_text(
+            text,
+            reply_markup=command_hub_detail_keyboard(),
+        )
+        if callback.from_user is not None:
+            await self._observe_action(f"hub_{section}", callback.from_user.id, callback.message.chat.id)
         await callback.answer()
