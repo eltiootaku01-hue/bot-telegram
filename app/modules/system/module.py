@@ -175,8 +175,7 @@ class SystemModule(BotModule):
                 "📖 <code>/anime</code> — buscar fichas locales de anime/manga.\n"
                 "🔎 <code>/anime_ficha</code> — abrir una ficha concreta.\n"
                 "🔁 <code>/recuperar_publicaciones</code> — revisar entregas ambiguas como administradora.\n"
-                "📋 <code>/cola_media</code> y <code>/cola_pedidos</code> — paneles operativos privados.
-"
+                "📋 <code>/cola_media</code> y <code>/cola_pedidos</code> — paneles operativos privados.\\n"
                 "ℹ️ El archivo local no completa datos faltantes con IA."
             ),
             BotIdentity.CHIE: (
@@ -186,8 +185,7 @@ class SystemModule(BotModule):
                 "📜 <code>/reglas</code> — consultar las reglas.\n"
                 "🌍 <code>/mundo</code> — métricas de Ciudad Animals.\n"
                 "🩺 <code>/salud</code> — estado técnico para el administrador.\n"
-                "📋 <code>/mis_pedidos</code> — ver el estado de tus pedidos de imágenes.
-"
+                "📋 <code>/mis_pedidos</code> — ver el estado de tus pedidos de imágenes.\\n"
                 "💡 <code>/revisar_mundo</code> y <code>/proponer_mundo</code> — revisión/propuestas del mundo."
             ),
         }
