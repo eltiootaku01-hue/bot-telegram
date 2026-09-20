@@ -14,8 +14,9 @@ async def test_cafe_menu_is_authored_and_contains_core_services() -> None:
 
     answers: list[str] = []
 
-    async def answer(text: str) -> None:
+    async def answer(text: str, **kwargs) -> None:
         answers.append(text)
+        assert kwargs["reply_markup"] is not None
 
     message = SimpleNamespace(
         chat=SimpleNamespace(id=-100, type="supergroup"),
