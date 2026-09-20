@@ -118,3 +118,19 @@ async def test_chat_module_responds_to_unknown_question_with_authored_fallback(d
 
     assert answers
     assert "no sé" in answers[0].casefold() or "no tengo" in answers[0].casefold()
+ 
+ 
+def test_all_identities_expose_role_specific_local_answers() -> None:
+    responder = LocalKnowledgeResponder()
+    samples = {
+        BotIdentity.CARI: "¿Qué puede hacer Cari en el Café Otaku?",
+        BotIdentity.SUNNA: "¿Cómo funciona WaifuMon?",
+        BotIdentity.CAMI: "¿Qué haces con el archivo?",
+        BotIdentity.CHIE: "¿Cómo configuro el grupo?",
+    }
+
+    for identity, text in samples.items():
+        result = responder.answer(identity, text)
+        assert result is not None, identity
+        assert result.article.identity is identity
+
