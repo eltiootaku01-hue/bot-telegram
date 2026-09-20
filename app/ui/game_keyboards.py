@@ -163,6 +163,7 @@ def waifu_filter_options_keyboard(field: str) -> InlineKeyboardMarkup:
         "s": (
             ("🏆 Ranker 2026", "ranker"),
             ("🆕 Anime Corner 2025", "recent"),
+            ("📦 Catálogo inicial", "local"),
         ),
     }
     builder = InlineKeyboardBuilder()
