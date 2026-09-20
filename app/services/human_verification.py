@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select, update
@@ -67,6 +67,7 @@ class HumanVerificationService:
                 HumanVerification.user_id == user_id,
             )
         )
+        expires_at = current + timedelta(seconds=120)
         if row is None:
             row = HumanVerification(
                 chat_id=chat_id,
@@ -75,6 +76,7 @@ class HumanVerificationService:
                 prompt_message_id=prompt_message_id,
                 default_permissions_json=default_permissions_json,
                 prompted_at=current,
+                expires_at=expires_at,
                 updated_at=current,
             )
             session.add(row)
@@ -83,10 +85,92 @@ class HumanVerificationService:
             row.prompt_message_id = prompt_message_id
             row.default_permissions_json = default_permissions_json
             row.prompted_at = current
+            row.expires_at = expires_at
             row.decided_at = None
             row.updated_at = current
         await session.flush()
         return row
+
+    async def claim_expired(
+        self,
+        session: AsyncSession,
+        *,
+        now: datetime | None = None,
+        limit: int = 50,
+    ) -> list[HumanVerification]:
+        """Claim overdue verifications without racing a user's button click."""
+        current = now or utc_now()
+        if limit <= 0:
+            return []
+        candidates = list(
+            await session.scalars(
+                select(HumanVerification)
+                .where(
+                    HumanVerification.status.in_(("pending", "expiring")),
+                    HumanVerification.expires_at.is_not(None),
+                    HumanVerification.expires_at <= current,
+                )
+                .order_by(HumanVerification.id.asc())
+                .limit(limit)
+            )
+        )
+        claimed: list[HumanVerification] = []
+        for row in candidates:
+            result = await session.execute(
+                update(HumanVerification)
+                .where(
+                    HumanVerification.id == row.id,
+                    HumanVerification.status.in_(("pending", "expiring")),
+                    HumanVerification.expires_at.is_not(None),
+                    HumanVerification.expires_at <= current,
+                )
+                .values(status="expiring", updated_at=current)
+            )
+            if result.rowcount == 1:
+                claimed.append(row)
+        if claimed:
+            await session.commit()
+        return claimed
+
+    async def finish_expiration(
+        self,
+        session: AsyncSession,
+        *,
+        verification_id: int,
+        expired_at: datetime | None = None,
+    ) -> bool:
+        current = expired_at or utc_now()
+        result = await session.execute(
+            update(HumanVerification)
+            .where(
+                HumanVerification.id == verification_id,
+                HumanVerification.status == "expiring",
+            )
+            .values(
+                status="expired",
+                decided_at=current,
+                updated_at=current,
+            )
+        )
+        return result.rowcount == 1
+
+    async def requeue_expiration(
+        self,
+        session: AsyncSession,
+        *,
+        verification_id: int,
+        now: datetime | None = None,
+    ) -> bool:
+        current = now or utc_now()
+        result = await session.execute(
+            update(HumanVerification)
+            .where(
+                HumanVerification.id == verification_id,
+                HumanVerification.status == "expiring",
+            )
+            .values(status="pending", expires_at=current + timedelta(seconds=30), updated_at=current)
+        )
+        return result.rowcount == 1
 
     async def decide(
         self,
