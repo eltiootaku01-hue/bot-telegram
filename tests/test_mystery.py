@@ -247,3 +247,32 @@ async def test_concurrent_correct_answers_have_one_winner_and_one_reward(tmp_pat
 
     await database_a.close()
     await database_b.close()
+
+
+@pytest.mark.parametrize(
+    "case_key",
+    [
+        "cake-slice",
+        "charger-switch",
+        "phone-last-use",
+        "battery-missing",
+        "earbud-left",
+        "cable-knot",
+        "remote-fridge",
+        "sugar-drawer",
+        "manga-bookmark",
+        "late-notification",
+    ],
+)
+def test_everyday_mystery_cases_are_nonviolent_and_have_valid_answers(case_key: str) -> None:
+    case = next(case for case in MysteryService.CASES if case.key == case_key)
+
+    assert len(case.options) == 4
+    assert 0 <= case.answer_index < len(case.options)
+    assert case.clues
+    assert any(
+        term in " ".join((case.title, case.question, *case.clues)).casefold()
+        for term in ("pastel", "cargador", "teléfono", "cable", "notificación", "auricular", "heladera", "manga")
+    )
+    forbidden = ("asesin", "homicid", "cadáver", "matar", "muert")
+    assert not any(term in " ".join((case.title, case.question, *case.clues)).casefold() for term in forbidden)
