@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from aiogram import Bot, F
+from aiogram.filters import Command
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery
 
@@ -12,6 +13,7 @@ from app.db.database import Database
 from app.game.catalog import get_character
 from app.game.gacha import GachaService
 from app.game.rare_approval import decide
+from app.ui.control_keyboards import rare_approval_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,10 @@ class AdminModule(BotModule):
         self.gacha = GachaService()
 
     def setup(self) -> None:
+        self.router.message.register(
+            self.pending_approvals_command,
+            Command("gacha_pendientes"),
+        )
         self.router.callback_query.register(
             self.rare_decision,
             F.data.startswith("admin:rare:"),
@@ -41,6 +47,47 @@ class AdminModule(BotModule):
             and callback.message.chat.type == "private"
             and callback.message.chat.id == self.settings.admin_user_id
         )
+
+    async def pending_approvals_command(self, message) -> None:
+        """Show pending rare-drop approvals so lost notifications remain recoverable."""
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or message.chat.id != self.settings.admin_user_id
+            or message.from_user.id != self.settings.admin_user_id
+        ):
+            return
+
+        from app.db.models import RareDropApproval
+
+        async with self.database.session() as session:
+            approvals = list(
+                await session.scalars(
+                    __import__("sqlalchemy", fromlist=["select"]).select(RareDropApproval)
+                    .where(RareDropApproval.status == "pending")
+                    .order_by(RareDropApproval.id.asc())
+                    .limit(20)
+                )
+            )
+
+        if not approvals:
+            await message.answer("✅ No hay drops raros pendientes de aprobación.")
+            return
+
+        await message.answer(
+            f"🌟 <b>Drops raros pendientes: {len(approvals)}</b>\n"
+            "Cada elemento conserva su decisión hasta que la apruebes o rechaces."
+        )
+        for approval in approvals:
+            character = get_character(approval.character_id)
+            await message.answer(
+                f"🌟 <b>Solicitud #{approval.id}</b>\n"
+                f"Jugador: <code>{approval.target_user_id}</code>\n"
+                f"Comunidad: <code>{approval.target_chat_id}</code>\n"
+                f"Personaje: <b>{character.name}</b>\n"
+                f"Rareza: <b>{approval.rarity}</b>",
+                reply_markup=rare_approval_keyboard(approval.id),
+            )
 
     async def rare_decision(self, callback: CallbackQuery, bot: Bot) -> None:
         if not self._is_owner(callback):
