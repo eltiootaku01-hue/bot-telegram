@@ -64,6 +64,10 @@ class CafeModule(BotModule):
             F.data == "cafe:recommendation",
         )
         self.router.callback_query.register(
+            self.mystery_open_callback,
+            F.data == "cafe:mystery:open",
+        )
+        self.router.callback_query.register(
             self.mystery_callback,
             F.data.startswith("cafe:mystery:"),
         )
@@ -114,6 +118,13 @@ class CafeModule(BotModule):
         await self.recommendation(callback.message)
         await callback.answer()
 
+
+    async def mystery_open_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None:
+            await callback.answer("No pude abrir el misterio.", show_alert=True)
+            return
+        await self.mystery(callback.message)
+        await callback.answer()
 
     async def mystery_callback(self, callback: CallbackQuery) -> None:
         if callback.message is None or callback.from_user is None:
