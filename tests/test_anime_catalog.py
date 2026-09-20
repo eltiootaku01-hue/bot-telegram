@@ -59,6 +59,27 @@ async def test_anime_catalog_upserts_work_and_character(tmp_path) -> None:
     await database.close()
 
 
+def test_anime_catalog_rejects_inverted_year_range() -> None:
+    service = AnimeCatalogService()
+    import asyncio
+
+    async def run() -> None:
+        database = Database("sqlite+aiosqlite:///:memory:")
+        await database.create_schema()
+        async with database.session() as session:
+            with pytest.raises(ValueError, match="year_end"):
+                await service.upsert_work(
+                    session,
+                    work_id="invalid-years",
+                    title="Invalid",
+                    year_start=2024,
+                    year_end=2023,
+                )
+        await database.close()
+
+    asyncio.run(run())
+
+
 @pytest.mark.asyncio
 async def test_anime_catalog_rejects_missing_work_for_character(tmp_path) -> None:
     database = Database(f"sqlite+aiosqlite:///{tmp_path / 'anime-invalid.db'}")
