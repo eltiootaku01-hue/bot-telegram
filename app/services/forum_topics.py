@@ -25,6 +25,7 @@ DEFAULT_TOPICS = {
     "anime": "🎌 ANIME",
     "debates": "💭 DEBATES",
     "trivia": "🧠 ANIME TRIVIA",
+    "misterios": "🕵️ MISTERIOS DE CAMI",
     "waifumon": "🎴 WAIFUMON",
     "puntos": "💰 CANJEO DE PUNTOS",
     "pedidos": "🖼️ PEDIDOS DE IMÁGENES",
