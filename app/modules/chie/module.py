@@ -9,7 +9,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, ChatMemberAdministrator, ChatMemberOwner, ChatMemberUpdated, Message
 from sqlalchemy import select
 
-from app.core.access import is_chat_staff
+from app.core.access import is_authorized_community, is_chat_staff
 from app.core.config import Settings, get_settings
 from app.core.events import EventBus
 from app.core.identity import BotIdentity
@@ -134,6 +134,8 @@ class ChieModule(BotModule):
         if new_member.status not in {"member", "administrator"}:
             return
         if new_member.user.is_bot:
+            return
+        if not is_authorized_community(self.settings, event.chat.id):
             return
         async with self.database.session() as session:
             setup = await session.scalar(
