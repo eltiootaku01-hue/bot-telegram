@@ -104,7 +104,7 @@ async def test_handle_text_persists_world_observation_after_authored_response(
     message = SimpleNamespace(
         from_user=SimpleNamespace(id=7),
         chat=SimpleNamespace(id=11),
-        text="ayuda",
+        text="hola",
         answer=answer,
     )
 
