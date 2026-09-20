@@ -3,7 +3,7 @@ import pytest
 from app.core.identity import BotIdentity
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import BotPresenceState, Chat, DurableJob, DomainEvent, MysteryRound, UserChat
+from app.db.models import BotPresenceState, Chat, DurableJob, DomainEvent, UserChat
 from app.db.world_models import WorldCatalogEntry, WorldUsageStat
 from app.services.operator_health import OperatorHealthService, format_operator_health
 
