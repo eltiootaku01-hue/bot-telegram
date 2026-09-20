@@ -205,6 +205,11 @@ class TelegramSetupAssistant(tk.Toplevel):
         results: dict[str, TelegramChatCheck | None],
     ) -> None:
         chie = results.get("chie")
+        if chie is not None and chie.chat_type not in {"group", "supergroup"}:
+            self.group_state_var.set(
+                f"✗ el chat base es de tipo {chie.chat_type or 'desconocido'}; elegí un grupo/supergrupo"
+            )
+            return
         if chie is None:
             state = "✗ Chie no tiene token configurado"
         elif not chie.ok:
