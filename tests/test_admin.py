@@ -102,3 +102,43 @@ async def test_rare_approval_notifies_player_after_approval() -> None:
     assert collection is not None
 
     await database.close()
+
+
+
+@pytest.mark.asyncio
+async def test_pending_gacha_approvals_are_owner_only_and_recoverable(database) -> None:
+    module = AdminModule(database, Settings(admin_user_id=77))
+
+    async with database.session() as session:
+        session.add(
+            RareDropApproval(
+                id=9,
+                character_id="taiga",
+                rarity=Rarity.B.value,
+                target_user_id=7,
+                target_chat_id=-100,
+                status="pending",
+            )
+        )
+
+    denied = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=88),
+        from_user=SimpleNamespace(id=88),
+        answer=AsyncMock(),
+    )
+    await module.pending_approvals_command(denied)
+    denied.answer.assert_not_awaited()
+
+    allowed = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=77),
+        from_user=SimpleNamespace(id=77),
+        answer=AsyncMock(),
+    )
+    await module.pending_approvals_command(allowed)
+
+    assert allowed.answer.await_count == 2
+    first_text = allowed.answer.await_args_list[0].args[0]
+    second_text = allowed.answer.await_args_list[1].args[0]
+    assert "Drops raros pendientes: 1" in first_text
+    assert "Solicitud #9" in second_text
+    assert "Taiga" in second_text
