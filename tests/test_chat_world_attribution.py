@@ -387,3 +387,16 @@ async def test_missing_partner_token_does_not_fake_a_second_speaker_message(data
             )
         )
     assert rows == []
+
+
+def test_chie_owns_generic_greetings_and_farewells() -> None:
+    from app.core.config import Settings
+
+    chie = ChatModule(Database("sqlite+aiosqlite:///:memory:"), identity=BotIdentity.CHIE, settings=Settings())
+    cari = ChatModule(Database("sqlite+aiosqlite:///:memory:"), identity=BotIdentity.CARI, settings=Settings())
+    sunna = ChatModule(Database("sqlite+aiosqlite:///:memory:"), identity=BotIdentity.SUNNA, settings=Settings())
+
+    assert chie._should_handle_text("hola") is True
+    assert chie._should_handle_text("me voy") is True
+    assert cari._should_handle_text("hola") is False
+    assert sunna._should_handle_text("hola") is False
