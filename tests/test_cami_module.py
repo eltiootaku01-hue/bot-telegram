@@ -4,7 +4,7 @@ import pytest
 
 from app.core.config import Settings
 from app.db.database import Database
-from app.db.models import MediaAsset
+from app.db.models import AnimeWork, MediaAsset
 from app.modules.cami_media.module import CamiMediaModule
 
 
@@ -205,4 +205,48 @@ async def test_catalog_search_records_user_chat_world_scope(tmp_path) -> None:
 
     assert rows
     assert rows[0].scope_id == "7:-100"
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_cami_media_long_anime_title_creates_bounded_local_work_id(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'cami-anime-id.db'}")
+    await database.create_schema()
+    module = CamiMediaModule(database, Settings(admin_user_id=7))
+
+    long_title = "A" * 255
+    async with database.session() as session:
+        asset = MediaAsset(
+            telegram_file_id="file-long-anime",
+            source_chat_id=7,
+            source_message_id=30,
+            status="needs_tag",
+        )
+        session.add(asset)
+        await session.flush()
+        asset_id = asset.id
+
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=7),
+        from_user=SimpleNamespace(id=7),
+        text=f"Hero | {long_title} | azul | waifu",
+        answer=answer,
+    )
+    state = FakeState(asset_id)
+
+    await module.receive_schedule_or_tags(message, state)
+
+    async with database.session() as session:
+        work = await session.scalar(
+            select(AnimeWork)
+        )
+
+    assert work is not None
+    assert len(work.id) <= 128
+    assert work.title == long_title
     await database.close()
