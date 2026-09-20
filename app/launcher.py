@@ -41,6 +41,7 @@ ENV_DEFAULTS = {
     "PUBLISH_PAGE_CHAT_ID": "0",
     "AUTHORIZED_CHAT_IDS": "",
     "ALLOW_ADMIN_PRIVATE_CHAT": "true",
+    "ALLOW_USER_PRIVATE_CHAT": "true",
     "AI_ENABLED": "false",
 }
 
@@ -123,6 +124,15 @@ class BotLauncher(tk.Tk):
         ttk.Entry(access_box, textvariable=self.authorized_chats_var).grid(
             row=0, column=1, sticky="ew", padx=5, pady=5
         )
+        self.allow_user_private_var = tk.BooleanVar(
+            value=(values.get("ALLOW_USER_PRIVATE_CHAT", "true") or "true").strip().lower()
+            in {"1", "true", "yes", "on"}
+        )
+        ttk.Checkbutton(
+            access_box,
+            text="Permitir funciones privadas a usuarios normales",
+            variable=self.allow_user_private_var,
+        ).grid(row=2, column=0, columnspan=2, sticky="w", padx=5, pady=(5, 2))
         self.allow_admin_private_var = tk.BooleanVar(
             value=(values.get("ALLOW_ADMIN_PRIVATE_CHAT", "true") or "true").strip().lower()
             in {"1", "true", "yes", "on"}
@@ -135,7 +145,7 @@ class BotLauncher(tk.Tk):
         ttk.Label(
             access_box,
             text="Vacío = ningún grupo autorizado. Los IDs se validan nuevamente en el runtime.",
-        ).grid(row=2, column=0, columnspan=2, sticky="w", padx=5, pady=(0, 3))
+        ).grid(row=3, column=0, columnspan=2, sticky="w", padx=5, pady=(0, 3))
 
         ai_box = ttk.LabelFrame(outer, text="IA opcional", padding=14)
         ai_box.pack(fill="x", pady=(16, 0))
@@ -244,6 +254,7 @@ class BotLauncher(tk.Tk):
             "PUBLISH_PAGE_CHAT_ID": self.publish_page_var.get().strip() or "0",
             "AUTHORIZED_CHAT_IDS": self.authorized_chats_var.get().strip(),
             "ALLOW_ADMIN_PRIVATE_CHAT": "true" if self.allow_admin_private_var.get() else "false",
+            "ALLOW_USER_PRIVATE_CHAT": "true" if self.allow_user_private_var.get() else "false",
             "BOT_IDENTITY": "cari",
             "AI_ENABLED": "true" if self.ai_global_var.get() else "false",
         })
