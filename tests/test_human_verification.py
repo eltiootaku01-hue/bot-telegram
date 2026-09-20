@@ -82,6 +82,11 @@ async def test_verification_no_restores_saved_permissions() -> None:
     class FakeBot:
         def __init__(self) -> None:
             self.restrict_chat_member = AsyncMock()
+            self.get_chat = AsyncMock(
+                return_value=SimpleNamespace(
+                    permissions=permissions,
+                )
+            )
 
     database = Database("sqlite+aiosqlite:///:memory:")
     await database.create_schema()
