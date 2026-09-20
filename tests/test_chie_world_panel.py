@@ -270,3 +270,71 @@ async def test_world_proposal_decision_is_owner_only_and_single_use(database: Da
     assert row.status == "accepted"
     owner.answer.assert_awaited_once()
     owner_message.edit_reply_markup.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_auto_world_curator_requires_explicit_gate(database: Database) -> None:
+    module = ChieModule(
+        database,
+        Settings(admin_user_id=77, ai_enabled=True, ai_enabled_chie=True),
+    )
+    module.bot = AsyncMock()
+
+    await module._maybe_generate_daily_world_proposal(
+        day_key="2026-09-24",
+        report=SimpleNamespace(review_type="daily", period_key="2026-09-24"),
+    )
+
+    module.bot.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_auto_world_curator_notifies_admin_only_after_generation(database: Database) -> None:
+    payload = (
+        '{"proposals":[{"title":"Idea","idea":"Una escena pequena.",'
+        '"reason":"Hay datos nuevos.","affected_identities":["cari"]}]}'
+    )
+    from app.brain.provider import LLMRequest
+    from app.services.world_curator_ai import WorldCuratorAIService, format_world_proposals
+
+    class FakeBrain:
+        def __init__(self) -> None:
+            self.requests: list[LLMRequest] = []
+
+        async def generate(self, request: LLMRequest) -> str:
+            self.requests.append(request)
+            return payload
+
+    settings = Settings(
+        admin_user_id=77,
+        ai_enabled=True,
+        ai_enabled_chie=True,
+        ai_curator_auto=True,
+        ollama_model="test-model",
+    )
+    module = ChieModule(database, settings)
+    brain = FakeBrain()
+    module.curator_ai = WorldCuratorAIService(settings, brain=brain)  # type: ignore[arg-type]
+    module.bot = AsyncMock()
+
+    async with database.session() as session:
+        report = await module.curator.build_daily(
+            session,
+            day_key="2026-09-25",
+        )
+
+    await module._maybe_generate_daily_world_proposal(
+        day_key="2026-09-25",
+        report=report,
+    )
+
+    module.bot.send_message.assert_awaited_once()
+    assert module.bot.send_message.await_args.args[0] == 77
+    assert len(brain.requests) == 1
+
+    await module._maybe_generate_daily_world_proposal(
+        day_key="2026-09-25",
+        report=report,
+    )
+    assert len(brain.requests) == 1
+    assert module.bot.send_message.await_count == 1
