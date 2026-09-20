@@ -11,6 +11,7 @@ from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.module import BotModule
 from app.db.database import Database
+from app.db.models import TioOperatorRequest
 from app.services.tio_operator import TioOperatorService
 from app.ui.control_keyboards import tio_operator_request_keyboard, tio_operator_resolve_keyboard
 
@@ -32,6 +33,10 @@ class TioOperatorModule(BotModule):
         self.router.message.register(
             self.pending_command,
             Command("tio_pendientes"),
+        )
+        self.router.message.register(
+            self.respond_command,
+            Command("tio_responder"),
         )
         self.router.message.register(
             self.capture_message,
@@ -92,6 +97,63 @@ class TioOperatorModule(BotModule):
                 )
 
         await message.answer("\n".join(lines))
+
+    async def respond_command(self, message: Message, bot: Bot) -> None:
+        """Relay the operator's exact text to the original community request."""
+        if not self._is_owner_private(message, self.settings) or not message.text:
+            return
+
+        parts = message.text.split(maxsplit=2)
+        if len(parts) < 3 or not parts[1].isdigit():
+            await message.answer(
+                "Uso: <code>/tio_responder ID mensaje</code>",
+            )
+            return
+
+        request_id = int(parts[1])
+        reply_text = parts[2].strip()
+        if not reply_text:
+            await message.answer("La respuesta no puede estar vacía.")
+            return
+
+        async with self.database.session() as session:
+            request = await session.get(TioOperatorRequest, request_id)
+            if request is None or request.status not in {"pending", "acknowledged"}:
+                await message.answer("Esa solicitud no está pendiente de respuesta.")
+                return
+
+            if not is_authorized_community(self.settings, request.chat_id):
+                await message.answer(
+                    "La comunidad original ya no está autorizada; no voy a enviar el mensaje.",
+                )
+                return
+
+            destination = request.chat_id
+            source_user = request.user_id
+
+        try:
+            await bot.send_message(
+                destination,
+                f"💬 <b>Tío Otaku (operador humano)</b>\n\n{escape(reply_text)}",
+            )
+        except Exception:
+            await message.answer(
+                f"❌ No pude entregar la respuesta de la solicitud #{request_id}. "
+                "La solicitud permanece pendiente."
+            )
+            raise
+
+        async with self.database.session() as session:
+            await self.service.decide(
+                session,
+                request_id=request_id,
+                status="resolved",
+            )
+
+        await message.answer(
+            f"✅ Respuesta de la solicitud #{request_id} enviada a la comunidad "
+            f"(usuario {source_user}).",
+        )
 
     async def capture_message(self, message: Message, bot: Bot) -> None:
         if (
