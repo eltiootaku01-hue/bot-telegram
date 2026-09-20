@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import select
 
 from app.characters.models import CharacterIntent
+from app.core.config import Settings
 from app.core.identity import BotIdentity
 from app.db.database import Database
 from app.db.world_models import WorldUsageStat
@@ -183,7 +184,7 @@ async def test_chat_uses_authored_pair_scene_without_generating_a_second_indepen
     module = ChatModule(
         database,
         identity=BotIdentity.CAMI,
-        settings=__import__('app.core.config', fromlist=['Settings']).Settings(bot_token_sunna='sunna-test-token'),
+        settings=Settings(bot_token_sunna='sunna-test-token'),
         bot_factory=lambda token: FakeTargetBot(),
     )
     answers: list[str] = []
@@ -219,7 +220,7 @@ async def test_interaction_usage_is_recorded_as_relationship(database: Database)
 
     module = ChatModule(
         database,
-        settings=__import__('app.core.config', fromlist=['Settings']).Settings(bot_token_cami='cami-test-token'),
+        settings=Settings(bot_token_cami='cami-test-token'),
         bot_factory=factory,
     )
 
@@ -252,7 +253,19 @@ async def test_interaction_usage_is_recorded_as_relationship(database: Database)
 async def test_directed_interaction_uses_persisted_relationship_count_to_rotate_authored_scene(
     database: Database,
 ) -> None:
-    module = ChatModule(database, identity=BotIdentity.CAMI)
+    target_bots: list[FakeTargetBot] = []
+
+    def factory(token: str) -> FakeTargetBot:
+        bot = FakeTargetBot()
+        target_bots.append(bot)
+        return bot
+
+    module = ChatModule(
+        database,
+        identity=BotIdentity.CAMI,
+        settings=Settings(bot_token_sunna="sunna-test-token"),
+        bot_factory=factory,
+    )
     answers: list[str] = []
 
     async def answer(text: str) -> None:
@@ -266,16 +279,20 @@ async def test_directed_interaction_uses_persisted_relationship_count_to_rotate_
     )
 
     await module.handle_text(message, AsyncMock())
-    first = list(answers)
+    first_source = list(answers)
+    first_followup = target_bots[-1].sent[0][1]
 
     answers.clear()
     await module.handle_text(message, AsyncMock())
-    second = list(answers)
+    second_source = list(answers)
+    second_followup = target_bots[-1].sent[0][1]
 
-    assert first
-    assert second
-    assert first[0] != second[0]
-    assert first[1] != second[1]
+    assert first_source
+    assert second_source
+    assert first_followup
+    assert second_followup
+    assert first_source[0] != second_source[0]
+    assert first_followup != second_followup
 
     async with database.session() as session:
         count = await module.world.usage_count(
