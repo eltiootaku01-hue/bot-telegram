@@ -196,49 +196,47 @@ class ChieModule(BotModule):
                 chat_id=chat_id,
                 window_seconds=raid_window,
             )
-        verification_timeout = raid_timeout if recent_joins + 1 >= raid_threshold else base_timeout
+        verification_timeout = (
+            raid_timeout if recent_joins + 1 >= raid_threshold else base_timeout
+        )
+        restrictive_permissions = ChatPermissions(
+            can_send_messages=False,
+            can_send_audios=False,
+            can_send_documents=False,
+            can_send_photos=False,
+            can_send_videos=False,
+            can_send_video_notes=False,
+            can_send_voice_notes=False,
+            can_send_polls=False,
+            can_send_other_messages=False,
+            can_add_web_page_previews=False,
+        )
 
         try:
-            chat_info = await bot.get_chat(chat_id)
-            permissions = getattr(chat_info, "permissions", None)
-            if not isinstance(permissions, ChatPermissions):
-                permissions = None
-        except (TelegramBadRequest, TelegramForbiddenError):
-            permissions = None
-
-        if permissions is not None:
-            try:
-                await bot.restrict_chat_member(
-                    chat_id,
-                    user_id,
-                    permissions=ChatPermissions(
-                        can_send_messages=False,
-                        can_send_audios=False,
-                        can_send_documents=False,
-                        can_send_photos=False,
-                        can_send_videos=False,
-                        can_send_video_notes=False,
-                        can_send_voice_notes=False,
-                        can_send_polls=False,
-                        can_send_other_messages=False,
-                        can_add_web_page_previews=False,
-                    ),
-                    use_independent_chat_permissions=True,
-                )
-            except (TelegramBadRequest, TelegramForbiddenError) as exc:
-                logger.warning(
-                    "Human verification restriction unavailable: chat=%s user=%s error=%s",
-                    chat_id,
-                    user_id,
-                    exc,
-                )
-                permissions = None
+            await bot.restrict_chat_member(
+                chat_id,
+                user_id,
+                permissions=restrictive_permissions,
+                use_independent_chat_permissions=True,
+            )
+        except (TelegramBadRequest, TelegramForbiddenError) as exc:
+            logger.warning(
+                "Human verification restriction unavailable; refusing to create verification: "
+                "chat=%s user=%s error=%s",
+                chat_id,
+                user_id,
+                exc,
+            )
+            return
 
         name = escape(event.new_chat_member.user.full_name)
+        raid_suffix = " ⚠️ Hay muchas entradas en curso." if recent_joins + 1 >= raid_threshold else ""
         prompt = (
             f"👋 <b>¡Bienvenido/a, {name}!</b>\n\n"
             "Soy Chie, la recepción de Ciudad Animals.\n\n"
-            "<b>¿Sos un bot?</b>\n"            "Elegí una respuesta para habilitar tu participación en la comunidad."
+            "<b>¿Sos un bot?</b>\n"
+            "Elegí una respuesta para habilitar tu participación en la comunidad.\n\n"
+            f"⏱️ Tenés <b>{verification_timeout} segundos</b> para responder.{raid_suffix}"
         )
         thread_id = await self.topics.get_thread_id(chat_id, "bienvenida")
         try:
@@ -261,16 +259,6 @@ class ChieModule(BotModule):
                 chat_id,
                 user_id,
             )
-            if permissions is not None:
-                try:
-                    await bot.restrict_chat_member(
-                        chat_id,
-                        user_id,
-                        permissions=permissions,
-                        use_independent_chat_permissions=True,
-                    )
-                except (TelegramBadRequest, TelegramForbiddenError):
-                    logger.exception("Could not restore permissions after verification prompt failure")
             return
 
         async with self.database.session() as session:
@@ -278,8 +266,12 @@ class ChieModule(BotModule):
                 session,
                 chat_id=chat_id,
                 user_id=user_id,
-                prompt_message_id=sent.message_id if isinstance(getattr(sent, "message_id", None), int) else None,
-                default_permissions_json=permissions_to_json(permissions) if permissions is not None else "{}",
+                prompt_message_id=(
+                    sent.message_id
+                    if isinstance(getattr(sent, "message_id", None), int)
+                    else None
+                ),
+                default_permissions_json="{}",
                 timeout_seconds=verification_timeout,
             )
         await self._observe_action("verification_prompt", user_id, chat_id)
