@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 from datetime import datetime
 from html import escape
@@ -153,7 +154,7 @@ class CamiMediaModule(BotModule):
                 asset.status = "tagged"
                 await self.anime.upsert_work(
                     session,
-                    work_id=f"media:{asset.anime.casefold()}",
+                    work_id=f"media:{hashlib.sha256(asset.anime.casefold().encode("utf-8")).hexdigest()}",
                     title=asset.anime,
                     status="unverified",
                     notes=(
