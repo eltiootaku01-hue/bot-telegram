@@ -32,6 +32,8 @@ class Chat(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     last_human_message_at: Mapped[datetime | None] = mapped_column(DateTime)
+    last_bot_message_at: Mapped[datetime | None] = mapped_column(DateTime)
+    last_social_event_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class UserChat(Base):
