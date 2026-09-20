@@ -92,7 +92,7 @@ class MysteryModule(BotModule):
                     MysteryRound.status == "active",
                     MysteryRound.message_id.is_(None),
                 )
-                .values(status="publishing", updated_at=datetime.utcnow())
+                .values(status="publishing", updated_at=utc_now())
             )
             if claimed.rowcount != 1:
                 return False
