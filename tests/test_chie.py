@@ -139,4 +139,4 @@ async def test_chie_group_setup_message_exposes_community_id() -> None:
 
     assert answers
     assert "-100123" in answers[0]
-    assert "Grupo general / bienvenida" not in answers[0]
+    assert "Grupo general / bienvenida" in answers[0]
