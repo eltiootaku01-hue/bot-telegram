@@ -239,7 +239,7 @@ class CamiMediaModule(BotModule):
             await self._observe_action("catalog_empty", message.from_user.id)
             return
 
-        title = f"📚 <b>Catálogo de Cami</b>" + (f" · <i>{escape(query)}</i>" if query else "")
+        title = "📚 <b>Catálogo de Cami</b>" + (f" · <i>{escape(query)}</i>" if query else "")
         lines = [title, ""]
         for asset in rows:
             character = escape((asset.character_id or "sin personaje").replace("-", " "))
