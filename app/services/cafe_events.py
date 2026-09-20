@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -110,6 +110,49 @@ class CafeEventService:
 
         return CafeDailyEventStart(row, event, True)
 
+    
+    async def claim_publication(
+        self,
+        session: AsyncSession,
+        *,
+        round_id: int,
+    ) -> bool:
+        """Atomically reserve the one Telegram publication for this event."""
+        result = await session.execute(
+            update(CafeDailyEventRound)
+            .where(
+                CafeDailyEventRound.id == round_id,
+                CafeDailyEventRound.status.in_(("active", "failed")),
+                CafeDailyEventRound.message_id.is_(None),
+            )
+            .values(
+                status="publishing",
+                updated_at=utc_now(),
+            )
+        )
+        return result.rowcount == 1
+
+    async def fail_publication(
+        self,
+        session: AsyncSession,
+        *,
+        round_id: int,
+    ) -> bool:
+        """Return a failed publication to a retryable state."""
+        result = await session.execute(
+            update(CafeDailyEventRound)
+            .where(
+                CafeDailyEventRound.id == round_id,
+                CafeDailyEventRound.status == "publishing",
+                CafeDailyEventRound.message_id.is_(None),
+            )
+            .values(
+                status="failed",
+                updated_at=utc_now(),
+            )
+        )
+        return result.rowcount == 1
+
     async def mark_published(
         self,
         session: AsyncSession,
@@ -120,7 +163,7 @@ class CafeEventService:
         row = await session.get(CafeDailyEventRound, round_id)
         if row is None:
             return None
-        if row.status not in {"active", "published"}:
+        if row.status not in {"active", "publishing", "published"}:
             return row
         if row.message_id is None:
             row.message_id = message_id
