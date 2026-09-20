@@ -18,6 +18,11 @@ class FixedEngine(GameEngine):
         return Rarity.B
 
 
+class CommonEngine(GameEngine):
+    def roll_gacha(self, seed: str | None = None) -> Rarity:
+        return Rarity.D
+
+
 @pytest.mark.asyncio
 async def test_rare_gacha_without_owner_is_refunded_and_closed(tmp_path) -> None:
     database = Database(f"sqlite+aiosqlite:///{tmp_path / 'gacha-handler.db'}")
@@ -95,7 +100,7 @@ async def test_normal_gacha_result_includes_authored_sunna_reaction(tmp_path) ->
         session.add(GameProfile(user_id=9, chat_id=-100, points=GACHA_COST_POINTS))
 
     module = GameModule(database, Settings(admin_user_id=0))
-    module.gacha_service = GachaService(FixedEngine())
+    module.gacha_service = GachaService(CommonEngine())
     module._community_chat_id = AsyncMock(return_value=-100)
     callback = SimpleNamespace(
         id="normal-gacha-reaction",
