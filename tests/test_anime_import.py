@@ -102,21 +102,18 @@ def test_load_import_file_rejects_non_list_works(tmp_path) -> None:
         load_import_file(source)
 
 
-def test_load_import_file_rejects_timezone_aware_verification_timestamps() -> None:
+@pytest.mark.asyncio
+async def test_import_file_rejects_timezone_aware_verification_timestamps(tmp_path) -> None:
     document = valid_document()
     document["works"][0]["last_verified"] = "2026-09-19T12:00:00-03:00"
+    source = tmp_path / "aware.json"
+    source.write_text(json.dumps(document), encoding="utf-8")
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'aware.db'}")
+    await database.create_schema()
+
     with pytest.raises(ValueError, match="timezone-naive"):
-        from app.services.anime_import import import_payload
-        from app.db.database import Database
-        import asyncio
+        async with database.session(write=True) as session:
+            await import_file(session, source)
 
-        async def run() -> None:
-            database = Database("sqlite+aiosqlite:///:memory:")
-            await database.create_schema()
-            try:
-                async with database.session(write=True) as session:
-                    await import_payload(session, document)
-            finally:
-                await database.close()
-
-        asyncio.run(run())
+    await database.close()
