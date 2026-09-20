@@ -43,6 +43,15 @@ def _ensure_compatibility(connection) -> None:
     _add_column_if_missing(connection, "durable_jobs", "heartbeat_at", "DATETIME", job_columns)
 
     connection.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_media_asset_unique_id "
+        "ON media_assets(telegram_unique_id) "
+        "WHERE telegram_unique_id IS NOT NULL"
+    ))
+    connection.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_media_asset_source_message "
+        "ON media_assets(source_chat_id, source_message_id)"
+    ))
+    connection.execute(text(
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_fan_request_source "
         "ON fan_requests(user_id, chat_id, source_message_id) "
         "WHERE source_message_id IS NOT NULL"
