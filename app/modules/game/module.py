@@ -22,6 +22,7 @@ from app.game.encounters import Encounter, encounter_options
 from app.game.engine import GameEngine
 from app.game.fusion import fuse_collection
 from app.game.gacha import GACHA_COST_POINTS, GachaService
+from app.game.missions import DailyMissionService
 from app.game.mystery import MysteryService
 from app.game.progression import apply_capture_progression, collection_status
 from app.game.waifu_browser import (
@@ -60,6 +61,7 @@ class GameModule(BotModule):
         self.engine = GameEngine()
         self.gacha_service = GachaService(self.engine)
         self.mystery_service = MysteryService()
+        self.missions = DailyMissionService()
         self.encounters = EncounterStore()
         self.wild: WildWaifuScheduler | None = None
         self.world = WorldService()
@@ -72,6 +74,7 @@ class GameModule(BotModule):
         self.router.message.register(self.inventory, Command("inventario"))
         self.router.message.register(self.combat, Command("combate"))
         self.router.message.register(self.mystery, Command("misterio"))
+        self.router.message.register(self.missions_command, Command("misiones"))
         self.router.message.register(self.waifus, Command("waifus"))
         self.router.callback_query.register(self.gacha_open, F.data == "game:gacha:open")
         self.router.callback_query.register(self.inventory_callback, F.data == "game:inventory:open")
@@ -120,6 +123,70 @@ class GameModule(BotModule):
     def _game_reaction(self, intent: CharacterIntent, roll: int) -> str:
         response = self.characters.choose(BotIdentity.SUNNA, intent, roll=roll)
         return response.scene.text if response is not None else ""
+
+    def _mission_day_key(self) -> str:
+        return self.missions.day_key(
+            timezone_name=self.settings.bot_world_timezone,
+        )
+
+    async def _record_mission(
+        self,
+        session,
+        *,
+        user_id: int,
+        chat_id: int,
+        mission_key: str,
+        reference_type: str,
+        reference_id: str,
+    ) -> tuple[bool, int, int, int]:
+        day_key = self._mission_day_key()
+        progress = await self.missions.record(
+            session,
+            user_id=user_id,
+            chat_id=chat_id,
+            day_key=day_key,
+            mission_key=mission_key,
+            reference_type=reference_type,
+            reference_id=reference_id,
+        )
+        claimed, balance = await self.missions.claim(
+            session,
+            user_id=user_id,
+            chat_id=chat_id,
+            day_key=day_key,
+            mission_key=mission_key,
+        )
+        return claimed, balance, progress.progress, progress.target
+
+    async def missions_command(self, message: Message) -> None:
+        if message.chat.type != "private" or message.from_user is None:
+            return
+        chat_id = await self._community_chat_id(message.from_user.id)
+        if chat_id is None:
+            await message.answer("😰 Todavía no hay una comunidad asociada a tu cuenta.")
+            return
+        day_key = self._mission_day_key()
+        async with self.database.session(write=True) as session:
+            rows = await self.missions.list_progress(
+                session,
+                user_id=message.from_user.id,
+                chat_id=chat_id,
+                day_key=day_key,
+            )
+        lines = ["🎯 <b>Misiones diarias</b>", f"📅 {day_key}", ""]
+        for mission, progress in rows:
+            status = "✅ Completada" if progress.claimed else f"{min(progress.progress, progress.target)}/{progress.target}"
+            lines.append(
+                f"• <b>{mission.label}</b> — {status} · +{mission.reward_points} pts"
+            )
+        lines.extend(
+            (
+                "",
+                "El progreso se registra una sola vez por acción y las recompensas no pueden duplicarse.",
+            )
+        )
+        await message.answer("\n".join(lines))
+        await self._observe_action("missions_view", message.from_user.id, chat_id)
 
     async def _community_chat_id(self, user_id: int) -> int | None:
         async with self.database.session() as session:
