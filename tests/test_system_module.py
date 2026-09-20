@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -33,4 +34,20 @@ async def test_chie_command_menu_exposes_world_metrics_command() -> None:
     assert "proponer_mundo" in names
     assert "comandos" in names
     assert "configurar" in names
+
+@pytest.mark.asyncio
+async def test_help_surface_is_identity_aware() -> None:
+    for identity, expected in (
+        (BotIdentity.CARI, "/cafe"),
+        (BotIdentity.CAMI, "/catalogo"),
+        (BotIdentity.CHIE, "/configurar"),
+    ):
+        module = SystemModule(identity)
+        message = SimpleNamespace(answer=AsyncMock())
+
+        await module.help(message)
+
+        rendered = message.answer.await_args.args[0]
+        assert identity.value.title() in rendered
+        assert expected in rendered
 
