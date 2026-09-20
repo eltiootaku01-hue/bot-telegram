@@ -61,3 +61,19 @@ def test_router_classifies_authored_confusion_phrases() -> None:
     assert router.classify("No entiendo qué pasó") is CharacterIntent.CONFUSION
     assert router.classify("qué está pasando?") is CharacterIntent.CONFUSION
     assert router.classify("no comprendo") is CharacterIntent.CONFUSION
+
+
+def test_router_returns_character_mentions_in_text_order() -> None:
+    router = CharacterIntentRouter()
+
+    assert router.target_identities("Cami y Sunna, una pregunta") == (
+        BotIdentity.CAMI,
+        BotIdentity.SUNNA,
+    )
+
+
+def test_router_keeps_single_target_backward_compatible() -> None:
+    router = CharacterIntentRouter()
+
+    assert router.target_identities("hola Cami") == (BotIdentity.CAMI,)
+    assert router.target_identity("hola Cami") is BotIdentity.CAMI
