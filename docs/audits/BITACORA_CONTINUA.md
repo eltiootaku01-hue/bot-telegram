@@ -3,7 +3,7 @@
 **Repositorio:** `eltiootaku01-hue/bot-telegram`  
 **Rama operativa:** `main`  
 **Fecha de corte:** 2026-09-20  
-**Último checkpoint operativo:** ver la sección 27; el SHA de main y el último SHA funcional se registran por separado.  
+**Último checkpoint operativo:** ver la sección 28; el SHA de main y el último SHA funcional se registran por separado.  
 **Objetivo:** evitar trabajo repetido, conservar evidencia de errores/pruebas y dirigir cada nueva sesión hacia áreas todavía incompletas.
 
 ---
