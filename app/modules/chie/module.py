@@ -22,7 +22,7 @@ from app.db.models import HumanVerification
 from app.db.world_models import WorldProposal, WorldReview
 from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
-from app.services.human_verification import HumanVerificationService, permissions_from_json, permissions_to_json
+from app.services.human_verification import HumanVerificationService
 from app.services.operator_health import OperatorHealthService, format_operator_health
 from app.services.world import WorldService
 from app.services.world_curator import WorldCuratorService, format_world_review
