@@ -157,11 +157,12 @@ class TriviaModule(BotModule):
                 day_key = self.missions.day_key(
                     timezone_name=self.settings.bot_world_timezone,
                 )
-                _, mission_progress = await self._record_mission(
+                await self.missions.record(
                     session,
                     user_id=callback.from_user.id,
                     chat_id=callback.message.chat.id,
                     day_key=day_key,
+                    mission_key="trivia_participation",
                     reference_type="trivia_answer",
                     reference_id=f"{round_id}:{callback.from_user.id}",
                 )
@@ -197,27 +198,6 @@ class TriviaModule(BotModule):
             await callback.answer("Respuesta inválida.", show_alert=True)
         else:
             await callback.answer("La trivia ya terminó. 😭")
-
-    async def _record_mission(
-        self,
-        session,
-        *,
-        user_id: int,
-        chat_id: int,
-        day_key: str,
-        reference_type: str,
-        reference_id: str,
-    ) -> tuple[object, object]:
-        progress = await self.missions.record(
-            session,
-            user_id=user_id,
-            chat_id=chat_id,
-            day_key=day_key,
-            mission_key="trivia_participation",
-            reference_type=reference_type,
-            reference_id=reference_id,
-        )
-        return progress, progress
 
     async def _observe_action(
         self,
