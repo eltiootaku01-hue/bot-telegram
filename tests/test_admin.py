@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy import select
 
 from app.core.config import Settings
 from app.core.identity import BotIdentity
@@ -87,8 +88,7 @@ async def test_rare_approval_notifies_player_after_approval() -> None:
     async with database.session() as session:
         approval = await session.get(RareDropApproval, 1)
         collection = await session.scalar(
-            __import__("sqlalchemy", fromlist=["select"]).select(GameCollection)
-            .where(GameCollection.character_id == "taiga")
+            select(GameCollection).where(GameCollection.character_id == "taiga")
         )
 
     assert approval is not None
