@@ -269,9 +269,25 @@ class BotLauncher(tk.Tk):
             "LLM_PROVIDER": self.provider_var.get().strip(),
             "LLM_MODEL": self.model_var.get().strip(),
             "OLLAMA_MODEL": self.model_var.get().strip() or "llama3.2:1b",
-            "MASTER_TELEGRAM_ID": self.master_var.get().strip() or "0",
-            "MASTER_USERNAME": self.master_username_var.get().strip(),
-            "ADMIN_USER_ID": self.master_var.get().strip() or self.admin_var.get().strip() or "0",
+            "MASTER_TELEGRAM_ID": (
+                self.master_var.get().strip()
+                if hasattr(self, "master_var")
+                else self.admin_var.get().strip()
+            ) or "0",
+            "MASTER_USERNAME": (
+                self.master_username_var.get().strip()
+                if hasattr(self, "master_username_var")
+                else ""
+            ),
+            "ADMIN_USER_ID": (
+                (
+                    self.master_var.get().strip()
+                    if hasattr(self, "master_var")
+                    else self.admin_var.get().strip()
+                )
+                or self.admin_var.get().strip()
+                or "0"
+            ),
             "BASE_GROUP_CHAT_ID": self.base_group_var.get().strip() or "0",
             "MEDIA_STORAGE_CHAT_ID": self.media_var.get().strip() or "0",
             "PUBLISH_PAGE_CHAT_ID": self.publish_page_var.get().strip() or "0",
