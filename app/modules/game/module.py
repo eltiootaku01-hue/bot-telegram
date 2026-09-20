@@ -24,11 +24,19 @@ from app.game.fusion import fuse_collection
 from app.game.gacha import GACHA_COST_POINTS, GachaService
 from app.game.mystery import MysteryService
 from app.game.progression import apply_capture_progression, collection_status
+from app.game.waifu_browser import page_for, render_page
 from app.game.wild_scheduler import WildWaifuScheduler
 from app.services.community import CommunityResolver
 from app.services.world import WorldService
 from app.ui.control_keyboards import rare_approval_keyboard
-from app.ui.game_keyboards import combat_keyboard, fusion_keyboard, game_hub_keyboard, gacha_keyboard, mystery_keyboard
+from app.ui.game_keyboards import (
+    combat_keyboard,
+    fusion_keyboard,
+    game_hub_keyboard,
+    gacha_keyboard,
+    mystery_keyboard,
+    waifu_catalog_keyboard,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +63,7 @@ class GameModule(BotModule):
         self.router.message.register(self.inventory, Command("inventario"))
         self.router.message.register(self.combat, Command("combate"))
         self.router.message.register(self.mystery, Command("misterio"))
+        self.router.message.register(self.waifus, Command("waifus"))
         self.router.callback_query.register(self.gacha_open, F.data == "game:gacha:open")
         self.router.callback_query.register(self.inventory_callback, F.data == "game:inventory:open")
         self.router.callback_query.register(self.combat_open, F.data == "game:combat:open")
@@ -63,6 +72,7 @@ class GameModule(BotModule):
         self.router.callback_query.register(self.combat_action, F.data.startswith("game:combat:"))
         self.router.callback_query.register(self.encounter_answer, F.data.startswith("game:encounter:"))
         self.router.callback_query.register(self.mystery_answer, F.data.startswith("game:mystery:"))
+        self.router.callback_query.register(self.waifu_catalog_page, F.data.startswith("game:waifus:page:"))
 
     async def on_startup(self, bot: Bot) -> None:
         self.wild = WildWaifuScheduler(bot, self.database)
@@ -139,6 +149,36 @@ class GameModule(BotModule):
         await self._observe_action("gacha_open", callback.from_user.id)
         await callback.answer()
 
+    async def waifus(self, message: Message) -> None:
+        if message.chat.type != "private":
+            return
+        page = page_for(1)
+        await message.answer(
+            render_page(page),
+            reply_markup=waifu_catalog_keyboard(page.page, page.total_pages),
+        )
+        if message.from_user is not None:
+            await self._observe_action("waifu_catalog", message.from_user.id)
+
+    async def waifu_catalog_page(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer(
+                "Este catálogo solo funciona en tu chat privado con Sunna. 😰",
+                show_alert=True,
+            )
+            return
+        parts = (callback.data or "").split(":")
+        if len(parts) != 4 or not parts[3].isdigit():
+            await callback.answer("Página inválida.", show_alert=True)
+            return
+        page = page_for(int(parts[3]))
+        if callback.message is not None:
+            await callback.message.edit_text(
+                render_page(page),
+                reply_markup=waifu_catalog_keyboard(page.page, page.total_pages),
+            )
+        await self._observe_action("waifu_catalog_page", callback.from_user.id)
+        await callback.answer()
     async def inventory_callback(self, callback: CallbackQuery) -> None:
         if not self._private_callback(callback):
             await callback.answer("Este botón solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
