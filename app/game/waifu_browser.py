@@ -53,5 +53,4 @@ def render_page(page: WaifuPage) -> str:
             f"  ⚡ Poder {character.power_score}/100 · ⭐ Popularidad {character.popularity_score}/100 · "
             f"ranking {ranking}"
         )
-    return "
-".join(lines)
+    return "\\n".join(lines)
