@@ -1150,3 +1150,29 @@ Cada nueva sesión debe:
 6. implementar código + regresión;
 7. validar;
 8. añadir una entrada con errores, causa, corrección y evidencia.
+
+---
+# 26. REACCIONES CONTEXTUALES AUTHORED DE SUNNA — 2026-09-20
+
+Objetivo: reaccionar a resultados reales de WaifuMon sin generación libre. Se añadieron GAME_SUCCESS y GAME_MISS, ocho líneas authored de Sunna y selección determinista mediante CharacterDirector.
+
+Integración real: captura correcta, fallo de encuentro, gacha normal y misterio (éxito/fallo). Estas rutas no invocan Brain/LLM.
+
+Errores encontrados en CI #1220:
+1. test de misterio sin User/Chat para satisfacer las FK del GameProfile. Corrección: fixture completo.
+2. test de gacha esperaba <b>Sunna:</b>, pero producción usa “🐍 Sunna:”. Corrección: expectativa del test.
+3. test normal de gacha usaba Rarity.B y por ello entraba al flujo de aprobación rara. Corrección: CommonEngine con Rarity.D.
+
+Validación final:
+- SHA funcional: 585c01caf0c590786f05497dccfccc7a11efba5c
+- CI #1222: SUCCESS
+- Windows Build #852: SUCCESS sobre el mismo SHA
+- Windows completó cinco ejecutables, verificación, smoke test de BotManager, instalador, manifest, ZIP portable, SHA-256 y artifacts.
+
+Archivos principales: app/characters/models.py, app/characters/repertoire.py, app/modules/game/module.py, tests/test_game_capture.py, tests/test_game_gacha_handler.py.
+
+No repetir: no reauditar esta capa desde cero salvo regresión, nuevo resultado de juego o cambio de arquitectura. Mantenerla authored-only; no convertirla en generación LLM.
+
+Estado global conservador: 82%. No se incrementa por este bloque porque siguen abiertas GUI, profundidad autoral, superficies avanzadas y release final.
+
+Próximo foco: escenas contextuales authored de Cari/Cami/Chie, eventos cotidianos de Ciudad Animals, superficies operativas, curación IA con aprobación humana y release final.
