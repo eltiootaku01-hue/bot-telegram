@@ -4,6 +4,7 @@ from app.game.waifu_browser import (
     WaifuFilter,
     WaifuFilterField,
     page_for,
+    render_detail,
     render_page,
 )
 
@@ -124,3 +125,41 @@ def test_waifu_catalog_filter_keyboard_uses_compact_telegram_callbacks() -> None
     assert "game:waifus:set:s:ranker" in source_callbacks
     assert "game:waifus:set:s:recent" in source_callbacks
     assert "game:waifus:set:s:local" in source_callbacks
+
+
+def test_waifu_detail_render_is_local_and_explicit_about_provenance() -> None:
+    from app.game.catalog import get_character
+
+    character = get_character("yor-forger")
+    rendered = render_detail(character)
+
+    assert "Yor Forger" in rendered
+    assert "SPY x FAMILY" in rendered
+    assert "Carta:" in rendered
+    assert "Clase:" in rendered
+    assert "Elemento:" in rendered
+    assert "Poder de balance:" in rendered
+    assert "Popularidad normalizada:" in rendered
+    assert "Ranker · snapshot 2026-07-15" in rendered
+    assert "porcentaje universal" in rendered
+
+
+def test_waifu_detail_callbacks_fit_telegram_callback_data_limit() -> None:
+    from app.ui.game_keyboards import waifu_catalog_keyboard
+
+    page = page_for(1)
+    markup = waifu_catalog_keyboard(
+        page.page,
+        page.total_pages,
+        page.active_filter,
+        page.characters,
+    )
+    callbacks = [
+        button.callback_data
+        for row in markup.inline_keyboard
+        for button in row
+        if button.callback_data
+    ]
+
+    assert callbacks
+    assert all(len(callback.encode("utf-8")) <= 64 for callback in callbacks)

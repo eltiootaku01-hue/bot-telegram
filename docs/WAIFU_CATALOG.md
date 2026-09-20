@@ -48,3 +48,16 @@ Cada entrada puede mantener identificador, obra, ranking, popularidad, poder, ra
 Para cada actualización conservar fuente, fecha, ranking observado y recalcular la puntuación normalizada. El poder permanece como balance del juego.
 
 Las imágenes no se descargan desde los rankings como dependencia de runtime. El arte entra por el flujo de medios de Cami.
+
+## Navegación del catálogo
+
+El panel de Sunna permite filtrar la colección sin consultar la web durante el uso del bot:
+
+- **Elemento:** fuego, agua, tierra, aire, hielo, luz, oscuridad, rayo, mente, arcano y neutro.
+- **Carta:** R, SR y UR.
+- **Clase:** D, C, B, A, S, SS y SSS.
+- **Fuente:** snapshot de Ranker 2026, ranking anual de Anime Corner 2025 o catálogo inicial del proyecto.
+
+El filtro se conserva al cambiar de página. Cada personaje visible puede abrir una ficha local con su obra, carta, clase, elemento, poder de balance, popularidad normalizada, ranking de referencia y procedencia. La ficha deja explícito que el poder es una métrica de balance del juego y que la popularidad normalizada es relativa a la fuente.
+
+Los callbacks del catálogo se mantienen compactos para respetar el límite de datos de botones inline de Telegram.
