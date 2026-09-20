@@ -13,15 +13,15 @@ from app.db.database import Database
     (
         (
             BotIdentity.CARI,
-            {"system", "world-catalog", "social_runtime", "chat", "cafe", "moderation", "brain_chat", "tio-operator"},
+            {"system", "world-catalog", "social_runtime", "chat", "cafe", "moderation", "trivia", "brain_chat", "tio-operator"},
         ),
         (
             BotIdentity.SUNNA,
-            {"system", "world-catalog", "social_runtime", "chat", "game", "trivia", "media", "admin", "brain_chat"},
+            {"system", "world-catalog", "social_runtime", "chat", "game", "media", "admin", "brain_chat"},
         ),
         (
             BotIdentity.CAMI,
-            {"system", "world-catalog", "social_runtime", "chat", "cami-media", "cami-media-publisher", "brain_chat"},
+            {"system", "world-catalog", "social_runtime", "chat", "cami-media", "cami-media-publisher", "mystery", "brain_chat"},
         ),
         (
             BotIdentity.CHIE,
@@ -48,10 +48,14 @@ def test_composition_uses_supplied_settings_instance() -> None:
     assert social.runtime.settings is settings
 
     sunna_modules = build_bot_modules(database, BotIdentity.SUNNA, settings)
-    trivia = next(module for module in sunna_modules if module.name == "trivia")
     media = next(module for module in sunna_modules if module.name == "media")
-    assert trivia.settings is settings
     assert media.settings is settings
+
+    cari_trivia = next(module for module in cari_modules if module.name == "trivia")
+    assert cari_trivia.settings is settings
+
+    cami_mystery = next(module for module in cami_modules if module.name == "mystery")
+    assert cami_mystery.settings is settings
 
     cami_modules = build_bot_modules(database, BotIdentity.CAMI, settings)
     cami_media = next(module for module in cami_modules if module.name == "cami-media")
