@@ -43,6 +43,7 @@ def validate_setup(
     allow_user_private_chat: bool,
     media_storage_chat_id: str,
     publish_page_chat_id: str,
+    base_group_chat_id: str = "0",
 ) -> SetupValidation:
     errors: list[str] = []
     warnings: list[str] = []
@@ -65,9 +66,19 @@ def validate_setup(
         admin_id = int(admin_user_id.strip() or "0")
     except ValueError:
         admin_id = 0
-        errors.append("ADMIN_USER_ID debe ser un entero positivo.")
+        errors.append("MASTER_TELEGRAM_ID debe ser un entero positivo.")
     if (allow_admin_private_chat or not allow_user_private_chat) and admin_id <= 0:
-        errors.append("ADMIN_USER_ID debe ser positivo para configurar el acceso privado del administrador.")
+        errors.append("MASTER_TELEGRAM_ID debe ser positivo para configurar el acceso privado del administrador.")
+
+    try:
+        base_group_id = int(base_group_chat_id.strip() or "0")
+    except ValueError:
+        base_group_id = 0
+        errors.append("BASE_GROUP_CHAT_ID debe ser 0 o un ID negativo de grupo.")
+    if base_group_id > 0:
+        errors.append("BASE_GROUP_CHAT_ID debe ser 0 o un ID negativo de grupo.")
+    if base_group_id < 0 and base_group_id not in authorized:
+        warnings.append("El grupo base todavía no está en AUTHORIZED_CHAT_IDS; agregalo con el Asistente Telegram.")
 
     for value, name in (
         (media_storage_chat_id, "MEDIA_STORAGE_CHAT_ID"),
@@ -80,6 +91,9 @@ def validate_setup(
             continue
         if parsed > 0:
             errors.append(f"{name} debe ser 0 o un ID negativo de Telegram.")
+
+    if "chie" in bots and not bots["chie"].get("token", "").strip():
+        warnings.append("Chie es el bot base de configuración; sin su token no se puede preparar la comunidad.")
 
     if not authorized and not allow_user_private_chat:
         warnings.append("No hay grupos autorizados y el acceso privado de usuarios está desactivado.")
