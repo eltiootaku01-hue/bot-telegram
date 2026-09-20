@@ -173,7 +173,7 @@ class MediaLibrary:
     async def pending(self, session: AsyncSession, limit: int = 50) -> list[MediaAsset]:
         result = await session.scalars(
             select(MediaAsset)
-            .where(MediaAsset.status == "inbox")
+            .where(MediaAsset.status == "cami_inbox")
             .order_by(MediaAsset.created_at.asc())
             .limit(limit)
         )
