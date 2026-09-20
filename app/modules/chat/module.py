@@ -143,11 +143,19 @@ class ChatModule(BotModule):
             and target is self.identity
             and targets[1] is not self.identity
         ):
+            partner = targets[1]
+            async with self.database.session() as session:
+                continuity_count = await self.world.usage_count(
+                    session,
+                    bot_identity=self.identity,
+                    entry_type="relationship",
+                    entry_key=f"{self.identity.value}-{partner.value}",
+                )
             response = self.characters.director.choose_interaction(
                 self.identity,
-                targets[1],
+                partner,
                 intent,
-                roll=(message.from_user.id + message.chat.id) % 17,
+                roll=(message.from_user.id + message.chat.id + continuity_count) % 17,
             )
         if response is None:
             response = self.characters.director.choose(
