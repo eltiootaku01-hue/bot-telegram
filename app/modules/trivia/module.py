@@ -14,7 +14,6 @@ from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
-from app.core.time import utc_now
 from app.services.community import CommunityResolver
 from app.services.world import WorldService
 from app.db.database import Database
