@@ -77,6 +77,10 @@ async def test_silence_restricts_member_and_records_expiry(database: Database, m
 
     bot.restrict_chat_member.assert_awaited_once()
     assert bot.restrict_chat_member.await_args.args[:2] == (-100, 20)
+    kwargs = bot.restrict_chat_member.await_args.kwargs
+    assert kwargs["use_independent_chat_permissions"] is True
+    assert kwargs["until_date"].tzinfo is not None
+    assert kwargs["permissions"].can_invite_users is None
 
     async with database.session() as session:
         row = await session.scalar(
