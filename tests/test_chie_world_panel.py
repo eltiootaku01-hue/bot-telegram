@@ -295,7 +295,7 @@ async def test_auto_world_curator_notifies_admin_only_after_generation(database:
         '"reason":"Hay datos nuevos.","affected_identities":["cari"]}]}'
     )
     from app.brain.provider import LLMRequest
-    from app.services.world_curator_ai import WorldCuratorAIService, format_world_proposals
+    from app.services.world_curator_ai import WorldCuratorAIService
 
     class FakeBrain:
         def __init__(self) -> None:
