@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity import BotIdentity
 from app.core.time import localize_utc, utc_now
-from app.db.models import Chat, FanRequest, GameEncounter, RequestStatus, UserChat
+from app.db.models import Chat, FanRequest, GameEncounter, RequestStatus, User, UserChat
 from app.db.trivia_models import TriviaRound
 
 
@@ -97,8 +97,11 @@ class CafeContextService:
 
         recent_new_members = int(
             await session.scalar(
-                select(func.count(UserChat.id)).where(
+                select(func.count(UserChat.id))
+                .join(User, User.id == UserChat.user_id)
+                .where(
                     UserChat.chat_id == chat_id,
+                    User.is_bot.is_(False),
                     UserChat.joined_at.is_not(None),
                     UserChat.joined_at >= observed_at - self.NEW_MEMBER_WINDOW,
                 )
