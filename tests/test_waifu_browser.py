@@ -142,3 +142,24 @@ def test_waifu_detail_render_is_local_and_explicit_about_provenance() -> None:
     assert "Popularidad normalizada:" in rendered
     assert "Ranker · snapshot 2026-07-15" in rendered
     assert "no es un porcentaje universal" in rendered
+
+
+def test_waifu_detail_callbacks_fit_telegram_callback_data_limit() -> None:
+    from app.ui.game_keyboards import waifu_catalog_keyboard
+
+    page = page_for(1)
+    markup = waifu_catalog_keyboard(
+        page.page,
+        page.total_pages,
+        page.active_filter,
+        page.characters,
+    )
+    callbacks = [
+        button.callback_data
+        for row in markup.inline_keyboard
+        for button in row
+        if button.callback_data
+    ]
+
+    assert callbacks
+    assert all(len(callback.encode("utf-8")) <= 64 for callback in callbacks)
