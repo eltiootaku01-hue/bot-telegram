@@ -12,7 +12,6 @@ from app.core.config import Settings
 from app.core.module import BotModule
 from app.core.time import world_now
 from app.db.database import Database
-from app.db.models import CafeDailyEventRound
 from app.services.cafe_events import CafeEventService
 from app.services.cafe_mystery import CAFE_MYSTERIES, mystery_for
 from app.services.world import WorldService
