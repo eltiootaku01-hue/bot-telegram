@@ -196,13 +196,13 @@ class CafeModule(BotModule):
 
 
     async def event_callback(self, callback: CallbackQuery) -> None:
-        if callback.message is None:
+        if callback.message is None or callback.from_user is None:
             await callback.answer("No pude abrir el evento.", show_alert=True)
             return
-        await self.event_command(callback.message)
+        await self.event_command(callback.message, user_id=callback.from_user.id)
         await callback.answer()
 
-    async def event_command(self, message: Message) -> None:
+    async def event_command(self, message: Message, *, user_id: int | None = None) -> None:
         day_key = world_now(self.timezone_name).date().isoformat()
         async with self.database.session(write=True) as session:
             await self.events.expire_old(session, chat_id=message.chat.id)
@@ -238,7 +238,23 @@ class CafeModule(BotModule):
                     round_id=row.id,
                     message_id=sent.message_id,
                 )
-        await self._observe("daily_event_open" if started.created else "daily_event_view", message)
+        if user_id is None:
+            await self._observe(
+                "daily_event_open" if started.created else "daily_event_view",
+                message,
+            )
+        else:
+            try:
+                async with self.database.session() as session:
+                    await self.world.observe_action(
+                        session,
+                        bot_identity=BotIdentity.CARI,
+                        action_key="daily_event_open" if started.created else "daily_event_view",
+                        user_id=user_id,
+                        chat_id=message.chat.id,
+                    )
+            except Exception:
+                pass
 
     async def recommendation(self, message: Message) -> None:
         day_key = world_now(self.timezone_name).date().isoformat()
