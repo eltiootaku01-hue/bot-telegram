@@ -191,6 +191,10 @@ The implementation is designed for a future **AI curator** that runs periodicall
 
 See `docs/CIUDAD_ANIMALS_WORLD.md` for the design and current status.
 
+## Telegram setup and Bot Manager
+
+The desktop setup screen now includes a local readiness checklist with ✓/⚠/✗ states, per-bot token verification, official Telegram add-to-group links, a base-community/home setting, real group presence/permission checks, a Master/Jefe Telegram ID field, and a direct Chie helper to obtain that ID. The complete operator procedure is in `docs/TELEGRAM_OPERATIONS_MANUAL.md`.
+
 ## API-saving strategy
 
 - Commands, moderation rules, points and game rules remain local.
