@@ -13,7 +13,7 @@ from app.db.database import Database
     (
         (
             BotIdentity.CARI,
-            {"system", "social_runtime", "chat", "moderation", "brain_chat"},
+            {"system", "social_runtime", "chat", "cafe", "moderation", "brain_chat"},
         ),
         (
             BotIdentity.SUNNA,
