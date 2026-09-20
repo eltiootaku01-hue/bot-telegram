@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import asyncio
+from datetime import timedelta
 
 
 from aiogram import Bot, F
@@ -81,7 +83,7 @@ class MysteryModule(BotModule):
                 row.status = "active"
                 row.winner_user_id = None
                 row.message_id = None
-                row.expires_at = utc_now()
+                row.expires_at = utc_now() + timedelta(hours=24)
 
             claimed = await session.execute(
                 update(MysteryRound)
@@ -200,7 +202,6 @@ class MysteryModule(BotModule):
             await self.tasks_sleep()
 
     async def tasks_sleep(self) -> None:
-        import asyncio
         await asyncio.sleep(3600)
 
     async def _configured_communities(self) -> list[int]:
