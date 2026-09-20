@@ -37,6 +37,10 @@ class TioOperatorModule(BotModule):
             Command("tio_responder"),
         )
         self.router.message.register(
+            self.view_command,
+            Command("tio_ver"),
+        )
+        self.router.message.register(
             self.capture_message,
             F.text.func(self._should_capture),
         )
@@ -100,6 +104,52 @@ class TioOperatorModule(BotModule):
                     f"{escape(request.text[:1000])}",
                     reply_markup=keyboard,
                 )
+
+    async def view_command(self, message: Message) -> None:
+        """Show full operator context for one request without changing its state."""
+        if not self._is_owner_private(message, self.settings) or not message.text:
+            return
+
+        parts = message.text.split(maxsplit=1)
+        if len(parts) != 2 or not parts[1].isdigit():
+            await message.answer("Uso: <code>/tio_ver ID</code>")
+            return
+
+        request_id = int(parts[1])
+        async with self.database.session() as session:
+            request = await session.get(TioOperatorRequest, request_id)
+            if request is None:
+                await message.answer("No existe esa solicitud.")
+                return
+            user, chat = await self.service.context(session, request)
+
+        user_name = escape(
+            (user.full_name if user else None)
+            or (user.first_name if user else None)
+            or str(request.user_id)
+        )
+        chat_name = escape(
+            (chat.title if chat else None)
+            or (chat.username if chat else None)
+            or str(request.chat_id)
+        )
+        status_label = {
+            "pending": "🆕 pendiente",
+            "acknowledged": "👀 recibida",
+            "responding": "⏳ respondiendo",
+            "resolved": "✅ resuelta",
+        }.get(request.status, escape(request.status))
+        await message.answer(
+            f"📋 <b>Contexto de Tío Otaku · solicitud #{request.id}</b>\n\n"
+            f"Estado: {status_label}\n"
+            f"Usuario: <b>{user_name}</b> · <code>{request.user_id}</code>\n"
+            f"Comunidad: <b>{chat_name}</b> · <code>{request.chat_id}</code>\n"
+            f"Mensaje original: <code>{request.source_message_id}</code>\n"
+            f"Creada: <code>{request.created_at.isoformat()}</code>\n"
+            f"Actualizada: <code>{request.updated_at.isoformat()}</code>\n\n"
+            f"<b>Texto original:</b>\n{escape(request.text)}\n\n"
+            f"Para responder manualmente: <code>/tio_responder {request.id} tu mensaje</code>"
+        )
 
     async def respond_command(self, message: Message, bot: Bot) -> None:
         """Relay the operator's exact text to the original community request."""
@@ -227,7 +277,7 @@ class TioOperatorModule(BotModule):
             return
 
         parts = (callback.data or "").split(":")
-        if len(parts) != 4 or parts[2] not in {"ack", "resolve"}:
+        if len(parts) != 4 or parts[2] not in {"ack", "resolve", "view"}:
             await callback.answer("Solicitud inválida.", show_alert=True)
             return
 
@@ -237,6 +287,40 @@ class TioOperatorModule(BotModule):
             await callback.answer("Solicitud inválida.", show_alert=True)
             return
 
+        try:
+            request_id = int(parts[3])
+        except ValueError:
+            await callback.answer("Solicitud inválida.", show_alert=True)
+            return
+
+        if parts[2] == "view":
+            async with self.database.session() as session:
+                request = await session.get(TioOperatorRequest, request_id)
+                if request is None:
+                    await callback.answer("Solicitud inexistente.", show_alert=True)
+                    return
+                user, chat = await self.service.context(session, request)
+            user_name = escape(
+                (user.full_name if user else None)
+                or (user.first_name if user else None)
+                or str(request.user_id)
+            )
+            chat_name = escape(
+                (chat.title if chat else None)
+                or (chat.username if chat else None)
+                or str(request.chat_id)
+            )
+            await callback.message.answer(
+                f"📋 <b>Contexto · solicitud #{request.id}</b>\n\n"
+                f"Estado: <b>{escape(request.status)}</b>\n"
+                f"Usuario: <b>{user_name}</b> · <code>{request.user_id}</code>\n"
+                f"Comunidad: <b>{chat_name}</b> · <code>{request.chat_id}</code>\n"
+                f"Mensaje original: <code>{request.source_message_id}</code>\n\n"
+                f"<b>Texto:</b>\n{escape(request.text)}\n\n"
+                f"Responder: <code>/tio_responder {request.id} tu mensaje</code>"
+            )
+            await callback.answer("Contexto mostrado.")
+            return
         status = "acknowledged" if parts[2] == "ack" else "resolved"
         async with self.database.session() as session:
             changed = await self.service.decide(
