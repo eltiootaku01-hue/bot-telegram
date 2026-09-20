@@ -13,11 +13,10 @@ from sqlalchemy import select, update
 from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
-from app.services.world import WorldService
-from app.services.community import CommunityResolver
-from app.services.world import WorldService
 from app.core.module import BotModule
 from app.core.time import utc_now
+from app.services.community import CommunityResolver
+from app.services.world import WorldService
 from app.db.database import Database
 from app.db.models import GameProfile, User
 from app.db.trivia_models import TriviaRound
@@ -40,7 +39,6 @@ class TriviaModule(BotModule):
         self.service = TriviaService()
         self.missions = DailyMissionService()
         self._bot: Bot | None = None
-        self.world = WorldService()
         self.world = WorldService()
         self.community = CommunityResolver(self.settings)
 
