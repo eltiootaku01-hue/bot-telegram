@@ -58,8 +58,11 @@ class HumanVerificationService:
         user_id: int,
         prompt_message_id: int | None,
         default_permissions_json: str,
+        timeout_seconds: int = 120,
         now: datetime | None = None,
     ) -> HumanVerification:
+        if timeout_seconds < 30:
+            raise ValueError("timeout_seconds must be at least 30")
         current = now or utc_now()
         row = await session.scalar(
             select(HumanVerification).where(
@@ -67,7 +70,7 @@ class HumanVerificationService:
                 HumanVerification.user_id == user_id,
             )
         )
-        expires_at = current + timedelta(seconds=120)
+        expires_at = current + timedelta(seconds=timeout_seconds)
         if row is None:
             row = HumanVerification(
                 chat_id=chat_id,
