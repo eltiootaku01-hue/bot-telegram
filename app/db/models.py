@@ -48,6 +48,22 @@ class UserChat(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+
+class ModerationAction(Base):
+    """Auditable explicit moderation action issued by a Telegram administrator."""
+
+    __tablename__ = "moderation_actions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    target_user_id: Mapped[int] = mapped_column(BigInteger)
+    moderator_user_id: Mapped[int] = mapped_column(BigInteger)
+    action: Mapped[str] = mapped_column(String(32))
+    reason: Mapped[str] = mapped_column(String(1000), default="")
+    until_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class GameProfile(Base):
     __tablename__ = "game_profiles"
     __table_args__ = (UniqueConstraint("user_id", "chat_id", name="uq_game_profile"),)
