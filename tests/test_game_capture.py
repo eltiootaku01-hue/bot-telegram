@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy import select
 
 from app.core.time import utc_now
+from app.characters.models import CharacterIntent
 from app.db.database import Database
 from app.db.models import Chat, GameCollection, GameEncounter, GameProfile, PointTransaction, User
 from app.modules.game.module import GameModule
@@ -61,6 +62,8 @@ async def test_capture_callback_persists_progression(tmp_path) -> None:
     assert collection.experience == 25
     assert transaction.reference_id == "encounter-1"
     assert edits
+    assert any("<b>Sunna:</b>" in text for text in edits)
+    assert any(text in edits[-1] for text in ("Bien. Lo hiciste.", "Ganaste.", "Fue buena jugada.", "Me alegra."))
     assert answers == ["¡CAPTURADA! 🎉"]
     await database.close()
 
@@ -119,3 +122,12 @@ async def test_gacha_open_callback_renders_gacha_panel() -> None:
     assert edits
     assert edits[0][0] == "🎰 <b>Gacha de personajes</b>"
     assert answers == [""]
+
+
+def test_game_reaction_is_authored_and_deterministic() -> None:
+    first = GameModule._game_reaction(GameModule.__new__(GameModule), CharacterIntent.GAME_SUCCESS, 7)
+    second = GameModule._game_reaction(GameModule.__new__(GameModule), CharacterIntent.GAME_SUCCESS, 7)
+
+    assert first
+    assert first == second
+    assert first in {"Bien. Lo hiciste.", "Ganaste.", "Fue buena jugada.", "Me alegra."}
