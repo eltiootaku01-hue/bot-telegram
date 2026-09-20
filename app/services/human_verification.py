@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time import utc_now
@@ -49,6 +49,29 @@ def permissions_from_json(raw: str) -> dict[str, bool]:
 
 class HumanVerificationService:
     """Transactional state machine for Chie's one-click human verification."""
+
+    async def recent_join_count(
+        self,
+        session: AsyncSession,
+        *,
+        chat_id: int,
+        window_seconds: int = 60,
+        now: datetime | None = None,
+    ) -> int:
+        """Count recent verification prompts for durable anti-raid pressure."""
+        if window_seconds <= 0:
+            raise ValueError("window_seconds must be positive")
+        current = now or utc_now()
+        cutoff = current - timedelta(seconds=window_seconds)
+        count = await session.scalar(
+            select(func.count())
+            .select_from(HumanVerification)
+            .where(
+                HumanVerification.chat_id == chat_id,
+                HumanVerification.prompted_at >= cutoff,
+            )
+        )
+        return int(count or 0)
 
     async def begin(
         self,
