@@ -46,6 +46,10 @@ class SystemModule(BotModule):
             BotIdentity.CARI: (
                 BotCommand(command="start", description="Presentación de Cari"),
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
+                BotCommand(command="advertir", description="Advertir sobre un mensaje"),
+                BotCommand(command="silenciar", description="Silenciar a un integrante"),
+                BotCommand(command="desilenciar", description="Retirar un silencio"),
+                BotCommand(command="expulsar", description="Expulsar a un integrante"),
             ),
             BotIdentity.SUNNA: (
                 BotCommand(command="start", description="Abrir la zona de Sunna"),
