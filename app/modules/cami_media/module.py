@@ -104,8 +104,16 @@ class CamiMediaModule(BotModule):
         if not self._is_media_staff(message) or not message.photo:
             return
         photo = message.photo[-1]
+        await state.clear()
         async with self.database.session() as session:
-            asset = await session.scalar(select(MediaAsset).where(MediaAsset.telegram_file_id == photo.file_id))
+            asset = await self.library.find_existing(
+                session,
+                telegram_file_id=photo.file_id,
+                telegram_unique_id=photo.file_unique_id,
+                source_chat_id=message.chat.id,
+                source_message_id=message.message_id,
+            )
+            created = asset is None
             if asset is None:
                 asset = MediaAsset(
                     telegram_file_id=photo.file_id,
@@ -117,13 +125,20 @@ class CamiMediaModule(BotModule):
                 )
                 session.add(asset)
                 await session.flush()
+            elif asset.telegram_file_id != photo.file_id:
+                asset.telegram_file_id = photo.file_id
+                await session.flush()
             asset_id = asset.id
-            await session.commit()
-        await message.answer(
-            "🗂️ <b>Recibido.</b> ¿Qué querés que haga con este material?",
-            reply_markup=cami_media_actions(asset_id),
-        )
-        await self._observe_action("media_ingest", message.from_user.id)
+
+        if created:
+            text = "🗂️ <b>Recibido.</b> ¿Qué querés que haga con este material?"
+        else:
+            text = (
+                f"♻️ <b>Este material ya estaba en la biblioteca como #{asset_id}.</b>\n"
+                "No se creó un duplicado; podés continuar trabajando sobre el registro existente."
+            )
+        await message.answer(text, reply_markup=cami_media_actions(asset_id))
+        await self._observe_action("media_ingest" if created else "media_duplicate", message.from_user.id)
 
     async def receive_schedule_or_tags(self, message: Message, state: FSMContext) -> None:
         if not self._is_media_staff(message) or not message.text:
