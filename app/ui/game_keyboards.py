@@ -64,22 +64,123 @@ def fusion_keyboard(character_id: str) -> InlineKeyboardMarkup:
     builder.row(InlineKeyboardButton(text="✨ Evolucionar", callback_data=f"game:fusion:{character_id}"))
     return builder.as_markup()
 
-def waifu_catalog_keyboard(page: int, total_pages: int) -> InlineKeyboardMarkup:
+def waifu_catalog_keyboard(
+    page: int,
+    total_pages: int,
+    active_filter=None,
+) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     navigation = []
+
+    def page_callback(target_page: int) -> str:
+        if active_filter is None:
+            return f"game:waifus:page:{target_page}"
+        return (
+            f"game:waifus:page:{target_page}:"
+            f"{active_filter.field.value}:{active_filter.value}"
+        )
+
     if page > 1:
         navigation.append(
-            InlineKeyboardButton(text="⬅️", callback_data=f"game:waifus:page:{page - 1}")
+            InlineKeyboardButton(text="⬅️", callback_data=page_callback(page - 1))
         )
     if page < total_pages:
         navigation.append(
-            InlineKeyboardButton(text="➡️", callback_data=f"game:waifus:page:{page + 1}")
+            InlineKeyboardButton(text="➡️", callback_data=page_callback(page + 1))
         )
     if navigation:
         builder.row(*navigation)
-    builder.row(InlineKeyboardButton(text="🎲 Volver al gacha", callback_data="game:gacha:open"))
+    builder.row(
+        InlineKeyboardButton(
+            text="🔎 Filtros",
+            callback_data="game:waifus:filters",
+        )
+    )
+    if active_filter is not None:
+        builder.row(
+            InlineKeyboardButton(
+                text="🧹 Quitar filtro",
+                callback_data="game:waifus:clear",
+            )
+        )
+    builder.row(
+        InlineKeyboardButton(
+            text="🎲 Volver al gacha",
+            callback_data="game:gacha:open",
+        )
+    )
     return builder.as_markup()
 
+
+def waifu_filter_categories_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="🔥 Elemento", callback_data="game:waifus:filter:e"),
+        InlineKeyboardButton(text="🎴 Carta", callback_data="game:waifus:filter:c"),
+    )
+    builder.row(
+        InlineKeyboardButton(text="🏷️ Clase", callback_data="game:waifus:filter:r"),
+        InlineKeyboardButton(text="📚 Fuente", callback_data="game:waifus:filter:s"),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="⬅️ Volver al catálogo",
+            callback_data="game:waifus:page:1",
+        )
+    )
+    return builder.as_markup()
+
+
+def waifu_filter_options_keyboard(field: str) -> InlineKeyboardMarkup:
+    options = {
+        "e": (
+            ("🔥 Fuego", "fuego"),
+            ("💧 Agua", "agua"),
+            ("🌱 Tierra", "tierra"),
+            ("🌪️ Aire", "aire"),
+            ("❄️ Hielo", "hielo"),
+            ("✨ Luz", "luz"),
+            ("🌑 Oscuridad", "oscuridad"),
+            ("⚡ Rayo", "rayo"),
+            ("🧠 Mente", "mente"),
+            ("🔮 Arcano", "arcano"),
+            ("⚪ Neutro", "neutro"),
+        ),
+        "c": (
+            ("R", "r"),
+            ("SR", "sr"),
+            ("UR", "ur"),
+        ),
+        "r": (
+            ("D", "d"),
+            ("C", "c"),
+            ("B", "b"),
+            ("A", "a"),
+            ("S", "s"),
+            ("SS", "ss"),
+            ("SSS", "sss"),
+        ),
+        "s": (
+            ("🏆 Ranker 2026", "ranker"),
+            ("🆕 Anime Corner 2025", "recent"),
+        ),
+    }
+    builder = InlineKeyboardBuilder()
+    for label, value in options.get(field, ()):
+        builder.add(
+            InlineKeyboardButton(
+                text=label,
+                callback_data=f"game:waifus:set:{field}:{value}",
+            )
+        )
+    builder.adjust(2)
+    builder.row(
+        InlineKeyboardButton(
+            text="⬅️ Categorías",
+            callback_data="game:waifus:filters",
+        )
+    )
+    return builder.as_markup()
 
 def mystery_keyboard(round_id: int, options: tuple[str, ...]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
