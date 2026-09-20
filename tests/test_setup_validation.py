@@ -95,3 +95,24 @@ def test_validate_setup_rejects_positive_base_group_id() -> None:
 
     assert not result.valid
     assert any("BASE_GROUP_CHAT_ID" in error for error in result.errors)
+
+
+def test_validate_setup_allows_token_only_bot_configuration() -> None:
+    bots = {
+        name: {"link": "", "token": f"token-{name}"}
+        for name in ("cari", "sunna", "cami", "chie")
+    }
+    result = validate_setup(
+        bots=bots,
+        authorized_chat_ids="-100123",
+        admin_user_id="123456",
+        allow_admin_private_chat=True,
+        allow_user_private_chat=True,
+        media_storage_chat_id="0",
+        publish_page_chat_id="0",
+        base_group_chat_id="-100123",
+    )
+
+    assert result.valid
+    assert not result.errors
+    assert all("enlace" in warning.casefold() for warning in result.warnings)
