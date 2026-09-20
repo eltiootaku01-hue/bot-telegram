@@ -92,3 +92,66 @@ def test_cami_media_staff_uses_callback_actor_not_message_sender() -> None:
 
     assert module._is_media_staff(callback_message, user_id=77) is True
     assert module._is_media_staff(callback_message, user_id=88) is False
+
+
+@pytest.mark.asyncio
+async def test_catalog_command_exposes_only_published_matching_assets(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'cami-catalog.db'}")
+    await database.create_schema()
+    module = CamiMediaModule(database, Settings(admin_user_id=7))
+
+    async with database.session() as session:
+        session.add_all(
+            [
+                MediaAsset(
+                    telegram_file_id="published-1",
+                    source_chat_id=7,
+                    source_message_id=10,
+                    status="published",
+                    character_id="asuna",
+                    anime="Sword Art Online",
+                    tags="conejita,azul",
+                    category="waifu",
+                ),
+                MediaAsset(
+                    telegram_file_id="private-1",
+                    source_chat_id=7,
+                    source_message_id=11,
+                    status="tagged",
+                    character_id="asuna",
+                    anime="Sword Art Online",
+                    tags="conejita",
+                    category="waifu",
+                ),
+                MediaAsset(
+                    telegram_file_id="published-2",
+                    source_chat_id=7,
+                    source_message_id=12,
+                    status="published_request",
+                    character_id="asuna",
+                    anime="Otra obra",
+                    tags="rojo",
+                    category="pedido",
+                ),
+            ]
+        )
+
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=7),
+        from_user=SimpleNamespace(id=7),
+        text="/catalogo asuna",
+        answer=answer,
+    )
+
+    await module.catalog_command(message)
+
+    assert answers
+    assert "Sword Art Online" in answers[0]
+    assert "Otra obra" in answers[0]
+    assert "file-" not in answers[0]
+    await database.close()
