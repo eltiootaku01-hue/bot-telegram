@@ -56,6 +56,10 @@ class TioOperatorModule(BotModule):
             self.decide_request,
             F.data.startswith("tio:request:"),
         )
+        self.router.callback_query.register(
+            self.history_page_callback,
+            F.data.startswith("tio:history:page:"),
+        )
 
     def _should_capture(self, text: str) -> bool:
         return is_tio_addressed(text)
@@ -114,22 +118,79 @@ class TioOperatorModule(BotModule):
                 )
 
     async def history_command(self, message: Message) -> None:
-        """Show recent operator requests without changing their state."""
+        """Show a paged, read-only view of recent operator requests."""
         if not self._is_owner_private(message, self.settings):
             return
 
+        page = 1
+        if message.text:
+            parts = message.text.split(maxsplit=1)
+            if len(parts) == 2:
+                if not parts[1].isdigit() or int(parts[1]) <= 0:
+                    await message.answer("Uso: <code>/tio_historial [página]</code>")
+                    return
+                page = int(parts[1])
+
+        await self._send_history_page(message, page, edit=False)
+
+    async def history_page_callback(self, callback: CallbackQuery) -> None:
+        if (
+            callback.message is None
+            or callback.from_user is None
+            or not self._is_owner_private(callback.message, self.settings)
+        ):
+            await callback.answer("No autorizado.", show_alert=True)
+            return
+
+        parts = (callback.data or "").split(":")
+        if len(parts) != 4 or not parts[3].isdigit() or int(parts[3]) <= 0:
+            await callback.answer("Página inválida.", show_alert=True)
+            return
+
+        await self._send_history_page(
+            callback.message,
+            int(parts[3]),
+            edit=True,
+        )
+        await callback.answer()
+
+    async def _send_history_page(
+        self,
+        message: Message,
+        page: int,
+        *,
+        edit: bool,
+    ) -> None:
+        page_size = 20
+        offset = (page - 1) * page_size
+
         async with self.database.session() as session:
-            requests = await self.service.recent_history(session, limit=20)
+            requests = await self.service.recent_history(
+                session,
+                limit=page_size + 1,
+                offset=offset,
+            )
+            has_next = len(requests) > page_size
+            requests = requests[:page_size]
             contexts = [
                 (request, *await self.service.context(session, request))
                 for request in requests
             ]
 
         if not requests:
-            await message.answer("📭 Todavía no hay solicitudes para Tío Otaku.")
+            if page > 1:
+                if edit:
+                    await message.edit_text("📭 No hay más solicitudes en el historial.")
+                else:
+                    await message.answer("📭 No hay solicitudes en esa página.")
+            else:
+                await message.answer("📭 Todavía no hay solicitudes para Tío Otaku.")
             return
 
-        lines = ["🗃️ <b>Historial de Tío Otaku</b>", ""]
+        lines = [
+            f"🗃️ <b>Historial de Tío Otaku</b> · página {page}",
+            "",
+        ]
         labels = {
             "pending": "🆕 pendiente",
             "acknowledged": "👀 recibida",
@@ -164,10 +225,16 @@ class TioOperatorModule(BotModule):
             )
             lines.append("")
 
-        await message.answer(
-            "\n".join(lines),
-            reply_markup=tio_operator_history_keyboard([request.id for request in requests]),
+        markup = tio_operator_history_keyboard(
+            [request.id for request in requests],
+            page=page,
+            has_previous=page > 1,
+            has_next=has_next,
         )
+        if edit:
+            await message.edit_text("\n".join(lines), reply_markup=markup)
+        else:
+            await message.answer("\n".join(lines), reply_markup=markup)
 
     async def view_command(self, message: Message) -> None:
         """Show full operator context for one request without changing its state."""
