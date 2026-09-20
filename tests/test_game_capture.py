@@ -132,3 +132,42 @@ def test_game_reaction_is_authored_and_deterministic() -> None:
     assert first
     assert first == second
     assert first in {"Bien. Lo hiciste.", "Ganaste.", "Fue buena jugada.", "Me alegra."}
+
+
+@pytest.mark.asyncio
+async def test_mystery_success_includes_authored_sunna_reaction(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'mystery-reaction.db'}")
+    await database.create_schema()
+    module = GameModule(database)
+
+    async with database.session(write=True) as session:
+        started = await module.mystery_service.start_round(
+            session, chat_id=-100, day_key="2026-09-30"
+        )
+
+    edited = []
+    answered = []
+
+    async def edit_text(text, **kwargs):
+        edited.append(text)
+
+    async def answer(text, **kwargs):
+        answered.append(text)
+
+    callback = SimpleNamespace(
+        data=f"game:mystery:{started.round.id}:{started.case.answer_index}",
+        from_user=SimpleNamespace(id=9, first_name="Jugador"),
+        message=SimpleNamespace(
+            chat=SimpleNamespace(id=-100, type="supergroup"),
+            edit_text=edit_text,
+        ),
+        answer=answer,
+    )
+
+    await module.mystery_answer(callback)
+
+    assert edited
+    assert any("<b>Sunna:</b>" in text for text in edited)
+    assert any(value in edited[-1] for value in ("Bien. Lo hiciste.", "Ganaste.", "Fue buena jugada.", "Me alegra."))
+    assert answered == ["¡Correcto! Ganaste el misterio. 🎉"]
+    await database.close()
