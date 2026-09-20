@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import tkinter as tk
+import webbrowser
 from pathlib import Path
 from queue import Empty, Queue
 from threading import Lock, Thread
@@ -16,6 +17,8 @@ except ImportError:  # pragma: no cover - packaged build installs python-dotenv
     dotenv_values = None
 
 from app.gui.telegram_setup import TelegramSetupAssistant
+from app.services.setup_checklist import build_setup_checklist
+from app.services.telegram_setup import build_start_link
 from app.services.launcher_supervisor import LauncherSupervisor
 from app.services.process_manager import ProcessManager
 from app.services.runtime_monitor import RuntimeMonitor, RuntimeSnapshot
@@ -179,6 +182,7 @@ class BotLauncher(tk.Tk):
             )
         self.ai_global_var.set(values.get("AI_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"})
         self._sync_ai_controls()
+        self.refresh_setup_checklist()
 
         options = ttk.Frame(outer)
         options.pack(fill="x", pady=(16, 0))
@@ -216,8 +220,13 @@ class BotLauncher(tk.Tk):
         ttk.Entry(infra, textvariable=self.publish_page_var, width=16).grid(row=1, column=3, sticky="w", padx=8, pady=(8, 0))
         ttk.Label(
             infra,
-            text="El ID de Maestro/Jefe es el que concede acceso administrativo a los bots. El @usuario es solo referencia visual.",
+            text="El ID de Maestro/Jefe es la identidad de permisos. El @usuario es solo referencia visual; el teléfono no se usa como credencial.",
         ).grid(row=2, column=0, columnspan=6, sticky="w", pady=(6, 0))
+        ttk.Button(
+            infra,
+            text="Obtener mi ID con Chie",
+            command=self.open_master_id_helper,
+        ).grid(row=0, column=6, sticky="w", padx=(12, 0))
 
         note = ttk.Label(
             outer,
@@ -226,12 +235,69 @@ class BotLauncher(tk.Tk):
         )
         note.pack(anchor="w", pady=(16, 8))
 
+        checklist = ttk.LabelFrame(outer, text="Estado de preparación", padding=10)
+        checklist.pack(fill="x", pady=(0, 10))
+        self.setup_checklist_var = tk.StringVar()
+        ttk.Label(checklist, textvariable=self.setup_checklist_var, justify="left").pack(anchor="w")
+        ttk.Button(checklist, text="Actualizar estado", command=self.refresh_setup_checklist).pack(anchor="e", pady=(8, 0))
+
         actions = ttk.Frame(outer)
         actions.pack(fill="x", pady=(4, 0))
         ttk.Button(actions, text="Asistente Telegram", command=self.open_telegram_assistant).pack(side="left")
+        ttk.Button(actions, text="Guía BotFather / Telegram", command=self.show_telegram_manual).pack(side="left", padx=8)
         ttk.Button(actions, text="Guardar configuración", command=self.save_config).pack(side="left", padx=8)
         ttk.Button(actions, text="Comenzar", command=self.start_all).pack(side="right")
         ttk.Label(outer, textvariable=self.status, anchor="w").pack(fill="x", pady=(12, 0))
+
+    def refresh_setup_checklist(self) -> None:
+        checks = build_setup_checklist(
+            bots={
+                key: {
+                    "link": fields["link"].get(),
+                    "token": fields["token"].get(),
+                }
+                for key, fields in self.bot_vars.items()
+            },
+            master_id=self.master_var.get(),
+            base_group_id=self.base_group_var.get(),
+            authorized_chat_ids=self.authorized_chats_var.get(),
+        )
+        self.setup_checklist_var.set("\n".join(checks))
+
+    def open_master_id_helper(self) -> None:
+        link = self.bot_vars["chie"]["link"].get().strip()
+        username = link.rsplit("/", 1)[-1].lstrip("@").split("?")[0] if link else ""
+        if not username:
+            messagebox.showwarning(
+                "Maestro/Jefe",
+                "Primero verificá el token de Chie en el Asistente Telegram para obtener su @username.",
+                parent=self,
+            )
+            return
+        webbrowser.open(build_start_link(username, "miid"))
+        self.status.set("Telegram abrió Chie: pulsá Iniciar; Chie te mostrará tu ID.")
+
+    def show_telegram_manual(self) -> None:
+        manual = (
+            "BOTFATHER\n"
+            "1. Creá Cari, Sunna, Cami y Chie con @BotFather.\n"
+            "2. Copiá cada token aquí y pulsá Verificar.\n"
+            "3. Para que los bots reciban mensajes normales de grupos, revisá /setprivacy en @BotFather; "
+            "los bots administradores reciben todos los mensajes.\n\n"
+            "GRUPO BASE\n"
+            "4. Agregá primero Chie al grupo general/bienvenida y dale permisos para eliminar, restringir y gestionar temas.\n"
+            "5. Ejecutá /configurar con Chie.\n"
+            "6. Copiá el ID negativo del grupo a Grupo base y autorizalo.\n"
+            "7. Agregá Cari, Sunna y Cami con sus botones y revisá presencia.\n\n"
+            "MAESTRO / JEFE\n"
+            "8. Usá Obtener mi ID con Chie para conocer tu ID numérico.\n"
+            "9. Pegá ese ID en Maestro/Jefe. Ese ID es el que usa el sistema para los permisos administrativos.\n\n"
+            "IMPORTANTE\n"
+            "El teléfono no se guarda ni se usa como credencial. El identificador operativo es el ID numérico de Telegram.\n"
+            "Telegram sí permite enlaces start/startgroup para abrir un bot o preparar su incorporación a un grupo, "
+            "pero la selección del grupo y la acción del usuario siguen formando parte del flujo oficial."
+        )
+        messagebox.showinfo("Guía rápida de Telegram", manual, parent=self)
 
     def _sync_ai_controls(self) -> None:
         enabled = self.ai_global_var.get()
