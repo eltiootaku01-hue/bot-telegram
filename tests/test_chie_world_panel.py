@@ -221,3 +221,52 @@ async def test_member_joined_skips_unauthorized_configured_community(database: D
     await module.member_joined(event, bot)
 
     bot.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_world_proposal_decision_is_owner_only_and_single_use(database: Database) -> None:
+    module = ChieModule(
+        database,
+        Settings(admin_user_id=77),
+    )
+    async with database.session() as session:
+        from app.db.world_models import WorldProposal
+        session.add(
+            WorldProposal(
+                review_id=1,
+                generator="brain:ollama:test",
+                status="pending",
+                payload_json='{"proposals":[{"title":"Idea","idea":"Una escena.","reason":"Uso","affected_identities":[]}]}' ,
+            )
+        )
+
+    denied = SimpleNamespace(
+        message=SimpleNamespace(chat=SimpleNamespace(type="private", id=88)),
+        from_user=SimpleNamespace(id=88),
+        data="chie:world-proposal:accept:1",
+        answer=AsyncMock(),
+    )
+    await module.world_proposal_decision(denied)
+    denied.answer.assert_awaited_once()
+
+    owner_message = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=77),
+        edit_reply_markup=AsyncMock(),
+        answer=AsyncMock(),
+    )
+    owner = SimpleNamespace(
+        message=owner_message,
+        from_user=SimpleNamespace(id=77),
+        data="chie:world-proposal:accept:1",
+        answer=AsyncMock(),
+    )
+    await module.world_proposal_decision(owner)
+
+    async with database.session() as session:
+        from app.db.world_models import WorldProposal
+        row = await session.get(WorldProposal, 1)
+
+    assert row is not None
+    assert row.status == "accepted"
+    owner.answer.assert_awaited_once()
+    owner_message.edit_reply_markup.assert_awaited_once()
