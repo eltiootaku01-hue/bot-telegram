@@ -5,13 +5,14 @@ from html import escape
 
 from aiogram import F
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from app.core.identity import BotIdentity
 from app.core.config import Settings
 from app.core.module import BotModule
 from app.core.time import world_now
 from app.db.database import Database
+from app.services.cafe_mystery import CAFE_MYSTERIES, mystery_for
 from app.services.world import WorldService
 from app.ui.cafe_keyboards import cafe_menu_keyboard
 
@@ -57,9 +58,14 @@ class CafeModule(BotModule):
         self.router.message.register(self.cafe, Command("cafe"))
         self.router.message.register(self.cafe, Command("menu"))
         self.router.message.register(self.recommendation, Command("recomendacion"))
+        self.router.message.register(self.mystery, Command("misterio"))
         self.router.callback_query.register(
             self.recommendation_callback,
             F.data == "cafe:recommendation",
+        )
+        self.router.callback_query.register(
+            self.mystery_callback,
+            F.data.startswith("cafe:mystery:"),
         )
 
     async def _observe(self, action_key: str, message: Message) -> None:
@@ -107,6 +113,67 @@ class CafeModule(BotModule):
             return
         await self.recommendation(callback.message)
         await callback.answer()
+
+
+    async def mystery_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None or callback.from_user is None:
+            await callback.answer("No pude abrir el misterio.", show_alert=True)
+            return
+        parts = (callback.data or "").split(":")
+        if len(parts) != 4 or not parts[2].isdigit() or not parts[3].isdigit():
+            await callback.answer("Misterio inválido.", show_alert=True)
+            return
+
+        case_index = int(parts[2])
+        option_index = int(parts[3])
+        day_key = world_now(self.timezone_name).date().isoformat()
+        mystery = mystery_for(day_key, callback.message.chat.id)
+        current_case_index = CAFE_MYSTERIES.index(mystery)
+
+        if case_index != current_case_index:
+            await callback.answer(
+                "Este misterio ya venció. Abrí /misterio para el caso de hoy.",
+                show_alert=True,
+            )
+            return
+        if option_index < 0 or option_index >= len(mystery.options):
+            await callback.answer("Opción inválida.", show_alert=True)
+            return
+
+        if option_index == mystery.answer_index:
+            await callback.answer("¡Correcto! 🔎", show_alert=True)
+            await callback.message.edit_text(
+                f"🕵️ <b>{escape(mystery.title)}</b>\n\n"
+                f"✅ <b>Correcto.</b> {escape(mystery.reveal)}\n\n"
+                "Este es un caso cotidiano del Café; no modifica el canon de la historia."
+            )
+            await self._observe("mystery_solved", callback.message)
+            return
+
+        await callback.answer("No. Revisá las pistas. 👀", show_alert=True)
+
+    async def mystery(self, message: Message) -> None:
+        day_key = world_now(self.timezone_name).date().isoformat()
+        mystery = mystery_for(day_key, message.chat.id)
+        case_index = CAFE_MYSTERIES.index(mystery)
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=f"{chr(65 + index)}. {option}",
+                        callback_data=f"cafe:mystery:{case_index}:{index}",
+                    )
+                ]
+                for index, option in enumerate(mystery.options)
+            ]
+        )
+        await message.answer(
+            f"🕵️ <b>Misterio del Café — {escape(mystery.title)}</b>\n\n"
+            f"{escape(mystery.question)}\n\n"
+            "Elegí una opción. Este minicaso es cotidiano y no añade hechos al canon.",
+            reply_markup=keyboard,
+        )
+        await self._observe("mystery_open", message)
 
     async def recommendation(self, message: Message) -> None:
         day_key = world_now(self.timezone_name).date().isoformat()
