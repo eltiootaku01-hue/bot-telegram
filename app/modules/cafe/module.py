@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from app.core.identity import BotIdentity
 from app.core.config import Settings
 from app.core.module import BotModule
-from app.core.time import world_now
+from app.core.time import utc_now, world_now
 from app.db.database import Database
 from app.db.models import CafeDailyEventRound
 from app.services.cafe_events import CafeEventService
