@@ -288,7 +288,11 @@ class BotLauncher(tk.Tk):
                 or self.admin_var.get().strip()
                 or "0"
             ),
-            "BASE_GROUP_CHAT_ID": self.base_group_var.get().strip() or "0",
+            "BASE_GROUP_CHAT_ID": (
+                self.base_group_var.get().strip()
+                if hasattr(self, "base_group_var")
+                else "0"
+            ) or "0",
             "MEDIA_STORAGE_CHAT_ID": self.media_var.get().strip() or "0",
             "PUBLISH_PAGE_CHAT_ID": self.publish_page_var.get().strip() or "0",
             "AUTHORIZED_CHAT_IDS": self.authorized_chats_var.get().strip(),
