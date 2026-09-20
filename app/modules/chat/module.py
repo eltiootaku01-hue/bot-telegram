@@ -94,20 +94,38 @@ class ChatModule(BotModule):
         text = message.text.strip()
         intent = self.characters.classify(text)
         normalized = text.casefold().strip().strip("!?.,:;")
-        target = self.characters.target_identity(text)
+        targets = self.characters.target_identities(text)
+        target = targets[0] if targets else None
         if normalized == "bot":
             intent = CharacterIntent.HELP
         elif intent is None and target is self.identity and normalized == self.identity.value:
             intent = CharacterIntent.CALLED
+        elif intent is None and len(targets) >= 2 and target is self.identity:
+            intent = CharacterIntent.UNKNOWN_TOPIC
         if intent is None:
             return
-        response = self.characters.director.choose(
-            self.identity,
-            intent,
-            roll=(message.from_user.id + message.chat.id) % 17,
-        )
+
+        response = None
+        if (
+            len(targets) >= 2
+            and target is self.identity
+            and targets[1] is not self.identity
+        ):
+            response = self.characters.director.choose_interaction(
+                self.identity,
+                targets[1],
+                intent,
+                roll=(message.from_user.id + message.chat.id) % 17,
+            )
+        if response is None:
+            response = self.characters.director.choose(
+                self.identity,
+                intent,
+                roll=(message.from_user.id + message.chat.id) % 17,
+            )
         if response is None:
             return
+
         await message.answer(response.scene.text)
         await self._observe_scene(
             message,
