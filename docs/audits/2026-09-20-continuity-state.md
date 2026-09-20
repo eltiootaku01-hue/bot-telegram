@@ -241,6 +241,10 @@ Estado global conservador: 79%. Esta cifra estima cobertura frente a la visión 
 
 Además de los bloques anteriores, no volver a auditar desde cero el transporte multi-identidad de interacciones, el panel navegable de /ayuda ni la siembra del catálogo base de Ciudad Animals. Solo reabrirlos ante regresión, cambio de diseño o requisito nuevo.
 
+## Bitácora maestra
+
+La fuente principal de continuidad es `docs/audits/BITACORA_CONTINUA.md`. Este documento conserva contexto histórico; antes de iniciar nuevo trabajo debe leerse la bitácora maestra y luego usar este archivo como detalle histórico.
+
 ## Snapshot 2026-09-20
 
 Estimación global conservadora del proyecto: 77%. No es una métrica de CI; es una estimación de cobertura funcional frente a la visión completa del proyecto.
