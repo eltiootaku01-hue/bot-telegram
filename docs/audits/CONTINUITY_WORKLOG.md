@@ -128,6 +128,16 @@ El 82% global no significa “82% del código escrito”. Representa cuánto de 
 - Regresión de prioridad: `1fe4c48538167d729263ff603b1cb232eb20c059`.
 - El último SHA de código de este bloque es `1fe4c48538167d729263ff603b1cb232eb20c059`.
 
+## ÚLTIMO BLOQUE DE CONTINUIDAD — 2026-09-20
+
+- Cami ya no monta `AdminModule`; la aprobación Gacha pertenece exclusivamente a Sunna.
+- El Brain es local-first cuando no existe proveedor explícito: Ollama precede a los backends externos configurados.
+- El menú de Cari ahora expone `/tio_responder`, manteniendo el flujo de Tío Otaku completamente humano.
+- El ranking, misterio diario, catálogo de Cami, curador de Ciudad Animals y repertorio de interacciones ya existían y no deben rehacerse sin encontrar un defecto concreto.
+- Progreso global mantenido en **82%**: no se incrementa por simple endurecimiento técnico; el trabajo restante principal sigue siendo profundidad de producto, contenido autoral confirmado, más interacciones/superficies y cierre de versión.
+- Código de esta tanda: `22804d3cd2fede673ca9299a6c3eec7f79608987` (composición), `1fe4c48538167d729263ff603b1cb232eb20c059` (Brain), `cb0c94a14fb4ddc3abe4c56a57717af066d6e07` (menú Tío).
+- Nota de validación: cada modificación funcional debe esperar su CI y Windows correspondientes antes de considerarse cerrada.
+
 ## TRABAJO PENDIENTE / PRÓXIMOS OBJETIVOS
 
 1. Profundizar canon y repertorio solamente usando material autoral confirmado; no inventar hechos narrativos.
