@@ -79,6 +79,12 @@ class ChatModule(BotModule):
                 bot_identity=self.identity,
                 entry_type="knowledge",
                 entry_key=entry_key,
+            )
+            await self.world.observe(
+                session,
+                bot_identity=self.identity,
+                entry_type="knowledge",
+                entry_key=entry_key,
                 scope_type="user",
                 scope_id=str(message.from_user.id),
             )
