@@ -3,7 +3,7 @@
 **Repositorio:** `eltiootaku01-hue/bot-telegram`  
 **Rama operativa:** `main`  
 **Fecha de corte:** 2026-09-20  
-**Último checkpoint operativo:** ver la sección 25; main y el último código funcional se registran por separado.  
+**Último checkpoint operativo:** ver la sección 27; el SHA de main y el último SHA funcional se registran por separado.  
 **Objetivo:** evitar trabajo repetido, conservar evidencia de errores/pruebas y dirigir cada nueva sesión hacia áreas todavía incompletas.
 
 ---
@@ -1176,3 +1176,92 @@ No repetir: no reauditar esta capa desde cero salvo regresión, nuevo resultado 
 Estado global conservador: 82%. No se incrementa por este bloque porque siguen abiertas GUI, profundidad autoral, superficies avanzadas y release final.
 
 Próximo foco: escenas contextuales authored de Cari/Cami/Chie, eventos cotidianos de Ciudad Animals, superficies operativas, curación IA con aprobación humana y release final.
+
+
+---
+# 27. CHECKPOINT ACTUAL — INICIALIZACIÓN REAL DEL CATÁLOGO DE CIUDAD ANIMALS — 2026-09-20
+
+## Problema detectado
+
+La implementación de Ciudad Animals ya disponía de:
+
+- WorldCatalogDefinition y WORLD_CATALOG;
+- WorldService.seed_catalog();
+- pruebas de idempotencia del seed;
+- catálogo de lugares, roles, acciones y relaciones authored.
+
+Sin embargo, la auditoría de composición encontró que seed_catalog() no tenía un consumidor productivo obligatorio. En consecuencia, una instalación real podía arrancar con el catálogo vacío aunque las pruebas unitarias del servicio pasaran.
+
+## Corrección
+
+Se creó app/modules/world/module.py con WorldCatalogModule.
+
+El módulo:
+
+1. pertenece al lifecycle común de los bots;
+2. se monta en las cuatro identidades mediante app/core/bot_composition.py;
+3. ejecuta WorldService.seed_catalog() durante on_startup();
+4. conserva la idempotencia existente y no genera observaciones falsas;
+5. se convirtió en paquete Python explícito mediante app/modules/world/__init__.py para que setuptools/PyInstaller lo reconozcan de forma determinista.
+
+## Regresiones añadidas
+
+- tests/test_bot_composition.py: todas las identidades deben incluir world-catalog.
+- tests/test_world_catalog.py: WorldCatalogModule.on_startup() debe persistir todo el catálogo y el repertorio.
+- Se preserva la prueba de seed idempotente para ejecuciones repetidas.
+
+## Errores / aprendizaje
+
+### A. Catálogo probado pero no inicializado en producción
+
+Síntoma: el servicio y sus pruebas estaban correctos, pero no había una llamada garantizada desde el lifecycle real.
+
+Causa: se había implementado el mecanismo de seed como capacidad de servicio sin convertirlo en una responsabilidad de arranque.
+
+Corrección: módulo compartido de inicialización montado en las cuatro identidades.
+
+Lección: una capacidad de persistencia no debe considerarse integrada hasta que exista un consumidor productivo verificable.
+
+### B. Paquete Python implícito
+
+Riesgo: el nuevo directorio podía funcionar en el árbol fuente pero no ser tratado igual por las herramientas de empaquetado.
+
+Corrección: app/modules/world/__init__.py.
+
+Lección: los nuevos subpaquetes destinados al ejecutable deben ser explícitos, no depender de namespace packages accidentales.
+
+## Evidencia
+
+- main / SHA actual: ae31d55776328ac8cc3963e42f6aad2181b0f31f
+- CI #1228: SUCCESS
+- Windows Build #858: SUCCESS
+- Pytest en CI: 415 passed, 52 warnings
+- Windows verificó los cinco ejecutables, smoke test de BotManager, instalador, manifest, ZIP portable, SHA-256 y subida de artefactos.
+
+## Estado funcional
+
+Este bloque sí queda cerrado. No volver a implementar ni auditar desde cero la inicialización del catálogo salvo regresión, cambio de arquitectura o nuevo requisito.
+
+## Porcentaje global
+
+82% conservador.
+
+No se eleva por el hecho de que el catálogo ahora arranque correctamente: el fix cierra una brecha dentro de una capacidad ya existente. Las áreas grandes aún abiertas siguen siendo profundidad de producto, escenas contextuales, superficies avanzadas, GUI y maduración de la curación IA/release.
+
+## No repetir
+
+Añadir a la lista de capas cerradas:
+
+- WorldCatalogModule / seed obligatorio de Ciudad Animals;
+- paquete explícito app.modules.world;
+- regresiones de startup del catálogo.
+
+## Siguiente foco real
+
+No volver a infraestructura cerrada. Comenzar por una capacidad de producto nueva, preferentemente:
+
+1. eventos cotidianos authored de Ciudad Animals;
+2. escenas contextuales de Cari/Cami/Chie con uso real;
+3. mejora de la experiencia del operador humano Tío Otaku;
+4. curación IA periódica con propuesta y aprobación humana;
+5. preparación de release final versionado.
