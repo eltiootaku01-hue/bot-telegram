@@ -3,13 +3,15 @@ from __future__ import annotations
 import logging
 
 from aiogram import Bot, F
+from sqlalchemy import select
 from aiogram.filters import Command
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
 from app.core.config import Settings, get_settings
 from app.core.module import BotModule
 from app.db.database import Database
+from app.db.models import RareDropApproval
 from app.game.catalog import get_character
 from app.game.gacha import GachaService
 from app.game.rare_approval import decide
@@ -48,7 +50,7 @@ class AdminModule(BotModule):
             and callback.message.chat.id == self.settings.admin_user_id
         )
 
-    async def pending_approvals_command(self, message) -> None:
+    async def pending_approvals_command(self, message: Message) -> None:
         """Show pending rare-drop approvals so lost notifications remain recoverable."""
         if (
             message.chat.type != "private"
@@ -58,12 +60,10 @@ class AdminModule(BotModule):
         ):
             return
 
-        from app.db.models import RareDropApproval
-
         async with self.database.session() as session:
             approvals = list(
                 await session.scalars(
-                    __import__("sqlalchemy", fromlist=["select"]).select(RareDropApproval)
+                    select(RareDropApproval)
                     .where(RareDropApproval.status == "pending")
                     .order_by(RareDropApproval.id.asc())
                     .limit(20)
