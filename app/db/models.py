@@ -269,6 +269,51 @@ class FanRequest(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+class AnimeWork(Base):
+    """Locally curated anime/manga work metadata with explicit provenance."""
+
+    __tablename__ = "anime_works"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    title: Mapped[str] = mapped_column(String(255))
+    titles_json: Mapped[str] = mapped_column(String(4000), default="[]")
+    media_type: Mapped[str] = mapped_column(String(32), default="unknown")
+    status: Mapped[str] = mapped_column(String(64), default="unverified")
+    year_start: Mapped[int | None] = mapped_column(Integer)
+    year_end: Mapped[int | None] = mapped_column(Integer)
+    episodes: Mapped[int | None] = mapped_column(Integer)
+    genres_json: Mapped[str] = mapped_column(String(4000), default="[]")
+    themes_json: Mapped[str] = mapped_column(String(4000), default="[]")
+    studio: Mapped[str | None] = mapped_column(String(255))
+    source_ids_json: Mapped[str] = mapped_column(String(4000), default="{}")
+    source_urls_json: Mapped[str] = mapped_column(String(8000), default="[]")
+    summary_short: Mapped[str] = mapped_column(String(4000), default="")
+    notes_json: Mapped[str] = mapped_column(String(4000), default="[]")
+    last_verified: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class AnimeCharacter(Base):
+    """Locally curated character metadata linked to one canonical work record."""
+
+    __tablename__ = "anime_characters"
+    __table_args__ = (
+        UniqueConstraint("work_id", "name", name="uq_anime_character_work_name"),
+    )
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    work_id: Mapped[str] = mapped_column(ForeignKey("anime_works.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(255))
+    aliases_json: Mapped[str] = mapped_column(String(4000), default="[]")
+    source_ids_json: Mapped[str] = mapped_column(String(4000), default="{}")
+    source_urls_json: Mapped[str] = mapped_column(String(8000), default="[]")
+    notes: Mapped[str] = mapped_column(String(4000), default="")
+    last_verified: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class BotSetting(Base):
     __tablename__ = "bot_settings"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
