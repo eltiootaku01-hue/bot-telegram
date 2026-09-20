@@ -21,9 +21,9 @@ class SocialActivity:
     recent_messages: int
     active_users: int
     last_human_message_at: datetime | None
-    last_bot_message_at: datetime | None
-    last_social_event_at: datetime | None
     observed_at: datetime
+    last_bot_message_at: datetime | None = None
+    last_social_event_at: datetime | None = None
 
     def to_snapshot(self, memory: SocialMemory) -> SocialSnapshot:
         now = self.observed_at
