@@ -104,8 +104,17 @@ def tio_operator_resolve_keyboard(request_id: int) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def tio_operator_history_keyboard(request_ids: list[int]) -> InlineKeyboardMarkup:
-    """Compact navigation for the operator's recent request history."""
+def tio_operator_history_keyboard(
+    request_ids: list[int],
+    *,
+    page: int = 1,
+    has_previous: bool = False,
+    has_next: bool = False,
+) -> InlineKeyboardMarkup:
+    """Compact history list with deterministic previous/next navigation."""
+    if page <= 0:
+        raise ValueError("history page must be positive")
+
     builder = InlineKeyboardBuilder()
     for request_id in request_ids:
         builder.add(
@@ -115,6 +124,25 @@ def tio_operator_history_keyboard(request_ids: list[int]) -> InlineKeyboardMarku
             )
         )
     builder.adjust(4)
+
+    navigation: list[InlineKeyboardButton] = []
+    if has_previous:
+        navigation.append(
+            InlineKeyboardButton(
+                text="⬅️ Anteriores",
+                callback_data=f"tio:history:page:{page - 1}",
+            )
+        )
+    if has_next:
+        navigation.append(
+            InlineKeyboardButton(
+                text="Siguientes ➡️",
+                callback_data=f"tio:history:page:{page + 1}",
+            )
+        )
+    if navigation:
+        builder.row(*navigation)
+
     return builder.as_markup()
 
 
