@@ -262,3 +262,36 @@ Antes de modificar algo:
 
 ### Regla permanente
 Leer este registro antes de modificar el repositorio y comprobar primero el SHA actual de `main`.
+
+## ÚLTIMO BLOQUE EJECUTADO — FICHA LOCAL DE ANIME/MANGA — 2026-09-20
+
+### Cerrado
+- Cami incorpora `/anime_ficha <consulta>`.
+- La consulta usa exclusivamente `AnimeCatalogService.search_works()`, por lo que acepta título, nombre de personaje o alias del catálogo local.
+- Si existe una única coincidencia, muestra ficha, estado, verificación, tipo, años, episodios, estudio, géneros, temas, resumen y hasta 20 personajes registrados con aliases.
+- Si la búsqueda es ambigua, muestra las fichas candidatas y sus IDs para refinar sin inventar datos.
+- La salida escapa HTML y marca explícitamente que Cami no completa datos faltantes con IA.
+- Se añadió telemetría agregada de uso `anime_detail`, `anime_detail_empty` y `anime_detail_ambiguous`.
+- Se añadieron regresiones en `tests/test_cami_anime_detail.py` para ficha única y búsqueda ambigua.
+- Un primer CI detectó un error sintáctico en el test/código nuevo; se corrigieron las dos apariciones del `join` roto.
+- Commit de código/test corregido y empaquetado: `1ef14e764a2d414575007a93f4bb3df082e40678`.
+- CI #1152: SUCCESS sobre ese SHA.
+- Windows Build #782: SUCCESS sobre ese SHA.
+- Windows comprobó cinco ejecutables, verificó ejecutables, smoke test de BotManager, instalador, ZIP portable, checksums y subida de ambos artefactos.
+
+### NO REPETIR
+- No volver a implementar `/anime_ficha`, búsqueda por personaje/alias ni la recuperación de metadatos que ya cubre este bloque.
+- No cambiar la ficha para consultar la web o un LLM en runtime; la búsqueda debe permanecer local.
+- No elevar el porcentaje global solo por esta mejora aislada.
+
+### Estado de producto
+- Producto global: **82%**.
+- Cami/superficie de catálogo local sube funcionalmente, pero el principal límite del producto sigue siendo profundidad de contenido autoral, más experiencias/interacciones y cierre de superficies pendientes.
+- El siguiente objetivo debe salir del primer pendiente real del worklog, no repetirse desde esta ficha.
+
+### Validación
+- El paquete Windows válido de este bloque está asociado a la ejecución #782 y al SHA de código `1ef14e764a2d414575007a93f4bb3df082e40678`.
+- Artefactos Windows:
+  - `bot-telegram-windows-installer`
+  - `bot-telegram-windows-portable`
+
