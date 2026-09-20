@@ -162,6 +162,58 @@ class GameGachaRoll(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+class GameDailyMissionProgress(Base):
+    """Durable progress for one player's daily mission in one community."""
+
+    __tablename__ = "game_daily_mission_progress"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "chat_id",
+            "day_key",
+            "mission_key",
+            name="uq_game_daily_mission_progress",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    day_key: Mapped[str] = mapped_column(String(16))
+    mission_key: Mapped[str] = mapped_column(String(64))
+    progress: Mapped[int] = mapped_column(Integer, default=0)
+    target: Mapped[int] = mapped_column(Integer)
+    claimed: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class GameDailyMissionCredit(Base):
+    """Unique source credit proving one gameplay action counted once."""
+
+    __tablename__ = "game_daily_mission_credits"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "chat_id",
+            "day_key",
+            "mission_key",
+            "reference_type",
+            "reference_id",
+            name="uq_game_daily_mission_credit",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    day_key: Mapped[str] = mapped_column(String(16))
+    mission_key: Mapped[str] = mapped_column(String(64))
+    reference_type: Mapped[str] = mapped_column(String(64))
+    reference_id: Mapped[str] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class MediaAlbum(Base):
     """Durable identity for one Telegram media group handled as an operator unit."""
 
