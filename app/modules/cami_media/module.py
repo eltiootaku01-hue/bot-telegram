@@ -96,8 +96,8 @@ class CamiMediaModule(BotModule):
         )
         return bool(
             message.chat.type == "private"
-            and self.settings.admin_user_id
-            and actor_id == self.settings.admin_user_id
+            and self.settings.master_user_id
+            and actor_id == self.settings.master_user_id
         )
 
     async def receive_photo(self, message: Message) -> None:
