@@ -152,6 +152,24 @@ No volver a implementar otra capa de validación de configuración dentro de Tki
 ### Próximo foco
 Después de validar este bloque, priorizar superficies aún simples de Cari/Cami y la experiencia histórica de Tío Otaku, sin reabrir componentes de concurrencia ya cubiertos.
 
+
+## Registro posterior — navegación del Café y revisión de superficies
+
+### Mejora entregada
+- `app/ui/cafe_keyboards.py` añade navegación del Café Otaku.
+- El menú de Cari ofrece recomendación interna y enlaces configurados a Sunna, Cami y Chie.
+- `CafeModule` conserva el uso de la misma zona horaria configurada y ahora recibe la instancia real de `Settings` desde `build_bot_modules()`.
+- Se añadió regresión para impedir que la composición pierda esos enlaces.
+- Se añadió callback directo para la recomendación determinista.
+
+### Revisión para evitar duplicación
+- Se comprobó que `/ranking` de Sunna ya consulta `GameProfile`, ordena por puntos/experiencia/ID y devuelve los diez primeros; no se volvió a implementar.
+- Se buscó texto de placeholders como “Próximamente”, “se mostrará”, “no implementada” y “pendiente de implementar”; no se encontró una ruta falsa equivalente en el código actual.
+- Se comprobó que Cami ya posee catálogo local de medios y fichas de anime/manga, y que Chie ya posee reglas, salud, mundo, propuestas y onboarding.
+
+### Regla de no repetición
+No recrear `/ranking`, catálogo de Cami ni los paneles de ayuda existentes salvo regresión o cambio de requisitos. Las próximas mejoras de producto deben centrarse en superficies todavía simples que aporten una capacidad nueva.
+
 ## Snapshot 2026-09-20 — actualización posterior
 
 Estado global conservador: 79%. Esta cifra estima cobertura frente a la visión completa del proyecto; no es una métrica de CI.
