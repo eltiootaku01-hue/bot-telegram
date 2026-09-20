@@ -21,6 +21,7 @@ from app.core.identity import BotIdentity
 from app.core.jobs import JobQueue
 from app.core.module import BotModule
 from app.core.time import local_to_utc, utc_now
+from app.services.cami_workboard import CamiWorkboardService, format_cami_workboard
 from app.services.community import CommunityResolver
 from app.services.requests import RequestService
 from app.db.community_models import SetupSession
@@ -61,6 +62,7 @@ class CamiMediaModule(BotModule):
         self.library = MediaLibrary()
         self.albums = MediaAlbumService()
         self.requests = RequestService()
+        self.workboard = CamiWorkboardService()
 
     async def _observe_action(
         self,
@@ -89,6 +91,7 @@ class CamiMediaModule(BotModule):
         self.router.message.register(self.anime_detail_command, Command("anime_ficha"))
         self.router.message.register(self.request_queue_command, Command("cola_pedidos"))
         self.router.message.register(self.media_queue_command, Command("cola_media"))
+        self.router.message.register(self.workboard_command, Command("tablero"))
         self.router.message.register(
             self.receive_schedule_or_tags,
             CamiMediaStates.waiting_tags,
@@ -697,6 +700,16 @@ class CamiMediaModule(BotModule):
             )
         await message.answer("\n".join(lines))
         await self._observe_action("media_queue_view", message.from_user.id)
+
+    async def workboard_command(self, message: Message) -> None:
+        """Show the highest-value next actions across Cami's durable queues."""
+        if not self._is_media_staff(message):
+            return
+        async with self.database.session() as session:
+            items = await self.workboard.next_items(session, limit=10)
+        await message.answer(format_cami_workboard(items))
+        await self._observe_action("workboard_view", message.from_user.id)
+
 
     async def recovery_command(self, message: Message) -> None:
         if not self._is_media_staff(message):
