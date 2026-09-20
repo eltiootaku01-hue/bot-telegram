@@ -136,7 +136,7 @@ ARTICLES: tuple[KnowledgeArticle, ...] = (
         identity=BotIdentity.CHIE,
         title="Configuración de Chie",
         keywords=(
-            "configurar grupo", "configurar", "permisos", "administradora",
+            "configurar grupo", "como configuro el grupo", "configurar", "permisos", "administradora",
             "como preparo el grupo", "cómo preparo el grupo",
             "foro", "temas", "reglas",
         ),
