@@ -58,7 +58,8 @@ class TriviaModule(BotModule):
         if callback.message is None:
             await callback.answer("No pude abrir la trivia.", show_alert=True)
             return
-        if callback.message.chat.type in {"group", "supergroup"}:
+        chat = getattr(callback.message, "chat", None)
+        if chat is not None and chat.type in {"group", "supergroup"}:
             await callback.answer("La consulta de trivia se hace desde tu chat privado con Cari.", show_alert=True)
             return
         community_chat_id = await self._community_chat_id(callback.from_user.id)
@@ -82,7 +83,7 @@ class TriviaModule(BotModule):
             )
         else:
             await callback.message.edit_text(
-                "🧠 <b>Trivia de Cari activa</b>\n\n"
+                "🧠 <b>Trivia activa — Cari</b>\n\n"
                 f"{escape(active.question)}\n\n"
                 f"🏆 +{active.points} puntos\n"
                 "Respondé desde los botones de la ronda pública."
