@@ -124,7 +124,8 @@ async def test_operator_decision_is_owner_only_and_single_use(database: Database
     denied.answer.assert_awaited_once()
 
     owner_message = SimpleNamespace(
-        chat=SimpleNamespace(type="private"),
+        chat=SimpleNamespace(type="private", id=77),
+        from_user=SimpleNamespace(id=77),
         edit_reply_markup=AsyncMock(),
         answer=AsyncMock(),
     )
