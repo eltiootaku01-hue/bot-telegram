@@ -11,6 +11,8 @@ from app.services.world_curator import WorldCuratorService
 from app.services.world_curator_ai import (
     CURATOR_PERSONA,
     WorldCuratorAIService,
+    StoredWorldProposals,
+    WorldCuratorAIService,
     format_world_proposals,
 )
 
@@ -120,12 +122,40 @@ def test_ai_curator_formats_untrusted_human_review_text() -> None:
     )
     stored = service._parse(brain.payload)
     rendered = format_world_proposals(
-        type("Stored", (), {
-            "review_id": 1,
-            "generator": "brain:ollama:test",
-            "status": "pending",
-            "items": stored,
-        })()
+        StoredWorldProposals(
+            proposal_id=1,
+            review_id=1,
+            generator="brain:ollama:test",
+            status="pending",
+            items=stored,
+        )
     )
     assert "no confiables" in rendered
     assert "Cari, Cami" in rendered
+
+
+@pytest.mark.asyncio
+async def test_ai_curator_decision_is_single_use(database: Database) -> None:
+    brain = FakeBrain(
+        '{"proposals":[{"title":"Idea","idea":"Una escena pequeña.","reason":"Hay espacio.","affected_identities":[] }]}'
+    )
+    settings = Settings(ai_enabled=True, ai_enabled_chie=True, ollama_model="test-model")
+    service = WorldCuratorAIService(settings, brain=brain)
+    world = WorldCuratorService()
+
+    async with database.session() as session:
+        report = await world.build_daily(session, day_key="2026-09-21")
+        review = await session.scalar(select(WorldReview))
+        assert review is not None
+        stored = await service.propose(session, review_row=review, report=report)
+        first = await service.decide(session, proposal_id=stored.proposal_id, approved=True)
+        second = await service.decide(session, proposal_id=stored.proposal_id, approved=False)
+
+    assert first is True
+    assert second is False
+
+    async with database.session() as session:
+        row = await session.get(WorldProposal, stored.proposal_id)
+
+    assert row is not None
+    assert row.status == "accepted"
