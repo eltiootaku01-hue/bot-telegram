@@ -389,8 +389,6 @@ class BotLauncher(tk.Tk):
     def _missing_required(self) -> list[str]:
         missing: list[str] = []
         for key, fields in self.bot_vars.items():
-            if not fields["link"].get().strip():
-                missing.append(f"Enlace de {key.title()}")
             if not fields["token"].get().strip():
                 missing.append(f"Token de {key.title()}")
         return missing
