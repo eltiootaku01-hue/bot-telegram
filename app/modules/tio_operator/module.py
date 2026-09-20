@@ -72,10 +72,6 @@ class TioOperatorModule(BotModule):
                 await message.answer("📭 No hay solicitudes pendientes para Tío Otaku.")
                 return
 
-            lines = [
-                "📨 <b>Bandeja pendiente de Tío Otaku</b>",
-                "",
-            ]
             for request in requests:
                 user, chat = await self.service.context(session, request)
                 user_name = (
@@ -88,12 +84,22 @@ class TioOperatorModule(BotModule):
                     if chat
                     else str(request.chat_id)
                 )
-                lines.append(
-                    f"• <b>#{request.id}</b> · {user_name} · {chat_name}\n"
-                    f"  {escape(request.text[:500])}"
+                status_label = {
+                    "pending": "🆕 pendiente",
+                    "acknowledged": "👀 recibida",
+                    "responding": "⏳ respondiendo",
+                }.get(request.status, escape(request.status))
+                keyboard = (
+                    tio_operator_resolve_keyboard(request.id)
+                    if request.status == "responding"
+                    else tio_operator_request_keyboard(request.id)
                 )
-
-        await message.answer("\n".join(lines))
+                await message.answer(
+                    f"📨 <b>Solicitud #{request.id}</b> · {status_label}\n"
+                    f"👤 {user_name} · 🏠 {chat_name}\n"
+                    f"{escape(request.text[:1000])}",
+                    reply_markup=keyboard,
+                )
 
     async def respond_command(self, message: Message, bot: Bot) -> None:
         """Relay the operator's exact text to the original community request."""
