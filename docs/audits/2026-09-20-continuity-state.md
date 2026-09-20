@@ -94,6 +94,43 @@ No volver a “auditar desde cero” TaskSupervisor, leases, access middleware, 
 ## Próximo objetivo
 
 Primero profundizar superficies y continuidad de interacción; después cerrar una tanda funcional suficientemente grande para preparar el release final.
+
+## Registro de ejecución — 2026-09-20 (bloque posterior al snapshot)
+
+### Punto de partida comprobado
+- `main` estaba en `c89cf3a7cc6202413642b4d772a85e58ef8356fe`.
+- CI #1176: SUCCESS.
+- Windows Build #806: SUCCESS.
+- No se reabrieron TaskSupervisor, leases, access middleware, RequestService, Cami publication fencing, WildWaifu expiration, trivia stale-state, rare approvals ni empaquetado Windows, porque no apareció evidencia nueva que justificara otra auditoría completa.
+
+### Trabajo realizado
+1. **Catálogo base de Ciudad Animals**
+   - Se incorporó `app/services/world_catalog.py`.
+   - Define lugares, roles, acciones y relaciones ya respaldadas por el diseño del proyecto.
+   - `ChatModule` siembra el catálogo al iniciar sin crear observaciones ficticias.
+   - Se añadió `tests/test_world_catalog.py`.
+   - No se añadió una biblia nueva de Chie ni hechos narrativos no confirmados.
+
+2. **Validación de configuración del Bot Manager**
+   - Se incorporó `app/services/setup_validation.py`.
+   - Valida tokens/enlaces requeridos, IDs numéricos, duplicados, allowlist de grupos, ADMIN_USER_ID y chats de infraestructura.
+   - Bot Manager ejecuta esta validación antes de guardar/iniciar.
+   - Los secretos nunca se imprimen en los mensajes de validación.
+   - Se añadió `tests/test_setup_validation.py`.
+
+### Errores encontrados durante esta línea de trabajo
+- En una regresión anterior, CI detectó imports incompletos en los tests de zona horaria; se corrigieron antes de continuar.
+- CI también detectó que el test de concurrencia del publisher Cami no estaba configurando la nueva allowlist; se corrigió el fixture, no la lógica de producción.
+- Ambos errores fueron usados para endurecer la suite en lugar de ocultarlos o saltar las pruebas.
+
+### Evidencia de validación
+- El estado anterior confirmado: CI #1176 y Windows #806 SUCCESS.
+- Las modificaciones posteriores de esta sección deben considerarse pendientes hasta que sus propios pipelines sobre el SHA final aparezcan como SUCCESS.
+- Regla: nunca considerar un bloque terminado únicamente porque el commit exista; exigir validación de GitHub Actions cuando el cambio lo requiera.
+
+### Regla de no repetición reforzada
+No volver a implementar otra capa de validación de configuración dentro de Tkinter ni duplicar `parse_numeric_ids`. Cualquier nueva superficie de configuración debe reutilizar `validate_setup()`.
+
 ## Snapshot 2026-09-20 — actualización posterior
 
 Estado global conservador: 79%. Esta cifra estima cobertura frente a la visión completa del proyecto; no es una métrica de CI.
