@@ -1,9 +1,25 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from dataclasses import dataclass
+from datetime import datetime
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.db.models import MediaAsset
+
+
+@dataclass(frozen=True, slots=True)
+class MediaQueueSummary:
+    inbox: int
+    needs_tag: int
+    waiting_schedule: int
+    scheduled: int
+    publishing: int
+    delivery_unknown: int
+    published: int
+    oldest_actionable_at: datetime | None
 
 
 class MediaLibrary:
@@ -14,6 +30,16 @@ class MediaLibrary:
     file again. Metadata remains local so assets can later be reused by
     publishers, games and future web/admin surfaces.
     """
+
+    ACTIONABLE_STATUSES = (
+        "cami_inbox",
+        "needs_tag",
+        "waiting_destination",
+        "waiting_schedule",
+        "scheduled",
+        "publishing",
+        "delivery_unknown",
+    )
 
     async def get(self, session: AsyncSession, asset_id: int) -> MediaAsset | None:
         return await session.get(MediaAsset, asset_id)
@@ -111,6 +137,39 @@ class MediaLibrary:
             await session.commit()
             await session.refresh(asset)
         return asset
+
+    async def queue_summary(self, session: AsyncSession) -> MediaQueueSummary:
+        counts = {}
+        for status in (
+            "cami_inbox",
+            "needs_tag",
+            "waiting_schedule",
+            "scheduled",
+            "publishing",
+            "delivery_unknown",
+            "published",
+        ):
+            counts[status] = int(
+                await session.scalar(
+                    select(func.count(MediaAsset.id)).where(MediaAsset.status == status)
+                )
+                or 0
+            )
+        oldest = await session.scalar(
+            select(func.min(MediaAsset.updated_at)).where(
+                MediaAsset.status.in_(self.ACTIONABLE_STATUSES)
+            )
+        )
+        return MediaQueueSummary(
+            inbox=counts["cami_inbox"],
+            needs_tag=counts["needs_tag"],
+            waiting_schedule=counts["waiting_schedule"],
+            scheduled=counts["scheduled"],
+            publishing=counts["publishing"],
+            delivery_unknown=counts["delivery_unknown"],
+            published=counts["published"],
+            oldest_actionable_at=oldest,
+        )
 
     async def pending(self, session: AsyncSession, limit: int = 50) -> list[MediaAsset]:
         result = await session.scalars(
