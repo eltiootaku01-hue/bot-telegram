@@ -116,3 +116,36 @@ async def test_mark_published_is_idempotent(database: Database) -> None:
     assert second is not None
     assert second.message_id == 101
     assert second.status == "published"
+
+
+@pytest.mark.asyncio
+async def test_claim_publication_is_single_winner(tmp_path) -> None:
+    import asyncio
+
+    database_a = Database(f"sqlite+aiosqlite:///{tmp_path / 'event-race.db'}")
+    database_b = Database(f"sqlite+aiosqlite:///{tmp_path / 'event-race.db'}")
+    await database_a.create_schema()
+    service = CafeEventService()
+
+    async with database_a.session(write=True) as session:
+        started = await service.start_event(session, chat_id=-100, day_key="2026-09-20")
+        round_id = started.round.id
+
+    async def claim(database):
+        async with database.session(write=True) as session:
+            return await service.claim_publication(session, round_id=round_id)
+
+    first, second = await asyncio.gather(
+        claim(database_a),
+        claim(database_b),
+    )
+
+    assert sorted((first, second)) == [False, True]
+
+    async with database_a.session() as session:
+        row = await session.get(CafeDailyEventRound, round_id)
+
+    assert row is not None
+    assert row.status == "publishing"
+    await database_a.close()
+    await database_b.close()
