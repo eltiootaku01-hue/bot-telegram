@@ -99,3 +99,39 @@ async def test_cafe_mystery_publishes_authored_case_and_buttons() -> None:
     )
 
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_cafe_event_persists_and_reuses_daily_state() -> None:
+    from types import SimpleNamespace
+
+    from sqlalchemy import select
+
+    from app.db.models import CafeDailyEventRound
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    module = CafeModule(database)
+
+    sent_ids = iter((501, 502))
+
+    async def answer(text: str, **kwargs):
+        return SimpleNamespace(message_id=next(sent_ids), chat=SimpleNamespace(id=-100))
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(id=-100, type="supergroup"),
+        from_user=SimpleNamespace(id=7),
+        answer=answer,
+    )
+
+    await module.event_command(message)
+    await module.event_command(message)
+
+    async with database.session() as session:
+        rows = list(await session.scalars(select(CafeDailyEventRound)))
+
+    assert len(rows) == 1
+    assert rows[0].status == "published"
+    assert rows[0].message_id == 501
+
+    await database.close()
