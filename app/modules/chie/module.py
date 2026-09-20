@@ -183,6 +183,22 @@ class ChieModule(BotModule):
     async def _start_human_verification(self, event: ChatMemberUpdated, bot: Bot) -> None:
         user_id = event.new_chat_member.user.id
         chat_id = event.chat.id
+        base_timeout = max(30, self.settings.human_verification_timeout_seconds)
+        raid_timeout = min(
+            base_timeout,
+            max(30, self.settings.human_verification_raid_timeout_seconds),
+        )
+        raid_threshold = max(1, self.settings.human_verification_raid_threshold)
+        raid_window = max(1, self.settings.human_verification_raid_window_seconds)
+        async with self.database.session() as session:
+            recent_joins = await self.verification.recent_join_count(
+                session,
+                chat_id=chat_id,
+                window_seconds=raid_window,
+            )
+        verification_timeout = raid_timeout if recent_joins + 1 >= raid_threshold else base_timeout
+        raid_mode = recent_joins + 1 >= raid_threshold
+
         try:
             chat_info = await bot.get_chat(chat_id)
             permissions = getattr(chat_info, "permissions", None)
@@ -265,7 +281,7 @@ class ChieModule(BotModule):
                 user_id=user_id,
                 prompt_message_id=sent.message_id if isinstance(getattr(sent, "message_id", None), int) else None,
                 default_permissions_json=permissions_to_json(permissions) if permissions is not None else "{}",
-                timeout_seconds=self.settings.human_verification_timeout_seconds,
+                timeout_seconds=verification_timeout,
             )
         await self._observe_action("verification_prompt", user_id, chat_id)
 
