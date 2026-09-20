@@ -3,8 +3,6 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from json import dumps, loads
-
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -74,10 +72,7 @@ class CafeEventService:
         *,
         chat_id: int,
         day_key: str,
-        expires_after_hours: int = 24,
     ) -> CafeDailyEventStart:
-        if expires_after_hours <= 0:
-            raise ValueError("expires_after_hours must be positive")
         event = self.event_for(day_key, chat_id)
         existing = await session.scalar(
             select(CafeDailyEventRound).where(
