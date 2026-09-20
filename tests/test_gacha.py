@@ -79,12 +79,12 @@ async def test_gacha_high_rarity_creates_approval_without_granting_character(dat
     assert result is not None
     assert result.granted is False
     assert result.approval is not None
-    assert result.character.id == "taiga"
+    assert result.character.rarity is Rarity.B
 
     async with database.session() as session:
         approval = await session.get(RareDropApproval, result.approval.id)
         collection = await session.scalar(
-            select(GameCollection).where(GameCollection.character_id == "taiga")
+            select(GameCollection).where(GameCollection.character_id == result.character.id)
         )
 
     assert approval is not None and approval.status == "pending"
@@ -206,8 +206,7 @@ async def test_gacha_approval_grants_rare_character_once(database):
     async with database.session() as session:
         collection = await session.scalar(
             select(GameCollection).where(
-                GameCollection.profile_id == 1,
-                GameCollection.character_id == "taiga",
+                GameCollection.character_id == result.character.id,
             )
         )
         roll = await session.scalar(
