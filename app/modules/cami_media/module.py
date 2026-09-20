@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from html import escape
 
 from aiogram import Bot, F
 from aiogram.fsm.context import FSMContext
@@ -67,6 +68,7 @@ class CamiMediaModule(BotModule):
     def setup(self) -> None:
         self.router.message.register(self.receive_photo, F.photo)
         self.router.message.register(self.recovery_command, Command("recuperar_publicaciones"))
+        self.router.message.register(self.catalog_command, Command("catalogo"))
         self.router.message.register(
             self.receive_schedule_or_tags,
             CamiMediaStates.waiting_tags,
@@ -193,6 +195,68 @@ class CamiMediaModule(BotModule):
         await message.answer("🗓️ <b>Programado.</b> La orden quedó persistida para que sobreviva a un reinicio.")
         await self._observe_action("media_schedule", message.from_user.id)
         await state.clear()
+
+    async def catalog_command(self, message: Message) -> None:
+        """Search the published media catalog without exposing private storage data."""
+        if message.chat.type not in {"private", "group", "supergroup"} or message.from_user is None:
+            return
+
+        parts = (message.text or "").split(maxsplit=1)
+        query = parts[1].strip() if len(parts) == 2 else ""
+        async with self.database.session() as session:
+            statement = (
+                select(MediaAsset)
+                .where(
+                    MediaAsset.status.in_(
+                        ["published", "published_request"]
+                    )
+                )
+                .order_by(MediaAsset.updated_at.desc(), MediaAsset.id.desc())
+                .limit(10)
+            )
+            if query:
+                pattern = f"%{query}%"
+                from sqlalchemy import or_
+
+                statement = (
+                    statement.where(
+                        or_(
+                            MediaAsset.character_id.ilike(pattern),
+                            MediaAsset.anime.ilike(pattern),
+                            MediaAsset.tags.ilike(pattern),
+                            MediaAsset.category.ilike(pattern),
+                        )
+                    )
+                )
+            rows = list(await session.scalars(statement))
+
+        if not rows:
+            await message.answer(
+                "📚 No encontré material publicado que coincida con esa búsqueda."
+                if query
+                else "📚 Todavía no hay material publicado en el catálogo."
+            )
+            await self._observe_action("catalog_empty", message.from_user.id)
+            return
+
+        title = f"📚 <b>Catálogo de Cami</b>" + (f" · <i>{escape(query)}</i>" if query else "")
+        lines = [title, ""]
+        for asset in rows:
+            character = escape((asset.character_id or "sin personaje").replace("-", " "))
+            anime = escape(asset.anime or "obra no indicada")
+            tags = [
+                tag.strip()
+                for tag in (asset.tags or "").split(",")
+                if tag.strip()
+            ]
+            tag_text = " ".join(f"#{escape(tag)}" for tag in tags[:5])
+            line = f"• <b>{character}</b> — {anime}"
+            if tag_text:
+                line += f" · {tag_text}"
+            lines.append(line)
+
+        await message.answer("\n".join(lines))
+        await self._observe_action("catalog_search" if query else "catalog_latest", message.from_user.id)
 
     async def recovery_command(self, message: Message) -> None:
         if not self._is_media_staff(message):
