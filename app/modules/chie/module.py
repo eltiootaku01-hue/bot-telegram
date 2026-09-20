@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from html import escape
 
@@ -20,6 +21,7 @@ from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
 from app.services.operator_health import OperatorHealthService, format_operator_health
 from app.services.world import WorldService
+from app.services.world_curator import WorldCuratorService, format_world_review
 from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard
 
 logger = logging.getLogger(__name__)
@@ -54,6 +56,7 @@ class ChieModule(BotModule):
         self.topics = ForumTopicService(database)
         self.settings = settings or get_settings()
         self.world = WorldService()
+        self.curator = WorldCuratorService(self.world)
         self.health = OperatorHealthService()
         self.worker = DurableWorker(database, event_bus=EventBus(), poll_seconds=1.0)
         self.bot: Bot | None = None
@@ -68,6 +71,7 @@ class ChieModule(BotModule):
         self.router.message.register(self.command_hub_command, Command("comandos"))
         self.router.message.register(self.rules_command, Command("reglas"))
         self.router.message.register(self.world_command, Command("mundo"))
+        self.router.message.register(self.world_review_command, Command("revisar_mundo"))
         self.router.message.register(self.health_command, Command("salud"))
         self.router.message.register(self.clear_my_world_data, Command("borrar_mi_memoria"))
         self.router.chat_member.register(self.member_joined)
@@ -76,6 +80,7 @@ class ChieModule(BotModule):
         self.bot = bot
         self.worker.register_event("fan_request.created", self._notify_new_request)
         self.tasks.start("request-notifications", self.worker.run())
+        self.tasks.start("world-daily-review", self._daily_world_review_loop())
 
     async def _notify_new_request(self, payload: dict) -> None:
         if self.bot is None or not self.settings.admin_user_id:
@@ -309,6 +314,40 @@ class ChieModule(BotModule):
                 lines.append("")
         await message.answer("\n".join(lines))
 
+    async def _daily_world_review_loop(self) -> None:
+        last_day: str | None = None
+        while True:
+            day_key = world_now(self.settings.bot_world_timezone).date().isoformat()
+            if day_key != last_day:
+                try:
+                    async with self.database.session() as session:
+                        report = await self.curator.build_daily(
+                            session,
+                            day_key=day_key,
+                        )
+                    last_day = report.period_key
+                    logger.info("Ciudad Animals daily review ready: day=%s", day_key)
+                except Exception:
+                    logger.exception(
+                        "Failed to build Ciudad Animals daily review: day=%s",
+                        day_key,
+                    )
+            await asyncio.sleep(900)
+
+    async def world_review_command(self, message: Message) -> None:
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or message.from_user.id != self.settings.admin_user_id
+        ):
+            return
+        day_key = world_now(self.settings.bot_world_timezone).date().isoformat()
+        async with self.database.session() as session:
+            report = await self.curator.build_daily(
+                session,
+                day_key=day_key,
+            )
+        await message.answer(format_world_review(report))
     async def health_command(self, message: Message) -> None:
         """Show a read-only system health snapshot to the configured owner."""
         if (
