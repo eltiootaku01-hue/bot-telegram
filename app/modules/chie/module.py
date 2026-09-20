@@ -406,11 +406,11 @@ class ChieModule(BotModule):
             return
 
         parts = (callback.data or "").split(":")
-        if len(parts) != 4 or parts[3] not in {"accept", "reject"} or not parts[2]:
+        if len(parts) != 4 or parts[2] not in {"accept", "reject"} or not parts[3]:
             await callback.answer("Propuesta inválida.", show_alert=True)
             return
         try:
-            proposal_id = int(parts[2])
+            proposal_id = int(parts[3])
         except ValueError:
             await callback.answer("Propuesta inválida.", show_alert=True)
             return
@@ -419,7 +419,7 @@ class ChieModule(BotModule):
             accepted = await self.curator_ai.decide(
                 session,
                 proposal_id=proposal_id,
-                approved=parts[3] == "accept",
+                approved=parts[2] == "accept",
             )
             if not accepted:
                 await callback.answer(
@@ -428,7 +428,7 @@ class ChieModule(BotModule):
                 )
                 return
 
-        status = "aceptada" if parts[3] == "accept" else "rechazada"
+        status = "aceptada" if parts[2] == "accept" else "rechazada"
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.message.answer(
             f"📌 Propuesta #{proposal_id} {status}. "
