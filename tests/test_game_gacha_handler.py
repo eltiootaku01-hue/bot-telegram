@@ -5,7 +5,7 @@ import pytest
 from sqlalchemy import select
 
 from app.core.config import Settings
-from app.core.database import Database
+from app.db.database import Database
 from app.db.models import Chat, GameGachaRoll, GameProfile, PointTransaction, RareDropApproval, User
 from app.game.engine import GameEngine
 from app.game.gacha import GACHA_COST_POINTS, GachaService
