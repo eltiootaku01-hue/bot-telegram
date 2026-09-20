@@ -80,3 +80,33 @@ async def test_rare_gacha_without_owner_is_refunded_and_closed(tmp_path) -> None
     assert refund.amount == GACHA_COST_POINTS
 
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_normal_gacha_result_includes_authored_sunna_reaction(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'gacha-reaction.db'}")
+    await database.create_schema()
+    async with database.session() as session:
+        session.add_all([
+            User(id=9, first_name="Jugador"),
+            Chat(id=-100, type="supergroup", title="Community"),
+        ])
+        await session.flush()
+        session.add(GameProfile(user_id=9, chat_id=-100, points=GACHA_COST_POINTS))
+
+    module = GameModule(database, Settings(admin_user_id=0))
+    module.gacha_service = GachaService(FixedEngine())
+    module._community_chat_id = AsyncMock(return_value=-100)
+    callback = SimpleNamespace(
+        id="normal-gacha-reaction",
+        from_user=SimpleNamespace(id=9),
+        message=SimpleNamespace(chat=SimpleNamespace(id=9, type="private")),
+        answer=AsyncMock(),
+    )
+
+    await module.gacha_roll(callback)
+
+    text = callback.answer.await_args.args[0]
+    assert "<b>Sunna:</b>" in text
+    assert any(value in text for value in ("Bien. Lo hiciste.", "Ganaste.", "Fue buena jugada.", "Me alegra."))
+    await database.close()
