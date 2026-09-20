@@ -1265,3 +1265,19 @@ No volver a infraestructura cerrada. Comenzar por una capacidad de producto nuev
 3. mejora de la experiencia del operador humano Tío Otaku;
 4. curación IA periódica con propuesta y aprobación humana;
 5. preparación de release final versionado.
+
+
+---
+# 28. CHECKPOINT DOCUMENTAL — DIFERENCIA ENTRE MAIN Y CÓDIGO FUNCIONAL — 2026-09-20
+
+Este commit de bitácora es únicamente documental.
+
+- main en el momento de este checkpoint: dd8b7a0a99758017af4a5a5a8a4005ad783576ad
+- último código funcional validado: ae31d55776328ac8cc3963e42f6aad2181b0f31f
+- CI del código funcional: #1228 SUCCESS
+- Windows del código funcional: #858 SUCCESS
+- Pytest del código funcional: 415 passed, 52 warnings
+
+Regla: el commit documental no se considera una nueva versión funcional ni cambia el porcentaje.
+
+Esta sección existe para que una sesión futura no confunda el HEAD de main con el último SHA que modificó código.
