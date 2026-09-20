@@ -20,6 +20,7 @@ from app.core.time import utc_now
 from app.db.database import Database
 from app.db.models import GameProfile, User
 from app.db.trivia_models import TriviaRound
+from app.game.missions import DailyMissionService
 from app.game.trivia import TriviaService
 from app.ui.game_keyboards import trivia_keyboard
 
@@ -36,6 +37,7 @@ class TriviaModule(BotModule):
         self.database = database
         self.settings = settings or get_settings()
         self.service = TriviaService()
+        self.missions = DailyMissionService()
         self._bot: Bot | None = None
         self.world = WorldService()
         self.community = CommunityResolver(self.settings)
@@ -140,7 +142,7 @@ class TriviaModule(BotModule):
             await callback.answer("Trivia inválida.", show_alert=True)
             return
         round_id, option_index = int(parts[2]), int(parts[3])
-        async with self.database.session() as session:
+        async with self.database.session(write=True) as session:
             result, balance = await self.service.answer(
                 session,
                 round_id,
@@ -149,6 +151,29 @@ class TriviaModule(BotModule):
                 chat_id=callback.message.chat.id,
             )
             round_row = await session.get(TriviaRound, round_id)
+            mission_claimed = False
+            mission_balance = balance
+            if result in {"correct", "wrong"}:
+                day_key = self.missions.day_key(
+                    timezone_name=self.settings.bot_world_timezone,
+                )
+                _, mission_progress = await self._record_mission(
+                    session,
+                    user_id=callback.from_user.id,
+                    chat_id=callback.message.chat.id,
+                    day_key=day_key,
+                    reference_type="trivia_answer",
+                    reference_id=f"{round_id}:{callback.from_user.id}",
+                )
+                mission_claimed, mission_balance = await self.missions.claim(
+                    session,
+                    user_id=callback.from_user.id,
+                    chat_id=callback.message.chat.id,
+                    day_key=day_key,
+                    mission_key="trivia_participation",
+                )
+                if mission_claimed:
+                    balance = mission_balance
         if round_row is None:
             await callback.answer("La trivia ya no existe.", show_alert=True)
             return
@@ -172,6 +197,27 @@ class TriviaModule(BotModule):
             await callback.answer("Respuesta inválida.", show_alert=True)
         else:
             await callback.answer("La trivia ya terminó. 😭")
+
+    async def _record_mission(
+        self,
+        session,
+        *,
+        user_id: int,
+        chat_id: int,
+        day_key: str,
+        reference_type: str,
+        reference_id: str,
+    ) -> tuple[object, object]:
+        progress = await self.missions.record(
+            session,
+            user_id=user_id,
+            chat_id=chat_id,
+            day_key=day_key,
+            mission_key="trivia_participation",
+            reference_type=reference_type,
+            reference_id=reference_id,
+        )
+        return progress, progress
 
     async def _observe_action(
         self,
