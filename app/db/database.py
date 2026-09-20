@@ -33,6 +33,7 @@ def _ensure_compatibility(connection) -> None:
     _add_column_if_missing(connection, "media_assets", "published_page_message_id", "BIGINT", media_columns)
     _add_column_if_missing(connection, "media_assets", "published_request_message_id", "BIGINT", media_columns)
     _add_column_if_missing(connection, "media_assets", "publish_group_chat_id", "BIGINT", media_columns)
+    _add_column_if_missing(connection, "media_assets", "media_group_id", "VARCHAR(128)", media_columns)
 
     chat_columns = {column["name"] for column in inspect(connection).get_columns("chats")}
     _add_column_if_missing(connection, "chats", "last_human_message_at", "DATETIME", chat_columns)
@@ -50,6 +51,11 @@ def _ensure_compatibility(connection) -> None:
     connection.execute(text(
         "CREATE INDEX IF NOT EXISTS idx_media_asset_source_message "
         "ON media_assets(source_chat_id, source_message_id)"
+    ))
+    connection.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_media_asset_group "
+        "ON media_assets(source_chat_id, media_group_id) "
+        "WHERE media_group_id IS NOT NULL"
     ))
     connection.execute(text(
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_fan_request_source "
