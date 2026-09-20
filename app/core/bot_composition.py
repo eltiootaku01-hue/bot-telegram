@@ -16,6 +16,7 @@ from app.modules.chie.module import ChieModule
 from app.modules.game.module import GameModule
 from app.modules.media.module import MediaModule
 from app.modules.moderation.module import ModerationModule
+from app.modules.mystery.module import MysteryModule
 from app.modules.requests.module import RequestModule
 from app.modules.system.module import SystemModule
 from app.modules.trivia.module import TriviaModule
@@ -44,9 +45,10 @@ def build_bot_modules(
         _spec("cafe", lambda: CafeModule(database, settings=settings), BotIdentity.CARI),
         _spec("moderation", lambda: ModerationModule(database), BotIdentity.CARI),
         _spec("game", lambda: GameModule(database, settings=settings), BotIdentity.SUNNA),
-        _spec("trivia", lambda: TriviaModule(database, settings=settings), BotIdentity.SUNNA),
+        _spec("trivia", lambda: TriviaModule(database, settings=settings), BotIdentity.CARI),
         _spec("media", lambda: MediaModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("sunna-admin", lambda: AdminModule(database, settings=settings), BotIdentity.SUNNA),
+        _spec("mystery", lambda: MysteryModule(database, settings=settings), BotIdentity.CAMI),
         _spec("cami-media", lambda: CamiMediaModule(database, settings=settings), BotIdentity.CAMI),
         _spec("cami-publisher", lambda: CamiMediaPublisher(database, settings=settings), BotIdentity.CAMI),
         _spec("chie", lambda: ChieModule(database, settings=settings), BotIdentity.CHIE),
