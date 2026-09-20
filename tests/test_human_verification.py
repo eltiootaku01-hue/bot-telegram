@@ -295,3 +295,36 @@ async def test_verification_decision_cannot_win_after_deadline(database: Databas
 
     assert row is not None
     assert row.status == "pending"
+
+
+@pytest.mark.asyncio
+async def test_recent_join_count_supports_adaptive_raid_detection(database: Database) -> None:
+    service = HumanVerificationService()
+    base = datetime(2026, 9, 20, 18, 0, 0)
+
+    async with database.session() as session:
+        for user_id in range(1, 6):
+            await service.begin(
+                session,
+                chat_id=-100,
+                user_id=user_id,
+                prompt_message_id=user_id,
+                default_permissions_json="{}",
+                timeout_seconds=120,
+                now=base,
+            )
+        count = await service.recent_join_count(
+            session,
+            chat_id=-100,
+            window_seconds=60,
+            now=base + timedelta(seconds=10),
+        )
+        old_count = await service.recent_join_count(
+            session,
+            chat_id=-100,
+            window_seconds=5,
+            now=base + timedelta(seconds=10),
+        )
+
+    assert count == 5
+    assert old_count == 0
