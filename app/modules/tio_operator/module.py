@@ -44,7 +44,12 @@ class TioOperatorModule(BotModule):
 
     def _should_capture(self, text: str) -> bool:
         normalized = " ".join(text.strip().split())
-        return bool(normalized and self._ADDRESS_RE.search(normalized))
+        if not normalized:
+            return False
+        return bool(
+            self._ADDRESS_RE.search(normalized)
+            or self._EXPLICIT_NAME_RE.search(normalized)
+        )
 
     @staticmethod
     def _is_owner_private(message: Message, settings: Settings) -> bool:
