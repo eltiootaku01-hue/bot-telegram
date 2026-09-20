@@ -53,6 +53,11 @@ class ChatModule(BotModule):
         normalized = text.casefold().strip().strip("!?.,:;")
         intent = self.characters.classify(text)
         target = self.characters.target_identity(text)
+        if (
+            self.identity is not BotIdentity.CHIE
+            and intent in {CharacterIntent.GREETING, CharacterIntent.FAREWELL}
+        ):
+            return False
         if self.identity is BotIdentity.CARI:
             if target is not None and target is not self.identity:
                 return False
@@ -201,6 +206,11 @@ class ChatModule(BotModule):
         normalized = text.casefold().strip().strip("!?.,:;")
         targets = self.characters.target_identities(text)
         target = targets[0] if targets else None
+        if (
+            self.identity is not BotIdentity.CHIE
+            and intent in {CharacterIntent.GREETING, CharacterIntent.FAREWELL}
+        ):
+            return
         if normalized == "bot":
             intent = CharacterIntent.HELP
         elif intent is None and target is self.identity and normalized == self.identity.value:
