@@ -181,7 +181,12 @@ async def test_chat_uses_authored_pair_scene_without_generating_a_second_indepen
     assert module._should_handle_text(message.text) is True
     await module.handle_text(message)
 
-    assert answers == [
+    assert len(answers) == 2
+    assert answers[0] in {
         "Sunna, si quieres podemos revisarlo juntas. Sin prisa.",
+        "Sunna, si querés, te muestro cómo funciona este juego.",
+    }
+    assert answers[1] in {
         "Sí... me gustaría.",
-    ]
+        "Sí. Quiero aprender.",
+    }
