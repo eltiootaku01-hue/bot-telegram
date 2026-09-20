@@ -43,6 +43,7 @@ def test_validate_setup_accepts_standard_local_configuration() -> None:
         allow_user_private_chat=True,
         media_storage_chat_id="-100777",
         publish_page_chat_id="-100888",
+        base_group_chat_id="-100123",
     )
 
     assert result.valid
@@ -62,3 +63,35 @@ def test_validate_setup_warns_when_every_user_facing_surface_is_disabled() -> No
 
     assert result.valid
     assert result.warnings
+
+
+def test_validate_setup_warns_when_base_group_is_not_authorized() -> None:
+    result = validate_setup(
+        bots=_bots(),
+        authorized_chat_ids="-100456",
+        admin_user_id="123456",
+        allow_admin_private_chat=True,
+        allow_user_private_chat=True,
+        media_storage_chat_id="0",
+        publish_page_chat_id="0",
+        base_group_chat_id="-100123",
+    )
+
+    assert result.valid
+    assert any("grupo base" in warning.casefold() for warning in result.warnings)
+
+
+def test_validate_setup_rejects_positive_base_group_id() -> None:
+    result = validate_setup(
+        bots=_bots(),
+        authorized_chat_ids="-100123",
+        admin_user_id="123456",
+        allow_admin_private_chat=True,
+        allow_user_private_chat=True,
+        media_storage_chat_id="0",
+        publish_page_chat_id="0",
+        base_group_chat_id="123",
+    )
+
+    assert not result.valid
+    assert any("BASE_GROUP_CHAT_ID" in error for error in result.errors)
