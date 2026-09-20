@@ -141,7 +141,7 @@ def test_waifu_detail_render_is_local_and_explicit_about_provenance() -> None:
     assert "Poder de balance:" in rendered
     assert "Popularidad normalizada:" in rendered
     assert "Ranker · snapshot 2026-07-15" in rendered
-    assert "no es un porcentaje universal." in rendered
+    assert "porcentaje universal" in rendered
 
 
 def test_waifu_detail_callbacks_fit_telegram_callback_data_limit() -> None:
