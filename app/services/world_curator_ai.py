@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,6 +41,7 @@ class WorldProposalItem:
 
 @dataclass(frozen=True, slots=True)
 class StoredWorldProposals:
+    proposal_id: int
     review_id: int
     generator: str
     status: str
@@ -131,6 +132,7 @@ class WorldCuratorAIService:
             return self._decode(existing)
 
         return StoredWorldProposals(
+            proposal_id=row.id,
             review_id=review_row.id,
             generator=generator,
             status=row.status,
@@ -227,6 +229,7 @@ class WorldCuratorAIService:
         except (TypeError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"Invalid stored world proposal #{row.id}") from exc
         return StoredWorldProposals(
+            proposal_id=row.id,
             review_id=row.review_id,
             generator=row.generator,
             status=row.status,
