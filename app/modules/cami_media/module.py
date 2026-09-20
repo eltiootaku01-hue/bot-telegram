@@ -13,6 +13,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
 
 from app.core.access import is_authorized_community
+from app.media.albums import MediaAlbumService
 from app.media.library import MediaLibrary
 from app.services.anime_catalog import AnimeCatalogService
 from app.core.config import Settings, get_settings
@@ -28,6 +29,7 @@ from app.db.models import FanRequest, MediaAsset, RequestStatus
 from app.services.forum_topics import ForumTopicService
 from app.services.world import WorldService
 from app.ui.media_keyboards import (
+    cami_album_actions,
     cami_media_actions,
     cami_pending_requests,
     cami_publish_destination,
@@ -57,6 +59,7 @@ class CamiMediaModule(BotModule):
         self.community = CommunityResolver(self.settings)
         self.anime = AnimeCatalogService()
         self.library = MediaLibrary()
+        self.albums = MediaAlbumService()
         self.requests = RequestService()
 
     async def _observe_action(
@@ -92,6 +95,7 @@ class CamiMediaModule(BotModule):
             CamiMediaStates.waiting_schedule,
         )
         self.router.callback_query.register(self.media_action, F.data.startswith("cami:media:"))
+        self.router.callback_query.register(self.album_action, F.data.startswith("cami:album:"))
         self.router.callback_query.register(self.link_request, F.data.startswith("cami:req:link:"))
         self.router.callback_query.register(self.recover_publication, F.data.startswith("cami:recovery:"))
 
@@ -109,9 +113,25 @@ class CamiMediaModule(BotModule):
     async def receive_photo(self, message: Message, state: FSMContext) -> None:
         if not self._is_media_staff(message) or not message.photo:
             return
+
         photo = message.photo[-1]
         await state.clear()
+        media_group_id = getattr(message, "media_group_id", None)
+        created = False
+        album_id: int | None = None
+        album_prompt = False
+
         async with self.database.session() as session:
+            album = None
+            if media_group_id:
+                album, _ = await self.albums.get_or_create(
+                    session,
+                    source_chat_id=message.chat.id,
+                    media_group_id=str(media_group_id),
+                    owner_user_id=message.from_user.id,
+                )
+                album_id = album.id
+
             asset = await self.library.find_existing(
                 session,
                 telegram_file_id=photo.file_id,
@@ -126,15 +146,37 @@ class CamiMediaModule(BotModule):
                     telegram_unique_id=photo.file_unique_id,
                     source_chat_id=message.chat.id,
                     source_message_id=message.message_id,
+                    media_group_id=str(media_group_id) if media_group_id else None,
                     media_type="photo",
                     status="cami_inbox",
                 )
                 session.add(asset)
                 await session.flush()
-            elif asset.telegram_file_id != photo.file_id:
-                asset.telegram_file_id = photo.file_id
+                if album is not None:
+                    await self.albums.add_item(session, album.id, asset_id=asset.id)
+            elif media_group_id and asset.media_group_id != str(media_group_id):
+                asset.media_group_id = str(media_group_id)
                 await session.flush()
+
+            if album is not None and created:
+                album_prompt = await self.albums.claim_prompt(session, album.id)
+
             asset_id = asset.id
+
+        if album_id is not None:
+            if not album_prompt:
+                return
+            async with self.database.session() as session:
+                summary = await self.albums.summary(session, album_id)
+            count = summary.item_count if summary is not None else 1
+            text = (
+                f"🖼️ <b>Álbum recibido</b> · <b>{count}</b> material(es) registrados.\n\n"
+                "Los elementos quedan individualmente catalogados y podés etiquetar todo el conjunto "
+                "cuando termine de llegar."
+            )
+            await message.answer(text, reply_markup=cami_album_actions(album_id))
+            await self._observe_action("media_album_ingest", message.from_user.id)
+            return
 
         if created:
             text = "🗂️ <b>Recibido.</b> ¿Qué querés que haga con este material?"
@@ -144,15 +186,118 @@ class CamiMediaModule(BotModule):
                 "No se creó un duplicado; podés continuar trabajando sobre el registro existente."
             )
         await message.answer(text, reply_markup=cami_media_actions(asset_id))
-        await self._observe_action("media_ingest" if created else "media_duplicate", message.from_user.id)
+        await self._observe_action(
+            "media_ingest" if created else "media_duplicate",
+            message.from_user.id,
+        )
+
+    async def album_action(self, callback: CallbackQuery, state: FSMContext) -> None:
+        if (
+            callback.message is None
+            or callback.data is None
+            or callback.from_user is None
+            or not self._is_media_staff(callback.message, user_id=callback.from_user.id)
+        ):
+            await callback.answer("Esta acción es privada.", show_alert=True)
+            return
+
+        parts = callback.data.split(":")
+        if len(parts) != 4 or parts[2] != "tag" or not parts[3].isdigit():
+            await callback.answer("Álbum inválido.", show_alert=True)
+            return
+
+        album_id = int(parts[3])
+        async with self.database.session() as session:
+            album = await session.get(MediaAlbum, album_id)
+            if album is None:
+                await callback.answer("No encuentro ese álbum.", show_alert=True)
+                return
+            items = await self.albums.items(
+                session,
+                source_chat_id=album.source_chat_id,
+                media_group_id=album.media_group_id,
+            )
+
+        if not items:
+            await callback.answer("El álbum no tiene materiales registrados.", show_alert=True)
+            return
+
+        await state.set_state(CamiMediaStates.waiting_tags)
+        await state.update_data(target_type="album", target_id=album_id)
+        await callback.message.edit_text(
+            f"🏷️ <b>Etiquetar álbum #{album_id}</b>\n"
+            f"Hay <b>{len(items)}</b> materiales registrados.\n\n"
+            "Mandame una línea y la aplicaré solo a los elementos que todavía no avanzaron:\n"
+            "<code>Asuna | Sword Art Online | cabello azul, uniforme | waifu</code>"
+        )
+        await self._observe_action("media_album_tag_start", callback.from_user.id, album.source_chat_id)
+        await callback.answer()
 
     async def receive_schedule_or_tags(self, message: Message, state: FSMContext) -> None:
         if not self._is_media_staff(message) or not message.text:
             return
         data = await state.get_data()
-        asset_id = data.get("asset_id")
-        if not isinstance(asset_id, int):
+        target_type = data.get("target_type", "asset")
+        target_id = data.get("target_id", data.get("asset_id"))
+        if not isinstance(target_id, int):
             return
+
+        if target_type == "album":
+            parts = [part.strip() for part in message.text.split("|")]
+            if len(parts) < 2:
+                await message.answer("🏷️ Usá <code>Personaje | Anime | tags | categoría</code>.")
+                return
+
+            character_id = parts[0].lower().replace(" ", "-")
+            anime_title = parts[1]
+            tags = ",".join(
+                tag.strip().lower()
+                for tag in (parts[2].split(",") if len(parts) > 2 else [])
+            )
+            category = parts[3] if len(parts) > 3 else "waifu"
+
+            async with self.database.session() as session:
+                album = await session.get(MediaAlbum, target_id)
+                if album is None or album.owner_user_id != message.from_user.id:
+                    await state.clear()
+                    return
+                assets = await self.albums.items(
+                    session,
+                    source_chat_id=album.source_chat_id,
+                    media_group_id=album.media_group_id,
+                )
+                editable = [
+                    asset
+                    for asset in assets
+                    if asset.status in {"cami_inbox", "needs_tag"}
+                ]
+                for asset in editable:
+                    asset.character_id = character_id
+                    asset.anime = anime_title
+                    asset.tags = tags
+                    asset.category = category
+                    asset.status = "tagged"
+
+                await self.anime.upsert_work(
+                    session,
+                    work_id=f"media:{hashlib.sha256(anime_title.casefold().encode('utf-8')).hexdigest()}",
+                    title=anime_title,
+                    status="unverified",
+                    notes=(
+                        "Derivado del catálogo de medios; requiere verificación antes de tratarlo como ficha factual.",
+                    ),
+                )
+                await self.albums.mark_processing(session, album.id)
+                await self.albums.mark_completed(session, album.id)
+
+            await message.answer(
+                f"🏷️ <b>Álbum #{target_id}</b>: etiquetados <b>{len(editable)}</b> de <b>{len(assets)}</b> materiales."
+            )
+            await self._observe_action("media_album_tag", message.from_user.id, message.chat.id)
+            await state.clear()
+            return
+
+        asset_id = target_id
         async with self.database.session() as session:
             asset = await session.get(MediaAsset, asset_id)
             if (
