@@ -25,7 +25,7 @@ from app.services.operator_health import OperatorHealthService, format_operator_
 from app.services.world import WorldService
 from app.services.world_curator import WorldCuratorService, format_world_review
 from app.services.world_curator_ai import WorldCuratorAIService, format_world_proposals
-from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard
+from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard, world_proposal_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,10 @@ class ChieModule(BotModule):
         self.router.message.register(self.world_command, Command("mundo"))
         self.router.message.register(self.world_review_command, Command("revisar_mundo"))
         self.router.message.register(self.world_proposal_command, Command("proponer_mundo"))
+        self.router.callback_query.register(
+            self.world_proposal_decision,
+            F.data.startswith("chie:world-proposal:"),
+        )
         self.router.message.register(self.health_command, Command("salud"))
         self.router.message.register(self.clear_my_world_data, Command("borrar_mi_memoria"))
         self.router.chat_member.register(self.member_joined)
@@ -380,10 +384,58 @@ class ChieModule(BotModule):
                     review_row=review_row,
                     report=report,
                 )
-            await message.answer(format_world_proposals(proposals))
+            await message.answer(
+                format_world_proposals(proposals),
+                reply_markup=world_proposal_keyboard(proposals.proposal_id),
+            )
         except Exception as exc:
             logger.exception("Failed to generate world proposals")
             await message.answer(f"⚠️ No se pudieron generar propuestas: {exc}")
+    async def world_proposal_decision(
+        self,
+        callback: CallbackQuery,
+    ) -> None:
+        if (
+            callback.message is None
+            or callback.from_user is None
+            or callback.from_user.id != self.settings.admin_user_id
+            or callback.message.chat.type != "private"
+            or callback.message.chat.id != self.settings.admin_user_id
+        ):
+            await callback.answer("No autorizado.", show_alert=True)
+            return
+
+        parts = (callback.data or "").split(":")
+        if len(parts) != 4 or parts[3] not in {"accept", "reject"} or not parts[2]:
+            await callback.answer("Propuesta inválida.", show_alert=True)
+            return
+        try:
+            proposal_id = int(parts[2])
+        except ValueError:
+            await callback.answer("Propuesta inválida.", show_alert=True)
+            return
+
+        async with self.database.session() as session:
+            accepted = await self.curator_ai.decide(
+                session,
+                proposal_id=proposal_id,
+                approved=parts[3] == "accept",
+            )
+            if not accepted:
+                await callback.answer(
+                    "La propuesta ya fue revisada o no existe.",
+                    show_alert=True,
+                )
+                return
+
+        status = "aceptada" if parts[3] == "accept" else "rechazada"
+        await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.answer(
+            f"📌 Propuesta #{proposal_id} {status}. "
+            "La decisión no modifica automáticamente el canon ni el código."
+        )
+        await callback.answer("Decisión guardada.")
+
     async def health_command(self, message: Message) -> None:
         """Show a read-only system health snapshot to the configured owner."""
         if (
