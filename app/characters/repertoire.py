@@ -462,4 +462,13 @@ REPERTOIRE: tuple[DialogueScene, ...] = (
         follow_up_text="Sí. Entender puede venir después.",
     ),
 
+    DialogueScene("sunna-game-success-1", CharacterIntent.GAME_SUCCESS, BotIdentity.SUNNA, "Bien. Lo hiciste."),
+    DialogueScene("sunna-game-success-2", CharacterIntent.GAME_SUCCESS, BotIdentity.SUNNA, "Ganaste."),
+    DialogueScene("sunna-game-success-3", CharacterIntent.GAME_SUCCESS, BotIdentity.SUNNA, "Fue buena jugada."),
+    DialogueScene("sunna-game-success-4", CharacterIntent.GAME_SUCCESS, BotIdentity.SUNNA, "Me alegra."),
+    DialogueScene("sunna-game-miss-1", CharacterIntent.GAME_MISS, BotIdentity.SUNNA, "Casi."),
+    DialogueScene("sunna-game-miss-2", CharacterIntent.GAME_MISS, BotIdentity.SUNNA, "No pasa nada."),
+    DialogueScene("sunna-game-miss-3", CharacterIntent.GAME_MISS, BotIdentity.SUNNA, "Estabas cerca."),
+    DialogueScene("sunna-game-miss-4", CharacterIntent.GAME_MISS, BotIdentity.SUNNA, "Probá otra vez."),
+
 )
