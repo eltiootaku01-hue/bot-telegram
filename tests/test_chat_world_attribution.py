@@ -190,3 +190,30 @@ async def test_chat_uses_authored_pair_scene_without_generating_a_second_indepen
         "Sí... me gustaría.",
         "Sí. Quiero aprender.",
     }
+
+
+@pytest.mark.asyncio
+async def test_interaction_usage_is_recorded_as_relationship(database: Database) -> None:
+    module = ChatModule(database)
+
+    async def answer(text: str) -> None:
+        return None
+
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=42),
+        chat=SimpleNamespace(id=-100),
+        text="Cari, Cami, no entiendo",
+        answer=answer,
+    )
+
+    await module.handle_text(message)
+
+    async with database.session() as session:
+        rows = list(await session.scalars(
+            select(WorldUsageStat).where(
+                WorldUsageStat.entry_type == "relationship",
+                WorldUsageStat.scope_type == "world",
+            )
+        ))
+
+    assert any(row.entry_key == "cari-cami" and row.count == 1 for row in rows)
