@@ -173,8 +173,9 @@ class GameModule(BotModule):
                 character = get_character(item.character_id)
                 progress = collection_status(item)
                 lines.append(
-                    f"• {character.name} · clase {item.rarity} · Nv.{item.level} · "
-                    f"EXP {item.experience} · ×{item.copies} · Evo.{item.evolution_stage}"
+                    f"• {character.name} · {character.card_tier.value} · {character.element.value} · "
+                    f"clase {item.rarity} · Nv.{item.level} · EXP {item.experience} · "
+                    f"×{item.copies} · Evo.{item.evolution_stage}"
                 )
                 if progress.can_evolve:
                     evolvable.append(item.character_id)
@@ -445,7 +446,8 @@ class GameModule(BotModule):
             callback.from_user.id + chat_id,
         )
         result_text = (
-            f"🎉 ¡Salió {result.character.name} ({result.character.rarity.value})! "
+            f"🎉 ¡Salió {result.character.name} ({result.character.card_tier.value})! "
+            f"Clase {result.character.rarity.value} · elemento {result.character.element.value} · "
             f"Saldo: {result.remaining_points}"
         )
         if reaction:
