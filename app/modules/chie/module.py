@@ -384,11 +384,12 @@ class ChieModule(BotModule):
                 )
                 if review_row is None:
                     raise RuntimeError("Daily world review was not persisted")
-                proposals = await self.curator_ai.propose(
-                    session,
-                    review_row=review_row,
-                    report=report,
-                )
+                review_id = review_row.id
+            proposals = await self.curator_ai.propose_for_database(
+                self.database,
+                review_id=review_id,
+                report=report,
+            )
             await message.answer(
                 format_world_proposals(proposals),
                 reply_markup=world_proposal_keyboard(proposals.proposal_id),
