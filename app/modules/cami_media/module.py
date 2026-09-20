@@ -13,6 +13,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
 
 from app.core.access import is_authorized_community
+from app.media.library import MediaLibrary
 from app.services.anime_catalog import AnimeCatalogService
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
@@ -54,6 +55,7 @@ class CamiMediaModule(BotModule):
         self.world = WorldService()
         self.community = CommunityResolver(self.settings)
         self.anime = AnimeCatalogService()
+        self.library = MediaLibrary()
 
     async def _observe_action(
         self,
@@ -100,7 +102,7 @@ class CamiMediaModule(BotModule):
             and actor_id == self.settings.master_user_id
         )
 
-    async def receive_photo(self, message: Message) -> None:
+    async def receive_photo(self, message: Message, state: FSMContext) -> None:
         if not self._is_media_staff(message) or not message.photo:
             return
         photo = message.photo[-1]
