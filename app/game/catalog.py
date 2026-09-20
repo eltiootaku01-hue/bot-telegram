@@ -22,7 +22,23 @@ CHARACTERS: dict[str, Character] = {
 
 # Preserve the original project ID used by existing collections and tests.
 if "anya-forger" in CHARACTERS:
-    CHARACTERS["anya"] = CHARACTERS.pop("anya-forger")
+    legacy_anya = CHARACTERS.pop("anya-forger")
+    CHARACTERS["anya"] = Character(
+        id="anya",
+        name=legacy_anya.name,
+        anime=legacy_anya.anime,
+        rarity=legacy_anya.rarity,
+        level=legacy_anya.level,
+        attack_name=legacy_anya.attack_name,
+        defense_name=legacy_anya.defense_name,
+        special_name=legacy_anya.special_name,
+        popularity_score=legacy_anya.popularity_score,
+        power_score=legacy_anya.power_score,
+        element=legacy_anya.element,
+        card_tier=legacy_anya.card_tier,
+        popularity_rank=legacy_anya.popularity_rank,
+        popularity_source=legacy_anya.popularity_source,
+    )
 
 CHARACTERS["taiga"] = Character(
     id="taiga",
