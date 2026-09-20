@@ -75,3 +75,16 @@ def test_ollama_request_uses_local_api_without_auth_header() -> None:
     assert captured["url"] == "http://127.0.0.1:11434/api/chat"
     assert captured["headers"] == {"Content-Type": "application/json"}
     assert captured["payload"]["model"] == "llama3.2:1b"  # type: ignore[index]
+
+
+def test_llm_request_can_replace_character_persona_for_internal_curator() -> None:
+    client = BrainClient(Settings(ollama_model="llama3.2:1b"))
+    request = LLMRequest(
+        identity=BotIdentity.CHIE,
+        user_text="snapshot",
+        persona="Sos un curador interno. No hables como Chie.",
+    )
+    prompt = client._system_prompt(request)
+    assert "curador interno" in prompt
+    assert "No hables como Chie" in prompt
+    assert "Café" not in prompt
