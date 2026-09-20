@@ -268,7 +268,7 @@ async def test_operator_reply_keeps_request_open_when_delivery_fails(database: D
         stored = await session.get(TioOperatorRequest, request_id)
 
     assert stored is not None
-    assert stored.status == "pending"
+    assert stored.status == "acknowledged"
     message.answer.assert_awaited_once()
 
 
@@ -294,3 +294,54 @@ async def test_operator_ignores_bot_authored_vocative(database: Database) -> Non
         rows = list(await session.scalars(select(TioOperatorRequest)))
 
     assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_operator_response_claim_is_single_use(database: Database) -> None:
+    service = TioOperatorService()
+
+    async with database.session() as session:
+        captured = await service.capture(
+            session,
+            chat_id=-100,
+            user_id=7,
+            source_message_id=49,
+            text="Tío Otaku, necesito una respuesta.",
+        )
+        request_id = captured.request.id
+
+        first = await service.claim_response(session, request_id=request_id)
+        second = await service.claim_response(session, request_id=request_id)
+
+    assert first is True
+    assert second is False
+
+    async with database.session() as session:
+        stored = await session.get(TioOperatorRequest, request_id)
+
+    assert stored is not None
+    assert stored.status == "responding"
+
+
+@pytest.mark.asyncio
+async def test_operator_response_claim_can_be_released(database: Database) -> None:
+    service = TioOperatorService()
+
+    async with database.session() as session:
+        captured = await service.capture(
+            session,
+            chat_id=-100,
+            user_id=7,
+            source_message_id=50,
+            text="Tío, después te escribo.",
+        )
+        request_id = captured.request.id
+        assert await service.claim_response(session, request_id=request_id) is True
+        assert await service.release_response(session, request_id=request_id) is True
+        assert await service.claim_response(session, request_id=request_id) is True
+
+    async with database.session() as session:
+        stored = await session.get(TioOperatorRequest, request_id)
+
+    assert stored is not None
+    assert stored.status == "responding"
