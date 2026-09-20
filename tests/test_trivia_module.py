@@ -180,3 +180,19 @@ async def test_trivia_start_callback_is_handled_as_panel_guidance() -> None:
     callback.answer.assert_awaited_once()
     callback.message.edit_text.assert_not_awaited()
     await cur_database.close()
+
+
+@pytest.mark.asyncio
+async def test_trivia_start_callback_is_wired_for_game_hub() -> None:
+    from unittest.mock import AsyncMock
+
+    from types import SimpleNamespace
+
+    module = TriviaModule.__new__(TriviaModule)
+    message = SimpleNamespace(edit_text=AsyncMock())
+    callback = SimpleNamespace(message=message, answer=AsyncMock())
+
+    await module.start_callback(callback)
+
+    message.edit_text.assert_awaited_once()
+    callback.answer.assert_awaited_once()
