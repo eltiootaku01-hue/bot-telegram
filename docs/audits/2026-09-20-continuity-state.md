@@ -94,6 +94,45 @@ No volver a “auditar desde cero” TaskSupervisor, leases, access middleware, 
 ## Próximo objetivo
 
 Primero profundizar superficies y continuidad de interacción; después cerrar una tanda funcional suficientemente grande para preparar el release final.
+## Snapshot 2026-09-20 — actualización posterior
+
+Estado global conservador: 79%. Esta cifra estima cobertura frente a la visión completa del proyecto; no es una métrica de CI.
+
+| Área | Estado estimado |
+| --- | ---: |
+| Arquitectura Core | 92% |
+| Persistencia / SQLite / transacciones | 97% |
+| Telegram / seguridad / runtime | 96% |
+| BotManager / Windows / empaquetado | 98% |
+| Módulos funcionales | 93% |
+| WaifuMon / progresión / trivia | 94% |
+| Personajes / canon | 80% |
+| Director / repertorio / rutinas | 77% |
+| Ciudad Animals / Café Otaku | 78% |
+| Interacciones / continuidad | 82% |
+| IA secundaria / curación | 40% |
+| GUI / experiencia de operador | 48% |
+
+### Bloque funcional cerrado en esta tanda
+
+- Ayuda navegable por identidad: /ayuda ahora abre un panel específico de Cari, Sunna, Cami o Chie y permite navegar por secciones sin mezclar identidades.
+- Interacción multi-identidad real: cuando una escena authored involucra a otro personaje, el follow-up se envía con el token Telegram de la identidad que realmente habla; en foros conserva message_thread_id. Si falta el token del compañero, no se falsifica el segundo hablante.
+- Ciudad Animals inicial: el catálogo persistente incluye lugares, roles, acciones y relaciones confirmadas; el estado se siembra al arrancar sin generar observaciones ficticias.
+- Validación del bloque: Ubuntu CI #1175 y Windows Build #805 quedaron success sobre el mismo SHA 6ecd41d6a482f0a70cf57eef5ceb2faab3c249fd.
+
+### Checklist actualizado
+
+- Profundidad autoral: EN PROGRESO. Se amplía solo material confirmado; no se creó una biblia nueva de Chie.
+- Más interacciones: BLOQUE ACTUAL CERRADO. La matriz está cubierta, las relaciones confirmadas tienen variantes y el transporte multi-identidad ya representa al hablante real.
+- Superficies: BLOQUE ACTUAL CERRADO para /ayuda; todavía pueden enriquecerse Cami/Cari/Chie con paneles de sus funciones.
+- Tío Otaku: AVANZADO. No convertirlo en una quinta IA sigue siendo una invariante.
+- Concurrencia: AVANZADO. Seguir solo cuando exista una ruta nueva sin regresión específica.
+- Release final: LISTO PARA TAG una vez que este snapshot quede en main; no crear otro bloque funcional artificial solo para inflar el porcentaje.
+
+### No repetir sin evidencia nueva
+
+Además de los bloques anteriores, no volver a auditar desde cero el transporte multi-identidad de interacciones, el panel navegable de /ayuda ni la siembra del catálogo base de Ciudad Animals. Solo reabrirlos ante regresión, cambio de diseño o requisito nuevo.
+
 ## Snapshot 2026-09-20
 
 Estimación global conservadora del proyecto: 77%. No es una métrica de CI; es una estimación de cobertura funcional frente a la visión completa del proyecto.
