@@ -213,7 +213,7 @@ class CafeModule(BotModule):
             )
 
         event_text = (
-            f"☀️ <b>Evento del Café — {escape(started.event.title)}</b>"\n\n"
+            f"☀️ <b>Evento del Café — {escape(started.event.title)}</b>\n\n"
             f"{escape(started.event.text)}\n\n"
             "Este evento es cotidiano y no añade hechos al canon."
         )
