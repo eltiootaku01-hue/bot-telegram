@@ -44,6 +44,10 @@ def validate_setup(
     media_storage_chat_id: str,
     publish_page_chat_id: str,
     base_group_chat_id: str = "0",
+    human_verification_timeout_seconds: str = "120",
+    human_verification_raid_window_seconds: str = "60",
+    human_verification_raid_threshold: str = "5",
+    human_verification_raid_timeout_seconds: str = "45",
 ) -> SetupValidation:
     errors: list[str] = []
     warnings: list[str] = []
@@ -93,6 +97,35 @@ def validate_setup(
             continue
         if parsed > 0:
             errors.append(f"{name} debe ser 0 o un ID negativo de Telegram.")
+
+    for value, name, minimum in (
+        (human_verification_timeout_seconds, "HUMAN_VERIFICATION_TIMEOUT_SECONDS", 30),
+        (human_verification_raid_window_seconds, "HUMAN_VERIFICATION_RAID_WINDOW_SECONDS", 1),
+        (human_verification_raid_threshold, "HUMAN_VERIFICATION_RAID_THRESHOLD", 1),
+        (human_verification_raid_timeout_seconds, "HUMAN_VERIFICATION_RAID_TIMEOUT_SECONDS", 30),
+    ):
+        try:
+            parsed = int(value.strip() or "0")
+        except ValueError:
+            errors.append(f"{name} debe ser un entero.")
+            continue
+        if parsed < minimum:
+            errors.append(f"{name} debe ser >= {minimum}.")
+
+    if (
+        human_verification_raid_timeout_seconds.strip()
+        and human_verification_timeout_seconds.strip()
+    ):
+        try:
+            raid_timeout = int(human_verification_raid_timeout_seconds.strip())
+            normal_timeout = int(human_verification_timeout_seconds.strip())
+            if raid_timeout > normal_timeout:
+                warnings.append(
+                    "HUMAN_VERIFICATION_RAID_TIMEOUT_SECONDS supera al TTL normal; "
+                    "se usará el menor de ambos."
+                )
+        except ValueError:
+            pass
 
     if "chie" in bots and not bots["chie"].get("token", "").strip():
         warnings.append("Chie es el bot base de configuración; sin su token no se puede preparar la comunidad.")
