@@ -190,3 +190,80 @@ async def test_operator_request_can_progress_from_acknowledged_to_resolved(
 
     assert row is not None
     assert row.status == "resolved"
+
+
+
+@pytest.mark.asyncio
+async def test_operator_can_relay_human_reply_and_resolve_request(database: Database) -> None:
+    module = TioOperatorModule(
+        database,
+        Settings(admin_user_id=77, authorized_chat_ids="-100"),
+    )
+    bot = AsyncMock()
+
+    async with database.session() as session:
+        captured = await TioOperatorService().capture(
+            session,
+            chat_id=-100,
+            user_id=7,
+            source_message_id=46,
+            text="Tío Otaku, ¿podés ayudarme?",
+        )
+        request_id = captured.request.id
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=77),
+        from_user=SimpleNamespace(id=77),
+        text=f"/tio_responder {request_id} Sí, decime qué pasó.",
+        answer=AsyncMock(),
+    )
+
+    await module.respond_command(message, bot)
+
+    bot.send_message.assert_awaited_once_with(
+        -100,
+        "💬 <b>Tío Otaku (operador humano)</b>\n\nSí, decime qué pasó.",
+    )
+
+    async with database.session() as session:
+        stored = await session.get(TioOperatorRequest, request_id)
+
+    assert stored is not None
+    assert stored.status == "resolved"
+
+
+@pytest.mark.asyncio
+async def test_operator_reply_keeps_request_open_when_delivery_fails(database: Database) -> None:
+    module = TioOperatorModule(
+        database,
+        Settings(admin_user_id=77, authorized_chat_ids="-100"),
+    )
+    bot = AsyncMock()
+    bot.send_message.side_effect = RuntimeError("telegram unavailable")
+
+    async with database.session() as session:
+        captured = await TioOperatorService().capture(
+            session,
+            chat_id=-100,
+            user_id=7,
+            source_message_id=47,
+            text="Tío, necesito ayuda.",
+        )
+        request_id = captured.request.id
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=77),
+        from_user=SimpleNamespace(id=77),
+        text=f"/tio_responder {request_id} No puedo responder ahora.",
+        answer=AsyncMock(),
+    )
+
+    with pytest.raises(RuntimeError, match="telegram unavailable"):
+        await module.respond_command(message, bot)
+
+    async with database.session() as session:
+        stored = await session.get(TioOperatorRequest, request_id)
+
+    assert stored is not None
+    assert stored.status == "pending"
+    message.answer.assert_awaited_once()
