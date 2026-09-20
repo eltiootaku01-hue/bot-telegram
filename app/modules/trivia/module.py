@@ -54,16 +54,44 @@ class TriviaModule(BotModule):
         self._bot = bot
         self.tasks.start("trivia-scheduler", self._scheduler())
 
-    async def start_callback(self, callback: CallbackQuery) -> None:
-        """Open trivia information from the Sunna game hub."""
-        if callback.message is not None:
+    async def start_panel(self, callback: CallbackQuery) -> None:
+        if callback.message is None:
+            await callback.answer("No pude abrir la trivia.", show_alert=True)
+            return
+        if callback.message.chat.type in {"group", "supergroup"}:
+            await callback.answer("La consulta de trivia se hace desde tu chat privado con Cari.", show_alert=True)
+            return
+        community_chat_id = await self._community_chat_id(callback.from_user.id)
+        if community_chat_id is None:
+            await callback.answer("Chie todavía no configuró la comunidad.", show_alert=True)
+            return
+
+        async with self.database.session() as session:
+            active = await session.scalar(
+                select(TriviaRound).where(
+                    TriviaRound.chat_id == community_chat_id,
+                    TriviaRound.status == "active",
+                    TriviaRound.expires_at > utc_now(),
+                )
+            )
+        if active is None:
             await callback.message.edit_text(
-                "🧠 <b>Trivia</b>\n\n"
-                "Las rondas aparecen automáticamente en la comunidad configurada.\n"
-                "Cuando haya una activa, podés responder desde sus botones. 🏆"
+                "🧠 <b>Trivia de Cari</b>\n\n"
+                "No hay una trivia activa ahora. Las rondas aparecen automáticamente "
+                "en la comunidad configurada."
+            )
+        else:
+            await callback.message.edit_text(
+                "🧠 <b>Trivia de Cari activa</b>\n\n"
+                f"{escape(active.question)}\n\n"
+                f"🏆 +{active.points} puntos\n"
+                "Respondé desde los botones de la ronda pública."
             )
         await callback.answer()
 
+    async def start_callback(self, callback: CallbackQuery) -> None:
+        """Backward-compatible alias for the Cari trivia status panel."""
+        await self.start_panel(callback)
     async def start_command(self, message: Message) -> None:
         if message.chat.type in {"group", "supergroup"}:
             if await self._publish(message.chat.id, source=message):
@@ -206,7 +234,7 @@ class TriviaModule(BotModule):
             async with self.database.session() as session:
                 await self.world.observe_action(
                     session,
-                    bot_identity=BotIdentity.SUNNA,
+                    bot_identity=BotIdentity.CARI,
                     action_key=action_key,
                     user_id=user_id,
                     chat_id=chat_id,
