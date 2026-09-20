@@ -86,3 +86,20 @@ def test_cami_does_not_mount_sunna_gacha_admin_module() -> None:
 
     assert "admin" not in names
     assert "cami-admin" not in names
+
+
+def test_cari_cafe_module_receives_cross_bot_links() -> None:
+    from app.modules.cafe.module import CafeModule
+
+    settings = Settings(
+        bot_link_sunna="https://t.me/SunnaBot",
+        bot_link_cami="https://t.me/CamiBot",
+        bot_link_chie="https://t.me/ChieBot",
+    )
+    database = Database("sqlite+aiosqlite:///:memory:")
+
+    modules = build_bot_modules(database, BotIdentity.CARI, settings)
+    cafe = next(module for module in modules if module.name == "cafe")
+
+    assert isinstance(cafe, CafeModule)
+    assert cafe.settings is settings
