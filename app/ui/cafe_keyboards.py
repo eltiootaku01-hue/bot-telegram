@@ -14,7 +14,11 @@ def cafe_menu_keyboard(settings: Settings) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text="🍿 Recomendación",
             callback_data="cafe:recommendation",
-        )
+        ),
+        InlineKeyboardButton(
+            text="🕵️ Misterio",
+            callback_data="cafe:mystery:open",
+        ),
     )
 
     links = (
