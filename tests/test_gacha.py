@@ -286,3 +286,72 @@ async def test_gacha_reference_cannot_be_replayed_for_another_player_or_communit
                 chat_id=-200,
                 seed="owned-by-7",
             )
+
+
+import asyncio
+
+
+@pytest.mark.asyncio
+async def test_concurrent_same_gacha_reference_charges_and_grants_once(tmp_path):
+    database_a = Database(f"sqlite+aiosqlite:///{tmp_path / 'gacha-race.db'}")
+    database_b = Database(f"sqlite+aiosqlite:///{tmp_path / 'gacha-race.db'}")
+    await database_a.create_schema()
+
+    async with database_a.session() as session:
+        session.add(User(id=11, first_name="Race"))
+        session.add(Chat(id=-101, type="supergroup", title="Race Community"))
+        await session.flush()
+        session.add(GameProfile(user_id=11, chat_id=-101, points=GACHA_COST_POINTS))
+
+    service = GachaService(FixedEngine(Rarity.D))
+
+    async def roll(database):
+        async with database.session(write=True) as session:
+            return await service.roll(
+                session,
+                user_id=11,
+                chat_id=-101,
+                seed="race-reference",
+            )
+
+    first, second = await asyncio.gather(
+        roll(database_a),
+        roll(database_b),
+    )
+
+    assert first is not None
+    assert second is not None
+    assert first.character.id == second.character.id
+    assert first.granted is True
+    assert second.granted is True
+
+    async with database_a.session() as session:
+        rolls = list(
+            await session.scalars(
+                select(GameGachaRoll).where(GameGachaRoll.roll_id == "race-reference")
+            )
+        )
+        transactions = list(
+            await session.scalars(
+                select(PointTransaction).where(
+                    PointTransaction.reference_type == "gacha",
+                    PointTransaction.reference_id == "race-reference",
+                )
+            )
+        )
+        collection = await session.scalar(
+            select(GameCollection).where(GameCollection.character_id == "anya")
+        )
+        profile = await session.scalar(
+            select(GameProfile).where(GameProfile.user_id == 11, GameProfile.chat_id == -101)
+        )
+
+    assert len(rolls) == 1
+    assert len(transactions) == 1
+    assert collection is not None
+    assert collection.copies == 1
+    assert profile is not None
+    assert profile.points == 0
+
+    await database_a.close()
+    await database_b.close()
