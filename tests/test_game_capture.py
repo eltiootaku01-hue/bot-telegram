@@ -141,6 +141,13 @@ async def test_mystery_success_includes_authored_sunna_reaction(tmp_path) -> Non
     module = GameModule(database)
 
     async with database.session(write=True) as session:
+        session.add_all(
+            [
+                User(id=9, first_name="Jugador"),
+                Chat(id=-100, type="supergroup", title="Café Otaku"),
+            ]
+        )
+        await session.flush()
         started = await module.mystery_service.start_round(
             session, chat_id=-100, day_key="2026-09-30"
         )
