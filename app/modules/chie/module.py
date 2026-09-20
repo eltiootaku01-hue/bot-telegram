@@ -177,30 +177,16 @@ class ChieModule(BotModule):
             )
         if setup is None:
             return
-        name = escape(new_member.user.full_name)
-        thread_id = await self.topics.get_thread_id(event.chat.id, "bienvenida")
-        await bot.send_message(
-            event.chat.id,
-            f"👋 <b>¡Bienvenido/a, {name}!</b>\n\n"
-            "Soy Chie y estoy en la recepción de Ciudad Animals. "
-            "Pasá por el tema de <b>reglas</b> antes de empezar. 💛",
-            message_thread_id=thread_id,
-        ) if thread_id is not None else await bot.send_message(
-            event.chat.id,
-            f"👋 <b>¡Bienvenido/a, {name}!</b>\n\n"
-            "Soy Chie y estoy en la recepción de Ciudad Animals. "
-            "Pasá por el tema de <b>reglas</b> antes de empezar. 💛",
-        )
+        await self._start_human_verification(event, bot)
         await self._observe_action("welcome", new_member.user.id, event.chat.id)
-        await self._start_human_verification(event, bot)
-        await self._start_human_verification(event, bot)
-
     async def _start_human_verification(self, event: ChatMemberUpdated, bot: Bot) -> None:
         user_id = event.new_chat_member.user.id
         chat_id = event.chat.id
         try:
             chat_info = await bot.get_chat(chat_id)
             permissions = getattr(chat_info, "permissions", None)
+            if not isinstance(permissions, ChatPermissions):
+                permissions = None
         except (TelegramBadRequest, TelegramForbiddenError):
             permissions = None
 
@@ -234,9 +220,9 @@ class ChieModule(BotModule):
 
         name = escape(event.new_chat_member.user.full_name)
         prompt = (
-            f"🤖 <b>Verificación de {name}</b>\n\n"
-            "<b>¿Sos un bot?</b>\n"
-            "Elegí una respuesta para habilitar tu participación en la comunidad."
+            f"👋 <b>¡Bienvenido/a, {name}!</b>\n\n"
+            "Soy Chie, la recepción de Ciudad Animals.\n\n"
+            "<b>¿Sos un bot?</b>\n"            "Elegí una respuesta para habilitar tu participación en la comunidad."
         )
         thread_id = await self.topics.get_thread_id(chat_id, "bienvenida")
         try:
