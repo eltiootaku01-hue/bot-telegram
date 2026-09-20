@@ -43,6 +43,10 @@ def test_world_catalog_has_cafe_and_waifumon_core_entries() -> None:
         item.entry_key == "cafe_mystery" and item.bot_identity is BotIdentity.CARI
         for item in WORLD_CATALOG
     )
+    assert any(
+        item.entry_key == "context_moment" and item.bot_identity is BotIdentity.CARI
+        for item in WORLD_CATALOG
+    )
 
 
 
