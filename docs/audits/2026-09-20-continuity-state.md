@@ -307,3 +307,28 @@ No reauditar desde cero los bloques ya marcados como corregidos arriba. Una nuev
 - Profundidad autoral y superficies funcionales todavía simples.
 - No reabrir componentes ya cubiertos por concurrencia, seguridad y empaquetado salvo evidencia nueva.
 
+## Snapshot 2026-09-20 — media, pedidos y método profesional
+
+### Trabajo integrado en main
+- Investigación comparativa de workflows reales de bots de media, soporte, moderación, juegos y generación local.
+- Nueva metodología transversal documentada: capture → validate → classify → queue → execute → confirm → observe → recover.
+- Cami ahora usa identidad estable de Telegram: `file_id` como handle operativo y `file_unique_id` como señal de identidad/deduplicación.
+- `MediaLibrary` incluye índice y cola operativa: inbox, tags, scheduling, publishing, delivery_unknown y published.
+- Cami dispone de `/cola_media` y `/cola_pedidos` en privado para monitorizar trabajo acumulado y entregas ambiguas.
+- Los usuarios pueden consultar `/mis_pedidos` en privado.
+- Los pedidos pagados reciben un SLA persistente por defecto de 48 horas mediante `due_at`; la cola puede detectar vencimientos.
+- El menú oficial de Telegram y la ayuda por identidad exponen las nuevas superficies.
+- Se corrigió una consulta heredada de `MediaLibrary.pending()` que buscaba el estado inexistente `inbox` en vez del estado operativo `cami_inbox`.
+
+### Regresiones y validaciones
+- Las pruebas nuevas cubren identidad estable de medios, deduplicación, cola de medios, cola de pedidos, historial privado del solicitante, SLA y menús.
+- CI #1444: SUCCESS sobre `2b3b4400e92e99cb3330ffc300f8d6b8d6dd9a9c`.
+- El último Windows Build sobre ese SHA fue cancelado durante PyInstaller por el runner y no debe contarse como fallo funcional; requiere una ejecución Windows final limpia para ese SHA.
+
+### Estado de producto
+- La cobertura global conservadora se mantiene alrededor de 79%; no se incrementa por contar documentación o pipelines.
+- La mejora principal es de profundidad operativa de Cami/Chie y de la metodología transversal; todavía quedan GUI avanzada, más profundidad autoral y evolución de la curación IA.
+
+### Regla para la siguiente tanda
+No añadir nuevas features hasta disponer de CI + Windows verdes sobre el SHA final de esta tanda. Después priorizar las áreas con mayor valor funcional pendiente, no repetir hardenings ya cerrados.
+
