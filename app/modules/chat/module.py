@@ -11,6 +11,7 @@ from app.characters.router import CharacterIntentRouter
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.knowledge.retrieval import LocalKnowledgeResponder, is_question_like
 from app.core.operator import is_tio_addressed
 from app.db.database import Database
 from app.services.world import WorldService
@@ -35,6 +36,7 @@ class ChatModule(BotModule):
         self.database = database
         self.identity = identity
         self.characters = CharacterIntentRouter()
+        self.knowledge = LocalKnowledgeResponder()
         self.world = world or WorldService()
         self.settings = settings or get_settings()
         self.bot_factory = bot_factory or (lambda token: Bot(token=token))
@@ -54,7 +56,12 @@ class ChatModule(BotModule):
         if self.identity is BotIdentity.CARI:
             if target is not None and target is not self.identity:
                 return False
-            return bool(normalized == "bot" or intent)
+            return bool(
+                normalized == "bot"
+                or intent
+                or self.knowledge.answer(self.identity, text) is not None
+                or is_question_like(text)
+            )
         return (
             self.characters.target_identity(text) is self.identity
             and (
@@ -63,6 +70,18 @@ class ChatModule(BotModule):
                 or len(self.characters.target_identities(text)) >= 2
             )
         )
+
+    async def _observe_knowledge(self, message: Message, article_key: str | None) -> None:
+        entry_key = article_key or "unresolved_question"
+        async with self.database.session() as session:
+            await self.world.observe(
+                session,
+                bot_identity=self.identity,
+                entry_type="knowledge",
+                entry_key=entry_key,
+                scope_type="user",
+                scope_id=str(message.from_user.id),
+            )
 
     async def _observe_interaction(
         self,
@@ -182,8 +201,29 @@ class ChatModule(BotModule):
             intent = CharacterIntent.CALLED
         elif intent is None and len(targets) >= 2 and target is self.identity:
             intent = CharacterIntent.UNKNOWN_TOPIC
-        if intent is None:
+        if intent is None and not is_question_like(text):
             return
+
+        local_answer = self.knowledge.answer(self.identity, text)
+        if local_answer is not None:
+            await self._send_authored_text(
+                message,
+                bot,
+                self.identity,
+                local_answer.article.answer,
+            )
+            await self._observe_knowledge(message, local_answer.article.key)
+            if local_answer.article.follow_up:
+                await self._send_authored_text(
+                    message,
+                    bot,
+                    self.identity,
+                    local_answer.article.follow_up,
+                )
+            return
+
+        if is_question_like(text):
+            intent = CharacterIntent.UNKNOWN_TOPIC
 
         response = None
         if (
