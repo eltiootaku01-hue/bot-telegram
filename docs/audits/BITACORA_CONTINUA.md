@@ -1851,3 +1851,65 @@ Primer candidato: ampliar escenas authored e interacciones contextuales de Cari,
 10. actualizar esta sección.
 
 Este documento es la memoria operativa principal del proyecto.
+
+
+# 33. CONTINUIDAD — VARIANTES AUTHORED DEL CONTEXTO DEL CAFÉ — 2026-09-20
+
+## 33.1 Implementación
+
+- app/services/cafe_context.py fue ampliado con variantes authored para cada razón contextual.
+- Se agregaron tres variantes para: WaifuMon activo, trivia activa, pedidos pendientes, nuevos integrantes, actividad humana, mañana, tarde y noche.
+- La selección sigue siendo determinista y no usa LLM.
+- choose() conserva variant_seed opcional.
+- moment() deriva una semilla estable de chat + día local, por lo que el mismo chat obtiene una variante estable durante el mismo día.
+- La primera clave histórica context-active-waifumon se preservó para no romper referencias previas.
+
+## 33.2 Pruebas nuevas
+
+- tests/test_cafe_context.py valida tres variantes authored distintas para un mismo estado.
+- Se valida que la selección produzca el mismo resultado para el mismo chat y día.
+- Se mantienen las pruebas de prioridad del contexto y lectura de estado real.
+
+## 33.3 Error real encontrado
+
+El primer CI del cambio falló porque la primera variante fue renombrada de context-active-waifumon a context-active-waifumon-1. Esa clave histórica podía afectar referencias/métricas existentes.
+
+Corrección:
+- se restauró context-active-waifumon para la variante base;
+- las nuevas variantes permanecen con sufijos -2 y -3;
+- no se modificó la lógica de selección ni se degradó la nueva funcionalidad.
+
+## 33.4 Evidencia
+
+- Commit funcional: 2d107acc7fe49fc04b36f5430ac87186de863906.
+- CI #1274: SUCCESS.
+- Pytest: 439 passed, 52 warnings.
+- Ruff: SUCCESS.
+- Windows Build #901: SUCCESS.
+- Windows verificó cinco ejecutables, smoke test de BotManager, instalador, manifest, ZIP portable, checksums y upload de ambos artefactos.
+
+Artefactos Windows #901:
+- installer: 98,857,362 bytes; digest sha256:1956853e40b30f7220d4500f7fecf572a9738cafb685d9593b86a64150d61bc1.
+- portable: 96,997,545 bytes; digest sha256:cbfce42e1f3fe20b40f4d0ec83d5b600b4e641714d7e74d89167b33d8494b3e0.
+
+## 33.5 Estado del porcentaje
+
+Se mantiene el porcentaje global conservador en 85%.
+
+Motivo: esta mejora aumenta la variedad y profundidad del Café, pero no completa todavía las áreas grandes pendientes de repertorio autoral, herramientas avanzadas del operador, GUI y revisión humana de curación.
+
+## 33.6 No repetir
+
+- No recrear el servicio de contexto del Café.
+- No eliminar las claves históricas del contexto sin migración explícita.
+- No introducir random() o estado aleatorio de proceso para elegir variantes.
+- No meter IA en la ruta de /momento.
+- No abrir de nuevo la auditoría de persistencia del contexto salvo regresión.
+
+## 33.7 Próximo trabajo
+
+Prioridad de producto siguiente:
+- ampliar una superficie real de Cami, Chie o Cari con comportamiento observable;
+- añadir regresión;
+- registrar cualquier fallo de CI antes de avanzar;
+- mantener el 85% hasta que el nuevo trabajo cubra una deuda funcional mayor.
