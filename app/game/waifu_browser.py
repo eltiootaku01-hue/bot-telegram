@@ -1,12 +1,35 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 
 from app.game.catalog import CHARACTERS
-from app.game.models import Character
+from app.game.models import CardTier, Character, Element, Rarity
+from app.game.waifu_catalog import ANIME_CORNER_2025_SOURCE, RANKER_2026_SOURCE
 
 
 PAGE_SIZE = 8
+
+
+class WaifuFilterField(StrEnum):
+    ELEMENT = "e"
+    CARD = "c"
+    RARITY = "r"
+    SOURCE = "s"
+
+
+@dataclass(frozen=True, slots=True)
+class WaifuFilter:
+    field: WaifuFilterField
+    value: str
+
+    @classmethod
+    def from_code(cls, field: str, value: str) -> "WaifuFilter | None":
+        try:
+            parsed_field = WaifuFilterField(field)
+        except ValueError:
+            return None
+        return cls(parsed_field, value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,13 +37,37 @@ class WaifuPage:
     page: int
     total_pages: int
     characters: tuple[Character, ...]
+    active_filter: WaifuFilter | None = None
 
 
-def page_for(page: int) -> WaifuPage:
-    """Return a deterministic page of the current playable waifu catalog."""
+def _matches(character: Character, active_filter: WaifuFilter | None) -> bool:
+    if active_filter is None:
+        return True
+    value = active_filter.value.casefold()
+    if active_filter.field is WaifuFilterField.ELEMENT:
+        return character.element.value.casefold() == value
+    if active_filter.field is WaifuFilterField.CARD:
+        return character.card_tier.value.casefold() == value
+    if active_filter.field is WaifuFilterField.RARITY:
+        return character.rarity.value.casefold() == value
+    if active_filter.field is WaifuFilterField.SOURCE:
+        if value == "ranker":
+            return character.popularity_source == RANKER_2026_SOURCE
+        if value == "recent":
+            return character.popularity_source == ANIME_CORNER_2025_SOURCE
+        return False
+    return False
+
+
+def page_for(
+    page: int,
+    *,
+    active_filter: WaifuFilter | None = None,
+) -> WaifuPage:
+    """Return a deterministic catalog page with an optional single filter."""
     characters = tuple(
         sorted(
-            CHARACTERS.values(),
+            (character for character in CHARACTERS.values() if _matches(character, active_filter)),
             key=lambda character: (
                 character.popularity_rank is None,
                 character.popularity_rank or 10_000,
@@ -35,22 +82,61 @@ def page_for(page: int) -> WaifuPage:
         page=safe_page,
         total_pages=total_pages,
         characters=characters[start : start + PAGE_SIZE],
+        active_filter=active_filter,
     )
+
+
+def filter_label(active_filter: WaifuFilter | None) -> str:
+    if active_filter is None:
+        return "Todos"
+    labels = {
+        (WaifuFilterField.ELEMENT, "fuego"): "Elemento: fuego",
+        (WaifuFilterField.ELEMENT, "agua"): "Elemento: agua",
+        (WaifuFilterField.ELEMENT, "tierra"): "Elemento: tierra",
+        (WaifuFilterField.ELEMENT, "aire"): "Elemento: aire",
+        (WaifuFilterField.ELEMENT, "hielo"): "Elemento: hielo",
+        (WaifuFilterField.ELEMENT, "luz"): "Elemento: luz",
+        (WaifuFilterField.ELEMENT, "oscuridad"): "Elemento: oscuridad",
+        (WaifuFilterField.ELEMENT, "rayo"): "Elemento: rayo",
+        (WaifuFilterField.ELEMENT, "mente"): "Elemento: mente",
+        (WaifuFilterField.ELEMENT, "arcano"): "Elemento: arcano",
+        (WaifuFilterField.ELEMENT, "neutro"): "Elemento: neutro",
+        (WaifuFilterField.CARD, "r"): "Carta: R",
+        (WaifuFilterField.CARD, "sr"): "Carta: SR",
+        (WaifuFilterField.CARD, "ur"): "Carta: UR",
+        (WaifuFilterField.RARITY, "d"): "Clase: D",
+        (WaifuFilterField.RARITY, "c"): "Clase: C",
+        (WaifuFilterField.RARITY, "b"): "Clase: B",
+        (WaifuFilterField.RARITY, "a"): "Clase: A",
+        (WaifuFilterField.RARITY, "s"): "Clase: S",
+        (WaifuFilterField.RARITY, "ss"): "Clase: SS",
+        (WaifuFilterField.RARITY, "sss"): "Clase: SSS",
+        (WaifuFilterField.SOURCE, "ranker"): "Fuente: Ranker 2026",
+        (WaifuFilterField.SOURCE, "recent"): "Fuente: Anime Corner 2025",
+    }
+    return labels.get((active_filter.field, active_filter.value.casefold()), "Filtro")
 
 
 def render_page(page: WaifuPage) -> str:
     lines = [
         f"📚 <b>Catálogo de waifus</b> · página {page.page}/{page.total_pages}",
+        f"🔎 <b>Filtro:</b> {filter_label(page.active_filter)}",
         "",
     ]
     for character in page.characters:
-        ranking = f"#{character.popularity_rank}" if character.popularity_rank is not None else "sin ranking"
+        ranking = (
+            f"#{character.popularity_rank}"
+            if character.popularity_rank is not None
+            else "sin ranking"
+        )
         lines.append(
             f"• <b>{character.name}</b> — {character.card_tier.value} · "
             f"clase {character.rarity.value} · {character.element.value}"
         )
         lines.append(
-            f"  ⚡ Poder {character.power_score}/100 · ⭐ Popularidad {character.popularity_score}/100 · "
-            f"ranking {ranking}"
+            f"  ⚡ Poder {character.power_score}/100 · "
+            f"⭐ Popularidad {character.popularity_score}/100 · ranking {ranking}"
         )
-    return "\\n".join(lines)
+    if not page.characters:
+        lines.append("No hay personajes que coincidan con ese filtro.")
+    return "\n".join(lines)
