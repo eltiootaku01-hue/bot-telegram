@@ -153,6 +153,14 @@ No volver a implementar otra capa de validación de configuración dentro de Tki
 Después de validar este bloque, priorizar superficies aún simples de Cari/Cami y la experiencia histórica de Tío Otaku, sin reabrir componentes de concurrencia ya cubiertos.
 
 
+
+### Incidencia detectada por CI
+- CI #1191 ejecutó 407 pruebas y falló 1: `test_cafe_menu_is_authored_and_contains_core_services`.
+- Causa exacta: el mock del test aceptaba solo `text`, mientras el nuevo comportamiento correcto de producción pasó `reply_markup`.
+- Corrección: el mock ahora acepta argumentos de presentación y exige que `reply_markup` exista. No se relajó el código de producción.
+- Resultado esperado: nueva validación sobre el SHA `8322acdf92a5f54e8bc99c9d74d6624c5d9029a0`.
+
+
 ## Registro posterior — navegación del Café y revisión de superficies
 
 ### Mejora entregada
