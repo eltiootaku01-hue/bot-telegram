@@ -132,6 +132,12 @@ Chie, necesito ayuda
 
 Cari incluye moderación explícita y determinista. Un administrador del grupo puede responder al mensaje de un integrante con `/advertir`, `/silenciar`, `/desilenciar` o `/expulsar`; no existe clasificación automática por IA en esta ruta. Las acciones sensibles vuelven a comprobar los roles de Telegram y no permiten actuar sobre administradores, el propio moderador ni cuentas de bots. Las acciones se registran en SQLite para auditoría.
 
+## Misiones diarias de Sunna
+
+Sunna también ofrece misiones diarias persistentes. La suite actual incluye captura de una waifu, participación en trivia y una tirada de gacha. El progreso se guarda por jugador, comunidad y fecha del mundo, y cada acción usa una referencia idempotente para evitar doble conteo. La recompensa se reclama mediante una transición atómica y entra en el mismo ledger de puntos.
+
+Podés abrirlas con `/misiones` o desde el panel de juegos. El sistema está diseñado para que futuras misiones puedan añadirse sin convertir la IA en parte del motor económico.
+
 ## WaifuMon gacha
 
 Sunna's private Gacha is a real persistent game action, not a cosmetic rarity roll. Each tirada costs **10 community points** and is recorded with an idempotent roll ID, so repeating the same Telegram callback cannot grant a second character.
@@ -197,6 +203,14 @@ pedido → estado durable → cola → toma → publicación → confirmación/r
 ```
 
 Users can run `/mis_pedidos` in private chat to see their latest request states. Cami can use `/cola_pedidos` privately to inspect pending, processing and overdue work. This state survives process restarts.
+
+## Tablero operativo de Cami
+
+Cami reúne pedidos y medios pendientes en `/tablero`. La vista prioriza entregas ambiguas, SLA vencidos y estados que bloquean el flujo, y propone una siguiente acción concreta. No reemplaza las colas durables ni ejecuta automáticamente acciones sensibles.
+
+El flujo de producción de contenido queda así:
+
+`ingesta → identificación → clasificación → prioridad → programación → claim → envío → confirmación → recuperación`
 
 ## Telegram as a storage vault
 
