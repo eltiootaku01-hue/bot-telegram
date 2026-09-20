@@ -254,6 +254,8 @@ async def test_directed_interaction_uses_persisted_relationship_count_to_rotate_
             bot_identity=BotIdentity.CAMI,
             entry_type="relationship",
             entry_key="cami-sunna",
+            scope_type="user_chat",
+            scope_id="7:11",
         )
 
     assert count == 2
