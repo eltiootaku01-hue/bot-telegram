@@ -211,30 +211,42 @@ class CafeModule(BotModule):
                 chat_id=message.chat.id,
                 day_key=day_key,
             )
-            if started.round.status == "published" and started.round.message_id is not None:
-                await message.answer(
-                    "☀️ El evento de hoy ya fue publicado. Podés consultar el Café cuando quieras."
-                )
-                await self._observe("daily_event_view", message)
-                return
-            claimed = await self.events.claim_publication(
+            already_published = (
+                started.round.status == "published"
+                and started.round.message_id is not None
+            )
+            claimed = False if already_published else await self.events.claim_publication(
                 session,
                 round_id=started.round.id,
             )
-            if not claimed:
-                await message.answer(
-                    "☀️ El evento de hoy ya se está publicando o quedó registrado."
-                )
-                await self._observe("daily_event_view", message)
-                return
+
+        if already_published:
+            await message.answer(
+                "☀️ El evento de hoy ya fue publicado. Podés consultar el Café cuando quieras."
+            )
+            await self._observe_event_action(
+                message,
+                user_id=user_id,
+                action_key="daily_event_view",
+            )
+            return
+
+        if not claimed:
+            await message.answer(
+                "☀️ El evento de hoy ya se está publicando o quedó registrado."
+            )
+            await self._observe_event_action(
+                message,
+                user_id=user_id,
+                action_key="daily_event_view",
+            )
+            return
 
         event_text = (
             f"☀️ <b>Evento del Café — {escape(started.event.title)}</b>\n\n"
             f"{escape(started.event.text)}\n\n"
             "Este evento es cotidiano y no añade hechos al canon."
         )
-        if not started.created and started.round.message_id is not None:
-            event_text += "\n\n<i>El evento de hoy ya fue registrado. Esta consulta vuelve a mostrar su estado.</i>"
 
         try:
             sent = await message.answer(event_text)
@@ -247,30 +259,38 @@ class CafeModule(BotModule):
             raise
 
         async with self.database.session(write=True) as session:
-            row = await session.get(CafeDailyEventRound, started.round.id)
-            if row is not None and row.message_id is None:
-                await self.events.mark_published(
-                    session,
-                    round_id=row.id,
-                    message_id=sent.message_id,
-                )
-        if user_id is None:
-            await self._observe(
-                "daily_event_open" if started.created else "daily_event_view",
-                message,
+            await self.events.mark_published(
+                session,
+                round_id=started.round.id,
+                message_id=sent.message_id,
             )
-        else:
-            try:
-                async with self.database.session() as session:
-                    await self.world.observe_action(
-                        session,
-                        bot_identity=BotIdentity.CARI,
-                        action_key="daily_event_open" if started.created else "daily_event_view",
-                        user_id=user_id,
-                        chat_id=message.chat.id,
-                    )
-            except Exception:
-                pass
+        await self._observe_event_action(
+            message,
+            user_id=user_id,
+            action_key="daily_event_open",
+        )
+
+    async def _observe_event_action(
+        self,
+        message: Message,
+        *,
+        user_id: int | None,
+        action_key: str,
+    ) -> None:
+        if user_id is None:
+            await self._observe(action_key, message)
+            return
+        try:
+            async with self.database.session() as session:
+                await self.world.observe_action(
+                    session,
+                    bot_identity=BotIdentity.CARI,
+                    action_key=action_key,
+                    user_id=user_id,
+                    chat_id=message.chat.id,
+                )
+        except Exception:
+            pass
 
     async def recommendation(self, message: Message) -> None:
         day_key = world_now(self.timezone_name).date().isoformat()
