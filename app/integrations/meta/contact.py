@@ -42,12 +42,10 @@ class MetaContactGateway:
                 image_url,
                 caption=caption,
             )
+        result = await self.client.send_messenger_image(recipient, image_url)
         if caption:
-            return await self.client.send_messenger_text(
-                recipient,
-                f"{caption}\n{image_url}",
-            )
-        return await self.client.send_messenger_image(recipient, image_url)
+            await self.client.send_messenger_text(recipient, caption)
+        return result
 
 
 __all__ = ["ContactProvider", "MetaContactGateway"]
