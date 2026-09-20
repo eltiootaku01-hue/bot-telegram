@@ -333,3 +333,36 @@ async def test_recent_join_count_supports_adaptive_raid_detection(database: Data
 
     assert count == 5
     assert old_count == 0
+
+
+@pytest.mark.asyncio
+async def test_expiry_claim_is_single_use(database: Database) -> None:
+    service = HumanVerificationService()
+    base = datetime(2026, 9, 20, 18, 0, 0)
+
+    async with database.session() as session:
+        await service.begin(
+            session,
+            chat_id=-100,
+            user_id=11,
+            prompt_message_id=16,
+            default_permissions_json="{}",
+            now=base,
+        )
+
+    async with database.session() as session:
+        first = await service.claim_expired(
+            session,
+            now=base + timedelta(seconds=121),
+        )
+
+    assert len(first) == 1
+    assert first[0].status == "expiring"
+
+    async with database.session() as session:
+        second = await service.claim_expired(
+            session,
+            now=base + timedelta(seconds=122),
+        )
+
+    assert second == []
