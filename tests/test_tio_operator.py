@@ -28,6 +28,8 @@ def test_operator_address_requires_explicit_call() -> None:
     assert not module._should_capture("¿Dónde está Tío Otaku?")
     assert not module._should_capture("Mi tío vive acá.")
     assert not module._should_capture("El tío de Juan llegó.")
+    assert not module._should_capture("Tío de Juan llegó.")
+    assert not module._should_capture("Tío necesito que vengas.")
 
 
 @pytest.mark.asyncio
