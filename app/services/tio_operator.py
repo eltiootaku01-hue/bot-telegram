@@ -126,6 +126,22 @@ class TioOperatorService:
         return result.rowcount == 1
 
 
+    async def recent_history(
+        self,
+        session: AsyncSession,
+        *,
+        limit: int = 20,
+    ) -> list[TioOperatorRequest]:
+        """Return recent operator requests for a read-only history surface."""
+        if limit <= 0:
+            raise ValueError("limit must be positive")
+        result = await session.scalars(
+            select(TioOperatorRequest)
+            .order_by(TioOperatorRequest.id.desc())
+            .limit(limit)
+        )
+        return list(result)
+
     async def recent_pending(
         self,
         session: AsyncSession,
