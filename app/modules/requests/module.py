@@ -1,8 +1,5 @@
-from aiogram import F
-from aiogram.fsm.context import FSMContext
 from html import escape
 import logging
-
 
 from aiogram import F
 from aiogram.filters import Command
@@ -14,13 +11,10 @@ from sqlalchemy import select
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.database import Database
-from app.db.models import GameProfile
-from app.db.models import RequestStatus
+from app.db.models import GameProfile, RequestStatus
 from app.services.requests import DEFAULT_REQUEST_COST, RequestService
 from app.services.world import WorldService
 from app.ui.control_keyboards import chie_request_cancel_keyboard
-
-import logging
 
 logger = logging.getLogger(__name__)
 
