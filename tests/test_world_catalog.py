@@ -90,3 +90,16 @@ async def test_world_catalog_module_seeds_catalog_at_process_startup() -> None:
 
     assert len(rows) == len(WORLD_CATALOG) + len(REPERTOIRE)
     await database.close()
+
+
+def test_world_catalog_assigns_each_new_specialty_to_its_owner() -> None:
+    by_key = {
+        item.entry_key: item.bot_identity
+        for item in WORLD_CATALOG
+        if item.entry_type == "action"
+    }
+
+    assert by_key["trivia"] is BotIdentity.CARI
+    assert by_key["mystery"] is BotIdentity.CAMI
+    assert by_key["waifumon"] is BotIdentity.SUNNA
+    assert by_key["human_verification"] is BotIdentity.CHIE
