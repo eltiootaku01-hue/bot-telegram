@@ -8,6 +8,7 @@ def game_hub_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🎲 Gacha", callback_data="game:gacha:open"),
         InlineKeyboardButton(text="🎒 Inventario", callback_data="game:inventory:open"),
     )
+    builder.row(InlineKeyboardButton(text="📚 Catálogo de waifus", callback_data="game:waifus:page:1"))
     builder.row(InlineKeyboardButton(text="⚔️ Combate", callback_data="game:combat:open"))
     builder.row(InlineKeyboardButton(text="🧠 Trivia", callback_data="game:trivia:start"))
     return builder.as_markup()
