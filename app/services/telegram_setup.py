@@ -22,6 +22,7 @@ class TelegramChatCheck:
     ok: bool
     chat_id: int
     title: str = ""
+    chat_type: str = ""
     username: str = ""
     bot_status: str = ""
     is_admin: bool = False
@@ -105,6 +106,7 @@ def check_bot_in_chat(
         ok=ok,
         chat_id=chat_id,
         title=str(chat.get("title") or chat.get("first_name") or ""),
+        chat_type=str(chat.get("type") or ""),
         username=str(chat.get("username") or ""),
         bot_status=status,
         is_admin=is_admin,
