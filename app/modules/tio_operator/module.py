@@ -12,7 +12,7 @@ from app.core.config import Settings, get_settings
 from app.core.module import BotModule
 from app.db.database import Database
 from app.services.tio_operator import TioOperatorService
-from app.ui.control_keyboards import tio_operator_request_keyboard
+from app.ui.control_keyboards import tio_operator_request_keyboard, tio_operator_resolve_keyboard
 
 
 class TioOperatorModule(BotModule):
@@ -168,7 +168,12 @@ class TioOperatorModule(BotModule):
             return
 
         label = "recibida" if status == "acknowledged" else "resuelta"
-        await callback.message.edit_reply_markup(reply_markup=None)
+        if status == "acknowledged":
+            await callback.message.edit_reply_markup(
+                reply_markup=tio_operator_resolve_keyboard(request_id),
+            )
+        else:
+            await callback.message.edit_reply_markup(reply_markup=None)
         await callback.message.answer(
             f"📝 Solicitud #{request_id} marcada como {label}. "
             "El sistema no redacta ni envía una respuesta como Tío Otaku."
