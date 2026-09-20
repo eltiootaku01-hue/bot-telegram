@@ -663,6 +663,14 @@ class GameModule(BotModule):
                     show_alert=True,
                 )
                 return
+            mission_claimed, mission_balance, _, _ = await self._record_mission(
+                session,
+                user_id=callback.from_user.id,
+                chat_id=chat_id,
+                mission_key="gacha_roll",
+                reference_type="gacha",
+                reference_id=str(callback.id),
+            )
             await session.commit()
 
         await self._observe_action("gacha_roll", callback.from_user.id, chat_id)
@@ -705,7 +713,7 @@ class GameModule(BotModule):
                         f"Clase: <b>{result.character.rarity.value}</b> · poder: <b>{result.character.power_score}/100</b>\n"
                         f"Popularidad: <b>{result.character.popularity_score}/100</b>"
                         f" · ranking: <b>#{result.character.popularity_rank}</b>\n"
-                        f"Saldo restante: <b>{result.remaining_points}</b>",
+                        f"Saldo restante: <b>{mission_balance if mission_claimed else result.remaining_points}</b>",
                         reply_markup=rare_approval_keyboard(result.approval.id),
                     )
                 except Exception:
@@ -724,8 +732,10 @@ class GameModule(BotModule):
         result_text = (
             f"🎉 ¡Salió {result.character.name} ({result.character.card_tier.value})! "
             f"Clase {result.character.rarity.value} · elemento {result.character.element.value} · "
-            f"Saldo: {result.remaining_points}"
+            f"Saldo: {mission_balance if mission_claimed else result.remaining_points}"
         )
+        if mission_claimed:
+            result_text += "\n🎯 Misión diaria completada: +10 puntos."
         if reaction:
             result_text += f"\n\n🐍 Sunna: {reaction}"
         await callback.answer(result_text, show_alert=True)
@@ -833,6 +843,16 @@ class GameModule(BotModule):
                 reference_id=encounter.id,
                 commit=False,
             )
+            mission_claimed, mission_balance, _, _ = await self._record_mission(
+                session,
+                user_id=callback.from_user.id,
+                chat_id=encounter.chat_id,
+                mission_key="capture_waifu",
+                reference_type="encounter",
+                reference_id=encounter.id,
+            )
+            if mission_claimed:
+                balance = mission_balance
             await session.commit()
         reaction = self._game_reaction(
             CharacterIntent.GAME_SUCCESS,
