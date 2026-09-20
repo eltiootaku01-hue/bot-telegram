@@ -144,3 +144,39 @@ async def test_operator_decision_is_owner_only_and_single_use(database: Database
     assert stored.status == "resolved"
     owner_message.edit_reply_markup.assert_awaited_once()
     owner_message.answer.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_operator_request_can_progress_from_acknowledged_to_resolved(
+    database: Database,
+) -> None:
+    service = TioOperatorService()
+
+    async with database.session() as session:
+        captured = await service.capture(
+            session,
+            chat_id=-100,
+            user_id=7,
+            source_message_id=45,
+            text="Tío, cuando puedas ayudame.",
+        )
+        request_id = captured.request.id
+        acknowledged = await service.decide(
+            session,
+            request_id=request_id,
+            status="acknowledged",
+        )
+        resolved = await service.decide(
+            session,
+            request_id=request_id,
+            status="resolved",
+        )
+
+    assert acknowledged is True
+    assert resolved is True
+
+    async with database.session() as session:
+        row = await session.get(TioOperatorRequest, request_id)
+
+    assert row is not None
+    assert row.status == "resolved"
