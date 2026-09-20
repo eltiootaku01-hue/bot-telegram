@@ -12,6 +12,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
 
 from app.core.access import is_authorized_community
+from app.services.anime_catalog import AnimeCatalogService
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.jobs import JobQueue
@@ -51,6 +52,7 @@ class CamiMediaModule(BotModule):
         self.settings = settings or get_settings()
         self.world = WorldService()
         self.community = CommunityResolver(self.settings)
+        self.anime = AnimeCatalogService()
 
     async def _observe_action(
         self,
@@ -75,6 +77,7 @@ class CamiMediaModule(BotModule):
         self.router.message.register(self.receive_photo, F.photo)
         self.router.message.register(self.recovery_command, Command("recuperar_publicaciones"))
         self.router.message.register(self.catalog_command, Command("catalogo"))
+        self.router.message.register(self.anime_command, Command("anime"))
         self.router.message.register(
             self.receive_schedule_or_tags,
             CamiMediaStates.waiting_tags,
@@ -148,6 +151,15 @@ class CamiMediaModule(BotModule):
                 )
                 asset.category = parts[3] if len(parts) > 3 else "waifu"
                 asset.status = "tagged"
+                await self.anime.upsert_work(
+                    session,
+                    work_id=f"media:{asset.anime.casefold()}",
+                    title=asset.anime,
+                    status="unverified",
+                    notes=(
+                        "Derivado del catálogo de medios; requiere verificación antes de tratarlo como ficha factual.",
+                    ),
+                )
                 await session.commit()
                 await message.answer(
                     "🏷️ Etiquetas guardadas. El material queda en la biblioteca para decidir su publicación."
@@ -263,6 +275,56 @@ class CamiMediaModule(BotModule):
 
         await message.answer("\n".join(lines))
         await self._observe_action("catalog_search" if query else "catalog_latest", message.from_user.id, message.chat.id)
+
+    async def anime_command(self, message: Message) -> None:
+        """Search only local anime/manga metadata; runtime never calls the web."""
+        if message.chat.type not in {"private", "group", "supergroup"} or message.from_user is None:
+            return
+
+        parts = (message.text or "").split(maxsplit=1)
+        query = parts[1].strip() if len(parts) == 2 else ""
+        async with self.database.session() as session:
+            rows = await self.anime.search_works(session, query, limit=10)
+
+        if not rows:
+            await message.answer(
+                "📖 No hay fichas locales que coincidan con esa búsqueda."
+                if query
+                else "📖 Todavía no hay fichas locales de anime/manga cargadas."
+            )
+            await self._observe_action(
+                "anime_search_empty" if query else "anime_catalog_empty",
+                message.from_user.id,
+                message.chat.id,
+            )
+            return
+
+        title = "📖 <b>Archivo local de anime/manga</b>"
+        if query:
+            title += f" · <i>{escape(query)}</i>"
+        lines = [title, ""]
+        for row in rows:
+            line = f"• <b>{escape(row.title)}</b> · {escape(row.media_type)} · {escape(row.status)}"
+            if row.year_start is not None:
+                years = str(row.year_start)
+                if row.year_end is not None and row.year_end != row.year_start:
+                    years += f"–{row.year_end}"
+                line += f" · {years}"
+            if row.genres:
+                line += f" · {escape(', '.join(row.genres[:4]))}"
+            lines.append(line)
+            if row.summary_short:
+                lines.append(f"  {escape(row.summary_short)}")
+            elif row.notes:
+                lines.append(f"  <i>{escape(row.notes[0])}</i>")
+
+        await message.answer("\n".join(lines))
+        await self._observe_action(
+            "anime_search" if query else "anime_catalog",
+            message.from_user.id,
+            message.chat.id,
+        )
+
 
     async def recovery_command(self, message: Message) -> None:
         if not self._is_media_staff(message):
