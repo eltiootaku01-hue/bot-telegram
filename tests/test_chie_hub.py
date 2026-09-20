@@ -11,7 +11,7 @@ from app.modules.chie.module import ChieModule
     ("section", "expected"),
     (
         ("community", "/reglas"),
-        ("games", "/juego"),
+        ("games", "/trivia"),
         ("content", "/catalogo"),
         ("points", "/puntos"),
         ("config", "/configurar"),
