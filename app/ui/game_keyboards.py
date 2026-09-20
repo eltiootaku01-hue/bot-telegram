@@ -68,12 +68,28 @@ def waifu_catalog_keyboard(
     page: int,
     total_pages: int,
     active_filter=None,
+    characters=(),
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
-    for character in getattr(active_filter, "_page_characters", ()):
-        pass
+    for character in characters:
+        if active_filter is None:
+            detail_data = f"game:waifu:d:{character.id}:{page}"
+        else:
+            detail_data = (
+                f"game:waifu:d:{character.id}:{page}:"
+                f"{active_filter.field.value}:{active_filter.value}"
+            )
+        builder.add(
+            InlineKeyboardButton(
+                text=character.name[:28],
+                callback_data=detail_data,
+            )
+        )
+    if characters:
+        builder.adjust(2)
 
+    navigation = []
     if page > 1:
         if active_filter is None:
             callback_data = f"game:waifus:page:{page - 1}"
@@ -82,7 +98,7 @@ def waifu_catalog_keyboard(
                 f"game:waifus:page:{page - 1}:"
                 f"{active_filter.field.value}:{active_filter.value}"
             )
-        builder.row(InlineKeyboardButton(text="⬅️", callback_data=callback_data))
+        navigation.append(InlineKeyboardButton(text="⬅️", callback_data=callback_data))
 
     if page < total_pages:
         if active_filter is None:
@@ -92,7 +108,10 @@ def waifu_catalog_keyboard(
                 f"game:waifus:page:{page + 1}:"
                 f"{active_filter.field.value}:{active_filter.value}"
             )
-        builder.row(InlineKeyboardButton(text="➡️", callback_data=callback_data))
+        navigation.append(InlineKeyboardButton(text="➡️", callback_data=callback_data))
+
+    if navigation:
+        builder.row(*navigation)
 
     builder.row(
         InlineKeyboardButton(
@@ -117,7 +136,6 @@ def waifu_catalog_keyboard(
 
 
 def waifu_catalog_detail_keyboard(
-    character_id: str,
     page: int,
     active_filter=None,
 ) -> InlineKeyboardMarkup:
@@ -141,31 +159,6 @@ def waifu_catalog_detail_keyboard(
             callback_data="game:gacha:open",
         )
     )
-    return builder.as_markup()
-
-
-def waifu_catalog_entry_keyboard(
-    characters,
-    *,
-    page: int,
-    active_filter=None,
-) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-    for character in characters:
-        if active_filter is None:
-            detail_data = f"game:waifu:d:{character.id}:{page}"
-        else:
-            detail_data = (
-                f"game:waifu:d:{character.id}:{page}:"
-                f"{active_filter.field.value}:{active_filter.value}"
-            )
-        builder.add(
-            InlineKeyboardButton(
-                text=character.name[:28],
-                callback_data=detail_data,
-            )
-        )
-    builder.adjust(2)
     return builder.as_markup()
 
 
