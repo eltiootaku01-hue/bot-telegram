@@ -158,6 +158,7 @@ class TioOperatorModule(BotModule):
     async def capture_message(self, message: Message, bot: Bot) -> None:
         if (
             message.from_user is None
+            or message.from_user.is_bot
             or not message.text
             or message.chat.type not in {"group", "supergroup"}
             or not is_authorized_community(self.settings, message.chat.id)
