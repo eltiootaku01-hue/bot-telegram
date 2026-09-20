@@ -1,0 +1,221 @@
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import pytest
+from aiogram.types import ChatPermissions
+
+from app.core.config import Settings
+from app.db.database import Database
+from app.db.models import HumanVerification
+from app.services.human_verification import (
+    HumanVerificationService,
+    permissions_from_json,
+    permissions_to_json,
+)
+
+
+@pytest.fixture
+async def database(tmp_path):
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'verification.db'}")
+    await database.create_schema()
+    yield database
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_verification_decision_is_single_use(database: Database) -> None:
+    service = HumanVerificationService()
+
+    async with database.session() as session:
+        await service.begin(
+            session,
+            chat_id=-100,
+            user_id=7,
+            prompt_message_id=12,
+            default_permissions_json="{}",
+        )
+
+    async with database.session() as session:
+        first = await service.decide(
+            session,
+            chat_id=-100,
+            user_id=7,
+            status="verified",
+        )
+
+    async with database.session() as session:
+        second = await service.decide(
+            session,
+            chat_id=-100,
+            user_id=7,
+            status="rejected",
+        )
+
+    assert first is not None
+    assert first.status == "verified"
+    assert second is None
+
+
+def test_permissions_round_trip_is_limited_to_member_permissions() -> None:
+    permissions = ChatPermissions(
+        can_send_messages=True,
+        can_send_photos=True,
+        can_invite_users=True,
+    )
+
+    encoded = permissions_to_json(permissions)
+    decoded = permissions_from_json(encoded)
+
+    assert decoded["can_send_messages"] is True
+    assert decoded["can_send_photos"] is True
+    assert "can_manage_topics" not in decoded
+    assert "can_invite_users" not in decoded
+
+
+@pytest.mark.asyncio
+async def test_verification_no_restores_saved_permissions() -> None:
+    from app.modules.chie.module import ChieModule
+
+    class FakeBot:
+        def __init__(self) -> None:
+            self.restrict_chat_member = AsyncMock()
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    module = ChieModule(
+        database,
+        Settings(
+            authorized_chat_ids="-100",
+            admin_user_id=77,
+            allow_admin_private_chat=True,
+        ),
+    )
+    permissions = ChatPermissions(can_send_messages=True, can_send_photos=True)
+
+    async with database.session() as session:
+        await module.verification.begin(
+            session,
+            chat_id=-100,
+            user_id=7,
+            prompt_message_id=12,
+            default_permissions_json=permissions_to_json(permissions),
+        )
+
+    bot = FakeBot()
+    callback = SimpleNamespace(
+        data="chie:verify:no:7",
+        from_user=SimpleNamespace(id=7),
+        message=SimpleNamespace(
+            chat=SimpleNamespace(id=-100, type="supergroup"),
+            edit_text=AsyncMock(),
+        ),
+        answer=AsyncMock(),
+    )
+
+    await module.human_verification(callback, bot)
+
+    async with database.session() as session:
+        row = await session.scalar(
+            __import__("sqlalchemy", fromlist=["select"]).select(HumanVerification).where(
+                HumanVerification.chat_id == -100,
+                HumanVerification.user_id == 7,
+            )
+        )
+
+    assert row is not None
+    assert row.status == "verified"
+    bot.restrict_chat_member.assert_awaited_once()
+    restored = bot.restrict_chat_member.await_args.kwargs["permissions"]
+    assert restored.can_send_messages is True
+    assert restored.can_send_photos is True
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_verification_yes_kicks_and_allows_rejoin() -> None:
+    from app.modules.chie.module import ChieModule
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    module = ChieModule(database, Settings(authorized_chat_ids="-100"))
+
+    async with database.session() as session:
+        await module.verification.begin(
+            session,
+            chat_id=-100,
+            user_id=7,
+            prompt_message_id=12,
+            default_permissions_json="{}",
+        )
+
+    bot = SimpleNamespace(
+        ban_chat_member=AsyncMock(),
+        unban_chat_member=AsyncMock(),
+    )
+    callback = SimpleNamespace(
+        data="chie:verify:yes:7",
+        from_user=SimpleNamespace(id=7),
+        message=SimpleNamespace(
+            chat=SimpleNamespace(id=-100, type="supergroup"),
+            edit_text=AsyncMock(),
+        ),
+        answer=AsyncMock(),
+    )
+
+    await module.human_verification(callback, bot)
+
+    bot.ban_chat_member.assert_awaited_once_with(-100, 7)
+    bot.unban_chat_member.assert_awaited_once_with(-100, 7)
+
+    async with database.session() as session:
+        row = await session.scalar(
+            __import__("sqlalchemy", fromlist=["select"]).select(HumanVerification).where(
+                HumanVerification.chat_id == -100,
+                HumanVerification.user_id == 7,
+            )
+        )
+
+    assert row is not None
+    assert row.status == "rejected"
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_wrong_user_cannot_use_another_users_verification(database: Database) -> None:
+    service = HumanVerificationService()
+    await database.create_schema() if False else None
+
+    async with database.session() as session:
+        await service.begin(
+            session,
+            chat_id=-100,
+            user_id=7,
+            prompt_message_id=12,
+            default_permissions_json="{}",
+        )
+
+    from app.modules.chie.module import ChieModule
+
+    module = ChieModule(database, Settings(authorized_chat_ids="-100"))
+    callback = SimpleNamespace(
+        data="chie:verify:no:7",
+        from_user=SimpleNamespace(id=8),
+        message=SimpleNamespace(chat=SimpleNamespace(id=-100, type="supergroup")),
+        answer=AsyncMock(),
+    )
+
+    await module.human_verification(callback, AsyncMock())
+
+    callback.answer.assert_awaited_once()
+    assert "no es para vos" in callback.answer.await_args.args[0]
+
+    async with database.session() as session:
+        row = await session.scalar(
+            __import__("sqlalchemy", fromlist=["select"]).select(HumanVerification).where(
+                HumanVerification.chat_id == -100,
+                HumanVerification.user_id == 7,
+            )
+        )
+
+    assert row is not None
+    assert row.status == "pending"
