@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time import utc_now
@@ -46,7 +47,7 @@ class MediaAlbumService:
         try:
             async with session.begin_nested():
                 await session.flush()
-        except Exception:
+        except IntegrityError:
             album = await session.scalar(
                 select(MediaAlbum).where(
                     MediaAlbum.source_chat_id == source_chat_id,
