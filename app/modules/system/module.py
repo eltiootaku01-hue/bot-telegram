@@ -114,6 +114,20 @@ class SystemModule(BotModule):
 
 
     async def start(self, message: Message) -> None:
+        if (
+            self.identity is BotIdentity.CHIE
+            and message.text
+            and message.text.casefold().strip() in {"/start miid", "/start@chiebot miid"}
+            and message.from_user is not None
+        ):
+            await message.answer(
+                "🆔 <b>Tu ID numérico de Telegram</b>\n\n"
+                f"<code>{message.from_user.id}</code>\n\n"
+                "Pegá este número en Bot Manager → Maestro / Jefe. "
+                "Es el identificador operativo de permisos; no hace falta guardar tu número de teléfono."
+            )
+            return
+
         text = (
             f"👋 <b>{self.profile.display_name}</b> está despierta.\n\n"
             f"{self.profile.role}."
