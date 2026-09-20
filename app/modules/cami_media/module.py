@@ -52,8 +52,13 @@ class CamiMediaModule(BotModule):
         self.world = WorldService()
         self.community = CommunityResolver(self.settings)
 
-    async def _observe_action(self, action_key: str, user_id: int) -> None:
-        """Record Cami media-desk usage without affecting the main workflow."""
+    async def _observe_action(
+        self,
+        action_key: str,
+        user_id: int,
+        chat_id: int | None = None,
+    ) -> None:
+        """Record Cami usage without affecting the main workflow."""
         try:
             async with self.database.session() as session:
                 await self.world.observe_action(
@@ -61,6 +66,7 @@ class CamiMediaModule(BotModule):
                     bot_identity=BotIdentity.CAMI,
                     action_key=action_key,
                     user_id=user_id,
+                    chat_id=chat_id,
                 )
         except Exception:
             logger.exception("World observation failed for Cami action=%s user=%s", action_key, user_id)
@@ -236,7 +242,7 @@ class CamiMediaModule(BotModule):
                 if query
                 else "📚 Todavía no hay material publicado en el catálogo."
             )
-            await self._observe_action("catalog_empty", message.from_user.id)
+            await self._observe_action("catalog_empty", message.from_user.id, message.chat.id)
             return
 
         title = "📚 <b>Catálogo de Cami</b>" + (f" · <i>{escape(query)}</i>" if query else "")
@@ -256,7 +262,7 @@ class CamiMediaModule(BotModule):
             lines.append(line)
 
         await message.answer("\n".join(lines))
-        await self._observe_action("catalog_search" if query else "catalog_latest", message.from_user.id)
+        await self._observe_action("catalog_search" if query else "catalog_latest", message.from_user.id, message.chat.id)
 
     async def recovery_command(self, message: Message) -> None:
         if not self._is_media_staff(message):
