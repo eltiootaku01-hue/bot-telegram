@@ -159,3 +159,34 @@ async def test_media_queue_summary_counts_pipeline_states(tmp_path) -> None:
     assert summary.oldest_actionable_at is not None
     await database.close()
 
+
+@pytest.mark.asyncio
+async def test_pending_returns_cami_inbox_assets(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'media-pending.db'}")
+    await database.create_schema()
+    library = MediaLibrary()
+
+    async with database.session() as session:
+        session.add_all(
+            [
+                MediaAsset(
+                    telegram_file_id="p1",
+                    source_chat_id=7,
+                    source_message_id=11,
+                    status="cami_inbox",
+                ),
+                MediaAsset(
+                    telegram_file_id="p2",
+                    source_chat_id=7,
+                    source_message_id=12,
+                    status="tagged",
+                ),
+            ]
+        )
+
+    async with database.session() as session:
+        pending = await library.pending(session)
+
+    assert [asset.telegram_file_id for asset in pending] == ["p1"]
+    await database.close()
+
