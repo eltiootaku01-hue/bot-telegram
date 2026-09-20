@@ -9,6 +9,7 @@ from app.core.social_runtime import SocialRuntimeModule
 from app.db.database import Database
 from app.modules.admin.module import AdminModule
 from app.modules.cami_media.module import CamiMediaModule
+from app.modules.cafe.module import CafeModule
 from app.modules.cami_media.publisher import CamiMediaPublisher
 from app.modules.chat.module import ChatModule
 from app.modules.chie.module import ChieModule
@@ -37,6 +38,7 @@ def build_bot_modules(
     )
     identity_specific = (
         _spec("chat", lambda: ChatModule(database, identity=identity), *BotIdentity),
+        _spec("cafe", lambda: CafeModule(database), BotIdentity.CARI),
         _spec("moderation", lambda: ModerationModule(database), BotIdentity.CARI),
         _spec("game", lambda: GameModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("trivia", lambda: TriviaModule(database, settings=settings), BotIdentity.SUNNA),
