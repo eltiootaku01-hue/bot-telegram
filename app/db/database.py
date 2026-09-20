@@ -37,6 +37,8 @@ def _ensure_compatibility(connection) -> None:
 
     chat_columns = {column["name"] for column in inspect(connection).get_columns("chats")}
     _add_column_if_missing(connection, "chats", "last_human_message_at", "DATETIME", chat_columns)
+    _add_column_if_missing(connection, "chats", "last_bot_message_at", "DATETIME", chat_columns)
+    _add_column_if_missing(connection, "chats", "last_social_event_at", "DATETIME", chat_columns)
 
     event_columns = {column["name"] for column in inspect(connection).get_columns("domain_events")}
     _add_column_if_missing(connection, "domain_events", "heartbeat_at", "DATETIME", event_columns)
