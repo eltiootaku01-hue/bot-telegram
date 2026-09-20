@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.db.database import Database
 from app.db.models import ModerationAction
+import app.modules.moderation.module as moderation_module
 from app.modules.moderation.module import ModerationModule
 
 
@@ -45,7 +46,8 @@ def make_bot():
 
 
 @pytest.mark.asyncio
-async def test_warning_is_admin_only_and_persisted(database: Database) -> None:
+async def test_warning_is_admin_only_and_persisted(database: Database, monkeypatch) -> None:
+    monkeypatch.setattr(moderation_module, "is_chat_staff", AsyncMock(return_value=True))
     module = ModerationModule(database)
     message = make_message(command="/advertir spam repetido")
     bot = make_bot()
@@ -65,7 +67,8 @@ async def test_warning_is_admin_only_and_persisted(database: Database) -> None:
 
 
 @pytest.mark.asyncio
-async def test_silence_restricts_member_and_records_expiry(database: Database) -> None:
+async def test_silence_restricts_member_and_records_expiry(database: Database, monkeypatch) -> None:
+    monkeypatch.setattr(moderation_module, "is_chat_staff", AsyncMock(return_value=True))
     module = ModerationModule(database)
     message = make_message(command="/silenciar flood")
     bot = make_bot()
@@ -87,14 +90,12 @@ async def test_silence_restricts_member_and_records_expiry(database: Database) -
 
 
 @pytest.mark.asyncio
-async def test_moderation_refuses_target_that_is_an_administrator(database: Database) -> None:
+async def test_moderation_refuses_target_that_is_an_administrator(database: Database, monkeypatch) -> None:
+    monkeypatch.setattr(moderation_module, "is_chat_staff", AsyncMock(return_value=True))
     module = ModerationModule(database)
     message = make_message(command="/silenciar")
     bot = AsyncMock()
-    bot.get_chat_member.side_effect = [
-        SimpleNamespace(status="administrator"),
-        SimpleNamespace(status="administrator"),
-    ]
+    bot.get_chat_member.side_effect = [SimpleNamespace(status="administrator")]
 
     await module.silence(message, bot)
 
@@ -104,7 +105,8 @@ async def test_moderation_refuses_target_that_is_an_administrator(database: Data
 
 
 @pytest.mark.asyncio
-async def test_kick_bans_then_unbans_member(database: Database) -> None:
+async def test_kick_bans_then_unbans_member(database: Database, monkeypatch) -> None:
+    monkeypatch.setattr(moderation_module, "is_chat_staff", AsyncMock(return_value=True))
     module = ModerationModule(database)
     message = make_message(command="/expulsar reglas incumplidas")
     bot = make_bot()
@@ -123,7 +125,8 @@ async def test_kick_bans_then_unbans_member(database: Database) -> None:
 
 
 @pytest.mark.asyncio
-async def test_moderation_requires_reply_to_a_real_user(database: Database) -> None:
+async def test_moderation_requires_reply_to_a_real_user(database: Database, monkeypatch) -> None:
+    monkeypatch.setattr(moderation_module, "is_chat_staff", AsyncMock(return_value=True))
     module = ModerationModule(database)
     message = make_message(command="/advertir")
     message.reply_to_message = None
@@ -131,5 +134,5 @@ async def test_moderation_requires_reply_to_a_real_user(database: Database) -> N
 
     await module.warn(message, bot)
 
-    bot.get_chat_member.assert_not_awaited()
+    assert bot.get_chat_member.await_count == 0
     assert "Respondé al mensaje" in message.answer.await_args.args[0]
