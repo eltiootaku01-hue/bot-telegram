@@ -154,3 +154,17 @@ def command_hub_detail_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="📖 Ayuda de Chie", callback_data="help:chie:commands"),
     )
     return builder.as_markup()
+
+def chie_human_verification_keyboard(user_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="🤖 Sí, soy un bot",
+            callback_data=f"chie:verify:yes:{user_id}",
+        ),
+        InlineKeyboardButton(
+            text="👤 No, soy una persona",
+            callback_data=f"chie:verify:no:{user_id}",
+        ),
+    )
+    return builder.as_markup()
