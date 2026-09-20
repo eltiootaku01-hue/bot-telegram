@@ -12,6 +12,8 @@ from app.core.config import Settings
 from app.core.module import BotModule
 from app.core.time import world_now
 from app.db.database import Database
+from app.db.models import CafeDailyEventRound
+from app.services.cafe_events import CafeEventService
 from app.services.cafe_mystery import CAFE_MYSTERIES, mystery_for
 from app.services.world import WorldService
 from app.ui.cafe_keyboards import cafe_menu_keyboard
@@ -53,6 +55,7 @@ class CafeModule(BotModule):
         self.settings = settings or Settings(bot_world_timezone=timezone_name)
         self.timezone_name = self.settings.bot_world_timezone
         self.world = WorldService()
+        self.events = CafeEventService()
 
     def setup(self) -> None:
         self.router.message.register(self.cafe, Command("cafe"))
@@ -71,6 +74,11 @@ class CafeModule(BotModule):
             self.mystery_callback,
             F.data.startswith("cafe:mystery:"),
         )
+        self.router.callback_query.register(
+            self.event_callback,
+            F.data == "cafe:event:open",
+        )
+        self.router.message.register(self.event_command, Command("evento"))
 
     async def _observe(self, action_key: str, message: Message) -> None:
         if message.from_user is None:
@@ -185,6 +193,52 @@ class CafeModule(BotModule):
             reply_markup=keyboard,
         )
         await self._observe("mystery_open", message)
+
+
+    async def event_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None:
+            await callback.answer("No pude abrir el evento.", show_alert=True)
+            return
+        await self.event_command(callback.message)
+        await callback.answer()
+
+    async def event_command(self, message: Message) -> None:
+        day_key = world_now(self.timezone_name).date().isoformat()
+        async with self.database.session(write=True) as session:
+            await self.events.expire_old(session, chat_id=message.chat.id)
+            started = await self.events.start_event(
+                session,
+                chat_id=message.chat.id,
+                day_key=day_key,
+            )
+
+        event_text = (
+            f"☀️ <b>Evento del Café — {escape(started.event.title)}</b>"\n\n"
+            f"{escape(started.event.text)}\n\n"
+            "Este evento es cotidiano y no añade hechos al canon."
+        )
+        if not started.created and started.round.message_id is not None:
+            event_text += "\n\n<i>El evento de hoy ya fue registrado. Esta consulta vuelve a mostrar su estado.</i>"
+
+        try:
+            sent = await message.answer(event_text)
+        except Exception:
+            async with self.database.session(write=True) as session:
+                row = await session.get(CafeDailyEventRound, started.round.id)
+                if row is not None and row.status == "active" and row.message_id is None:
+                    row.status = "failed"
+                    row.updated_at = utc_now()
+            raise
+
+        async with self.database.session(write=True) as session:
+            row = await session.get(CafeDailyEventRound, started.round.id)
+            if row is not None and row.message_id is None:
+                await self.events.mark_published(
+                    session,
+                    round_id=row.id,
+                    message_id=sent.message_id,
+                )
+        await self._observe("daily_event_open" if started.created else "daily_event_view", message)
 
     async def recommendation(self, message: Message) -> None:
         day_key = world_now(self.timezone_name).date().isoformat()
