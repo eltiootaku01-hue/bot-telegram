@@ -97,7 +97,7 @@ class ChieModule(BotModule):
         self.tasks.start("world-daily-review", self._daily_world_review_loop())
 
     async def _notify_new_request(self, payload: dict) -> None:
-        if self.bot is None or not self.settings.admin_user_id:
+        if self.bot is None or not self.settings.master_user_id:
             return
         request_id = int(payload["request_id"])
         user_id = int(payload["user_id"])
@@ -130,7 +130,7 @@ class ChieModule(BotModule):
         if special_details:
             text += f"\n📌 <b>Detalles:</b> {special_details}"
         text += "\n\nCuando tengas la imagen, mandásela a Cami y ella la asociará con este pedido."
-        await self.bot.send_message(self.settings.admin_user_id, text)
+        await self.bot.send_message(self.settings.master_user_id, text)
 
     async def _observe_action(self, action_key: str, user_id: int, chat_id: int | None = None) -> None:
         """Record Chie coordination activity without affecting the main workflow."""
@@ -309,7 +309,7 @@ class ChieModule(BotModule):
         if (
             message.chat.type != "private"
             or message.from_user is None
-            or message.from_user.id != self.settings.admin_user_id
+            or message.from_user.id != self.settings.master_user_id
         ):
             return
         lines = ["🌍 <b>Ciudad Animals — estado agregado</b>", ""]
@@ -365,7 +365,7 @@ class ChieModule(BotModule):
             return
         if not self.settings.ai_for(BotIdentity.CHIE):
             return
-        if not self.settings.admin_user_id or self.bot is None:
+        if not self.settings.master_user_id or self.bot is None:
             return
 
         async with self.database.session() as session:
@@ -393,7 +393,7 @@ class ChieModule(BotModule):
             report=report,
         )
         await self.bot.send_message(
-            self.settings.admin_user_id,
+            self.settings.master_user_id,
             format_world_proposals(proposals),
             reply_markup=world_proposal_keyboard(proposals.proposal_id),
         )
@@ -402,7 +402,7 @@ class ChieModule(BotModule):
         if (
             message.chat.type != "private"
             or message.from_user is None
-            or message.from_user.id != self.settings.admin_user_id
+            or message.from_user.id != self.settings.master_user_id
         ):
             return
         day_key = world_now(self.settings.bot_world_timezone).date().isoformat()
@@ -416,7 +416,7 @@ class ChieModule(BotModule):
         if (
             message.chat.type != "private"
             or message.from_user is None
-            or message.from_user.id != self.settings.admin_user_id
+            or message.from_user.id != self.settings.master_user_id
         ):
             return
         day_key = world_now(self.settings.bot_world_timezone).date().isoformat()
@@ -454,9 +454,9 @@ class ChieModule(BotModule):
         if (
             callback.message is None
             or callback.from_user is None
-            or callback.from_user.id != self.settings.admin_user_id
+            or callback.from_user.id != self.settings.master_user_id
             or callback.message.chat.type != "private"
-            or callback.message.chat.id != self.settings.admin_user_id
+            or callback.message.chat.id != self.settings.master_user_id
         ):
             await callback.answer("No autorizado.", show_alert=True)
             return
@@ -497,7 +497,7 @@ class ChieModule(BotModule):
         if (
             message.chat.type != "private"
             or message.from_user is None
-            or message.from_user.id != self.settings.admin_user_id
+            or message.from_user.id != self.settings.master_user_id
         ):
             return
         async with self.database.session() as session:
