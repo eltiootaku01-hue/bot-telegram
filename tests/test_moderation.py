@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy import select
 
-from app.core.config import Settings
 from app.db.database import Database
 from app.db.models import ModerationAction
 from app.modules.moderation.module import ModerationModule
