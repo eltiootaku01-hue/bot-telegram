@@ -1510,3 +1510,169 @@ El 82% representa cobertura funcional aproximada frente a la visión completa. N
 4. Ampliación de superficies de Cami, Chie y Cari.
 
 Regla: no volver a tocar infraestructura cerrada solo para aumentar porcentaje. Cada avance debe aportar capacidad observable y quedar cubierto por regresión y CI.
+
+# 31. CONTINUIDAD — CONTEXTO DEL CAFÉ, TÍO OTAKU Y CURACIÓN IA — 2026-09-20
+
+## 31.1 Estado real de main
+
+- main funcional integrado: cea3a6d9113aacce63d7652f9cfaca0508255a60
+- commit: feat: decouple and optionally automate world curation
+- El commit integra el PR #19 de curación IA.
+- La paginación de Tío Otaku se integró previamente mediante PR #18 en 9329a4024bd018f73d2f69e8fae9652c93fe2a70.
+- El estado base inmediatamente anterior al bloque contextual era be4ea301fa8c1be6c567c75f0aae02c5fff06488.
+
+## 31.2 Bloque contextual del Café — CERRADO
+
+### Implementación
+
+- app/services/cafe_context.py: snapshot de estado real y selector authored.
+- app/modules/cafe/module.py: comando /momento y callback.
+- app/ui/cafe_keyboards.py: botón 🌤️ Momento.
+- app/services/world_catalog.py: entrada context_moment.
+- app/modules/system/module.py: comando momento.
+
+La selección prioriza, en orden:
+1. encuentro WaifuMon activo;
+2. trivia activa;
+3. pedidos pendientes;
+4. nuevos integrantes humanos;
+5. actividad humana reciente;
+6. franja horaria local.
+
+No usa LLM ni modifica canon.
+
+### Errores reales encontrados
+
+1. Las primeras pruebas del contexto usaban registros incompletos y podían violar las FK de SQLite. Se reemplazaron por fixtures relacionales completos.
+2. La primera consulta de nuevos integrantes contaba también cuentas de bots. Se añadió el join con User y el filtro User.is_bot=False.
+3. Una edición automática del módulo de Chie fue bloqueada por controles de la herramienta antes de escribir; no produjo cambio parcial. Se rehizo mediante un commit Git de bajo nivel y se verificó el árbol.
+4. Durante el trabajo se detectó que el comando de curación mantenía la sesión DB abierta mientras esperaba al proveedor. Se corrigió antes de integrar el PR.
+
+### Validación
+
+- SHA del bloque contextual: be4ea301fa8c1be6c567c75f0aae02c5fff06488
+- CI #1264: SUCCESS.
+- Windows Build #894: SUCCESS.
+- Windows comprobó cinco ejecutables, smoke test de BotManager, instalador, ZIP portable, checksums y artifacts.
+
+## 31.3 Tío Otaku — paginación del historial — CERRADO
+
+### Implementación
+
+- TioOperatorService.recent_history() acepta offset.
+- Botones de navegación tio:history:page:<n>.
+- Página de 20 solicitudes.
+- /tio_historial [página].
+- Vista de solo lectura; no cambia estado de las solicitudes.
+
+### Error real encontrado
+
+El primer CI del PR #18 falló en Pytest porque el fixture de history_page_callback no incluía edit_text en el mock. Producción ya usaba correctamente edit_text; se corrigió únicamente el test.
+
+### Validación
+
+- PR #18: feat: paginate Tio Otaku operator history.
+- Primer CI #1265: FAILURE por el fixture descrito.
+- Corrección en b4d118ac7041a50d995ca6927c16aec00de292b8.
+- CI #1266: SUCCESS.
+- Merge a main: 9329a4024bd018f73d2f69e8fae9652c93fe2a70.
+- CI #1267: SUCCESS.
+- Windows Build #895: SUCCESS.
+
+## 31.4 Curación IA desacoplada y opt-in — CERRADO COMO INFRAESTRUCTURA DE CURACIÓN
+
+### Implementación
+
+- WorldCuratorAIService.propose_for_database() separa lectura/validación del review, llamada de red al LLM y persistencia corta de la propuesta.
+- La llamada LLM ya no mantiene una sesión SQLite abierta.
+- Nueva configuración AI_CURATOR_AUTO=false.
+- Chie puede ejecutar una pasada diaria opcional.
+- Se comprueba que ya exista una propuesta para el review + generator antes de generar.
+- Las propuestas siguen siendo pending y requieren aprobación humana.
+- Ninguna ruta del curator escribe automáticamente canon, personajes, repertorio o catálogo.
+
+### Pruebas
+
+- El parser rechaza payloads inválidos e identidades desconocidas.
+- La propuesta se reutiliza sin una segunda llamada LLM.
+- La nueva ruta de database persiste correctamente.
+- Una sonda abre otra sesión DB durante generate(), demostrando que la ruta desacoplada no conserva una transacción activa.
+- El gate automático está desactivado por defecto.
+- Con el gate activado, se notifica al administrador una sola vez para el review existente.
+
+### Validación
+
+- PR #19: feat: decouple and optionally automate world curation.
+- CI #1268: SUCCESS.
+- Merge a main: cea3a6d9113aacce63d7652f9cfaca0508255a60.
+- CI #1269: SUCCESS.
+- Windows Build #896: SUCCESS.
+
+## 31.5 No repetir
+
+No volver a implementar desde cero, salvo regresión o requisito nuevo:
+
+- eventos/jobs leases y fencing;
+- transacciones de miembros;
+- RequestService;
+- acceso Telegram y callbacks privados;
+- economía/gacha/puntos idempotentes;
+- WildWaifu y Trivia lifecycle;
+- Cami Publisher;
+- catálogo base y WorldCatalogModule;
+- misterio, recomendación y evento diario;
+- interacciones authored y transporte multi-identidad;
+- contexto básico del Café /momento;
+- paginación del historial de Tío Otaku;
+- separación DB/LLM de la curación y gate AI_CURATOR_AUTO.
+
+La curación IA no queda cerrada como producto final: queda cerrada su infraestructura segura de propuesta. Sigue abierto mejorar el prompt, evaluación de propuestas y herramientas humanas de edición/aprobación.
+
+## 31.6 Porcentaje actual
+
+Estimación global conservadora: 85%.
+
+No es una métrica de líneas de código ni de CI.
+
+| Área | Estado estimado |
+| --- | ---: |
+| Arquitectura Core | 93% |
+| Persistencia / SQLite / transacciones | 97% |
+| Telegram / seguridad / runtime | 97% |
+| BotManager / Windows / empaquetado | 98% |
+| Módulos funcionales | 95% |
+| WaifuMon / progresión / trivia | 95% |
+| Personajes / canon | 82% |
+| Director / repertorio / rutinas | 82% |
+| Ciudad Animals / Café Otaku | 90% |
+| Interacciones / continuidad | 88% |
+| IA secundaria / curación | 65% |
+| GUI / experiencia de operador | 52% |
+
+### Motivo del 85%
+
+El núcleo técnico está muy consolidado y el proyecto ya tiene funcionamiento contextual, operación humana y una capa de curación IA segura. Todavía falta profundidad autoral y de producto: repertorio y escenas más amplias, mejores superficies de Cami/Chie/Cari, una GUI de administración más completa, evaluación/edición de propuestas de curación y release final deliberado.
+
+## 31.7 Próximo punto
+
+La infraestructura cerrada no debe repetirse.
+
+Siguiente prioridad de producto:
+1. ampliar superficies reales de Cami, Chie y Cari;
+2. mejorar herramientas del operador humano Tío Otaku más allá del historial básico;
+3. profundizar escenas y relaciones authored;
+4. mejorar la revisión humana de propuestas de curación;
+5. preparación deliberada del release final versionado.
+
+## 31.8 Regla de continuidad
+
+En cada nueva sesión:
+
+1. leer la sección 31;
+2. consultar el SHA de main;
+3. consultar el último CI y Windows SUCCESS;
+4. comparar contra la lista de No repetir;
+5. seleccionar una deuda abierta;
+6. implementar código + regresión;
+7. validar;
+8. añadir aquí el error encontrado, la causa, la corrección y la evidencia.

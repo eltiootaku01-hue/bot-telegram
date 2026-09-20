@@ -201,6 +201,32 @@ See `docs/CIUDAD_ANIMALS_WORLD.md` for the design and current status.
 - Provider settings are configurable so Gemini, Groq, Cerebras or OpenRouter can be wired behind the Brain layer when credentials are available.
 - No cloud model is bundled into the Windows executable.
 
+## Contextual Café moments
+
+Cari exposes a deterministic /momento surface that reads the current Café state before selecting an authored scene. It can react to an active WaifuMon encounter, active trivia, pending fan requests, recent human arrivals, recent human activity, or the local time of Ciudad Animals.
+
+The contextual service is read-only and does not modify canon. The message remains authored text and does not invoke the Brain.
+
+## Tío Otaku operator history
+
+Tío Otaku remains a human-operated character. His private operator history now supports pagination with:
+
+/tio_historial
+/tio_historial 2
+
+The page is read-only, shows up to 20 requests, and exposes previous/next navigation. The system never generates Tío Otaku's response automatically.
+
+## Optional daily AI curation
+
+Ciudad Animals can optionally generate one daily proposal set from the persisted aggregate review. This is explicitly disabled by default:
+
+AI_ENABLED=false
+AI_CURATOR_AUTO=false
+
+When AI_CURATOR_AUTO=true and Chie's AI gate is enabled, the curator receives only the aggregate world snapshot. The network call happens outside the database transaction; the resulting proposal is stored as untrusted pending data and sent to the configured administrator for human review.
+
+Accepting a proposal does not rewrite canon, personalities, repertoire or source documents automatically. The curator is a suggestion layer, not the authority of Ciudad Animals.
+
 ## Architecture
 
 ```text
