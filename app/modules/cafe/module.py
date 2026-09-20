@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import date
 from html import escape
 
 from aiogram.filters import Command
@@ -9,6 +8,7 @@ from aiogram.types import Message
 
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.core.time import world_now
 from app.db.database import Database
 from app.services.world import WorldService
 
@@ -38,9 +38,10 @@ class CafeModule(BotModule):
 
     name = "cafe"
 
-    def __init__(self, database: Database) -> None:
+    def __init__(self, database: Database, timezone_name: str = "America/Argentina/Buenos_Aires") -> None:
         super().__init__()
         self.database = database
+        self.timezone_name = timezone_name
         self.world = WorldService()
 
     def setup(self) -> None:
@@ -85,7 +86,7 @@ class CafeModule(BotModule):
         await self._observe("cafe_menu", message)
 
     async def recommendation(self, message: Message) -> None:
-        day_key = date.today().isoformat()
+        day_key = world_now(self.timezone_name).date().isoformat()
         digest = hashlib.sha256(f"{day_key}:{message.chat.id}".encode("utf-8")).digest()
         index = int.from_bytes(digest[:8], "big") % len(DAILY_RECOMMENDATIONS)
         title, description = DAILY_RECOMMENDATIONS[index]
