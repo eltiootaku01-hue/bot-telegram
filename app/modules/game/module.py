@@ -7,6 +7,8 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
+from app.characters.director import CharacterDirector
+from app.characters.models import CharacterIntent
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
@@ -45,6 +47,7 @@ class GameModule(BotModule):
         self.wild: WildWaifuScheduler | None = None
         self.world = WorldService()
         self.community = CommunityResolver(self.settings)
+        self.characters = CharacterDirector()
 
     def setup(self) -> None:
         self.router.message.register(self.game, Command("juego"))
@@ -88,6 +91,10 @@ class GameModule(BotModule):
                 )
         except Exception:
             logger.exception("World observation failed for Sunna action=%s user=%s", action_key, user_id)
+
+    def _game_reaction(self, intent: CharacterIntent, roll: int) -> str:
+        response = self.characters.choose(BotIdentity.SUNNA, intent, roll=roll)
+        return response.scene.text if response is not None else ""
 
     async def _community_chat_id(self, user_id: int) -> int | None:
         async with self.database.session() as session:
@@ -485,7 +492,14 @@ class GameModule(BotModule):
             if not attempt.correct:
                 await session.commit()
                 await self._observe_action("encounter_attempt_wrong", callback.from_user.id, encounter.chat_id)
-                await callback.answer("❌ Fallaste. Esta oportunidad era solo tuya.", show_alert=True)
+                reaction = self._game_reaction(
+                    CharacterIntent.GAME_MISS,
+                    callback.from_user.id + callback.message.chat.id,
+                )
+                message = "❌ Fallaste. Esta oportunidad era solo tuya."
+                if reaction:
+                    message += f"\n\n🐍 <b>Sunna:</b> {reaction}"
+                await callback.answer(message, show_alert=True)
                 return
 
             claimed = await session.execute(
@@ -522,9 +536,16 @@ class GameModule(BotModule):
                 commit=False,
             )
             await session.commit()
-        await callback.message.edit_text(
+        reaction = self._game_reaction(
+            CharacterIntent.GAME_SUCCESS,
+            callback.from_user.id + callback.message.chat.id,
+        )
+        result_text = (
             f"🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n"
             f"✨ Clase {encounter.rarity} · colección ×{owned.copies}\n⭐ +{progress.points_gained} puntos · saldo: {balance}"
         )
+        if reaction:
+            result_text += f"\n\n🐍 <b>Sunna:</b> {reaction}"
+        await callback.message.edit_text(result_text)
         await self._observe_action("encounter_capture", callback.from_user.id, encounter.chat_id)
         await callback.answer("¡CAPTURADA! 🎉", show_alert=True)
