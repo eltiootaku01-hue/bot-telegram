@@ -125,8 +125,9 @@ async def test_gacha_open_callback_renders_gacha_panel() -> None:
 
 
 def test_game_reaction_is_authored_and_deterministic() -> None:
-    first = GameModule._game_reaction(GameModule.__new__(GameModule), CharacterIntent.GAME_SUCCESS, 7)
-    second = GameModule._game_reaction(GameModule.__new__(GameModule), CharacterIntent.GAME_SUCCESS, 7)
+    module = GameModule(None)
+    first = module._game_reaction(CharacterIntent.GAME_SUCCESS, 7)
+    second = module._game_reaction(CharacterIntent.GAME_SUCCESS, 7)
 
     assert first
     assert first == second
