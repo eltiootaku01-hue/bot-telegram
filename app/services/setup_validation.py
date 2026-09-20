@@ -66,9 +66,9 @@ def validate_setup(
         admin_id = int(admin_user_id.strip() or "0")
     except ValueError:
         admin_id = 0
-        errors.append("MASTER_TELEGRAM_ID debe ser un entero positivo.")
+        errors.append("MASTER_TELEGRAM_ID / ADMIN_USER_ID debe ser un entero positivo.")
     if (allow_admin_private_chat or not allow_user_private_chat) and admin_id <= 0:
-        errors.append("MASTER_TELEGRAM_ID debe ser positivo para configurar el acceso privado del administrador.")
+        errors.append("MASTER_TELEGRAM_ID / ADMIN_USER_ID debe ser positivo para configurar el acceso privado del administrador.")
 
     try:
         base_group_id = int(base_group_chat_id.strip() or "0")
