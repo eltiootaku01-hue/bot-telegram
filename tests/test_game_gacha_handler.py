@@ -28,9 +28,11 @@ async def test_rare_gacha_without_owner_is_refunded_and_closed(tmp_path) -> None
             [
                 User(id=7, first_name="Jugador"),
                 Chat(id=-100, type="supergroup", title="Community"),
-                GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS),
             ]
         )
+        await session.flush()
+        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS))
+        await session.flush()
 
     module = GameModule(database, Settings(admin_user_id=0))
     module.gacha_service = GachaService(FixedEngine())
