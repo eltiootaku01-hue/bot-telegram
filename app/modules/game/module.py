@@ -374,7 +374,31 @@ class GameModule(BotModule):
 
         if result.approval is not None:
             admin_id = self.settings.admin_user_id
-            if admin_id and bot is not None:
+            if not admin_id or bot is None:
+                async with self.database.session(write=True) as session:
+                    approval = await session.get(type(result.approval), result.approval.id)
+                    if approval is not None and approval.status == "pending":
+                        from app.game.rare_approval import decide
+
+                        rejected = await decide(
+                            session,
+                            result.approval.id,
+                            False,
+                            commit=False,
+                        )
+                        if rejected is not None:
+                            _, refunded_balance = await self.gacha_service.finalize_approval(
+                                session,
+                                rejected,
+                            )
+                            await session.commit()
+                            await callback.answer(
+                                "⚠️ El drop raro requiere un propietario configurado. "
+                                f"Se devolvieron los {GACHA_COST_POINTS} puntos. Saldo: {refunded_balance}.",
+                                show_alert=True,
+                            )
+                            return
+            else:
                 try:
                     await bot.send_message(
                         admin_id,
