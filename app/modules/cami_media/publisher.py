@@ -99,12 +99,12 @@ class CamiMediaPublisher(BotModule):
                     if candidates:
                         await session.commit()
 
-                if candidates and self.settings.admin_user_id:
+                if candidates and self.settings.master_user_id:
                     for asset in candidates:
                         try:
                             kind = "pedido" if asset.request_id is not None else "publicación"
                             await bot.send_message(
-                                self.settings.admin_user_id,
+                                self.settings.master_user_id,
                                 f"⚠️ <b>Entrega ambigua de Cami</b>\n\n"
                                 f"Material #{asset.id} ({kind}) quedó en <code>delivery_unknown</code>.\n"
                                 "Telegram pudo haber recibido el envío antes de que Cami guardara el ID. "
