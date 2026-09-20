@@ -201,10 +201,8 @@ class ChatModule(BotModule):
             intent = CharacterIntent.CALLED
         elif intent is None and len(targets) >= 2 and target is self.identity:
             intent = CharacterIntent.UNKNOWN_TOPIC
-        if intent is None and not is_question_like(text):
-            return
-
         local_answer = self.knowledge.answer(self.identity, text)
+        if local_answer is not None:
         if local_answer is not None:
             await self._send_authored_text(
                 message,
