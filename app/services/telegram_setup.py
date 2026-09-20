@@ -134,3 +134,15 @@ def build_private_link(username: str) -> str:
 
 def required_group_rights(role: str) -> tuple[str, ...]:
     return ROLE_ADMIN_RIGHTS.get(role, ())
+
+
+def build_start_link(username: str, parameter: str) -> str:
+    clean = username.lstrip("@").strip()
+    parameter = parameter.strip()
+    if not clean:
+        raise ValueError("Bot username is required")
+    if not parameter or not all(character.isalnum() or character in "_-" for character in parameter):
+        raise ValueError("Start parameter must use only A-Z, a-z, 0-9, _ or -")
+    if len(parameter) > 64:
+        raise ValueError("Start parameter is too long")
+    return f"https://t.me/{clean}?start={parameter}"
