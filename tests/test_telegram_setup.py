@@ -22,3 +22,10 @@ def test_sunna_group_add_link_does_not_request_admin_rights() -> None:
 
 def test_private_link_normalizes_username() -> None:
     assert build_private_link("@CariBot") == "https://t.me/CariBot"
+
+
+
+def test_start_link_validates_and_encodes_master_helper() -> None:
+    from app.services.telegram_setup import build_start_link
+
+    assert build_start_link("@ChieBot", "miid") == "https://t.me/ChieBot?start=miid"
