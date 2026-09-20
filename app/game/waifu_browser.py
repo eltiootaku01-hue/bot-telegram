@@ -143,3 +143,35 @@ def render_page(page: WaifuPage) -> str:
     if not page.characters:
         lines.append("No hay personajes que coincidan con ese filtro.")
     return "\n".join(lines)
+
+
+def source_label(character: Character) -> str:
+    if character.popularity_source == RANKER_2026_SOURCE:
+        return "Ranker · snapshot 2026-07-15"
+    if character.popularity_source == ANIME_CORNER_2025_SOURCE:
+        return "Anime Corner · ranking 2025"
+    return "Catálogo inicial del proyecto"
+
+
+def render_detail(character: Character) -> str:
+    ranking = (
+        f"#{character.popularity_rank}"
+        if character.popularity_rank is not None
+        else "sin ranking externo"
+    )
+    return "\n".join(
+        (
+            f"🎴 <b>{character.name}</b>",
+            f"📺 {character.anime}",
+            "",
+            f"🏷️ Carta: <b>{character.card_tier.value}</b>",
+            f"💠 Clase: <b>{character.rarity.value}</b>",
+            f"🌟 Elemento: <b>{character.element.value}</b>",
+            f"⚡ Poder de balance: <b>{character.power_score}/100</b>",
+            f"⭐ Popularidad normalizada: <b>{character.popularity_score}/100</b>",
+            f"📊 Ranking de referencia: <b>{ranking}</b>",
+            f"📚 Procedencia: {source_label(character)}",
+            "",
+            "El poder es balance local del juego; la popularidad es una escala derivada de la fuente y no un porcentaje universal.",
+        )
+    )
