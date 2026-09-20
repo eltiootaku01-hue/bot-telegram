@@ -190,9 +190,19 @@ Every successful waifu capture can award community points. Points belong to the 
 
 Every paid fan request receives a database-generated request number shown to humans as `Pedido #123`. The internal `request_id` remains the authoritative reference.
 
+The request workflow is now operator-oriented rather than message-oriented:
+
+```text
+pedido → estado durable → cola → toma → publicación → confirmación/recuperación
+```
+
+Users can run `/mis_pedidos` in private chat to see their latest request states. Cami can use `/cola_pedidos` privately to inspect pending, processing and overdue work. This state survives process restarts.
+
 ## Telegram as a storage vault
 
 A private Telegram group or channel can be configured as the media vault/inbox with `MEDIA_STORAGE_CHAT_ID`. Telegram `file_id` values are reused so images do not need unnecessary local copies.
+
+Cami also keeps the stable `file_unique_id` when Telegram provides it. Reposting the same stable media identity updates/reuses the local asset instead of silently creating a duplicate. `/cola_media` exposes the pipeline state: inbox, tagging, scheduling, publishing, ambiguous delivery and completed assets.
 
 ## Wild waifu loop
 
@@ -218,6 +228,16 @@ See `docs/CIUDAD_ANIMALS_WORLD.md` for the design and current status.
 ## Telegram setup and Bot Manager
 
 The desktop setup screen now includes a local readiness checklist with ✓/⚠/✗ states, per-bot token verification, official Telegram add-to-group links, a base-community/home setting, real group presence/permission checks, a Master/Jefe Telegram ID field, and a direct Chie helper to obtain that ID. The complete operator procedure is in `docs/TELEGRAM_OPERATIONS_MANUAL.md`.
+
+## Professional operating method
+
+Each identity follows the same high-level pattern without collapsing their roles:
+
+```text
+capture → validate → classify → queue → execute → confirm → observe → recover
+```
+
+Cari applies it to community operations and moderation, Sunna to deterministic game/economy state, Cami to media and requests, Chie to community configuration and coordination, and Tío Otaku to a human-only operator inbox. The detailed comparative research and evolution roadmap are in `docs/research/2026-09-20-bot-role-workflows.md` and `docs/research/2026-09-20-media-and-request-workflows.md`.
 
 ## API-saving strategy
 
