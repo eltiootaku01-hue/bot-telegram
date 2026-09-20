@@ -113,7 +113,7 @@ class TioOperatorService:
         allowed_current = (
             ("pending",)
             if status == "acknowledged"
-            else ("pending", "acknowledged")
+            else ("pending", "acknowledged", "responding")
         )
         result = await session.execute(
             update(TioOperatorRequest)
@@ -124,6 +124,7 @@ class TioOperatorService:
             .values(status=status, updated_at=utc_now())
         )
         return result.rowcount == 1
+
 
     async def recent_pending(
         self,
