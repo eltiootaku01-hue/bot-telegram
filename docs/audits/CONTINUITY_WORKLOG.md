@@ -156,3 +156,41 @@ Antes de modificar algo:
 - comprobar el SHA actual de `main`;
 - revisar CI asociado al SHA;
 - continuar desde el primer pendiente real.
+
+
+## ÚLTIMO BLOQUE EJECUTADO — 2026-09-20 (continuación)
+
+### Telemetría relacional de Ciudad Animals
+- Se añadió `ChatModule._observe_interaction()` para registrar el uso de relaciones authored entre personajes en scopes world, user y user_chat.
+- La observación ocurre después de enviar el follow-up authored, por lo que una interacción fallida no se convierte en una métrica falsa.
+- Commit: `24cad87ca998eae9dc0fc0d10a12ef6266eaa891`.
+- Regresión: `d226c348a0d515ab6bc7c231efb0373f0ce8aba9`.
+
+### Cobertura de interacciones
+- Se añadió una barrera CI que recorre las 12 parejas dirigidas entre Cari, Sunna, Cami y Chie.
+- La prueba acepta cualquier `CharacterIntent` authored disponible y exige speaker + follow-up correctos.
+- Esto evita borrar accidentalmente una relación existente sin detectarlo.
+- Primera versión demasiado estricta provocó CI #1123; se corrigió sin relajar la garantía de cobertura.
+- Commit de la barrera corregida: `c87685801f174a813035a3bd7528be8cf926c345`.
+
+### Gacha concurrente
+- Se añadió regresión con dos instancias de Database contra el mismo SQLite para comprobar que una referencia Gacha concurrente termina en una sola tirada, un solo cobro y una sola copia.
+- El test detectó un import mal ubicado en la primera implementación; CI lo señaló con Ruff y fue corregido.
+- Commit final de código/test: `1f0bf96e6682f53c97bcc08c9bbf7b7cd77a6d2b`.
+
+### Validación definitiva de este bloque
+- CI #1126: SUCCESS sobre `1f0bf96e6682f53c97bcc08c9bbf7b7cd77a6d2b`.
+- Windows Build #756: SUCCESS sobre el mismo SHA.
+- Windows verificó los cinco ejecutables, smoke test de BotManager, instalador, ZIP portable y checksums.
+- Los CI #1123, #1124 y #1125 anteriores fallaron únicamente por defectos en los tests nuevos (criterio de matriz/import), y fueron corregidos antes de la validación final.
+- El estado actual de `main` queda en `1f0bf96e6682f53c97bcc08c9bbf7b7cd77a6d2b`.
+
+### Estado de producto
+- Progreso global se mantiene en **82%**. No sube por añadir pruebas, telemetría o hardening si no se completa una parte sustancial de la visión de producto.
+- Interacciones puede considerarse aproximadamente **84%** por la cobertura completa de las parejas dirigidas.
+- Personajes/canon se mantiene alrededor de **84%** porque el contenido autoral confirmado sigue siendo el límite.
+- Ciudad Animals puede mantenerse alrededor de **88-89%**; el ledger, catálogo, curador y métricas relacionales ya están conectados.
+- La prioridad restante sigue siendo profundidad de producto, más contenido autoral confirmado, superficies de Cami/Chie/Cari, mejor UX del operador humano y cierre de versión.
+
+### NO REPETIR
+- No volver a implementar el ledger de Ciudad Animals, el catálogo persistente, el curador diario, el puente humano de Tío Otaku, Gacha idempotente, Misterio diario, publicación durable de Cami, control de acceso privado, allowlist de comunidades, fencing de leases ni las matrices authored de interacción salvo que una auditoría futura encuentre un defecto concreto.
