@@ -101,7 +101,9 @@ El 82% global no significa “82% del código escrito”. Representa cuánto de 
 - CI reciente verde sobre `d4315ec5306345c3af5b7707eab9f2d0d39d183d`.
 - Windows Build reciente verde sobre `d4315ec5306345c3af5b7707eab9f2d0d39d183d`.
 - En la etapa inmediatamente anterior: CI #673 verde y Windows #314 verde sobre `c13da70731d18bdd71533e0e03982d58d58e2e91`.
-- Las nuevas modificaciones posteriores a esos commits deben esperar su propio CI antes de llamarse “validadas”.
+- CI #1111 quedó verde sobre `a21d5eafc75e4f744240a8d4ca3638ef99ff8680` (código con fencing de Tío).
+- Windows #741 está ejecutando el mismo SHA; ya superó checkout/setup y sigue en construcción de ejecutables. Todavía no debe etiquetarse como “Windows validado” hasta terminar.
+- Las modificaciones posteriores a ese SHA que solo cambien documentación no alteran el binario, pero se mantienen fuera de la validación funcional hasta que su propio CI concluya.
 
 ## TRABAJO PENDIENTE / PRÓXIMOS OBJETIVOS
 
