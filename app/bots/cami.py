@@ -11,7 +11,10 @@ async def run() -> None:
     bot, dispatcher, database = build_dispatcher(get_settings(), BotIdentity.CAMI)
     await database.create_schema()
     try:
-        await dispatcher.start_polling(bot)
+        await dispatcher.start_polling(
+            bot,
+            allowed_updates=dispatcher.resolve_used_update_types(),
+        )
     finally:
         await database.close()
         await bot.session.close()
