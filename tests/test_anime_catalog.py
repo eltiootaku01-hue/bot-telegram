@@ -148,3 +148,31 @@ async def test_anime_catalog_data_uses_structured_provenance_fields(tmp_path) ->
     assert "example.invalid" in row.source_urls_json
     assert character_count is None
     await database.close()
+
+@pytest.mark.asyncio
+async def test_anime_catalog_search_finds_work_by_character_alias(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'anime-character-search.db'}")
+    await database.create_schema()
+    service = AnimeCatalogService()
+
+    async with database.session() as session:
+        await service.upsert_work(
+            session,
+            work_id="anime.character-search",
+            title="Obra por personaje",
+        )
+        await service.add_character(
+            session,
+            character_id="anime.character-search:hero",
+            work_id="anime.character-search",
+            name="Asuna",
+            aliases=("Yuuki", "heroína"),
+        )
+
+    async with database.session() as session:
+        by_name = await service.search_works(session, "Asuna")
+        by_alias = await service.search_works(session, "Yuuki")
+
+    assert by_name and by_name[0].id == "anime.character-search"
+    assert by_alias and by_alias[0].id == "anime.character-search"
+    await database.close()
