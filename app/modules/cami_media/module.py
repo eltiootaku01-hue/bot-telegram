@@ -79,6 +79,7 @@ class CamiMediaModule(BotModule):
         self.router.message.register(self.recovery_command, Command("recuperar_publicaciones"))
         self.router.message.register(self.catalog_command, Command("catalogo"))
         self.router.message.register(self.anime_command, Command("anime"))
+        self.router.message.register(self.anime_detail_command, Command("anime_ficha"))
         self.router.message.register(
             self.receive_schedule_or_tags,
             CamiMediaStates.waiting_tags,
@@ -326,6 +327,105 @@ class CamiMediaModule(BotModule):
             message.chat.id,
         )
 
+
+    async def anime_detail_command(self, message: Message) -> None:
+        """Show one local anime/manga record with its known characters and aliases."""
+        if message.chat.type not in {"private", "group", "supergroup"} or message.from_user is None:
+            return
+
+        parts = (message.text or "").split(maxsplit=1)
+        query = parts[1].strip() if len(parts) == 2 else ""
+        if not query:
+            await message.answer(
+                "📖 Indicá una obra o personaje. Ejemplo: <code>/anime_ficha Asuna</code>"
+            )
+            return
+
+        async with self.database.session() as session:
+            matches = await self.anime.search_works(session, query, limit=6)
+            if len(matches) == 0:
+                await message.answer("📖 No encontré una ficha local para esa búsqueda.")
+                await self._observe_action(
+                    "anime_detail_empty",
+                    message.from_user.id,
+                    message.chat.id,
+                )
+                return
+            if len(matches) > 1:
+                lines = [
+                    f"📖 <b>Encontré {len(matches)} fichas</b>. Afiná la búsqueda:",
+                    "",
+                ]
+                lines.extend(
+                    f"• <code>{escape(row.id)}</code> — <b>{escape(row.title)}</b>"
+                    for row in matches
+                )
+                await message.answer("
+".join(lines))
+                await self._observe_action(
+                    "anime_detail_ambiguous",
+                    message.from_user.id,
+                    message.chat.id,
+                )
+                return
+
+            row = matches[0]
+            characters = await self.anime.characters_for_work(
+                session,
+                row.id,
+                limit=20,
+            )
+
+        verification = (
+            "verificada"
+            if row.last_verified is not None
+            else "no verificada"
+        )
+        lines = [
+            f"📖 <b>{escape(row.title)}</b>",
+            f"ID: <code>{escape(row.id)}</code>",
+            f"Estado: <b>{escape(row.status)}</b> · fuente {verification}",
+        ]
+        if row.media_type:
+            lines.append(f"Tipo: {escape(row.media_type)}")
+        if row.year_start is not None:
+            years = str(row.year_start)
+            if row.year_end is not None and row.year_end != row.year_start:
+                years += f"–{row.year_end}"
+            lines.append(f"Año: {years}")
+        if row.episodes is not None:
+            lines.append(f"Episodios: {row.episodes}")
+        if row.studio:
+            lines.append(f"Estudio: {escape(row.studio)}")
+        if row.genres:
+            lines.append(f"Géneros: {escape(', '.join(row.genres[:8]))}")
+        if row.themes:
+            lines.append(f"Temas: {escape(', '.join(row.themes[:8]))}")
+        if row.summary_short:
+            lines.extend(("", f"<b>Resumen:</b> {escape(row.summary_short)}"))
+        if characters:
+            lines.extend(("", "<b>Personajes registrados:</b>"))
+            for character in characters:
+                item = f"• {escape(character.name)}"
+                aliases = ", ".join(character.aliases[:5])
+                if aliases:
+                    item += f" · aliases: {escape(aliases)}"
+                lines.append(item)
+        else:
+            lines.extend(("", "No hay personajes registrados para esta ficha."))
+        lines.extend(
+            (
+                "",
+                "ℹ️ Esta ficha pertenece al catálogo local. Cami no completa datos faltantes con IA.",
+            )
+        )
+        await message.answer("
+".join(lines))
+        await self._observe_action(
+            "anime_detail",
+            message.from_user.id,
+            message.chat.id,
+        )
 
     async def recovery_command(self, message: Message) -> None:
         if not self._is_media_staff(message):
