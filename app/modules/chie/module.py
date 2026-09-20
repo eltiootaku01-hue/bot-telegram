@@ -235,7 +235,12 @@ class ChieModule(BotModule):
                     status="awaiting_confirmation",
                 ))
             await session.commit()
-        await message.answer("✅ Permisos comprobados. Volvé al chat privado conmigo y tocá <b>Ya me agregaste de admin</b>.")
+        await message.answer(
+            f"✅ Permisos comprobados.\n\n"
+            f"🆔 ID de esta comunidad: <code>{message.chat.id}</code>\n\n"
+            "Copiá ese ID en Bot Manager como Grupo general / bienvenida y agregalo a AUTHORIZED_CHAT_IDS.\n"
+            "Después volvé al chat privado conmigo y tocá <b>Ya me agregaste de admin</b>."
+        )
         await self._observe_action("onboarding_group_configured", message.from_user.id, message.chat.id)
 
     async def check_setup(self, callback: CallbackQuery, bot: Bot) -> None:
