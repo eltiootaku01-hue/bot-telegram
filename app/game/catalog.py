@@ -55,10 +55,15 @@ CHARACTERS["taiga"] = Character(
 )
 
 WILD_RARITIES = frozenset({Rarity.D, Rarity.C})
+LEGACY_CHARACTER_IDS = {"anya-forger": "anya"}
+
+
+def canonical_character_id(character_id: str) -> str:
+    return LEGACY_CHARACTER_IDS.get(character_id, character_id)
 
 
 def get_character(character_id: str) -> Character:
-    return CHARACTERS[character_id]
+    return CHARACTERS[canonical_character_id(character_id)]
 
 
 def wild_characters() -> tuple[Character, ...]:
