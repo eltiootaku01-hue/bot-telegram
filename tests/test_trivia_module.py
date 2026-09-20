@@ -165,3 +165,18 @@ async def test_ranking_command_lists_only_configured_community(tmp_path) -> None
     assert "Otro" not in answers[0]
     assert answers[0].index("Ana") < answers[0].index("&lt;Beto&gt;")
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_trivia_start_callback_is_handled_as_panel_guidance() -> None:
+    module = TriviaModule(cur_database := Database("sqlite+aiosqlite:///:memory:"))
+
+    callback = AsyncMock()
+    callback.data = "game:trivia:start"
+    callback.message = AsyncMock()
+
+    await module.answer(callback)
+
+    callback.answer.assert_awaited_once()
+    callback.message.edit_text.assert_not_awaited()
+    await cur_database.close()
