@@ -39,7 +39,7 @@ def build_bot_modules(
     )
     identity_specific = (
         _spec("chat", lambda: ChatModule(database, identity=identity), *BotIdentity),
-        _spec("cafe", lambda: CafeModule(database, timezone_name=(settings.bot_world_timezone if settings else Settings().bot_world_timezone)), BotIdentity.CARI),
+        _spec("cafe", lambda: CafeModule(database, settings=settings), BotIdentity.CARI),
         _spec("moderation", lambda: ModerationModule(database), BotIdentity.CARI),
         _spec("game", lambda: GameModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("trivia", lambda: TriviaModule(database, settings=settings), BotIdentity.SUNNA),
