@@ -10,7 +10,6 @@ from app.db.world_models import WorldProposal, WorldReview
 from app.services.world_curator import WorldCuratorService
 from app.services.world_curator_ai import (
     CURATOR_PERSONA,
-    WorldCuratorAIService,
     StoredWorldProposals,
     WorldCuratorAIService,
     format_world_proposals,
