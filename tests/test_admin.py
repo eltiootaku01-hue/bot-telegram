@@ -11,6 +11,14 @@ from app.game.models import Rarity
 from app.modules.admin.module import AdminModule
 
 
+@pytest.fixture
+async def database():
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    yield database
+    await database.close()
+
+
 def test_rare_approval_owner_requires_private_owner_chat() -> None:
     module = AdminModule(
         Database("sqlite+aiosqlite:///:memory:"),
