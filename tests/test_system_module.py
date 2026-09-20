@@ -51,3 +51,15 @@ async def test_help_surface_is_identity_aware() -> None:
         assert identity.value.title() in rendered
         assert expected in rendered
 
+
+
+@pytest.mark.asyncio
+async def test_sunna_command_menu_exposes_daily_missions() -> None:
+    module = SystemModule(BotIdentity.SUNNA)
+    bot = AsyncMock()
+    await module.on_startup(bot)
+
+    commands = bot.set_my_commands.await_args.args[0]
+    names = {command.command for command in commands}
+
+    assert "misiones" in names
