@@ -18,6 +18,7 @@ except ImportError:  # pragma: no cover - packaged build installs python-dotenv
 from app.services.launcher_supervisor import LauncherSupervisor
 from app.services.process_manager import ProcessManager
 from app.services.runtime_monitor import RuntimeMonitor, RuntimeSnapshot
+from app.services.setup_validation import validate_setup
 
 
 SOURCE_ROOT = Path(__file__).resolve().parent.parent
@@ -277,6 +278,35 @@ class BotLauncher(tk.Tk):
                 missing.append(f"Token de {key.title()}")
         return missing
 
+    def _validate_configuration(self) -> bool:
+        result = validate_setup(
+            bots={
+                key: {
+                    "link": fields["link"].get(),
+                    "token": fields["token"].get(),
+                }
+                for key, fields in self.bot_vars.items()
+            },
+            authorized_chat_ids=self.authorized_chats_var.get(),
+            admin_user_id=self.admin_var.get(),
+            allow_admin_private_chat=self.allow_admin_private_var.get(),
+            allow_user_private_chat=self.allow_user_private_var.get(),
+            media_storage_chat_id=self.media_var.get(),
+            publish_page_chat_id=self.publish_page_var.get(),
+        )
+        if result.errors:
+            messagebox.showerror(
+                "Configuración inválida",
+                "\n".join(f"• {error}" for error in result.errors),
+            )
+            return False
+        if result.warnings:
+            messagebox.showwarning(
+                "Revisión de configuración",
+                "\n".join(f"• {warning}" for warning in result.warnings),
+            )
+        return True
+
     def start_all(self) -> None:
         missing = self._missing_required()
         if missing:
@@ -284,6 +314,8 @@ class BotLauncher(tk.Tk):
                 "Falta configuración",
                 "Antes de comenzar completá:\n\n" + "\n".join(f"• {item}" for item in missing),
             )
+            return
+        if not self._validate_configuration():
             return
         if not self.save_config():
             return
