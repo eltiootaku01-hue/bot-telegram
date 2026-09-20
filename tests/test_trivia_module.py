@@ -189,8 +189,15 @@ async def test_trivia_start_callback_is_wired_for_game_hub() -> None:
     from types import SimpleNamespace
 
     module = TriviaModule.__new__(TriviaModule)
-    message = SimpleNamespace(edit_text=AsyncMock())
-    callback = SimpleNamespace(message=message, answer=AsyncMock())
+    message = SimpleNamespace(
+        chat=SimpleNamespace(id=7, type="private"),
+        edit_text=AsyncMock(),
+    )
+    callback = SimpleNamespace(
+        message=message,
+        from_user=SimpleNamespace(id=7),
+        answer=AsyncMock(),
+    )
 
     await module.start_callback(callback)
 
