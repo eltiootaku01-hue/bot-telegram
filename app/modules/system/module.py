@@ -66,6 +66,7 @@ class SystemModule(BotModule):
             BotIdentity.CAMI: (
                 BotCommand(command="start", description="Presentación de Cami"),
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
+                BotCommand(command="catalogo", description="Buscar material publicado"),
                 BotCommand(command="recuperar_publicaciones", description="Revisar entregas ambiguas"),
             ),
             BotIdentity.CHIE: (
