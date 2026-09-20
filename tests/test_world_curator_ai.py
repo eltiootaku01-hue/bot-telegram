@@ -158,3 +158,73 @@ async def test_ai_curator_decision_is_single_use(database: Database) -> None:
 
     assert row is not None
     assert row.status == "accepted"
+
+
+@pytest.mark.asyncio
+async def test_ai_curator_database_path_reuses_persisted_proposal(database: Database) -> None:
+    brain = FakeBrain(
+        '{"proposals":[{"title":"Idea","idea":"Una escena pequeña.","reason":"Hay datos.","affected_identities":["cari"]}]}'
+    )
+    settings = Settings(
+        ai_enabled=True,
+        ai_enabled_chie=True,
+        ollama_model="test-model",
+    )
+    service = WorldCuratorAIService(settings, brain=brain)  # type: ignore[arg-type]
+    world = WorldCuratorService()
+
+    async with database.session() as session:
+        report = await world.build_daily(session, day_key="2026-09-22")
+        review = await session.scalar(select(WorldReview))
+        assert review is not None
+        review_id = review.id
+
+    first = await service.propose_for_database(
+        database,
+        review_id=review_id,
+        report=report,
+    )
+    second = await service.propose_for_database(
+        database,
+        review_id=review_id,
+        report=report,
+    )
+
+    assert first == second
+    assert len(brain.requests) == 1
+
+
+@pytest.mark.asyncio
+async def test_ai_curator_database_path_keeps_llm_outside_active_db_transaction(
+    database: Database,
+) -> None:
+    class TransactionProbeBrain(FakeBrain):
+        async def generate(self, request: LLMRequest) -> str:
+            async with database.session() as session:
+                await session.execute(select(WorldReview.id).limit(1))
+            return await super().generate(request)
+
+    brain = TransactionProbeBrain(
+        '{"proposals":[{"title":"Idea","idea":"Una escena.","reason":"Probe.","affected_identities":[]}]}' 
+    )
+    settings = Settings(
+        ai_enabled=True,
+        ai_enabled_chie=True,
+        ollama_model="test-model",
+    )
+    service = WorldCuratorAIService(settings, brain=brain)  # type: ignore[arg-type]
+    world = WorldCuratorService()
+
+    async with database.session() as session:
+        report = await world.build_daily(session, day_key="2026-09-23")
+        review = await session.scalar(select(WorldReview))
+        assert review is not None
+        review_id = review.id
+
+    stored = await service.propose_for_database(
+        database,
+        review_id=review_id,
+        report=report,
+    )
+
+    assert stored.status == "pending"

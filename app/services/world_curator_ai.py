@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.brain.provider import BrainClient, LLMProviderError, LLMRequest
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
+from app.db.database import Database
 from app.db.world_models import WorldProposal, WorldReview
 from app.services.world_curator import WorldReviewReport
 
@@ -59,6 +60,126 @@ class WorldCuratorAIService:
     ) -> None:
         self.settings = settings or get_settings()
         self.brain = brain or BrainClient(self.settings)
+
+    async def propose_for_database(
+        self,
+        database: Database,
+        *,
+        review_id: int,
+        report: WorldReviewReport,
+    ) -> StoredWorldProposals:
+        """Generate outside the DB transaction, then persist in a short transaction."""
+        if not self.settings.ai_for(BotIdentity.CHIE):
+            raise LLMProviderError("AI curator is disabled for Chie")
+
+        generator = self._generator_name()
+        async with database.session() as session:
+            review_row = await session.get(WorldReview, review_id)
+            if review_row is None:
+                raise ValueError(f"World review #{review_id} does not exist")
+            if (
+                report.review_type != review_row.review_type
+                or report.period_key != review_row.period_key
+            ):
+                raise ValueError("World review report does not match persisted review")
+            existing = await session.scalar(
+                select(WorldProposal).where(
+                    WorldProposal.review_id == review_row.id,
+                    WorldProposal.generator == generator,
+                )
+            )
+            if existing is not None:
+                return self._decode(existing)
+
+        request = self._request_for_report(report)
+        raw = await self.brain.generate(request)
+        items = self._parse(raw)
+
+        return await self._persist_generated(
+            database,
+            review_id=review_id,
+            generator=generator,
+            items=items,
+        )
+
+    def _request_for_report(self, report: WorldReviewReport) -> LLMRequest:
+        return LLMRequest(
+            identity=BotIdentity.CHIE,
+            user_text=json.dumps(
+                report.to_payload(),
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
+            persona=CURATOR_PERSONA,
+            system_extra=CURATOR_RULES,
+            max_tokens=600,
+            max_user_chars=8000,
+            temperature=0.2,
+        )
+
+    async def _persist_generated(
+        self,
+        database: Database,
+        *,
+        review_id: int,
+        generator: str,
+        items: tuple[WorldProposalItem, ...],
+    ) -> StoredWorldProposals:
+        payload = {
+            "proposals": [
+                {
+                    "title": item.title,
+                    "idea": item.idea,
+                    "reason": item.reason,
+                    "affected_identities": [
+                        identity.value for identity in item.affected_identities
+                    ],
+                }
+                for item in items
+            ]
+        }
+        async with database.session(write=True) as session:
+            existing = await session.scalar(
+                select(WorldProposal).where(
+                    WorldProposal.review_id == review_id,
+                    WorldProposal.generator == generator,
+                )
+            )
+            if existing is not None:
+                return self._decode(existing)
+
+            row = WorldProposal(
+                review_id=review_id,
+                generator=generator,
+                status="pending",
+                payload_json=json.dumps(
+                    payload,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
+            )
+            try:
+                async with session.begin_nested():
+                    session.add(row)
+                    await session.flush()
+            except IntegrityError:
+                existing = await session.scalar(
+                    select(WorldProposal).where(
+                        WorldProposal.review_id == review_id,
+                        WorldProposal.generator == generator,
+                    )
+                )
+                if existing is None:
+                    raise
+                return self._decode(existing)
+
+            return StoredWorldProposals(
+                proposal_id=row.id,
+                review_id=review_id,
+                generator=generator,
+                status=row.status,
+                items=items,
+            )
 
     async def propose(
         self,

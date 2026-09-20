@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     authorized_chat_ids: str = ""
     allow_admin_private_chat: bool = True
     allow_user_private_chat: bool = True
+    # Optional daily AI world-curation pass; when false, AI remains manual-only.
+    ai_curator_auto: bool = False
 
     # World time is explicit for schedules; persistence remains UTC.
     bot_world_timezone: str = "America/Argentina/Buenos_Aires"

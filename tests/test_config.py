@@ -34,3 +34,8 @@ def test_media_vault_channel_is_authorized_only_by_explicit_vault_id() -> None:
 def test_zero_media_vault_id_does_not_authorize_any_channel() -> None:
     settings = Settings(media_storage_chat_id=0)
     assert settings.is_chat_allowed(-100555, "channel") is False
+
+
+def test_ai_curator_auto_is_disabled_by_default() -> None:
+    settings = Settings()
+    assert settings.ai_curator_auto is False
