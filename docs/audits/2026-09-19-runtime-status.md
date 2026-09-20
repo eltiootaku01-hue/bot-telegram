@@ -87,6 +87,12 @@ La IA sigue siendo opcional y secundaria. El runtime social y los personajes usa
 
 El mundo narrativo y las escenas pueden seguir creciendo, pero los cambios deben incorporarse mediante catálogo/repertorio autorizado y no mediante generación libre en la ruta cotidiana.
 
+## Cambios de producto posteriores
+
+- El Café Otaku dispone de `/cafe`, `/menu` y `/recomendacion` mediante Cari, con selección diaria basada en la zona horaria del mundo.
+- Cami dispone de `/catalogo` para buscar únicamente material publicado.
+- Las nuevas acciones se registran en el catálogo agregado de Ciudad Animals.
+
 ## Evidencia
 
 El SHA de referencia quedó validado por CI #938 y Windows Build #579. La validación Windows cubrió compilación, verificación, smoke test, instalador, ZIP portable y checksums. Los artefactos permanecen asociados a esa ejecución de GitHub Actions.
