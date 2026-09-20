@@ -79,7 +79,7 @@ async def test_user_intent_remains_bound_to_cari_requester(database: Database) -
 async def test_handle_text_persists_world_observation_after_authored_response(
     database: Database,
 ) -> None:
-    module = ChatModule(database, identity=BotIdentity.CAMI)
+    module = ChatModule(database)
     answers: list[str] = []
 
     async def answer(text: str) -> None:
@@ -223,7 +223,7 @@ async def test_interaction_usage_is_recorded_as_relationship(database: Database)
 async def test_directed_interaction_uses_persisted_relationship_count_to_rotate_authored_scene(
     database: Database,
 ) -> None:
-    module = ChatModule(database)
+    module = ChatModule(database, identity=BotIdentity.CAMI)
     answers: list[str] = []
 
     async def answer(text: str) -> None:
