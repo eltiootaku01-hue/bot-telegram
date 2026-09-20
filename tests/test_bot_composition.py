@@ -62,3 +62,16 @@ def test_composition_uses_supplied_settings_instance() -> None:
     chie_modules = build_bot_modules(database, BotIdentity.CHIE, settings)
     chie = next(module for module in chie_modules if module.name == "chie")
     assert chie.settings is settings
+
+
+def test_cari_cafe_module_receives_configured_world_timezone() -> None:
+    from app.modules.cafe.module import CafeModule
+
+    settings = Settings(bot_world_timezone="Europe/Madrid")
+    database = Database("sqlite+aiosqlite:///:memory:")
+
+    modules = build_bot_modules(database, BotIdentity.CARI, settings)
+    cafe = next(module for module in modules if module.name == "cafe")
+
+    assert isinstance(cafe, CafeModule)
+    assert cafe.timezone_name == "Europe/Madrid"
