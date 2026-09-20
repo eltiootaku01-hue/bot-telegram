@@ -242,8 +242,17 @@ async def test_begin_honors_configured_timeout(database: Database) -> None:
     assert row.expires_at == base + timedelta(seconds=45)
 
 
-def test_begin_rejects_unreasonably_short_timeout() -> None:
+@pytest.mark.asyncio
+async def test_begin_rejects_unreasonably_short_timeout(database: Database) -> None:
     service = HumanVerificationService()
-    import inspect
 
-    assert "timeout_seconds" in inspect.signature(service.begin).parameters
+    async with database.session() as session:
+        with pytest.raises(ValueError, match="at least 30"):
+            await service.begin(
+                session,
+                chat_id=-100,
+                user_id=9,
+                prompt_message_id=14,
+                default_permissions_json="{}",
+                timeout_seconds=29,
+            )
