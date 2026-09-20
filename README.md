@@ -145,6 +145,17 @@ Sunna incorpora un misterio authored que puede iniciarse en la comunidad con `/m
 
 La ronda y los intentos quedan persistidos en SQLite. Cada jugador puede responder una sola vez, el ganador se reclama con una transición atómica y la recompensa usa una referencia idempotente en el ledger de puntos. Si Telegram rechaza la publicación inicial, la ronda queda marcada para poder reintentarse en lugar de bloquear el día.
 
+## Café Otaku
+
+Cari incluye una superficie determinista del Café Otaku:
+
+- `/cafe` o `/menu` muestra los servicios disponibles en Ciudad Animals.
+- `/recomendacion` entrega una recomendación diaria estable para esa comunidad/chat.
+- La recomendación y el menú usan texto authored-only; no requieren un modelo de IA.
+- Las métricas del mundo registran el uso agregado de estas acciones sin guardar el texto completo del usuario.
+
+El catálogo público de Cami se consulta con `/catalogo` y solamente muestra material que ya fue publicado.
+
 ## Shared points
 
 Every successful waifu capture can award community points. Points belong to the player + community and use an auditable transaction ledger. Fan requests and Gacha spend those same points.
