@@ -13,7 +13,11 @@ from app.core.module import BotModule
 from app.db.database import Database
 from app.db.models import TioOperatorRequest
 from app.services.tio_operator import TioOperatorService
-from app.ui.control_keyboards import tio_operator_request_keyboard, tio_operator_resolve_keyboard
+from app.ui.control_keyboards import (
+    tio_operator_history_keyboard,
+    tio_operator_request_keyboard,
+    tio_operator_resolve_keyboard,
+)
 
 
 class TioOperatorModule(BotModule):
@@ -116,6 +120,10 @@ class TioOperatorModule(BotModule):
 
         async with self.database.session() as session:
             requests = await self.service.recent_history(session, limit=20)
+            contexts = [
+                (request, *await self.service.context(session, request))
+                for request in requests
+            ]
 
         if not requests:
             await message.answer("📭 Todavía no hay solicitudes para Tío Otaku.")
@@ -128,8 +136,7 @@ class TioOperatorModule(BotModule):
             "responding": "⏳ respondiendo",
             "resolved": "✅ resuelta",
         }
-        for request in requests:
-            user, chat = await self._context_for_history(request)
+        for request, user, chat in contexts:
             user_name = escape(
                 (user.full_name if user else None)
                 or (user.first_name if user else None)
@@ -157,11 +164,10 @@ class TioOperatorModule(BotModule):
             )
             lines.append("")
 
-        await message.answer("\n".join(lines))
-
-    async def _context_for_history(self, request: TioOperatorRequest):
-        async with self.database.session() as session:
-            return await self.service.context(session, request)
+        await message.answer(
+            "\n".join(lines),
+            reply_markup=tio_operator_history_keyboard([request.id for request in requests]),
+        )
 
     async def view_command(self, message: Message) -> None:
         """Show full operator context for one request without changing its state."""
