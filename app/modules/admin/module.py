@@ -43,11 +43,11 @@ class AdminModule(BotModule):
 
     def _is_owner(self, callback: CallbackQuery) -> bool:
         return (
-            bool(self.settings.admin_user_id)
-            and callback.from_user.id == self.settings.admin_user_id
+            bool(self.settings.master_user_id)
+            and callback.from_user.id == self.settings.master_user_id
             and callback.message is not None
             and callback.message.chat.type == "private"
-            and callback.message.chat.id == self.settings.admin_user_id
+            and callback.message.chat.id == self.settings.master_user_id
         )
 
     async def pending_approvals_command(self, message: Message) -> None:
@@ -55,8 +55,8 @@ class AdminModule(BotModule):
         if (
             message.chat.type != "private"
             or message.from_user is None
-            or message.chat.id != self.settings.admin_user_id
-            or message.from_user.id != self.settings.admin_user_id
+            or message.chat.id != self.settings.master_user_id
+            or message.from_user.id != self.settings.master_user_id
         ):
             return
 
