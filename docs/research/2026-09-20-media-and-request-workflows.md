@@ -120,3 +120,29 @@ Cada etapa tiene que ser reiniciable sin duplicar efectos. La futura evolución 
 - tiempo de espera promedio del pedido.
 
 La IA, cuando exista, debe servir como herramienta opcional de clasificación/sugerencia. No debe ser la autoridad sobre canon, identidad de personajes, permisos ni estados de publicación.
+
+
+## Evolución integrada el 2026-09-20: tablero de trabajo
+
+A partir de los patrones anteriores, Cami incorpora una vista privada /tablero que unifica pedidos y materiales pendientes. No sustituye las colas persistentes: funciona como una capa de routing para decidir qué trabajo merece atención primero.
+
+La prioridad actual favorece:
+
+1. entregas ambiguas que podrían producir duplicados;
+2. pedidos cuyo SLA ya venció;
+3. pedidos pendientes de información o aprobación;
+4. medios que bloquean la cadena de publicación;
+5. programación futura.
+
+Cada elemento incluye una siguiente acción concreta. Esto evita el problema operativo de tener varias bandejas correctas pero no saber cuál atender primero.
+
+## Álbumes como unidad de trabajo
+
+La ingesta de Cami reconoce media_group_id y crea una identidad persistente de álbum. Los elementos siguen guardándose individualmente para conservar trazabilidad, pero la interfaz evita pedir una decisión por cada foto.
+
+Este equilibrio permite dos propiedades que suelen competir entre sí:
+
+- agrupación para el operador;
+- trazabilidad individual para publicación, recuperación y catálogo.
+
+La futura publicación de álbumes puede usar sendMediaGroup cuando el destino y la política de publicación lo justifiquen, conservando estados por elemento y una estrategia explícita para entregas ambiguas.
