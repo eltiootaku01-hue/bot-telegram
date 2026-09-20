@@ -38,6 +38,7 @@ WORLD_CATALOG: tuple[WorldCatalogDefinition, ...] = (
     WorldCatalogDefinition(BotIdentity.CARI, "action", "daily_recommendation", "Recomendación diaria del Café", 50),
     WorldCatalogDefinition(BotIdentity.CARI, "action", "cafe_mystery", "Misterio diario del Café", 50),
     WorldCatalogDefinition(BotIdentity.CARI, "action", "cafe_daily_event", "Evento cotidiano del Café", 50),
+    WorldCatalogDefinition(BotIdentity.CARI, "action", "trivia", "Trivia de anime de Cari", 85),
     WorldCatalogDefinition(BotIdentity.CARI, "action", "context_moment", "Momento contextual del Café", 45),
     WorldCatalogDefinition(
         BotIdentity.SUNNA,
@@ -54,7 +55,6 @@ WORLD_CATALOG: tuple[WorldCatalogDefinition, ...] = (
         90,
     ),
     WorldCatalogDefinition(BotIdentity.SUNNA, "action", "gacha", "Gacha de personajes", 80),
-    WorldCatalogDefinition(BotIdentity.SUNNA, "action", "trivia", "Trivia de anime", 80),
     WorldCatalogDefinition(BotIdentity.SUNNA, "action", "combat", "Combate", 70),
     WorldCatalogDefinition(BotIdentity.SUNNA, "action", "collection", "Colección y evolución", 70),
     WorldCatalogDefinition(
@@ -75,6 +75,7 @@ WORLD_CATALOG: tuple[WorldCatalogDefinition, ...] = (
     WorldCatalogDefinition(BotIdentity.CAMI, "action", "publication", "Publicaciones", 80),
     WorldCatalogDefinition(BotIdentity.CAMI, "action", "statistics", "Estadísticas", 70),
     WorldCatalogDefinition(BotIdentity.CAMI, "action", "catalog_search", "Búsqueda del catálogo", 65),
+    WorldCatalogDefinition(BotIdentity.CAMI, "action", "mystery", "Misterio diario de Cami", 85),
     WorldCatalogDefinition(
         BotIdentity.CHIE,
         "place",
@@ -91,6 +92,7 @@ WORLD_CATALOG: tuple[WorldCatalogDefinition, ...] = (
     ),
     WorldCatalogDefinition(BotIdentity.CHIE, "action", "onboarding", "Bienvenida y configuración", 80),
     WorldCatalogDefinition(BotIdentity.CHIE, "action", "welcome", "Bienvenida de nuevos integrantes", 75),
+    WorldCatalogDefinition(BotIdentity.CHIE, "action", "human_verification", "Verificación humana de nuevos integrantes", 95),
     WorldCatalogDefinition(BotIdentity.CHIE, "action", "moderation", "Moderación y permisos", 80),
     WorldCatalogDefinition(BotIdentity.CHIE, "topic", "rules", "Reglas de la comunidad", 70),
     WorldCatalogDefinition(BotIdentity.CHIE, "topic", "welcome", "Tema de bienvenida", 65),
