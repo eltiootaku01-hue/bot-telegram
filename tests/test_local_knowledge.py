@@ -3,10 +3,19 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from app.db.database import Database
 from app.core.config import Settings
 from app.core.identity import BotIdentity
 from app.knowledge.retrieval import LocalKnowledgeResponder, is_question_like
 from app.modules.chat.module import ChatModule
+
+
+@pytest.fixture
+async def database():
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    yield database
+    await database.close()
 
 
 def test_question_detection_handles_common_spanish_questions() -> None:
