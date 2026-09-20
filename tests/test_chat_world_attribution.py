@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from unittest.mock import AsyncMock
 
+
 import pytest
 from sqlalchemy import select
 
@@ -92,7 +93,7 @@ async def test_handle_text_persists_world_observation_after_authored_response(
         answer=answer,
     )
 
-    await module.handle_text(message)
+    await module.handle_text(message, AsyncMock())
 
     assert answers
     async with database.session() as session:
@@ -129,7 +130,7 @@ async def test_non_cari_character_chat_requires_explicit_address(database: Datab
         text="Sunna",
         answer=answer,
     )
-    await sunna.handle_text(message)
+    await sunna.handle_text(message, AsyncMock())
 
     assert answers == ["¿Sí?"]
 
@@ -179,16 +180,12 @@ async def test_chat_uses_authored_pair_scene_without_generating_a_second_indepen
     )
 
     assert module._should_handle_text(message.text) is True
-    await module.handle_text(message)
+    await module.handle_text(message, AsyncMock())
 
-    assert len(answers) == 2
+    assert len(answers) == 1
     assert answers[0] in {
         "Sunna, si quieres podemos revisarlo juntas. Sin prisa.",
         "Sunna, si querés, te muestro cómo funciona este juego.",
-    }
-    assert answers[1] in {
-        "Sí... me gustaría.",
-        "Sí. Quiero aprender.",
     }
 
 
@@ -236,11 +233,11 @@ async def test_directed_interaction_uses_persisted_relationship_count_to_rotate_
         answer=answer,
     )
 
-    await module.handle_text(message)
+    await module.handle_text(message, AsyncMock())
     first = list(answers)
 
     answers.clear()
-    await module.handle_text(message)
+    await module.handle_text(message, AsyncMock())
     second = list(answers)
 
     assert first
@@ -259,3 +256,85 @@ async def test_directed_interaction_uses_persisted_relationship_count_to_rotate_
         )
 
     assert count == 2
+
+
+
+@pytest.mark.asyncio
+async def test_interaction_follow_up_uses_target_identity_transport_and_forum_thread(database: Database) -> None:
+    from app.core.config import Settings
+
+    source_answers: list[str] = []
+    target_sent: list[tuple[int, str, int | None]] = []
+
+    class FakeSession:
+        async def close(self) -> None:
+            return None
+
+    class FakeTargetBot:
+        def __init__(self) -> None:
+            self.session = FakeSession()
+
+        async def send_message(self, chat_id: int, text: str, message_thread_id: int | None = None) -> None:
+            target_sent.append((chat_id, text, message_thread_id))
+
+    module = ChatModule(
+        database,
+        identity=BotIdentity.CAMI,
+        settings=Settings(bot_token_sunna="sunna-test-token"),
+        bot_factory=lambda token: FakeTargetBot(),
+    )
+
+    async def answer(text: str) -> None:
+        source_answers.append(text)
+
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=42),
+        chat=SimpleNamespace(id=-100, type="supergroup"),
+        message_thread_id=1234,
+        text="Cami y Sunna, una pregunta",
+        answer=answer,
+    )
+
+    await module.handle_text(message, AsyncMock())
+
+    assert len(source_answers) == 1
+    assert source_answers[0] in {
+        "Sunna, si quieres podemos revisarlo juntas. Sin prisa.",
+        "Sunna, si querés, te muestro cómo funciona este juego.",
+    }
+    assert target_sent
+    assert target_sent[0][0] == -100
+    assert target_sent[0][2] == 1234
+    assert target_sent[0][1] in {
+        "Sí... me gustaría.",
+        "Sí. Quiero aprender.",
+    }
+
+
+@pytest.mark.asyncio
+async def test_missing_partner_token_does_not_fake_a_second_speaker_message(database: Database) -> None:
+    source_answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        source_answers.append(text)
+
+    module = ChatModule(database, identity=BotIdentity.CAMI)
+
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=42),
+        chat=SimpleNamespace(id=-100, type="supergroup"),
+        text="Cami y Sunna, una pregunta",
+        answer=answer,
+    )
+
+    await module.handle_text(message, AsyncMock())
+
+    assert len(source_answers) == 1
+
+    async with database.session() as session:
+        rows = list(
+            await session.scalars(
+                select(WorldUsageStat).where(WorldUsageStat.entry_type == "relationship")
+            )
+        )
+    assert rows == []
