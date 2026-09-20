@@ -3,14 +3,17 @@ from __future__ import annotations
 import hashlib
 from html import escape
 
+from aiogram import F
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
 from app.core.identity import BotIdentity
+from app.core.config import Settings
 from app.core.module import BotModule
 from app.core.time import world_now
 from app.db.database import Database
 from app.services.world import WorldService
+from app.ui.cafe_keyboards import cafe_menu_keyboard
 
 
 CAFE_MENU: tuple[tuple[str, str], ...] = (
@@ -38,16 +41,26 @@ class CafeModule(BotModule):
 
     name = "cafe"
 
-    def __init__(self, database: Database, timezone_name: str = "America/Argentina/Buenos_Aires") -> None:
+    def __init__(
+        self,
+        database: Database,
+        timezone_name: str = "America/Argentina/Buenos_Aires",
+        settings: Settings | None = None,
+    ) -> None:
         super().__init__()
         self.database = database
         self.timezone_name = timezone_name
+        self.settings = settings or Settings(bot_world_timezone=timezone_name)
         self.world = WorldService()
 
     def setup(self) -> None:
         self.router.message.register(self.cafe, Command("cafe"))
         self.router.message.register(self.cafe, Command("menu"))
         self.router.message.register(self.recommendation, Command("recomendacion"))
+        self.router.callback_query.register(
+            self.recommendation_callback,
+            F.data == "cafe:recommendation",
+        )
 
     async def _observe(self, action_key: str, message: Message) -> None:
         if message.from_user is None:
@@ -82,8 +95,18 @@ class CafeModule(BotModule):
                 "📚 El archivo de material se consulta con Cami.",
             )
         )
-        await message.answer("\n".join(lines))
+        await message.answer(
+            "\n".join(lines),
+            reply_markup=cafe_menu_keyboard(self.settings),
+        )
         await self._observe("cafe_menu", message)
+
+    async def recommendation_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None or callback.from_user is None:
+            await callback.answer("No pude abrir la recomendación.", show_alert=True)
+            return
+        await self.recommendation(callback.message)
+        await callback.answer()
 
     async def recommendation(self, message: Message) -> None:
         day_key = world_now(self.timezone_name).date().isoformat()
