@@ -51,6 +51,10 @@ ENV_DEFAULTS = {
     "MASTER_TELEGRAM_ID": "0",
     "MASTER_USERNAME": "",
     "BASE_GROUP_CHAT_ID": "0",
+    "HUMAN_VERIFICATION_TIMEOUT_SECONDS": "120",
+    "HUMAN_VERIFICATION_RAID_WINDOW_SECONDS": "60",
+    "HUMAN_VERIFICATION_RAID_THRESHOLD": "5",
+    "HUMAN_VERIFICATION_RAID_TIMEOUT_SECONDS": "45",
 }
 
 AI_FIELDS = (
@@ -157,6 +161,42 @@ class BotLauncher(tk.Tk):
             access_box,
             text="Vacío = ningún grupo autorizado. Los IDs se validan nuevamente en el runtime.",
         ).grid(row=3, column=0, columnspan=2, sticky="w", padx=5, pady=(0, 3))
+
+        verification = ttk.LabelFrame(outer, text="Chie · verificación humana / anti-raid", padding=14)
+        verification.pack(fill="x", pady=(12, 0))
+        verification.columnconfigure(1, weight=1)
+        self.verification_timeout_var = tk.StringVar(
+            value=values.get("HUMAN_VERIFICATION_TIMEOUT_SECONDS", "120") or "120"
+        )
+        self.verification_raid_window_var = tk.StringVar(
+            value=values.get("HUMAN_VERIFICATION_RAID_WINDOW_SECONDS", "60") or "60"
+        )
+        self.verification_raid_threshold_var = tk.StringVar(
+            value=values.get("HUMAN_VERIFICATION_RAID_THRESHOLD", "5") or "5"
+        )
+        self.verification_raid_timeout_var = tk.StringVar(
+            value=values.get("HUMAN_VERIFICATION_RAID_TIMEOUT_SECONDS", "45") or "45"
+        )
+        ttk.Label(verification, text="TTL normal (segundos)").grid(row=0, column=0, sticky="w", padx=5, pady=4)
+        ttk.Entry(verification, textvariable=self.verification_timeout_var, width=12).grid(
+            row=0, column=1, sticky="w", padx=5, pady=4
+        )
+        ttk.Label(verification, text="Ventana anti-raid (segundos)").grid(row=1, column=0, sticky="w", padx=5, pady=4)
+        ttk.Entry(verification, textvariable=self.verification_raid_window_var, width=12).grid(
+            row=1, column=1, sticky="w", padx=5, pady=4
+        )
+        ttk.Label(verification, text="Umbral de entradas").grid(row=2, column=0, sticky="w", padx=5, pady=4)
+        ttk.Entry(verification, textvariable=self.verification_raid_threshold_var, width=12).grid(
+            row=2, column=1, sticky="w", padx=5, pady=4
+        )
+        ttk.Label(verification, text="TTL durante oleada (segundos)").grid(row=3, column=0, sticky="w", padx=5, pady=4)
+        ttk.Entry(verification, textvariable=self.verification_raid_timeout_var, width=12).grid(
+            row=3, column=1, sticky="w", padx=5, pady=4
+        )
+        ttk.Label(
+            verification,
+            text="Chie restringe al entrar. Al vencer o responder 'Sí, soy un bot', expulsa y desbanea.",
+        ).grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=(6, 2))
 
         ai_box = ttk.LabelFrame(outer, text="IA opcional", padding=14)
         ai_box.pack(fill="x", pady=(16, 0))
@@ -364,6 +404,10 @@ class BotLauncher(tk.Tk):
             "AUTHORIZED_CHAT_IDS": self.authorized_chats_var.get().strip(),
             "ALLOW_ADMIN_PRIVATE_CHAT": "true" if self.allow_admin_private_var.get() else "false",
             "ALLOW_USER_PRIVATE_CHAT": "true" if self.allow_user_private_var.get() else "false",
+            "HUMAN_VERIFICATION_TIMEOUT_SECONDS": self.verification_timeout_var.get().strip() or "120",
+            "HUMAN_VERIFICATION_RAID_WINDOW_SECONDS": self.verification_raid_window_var.get().strip() or "60",
+            "HUMAN_VERIFICATION_RAID_THRESHOLD": self.verification_raid_threshold_var.get().strip() or "5",
+            "HUMAN_VERIFICATION_RAID_TIMEOUT_SECONDS": self.verification_raid_timeout_var.get().strip() or "45",
             "BOT_IDENTITY": "cari",
             "AI_ENABLED": "true" if self.ai_global_var.get() else "false",
         })
