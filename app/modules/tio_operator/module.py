@@ -11,7 +11,6 @@ from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.module import BotModule
 from app.db.database import Database
-from app.db.models import TioOperatorRequest
 from app.services.tio_operator import TioOperatorService
 from app.ui.control_keyboards import tio_operator_request_keyboard
 
@@ -30,7 +29,10 @@ class TioOperatorModule(BotModule):
         self.service = TioOperatorService()
 
     def setup(self) -> None:
-        self.router.message.register(self.pending_command, Command("tio_pendientes"))
+        self.router.message.register(
+            self.pending_command,
+            Command("tio_pendientes"),
+        )
         self.router.message.register(
             self.capture_message,
             F.text.func(self._should_capture),
@@ -68,23 +70,28 @@ class TioOperatorModule(BotModule):
                 await message.answer("📭 No hay solicitudes pendientes para Tío Otaku.")
                 return
 
-            lines = ["📨 <b>Bandeja pendiente de Tío Otaku</b>", ""]
+            lines = [
+                "📨 <b>Bandeja pendiente de Tío Otaku</b>",
+                "",
+            ]
             for request in requests:
                 user, chat = await self.service.context(session, request)
-                user_name = escape(
-                    user.first_name or str(request.user_id)
-                ) if user else str(request.user_id)
-                chat_name = escape(
-                    chat.title or str(request.chat_id)
-                ) if chat else str(request.chat_id)
+                user_name = (
+                    escape(user.first_name or str(request.user_id))
+                    if user
+                    else str(request.user_id)
+                )
+                chat_name = (
+                    escape(chat.title or str(request.chat_id))
+                    if chat
+                    else str(request.chat_id)
+                )
                 lines.append(
-                    f"• <b>#{request.id}</b> · {user_name} · {chat_name}
-"
+                    f"• <b>#{request.id}</b> · {user_name} · {chat_name}\n"
                     f"  {escape(request.text[:500])}"
                 )
 
-        await message.answer("
-".join(lines))
+        await message.answer("\n".join(lines))
 
     async def capture_message(self, message: Message, bot: Bot) -> None:
         if (
@@ -138,6 +145,7 @@ class TioOperatorModule(BotModule):
         if len(parts) != 4 or parts[2] not in {"ack", "resolve"}:
             await callback.answer("Solicitud inválida.", show_alert=True)
             return
+
         try:
             request_id = int(parts[3])
         except ValueError:
@@ -151,8 +159,12 @@ class TioOperatorModule(BotModule):
                 request_id=request_id,
                 status=status,
             )
+
         if not changed:
-            await callback.answer("Solicitud ya procesada o inexistente.", show_alert=True)
+            await callback.answer(
+                "Solicitud ya procesada o inexistente.",
+                show_alert=True,
+            )
             return
 
         label = "recibida" if status == "acknowledged" else "resuelta"
