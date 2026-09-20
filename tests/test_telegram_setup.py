@@ -10,7 +10,7 @@ def test_group_add_link_is_bot_specific_and_encodes_role_permissions() -> None:
     link = build_group_add_link("@ChieBot", role="chie")
 
     assert link.startswith("https://t.me/ChieBot?startgroup=bottelegram")
-    assert "admin=delete_messages%2Brestrict_members%2Bmanage_topics" in link
+    assert "admin=delete_messages+restrict_members+manage_topics" in link
 
 
 def test_sunna_group_add_link_does_not_request_admin_rights() -> None:
