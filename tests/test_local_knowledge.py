@@ -134,3 +134,45 @@ def test_all_identities_expose_role_specific_local_answers() -> None:
         assert result is not None, identity
         assert result.article.identity is identity
 
+
+@pytest.mark.asyncio
+async def test_unknown_cari_question_creates_aggregate_knowledge_gap(database) -> None:
+    module = ChatModule(
+        database,
+        identity=BotIdentity.CARI,
+        settings=Settings(ai_enabled=False),
+    )
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=43),
+        chat=SimpleNamespace(id=100, type="supergroup"),
+        text="¿Cuál es el horario del tren lunar?",
+        answer=answer,
+    )
+
+    await module.handle_text(message, AsyncMock())
+
+    assert answers
+    async with database.session() as session:
+        world_gap = await module.world.usage_count(
+            session,
+            bot_identity=BotIdentity.CARI,
+            entry_type="knowledge",
+            entry_key="unresolved_question",
+        )
+        user_gap = await module.world.usage_count(
+            session,
+            bot_identity=BotIdentity.CARI,
+            entry_type="knowledge",
+            entry_key="unresolved_question",
+            scope_type="user",
+            scope_id="43",
+        )
+
+    assert world_gap == 1
+    assert user_gap == 1
+
