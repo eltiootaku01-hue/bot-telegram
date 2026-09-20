@@ -292,3 +292,75 @@ async def test_cami_photo_reuses_asset_when_file_id_changes_but_unique_id_matche
     assert rows[0].telegram_unique_id == "unique-1"
     assert any("biblioteca" in value for value in answers)
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_cami_request_queue_dashboard_aggregates_authorized_communities(tmp_path) -> None:
+    from types import SimpleNamespace
+
+    from app.db.community_models import SetupSession
+    from app.db.models import Chat, FanRequest, User
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'cami-queue-dashboard.db'}")
+    await database.create_schema()
+    module = CamiMediaModule(
+        database,
+        Settings(
+            master_telegram_id=7,
+            authorized_chat_ids="-100,-200",
+        ),
+    )
+
+    async with database.session() as session:
+        session.add_all(
+            [
+                User(id=7, first_name="Master"),
+                Chat(id=-100, type="supergroup", title="One"),
+                Chat(id=-200, type="supergroup", title="Two"),
+                SetupSession(
+                    user_id=7,
+                    chat_id=-100,
+                    bot_identity="chie",
+                    status="configured",
+                ),
+                SetupSession(
+                    user_id=7,
+                    chat_id=-200,
+                    bot_identity="chie",
+                    status="configured",
+                ),
+                FanRequest(
+                    user_id=7,
+                    chat_id=-100,
+                    description="one",
+                    points_cost=50,
+                    status="pending_admin",
+                ),
+                FanRequest(
+                    user_id=7,
+                    chat_id=-200,
+                    description="two",
+                    points_cost=50,
+                    status="processing",
+                ),
+            ]
+        )
+
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=7),
+        from_user=SimpleNamespace(id=7),
+        answer=answer,
+    )
+
+    await module.request_queue_command(message)
+
+    assert answers
+    assert "Pendientes: <b>1</b>" in answers[0]
+    assert "Procesando: <b>1</b>" in answers[0]
+    assert "Comunidades activas: <b>2</b>" in answers[0]
+    await database.close()
