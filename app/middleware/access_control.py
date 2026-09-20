@@ -9,6 +9,10 @@ from app.core.config import Settings
 
 
 class ChatAccessMiddleware(BaseMiddleware):
+    """Fail-closed Telegram access gate with Chie onboarding exception."""
+
+    BOOTSTRAP_FLAG = "chat_access_bootstrap"
+
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
@@ -24,48 +28,64 @@ class ChatAccessMiddleware(BaseMiddleware):
 
         if update is None or self._is_allowed(update):
             return await handler(event, data)
+
+        if await self._allow_chie_bootstrap(update, data):
+            data[self.BOOTSTRAP_FLAG] = True
+            return await handler(event, data)
+
         return None
 
     def _is_allowed(self, update: Update) -> bool:
+        membership = update.chat_member or update.chat_join_request or update.my_chat_member
+        if membership is not None:
+            return self.settings.is_chat_allowed(
+                membership.chat.id,
+                membership.chat.type,
+                getattr(getattr(membership, "from_user", None), "id", None),
+            )
+
         callback = update.callback_query
         if callback is not None and callback.message is not None:
-            return self.settings.is_chat_allowed(
-                callback.message.chat.id,
-                callback.message.chat.type,
-                callback.from_user.id if callback.from_user is not None else None,
+            message = callback.message
+            actor = callback.from_user
+        else:
+            message = (
+                update.message
+                or update.edited_message
+                or update.channel_post
+                or update.edited_channel_post
             )
+            actor = message.from_user if message is not None else None
 
-        message = update.message or update.edited_message
-        if message is not None:
-            user = message.from_user
-            return self.settings.is_chat_allowed(
-                message.chat.id,
-                message.chat.type,
-                user.id if user is not None else None,
-            )
+        if message is None:
+            return False
 
-        member_update = update.chat_member
-        if member_update is not None:
-            return self.settings.is_chat_allowed(
-                member_update.chat.id,
-                member_update.chat.type,
-                member_update.from_user.id if member_update.from_user is not None else None,
-            )
+        return self.settings.is_chat_allowed(
+            message.chat.id,
+            message.chat.type,
+            actor.id if actor is not None else None,
+        )
 
-        my_member_update = update.my_chat_member
-        if my_member_update is not None:
-            return self.settings.is_chat_allowed(
-                my_member_update.chat.id,
-                my_member_update.chat.type,
-                my_member_update.from_user.id if my_member_update.from_user is not None else None,
-            )
+    async def _allow_chie_bootstrap(self, update: Update, data: dict) -> bool:
+        """Allow only the exact onboarding command from a real group administrator."""
+        message = update.message
+        if message is None or message.chat.type not in {"group", "supergroup"}:
+            return False
+        if message.from_user is None or not message.text:
+            return False
 
-        join_request = update.chat_join_request
-        if join_request is not None:
-            return self.settings.is_chat_allowed(
-                join_request.chat.id,
-                join_request.chat.type,
-                join_request.from_user.id if join_request.from_user is not None else None,
-            )
+        command = message.text.strip().split(maxsplit=1)[0].casefold()
+        if command.split("@", 1)[0] != "/configurar":
+            return False
 
-        return False
+        bot = data.get("bot")
+        if bot is None:
+            return False
+
+        try:
+            member = await bot.get_chat_member(message.chat.id, message.from_user.id)
+        except Exception:
+            return False
+        status = getattr(member, "status", None)
+        status = getattr(status, "value", status)
+        return str(status).casefold() in {"administrator", "creator"}
