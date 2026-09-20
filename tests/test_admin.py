@@ -41,27 +41,34 @@ async def test_rare_approval_notifies_player_after_approval() -> None:
             [
                 User(id=7, first_name="Jugador"),
                 Chat(id=-100, type="supergroup", title="Community"),
-                GameProfile(user_id=7, chat_id=-100, points=10),
-                RareDropApproval(
-                    id=1,
-                    character_id="taiga",
-                    rarity=Rarity.B.value,
-                    target_user_id=7,
-                    target_chat_id=-100,
-                    status="pending",
-                ),
-                GameGachaRoll(
-                    id=1,
-                    roll_id="approval-roll",
-                    user_id=7,
-                    chat_id=-100,
-                    rolled_rarity=Rarity.B.value,
-                    character_id="taiga",
-                    approval_id=1,
-                    granted=False,
-                ),
             ]
         )
+        await session.flush()
+        session.add(GameProfile(user_id=7, chat_id=-100, points=10))
+        session.add(
+            RareDropApproval(
+                id=1,
+                character_id="taiga",
+                rarity=Rarity.B.value,
+                target_user_id=7,
+                target_chat_id=-100,
+                status="pending",
+            )
+        )
+        await session.flush()
+        session.add(
+            GameGachaRoll(
+                id=1,
+                roll_id="approval-roll",
+                user_id=7,
+                chat_id=-100,
+                rolled_rarity=Rarity.B.value,
+                character_id="taiga",
+                approval_id=1,
+                granted=False,
+            )
+        )
+        await session.flush()
 
     bot = AsyncMock()
     module = AdminModule(database, Settings(admin_user_id=77))
