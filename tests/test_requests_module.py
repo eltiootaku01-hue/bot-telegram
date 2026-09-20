@@ -19,6 +19,11 @@ async def test_my_requests_shows_only_requester_history(tmp_path) -> None:
                 User(id=7, first_name="Requester"),
                 User(id=8, first_name="Other"),
                 Chat(id=-100, type="supergroup", title="Community"),
+            ]
+        )
+        await session.flush()
+        session.add_all(
+            [
                 FanRequest(
                     user_id=7,
                     chat_id=-100,
