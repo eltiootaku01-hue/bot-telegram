@@ -26,7 +26,10 @@ def combat_keyboard() -> InlineKeyboardMarkup:
 def gacha_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="🎲 Tirar gacha", callback_data="game:gacha:roll"))
-    builder.row(InlineKeyboardButton(text="🎒 Inventario", callback_data="game:inventory:open"))
+    builder.row(
+        InlineKeyboardButton(text="📚 Ver waifus", callback_data="game:waifus:page:1"),
+        InlineKeyboardButton(text="🎒 Inventario", callback_data="game:inventory:open"),
+    )
     return builder.as_markup()
 
 
@@ -56,6 +59,23 @@ def fusion_keyboard(character_id: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="✨ Evolucionar", callback_data=f"game:fusion:{character_id}"))
     return builder.as_markup()
+
+def waifu_catalog_keyboard(page: int, total_pages: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    navigation = []
+    if page > 1:
+        navigation.append(
+            InlineKeyboardButton(text="⬅️", callback_data=f"game:waifus:page:{page - 1}")
+        )
+    if page < total_pages:
+        navigation.append(
+            InlineKeyboardButton(text="➡️", callback_data=f"game:waifus:page:{page + 1}")
+        )
+    if navigation:
+        builder.row(*navigation)
+    builder.row(InlineKeyboardButton(text="🎲 Volver al gacha", callback_data="game:gacha:open"))
+    return builder.as_markup()
+
 
 def mystery_keyboard(round_id: int, options: tuple[str, ...]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
