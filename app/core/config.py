@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.2:1b"
     ollama_base_url: str = "http://127.0.0.1:11434"
 
+    # Optional outbound Meta messaging adapters.
+    meta_graph_api_version: str = "v26.0"
+    whatsapp_access_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    messenger_page_access_token: str = ""
+    messenger_page_id: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", case_sensitive=False)
 
     @field_validator("bot_world_timezone")
