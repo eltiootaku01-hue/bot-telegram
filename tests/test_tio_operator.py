@@ -513,3 +513,56 @@ async def test_operator_context_callback_does_not_change_request_state(database:
 
     assert stored is not None
     assert stored.status == "pending"
+
+
+@pytest.mark.asyncio
+async def test_operator_history_is_read_only_and_exposes_direct_navigation(database: Database) -> None:
+    service = TioOperatorService()
+    module = TioOperatorModule(
+        database,
+        Settings(admin_user_id=77, authorized_chat_ids="-100"),
+    )
+
+    async with database.session() as session:
+        first = await service.capture(
+            session,
+            chat_id=-100,
+            user_id=7,
+            source_message_id=60,
+            text="Tío Otaku, necesito contexto histórico.",
+        )
+        second = await service.capture(
+            session,
+            chat_id=-100,
+            user_id=8,
+            source_message_id=61,
+            text="Tío, otra consulta.",
+        )
+        await service.decide(
+            session,
+            request_id=second.request.id,
+            status="resolved",
+        )
+
+    message = _owner_message("/tio_historial")
+    await module.history_command(message)
+
+    assert message.answer.await_count == 1
+    call = message.answer.await_args
+    rendered = call.args[0]
+    keyboard = call.kwargs["reply_markup"].inline_keyboard
+    callback_data = [
+        button.callback_data
+        for row in keyboard
+        for button in row
+    ]
+
+    assert f"#{second.request.id}" in rendered
+    assert f"#{first.request.id}" in rendered
+    assert f"tio:request:view:{second.request.id}" in callback_data
+    assert f"tio:request:view:{first.request.id}" in callback_data
+
+    async with database.session() as session:
+        rows = list(await session.scalars(select(TioOperatorRequest).order_by(TioOperatorRequest.id.asc())))
+
+    assert [row.status for row in rows] == ["pending", "resolved"]
