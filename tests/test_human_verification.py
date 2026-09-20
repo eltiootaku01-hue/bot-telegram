@@ -256,3 +256,42 @@ async def test_begin_rejects_unreasonably_short_timeout(database: Database) -> N
                 default_permissions_json="{}",
                 timeout_seconds=29,
             )
+
+
+@pytest.mark.asyncio
+async def test_verification_decision_cannot_win_after_deadline(database: Database) -> None:
+    service = HumanVerificationService()
+    base = datetime(2026, 9, 20, 18, 0, 0)
+
+    async with database.session() as session:
+        await service.begin(
+            session,
+            chat_id=-100,
+            user_id=10,
+            prompt_message_id=15,
+            default_permissions_json="{}",
+            timeout_seconds=30,
+            now=base,
+        )
+
+    async with database.session() as session:
+        decided = await service.decide(
+            session,
+            chat_id=-100,
+            user_id=10,
+            status="verified",
+            now=base + timedelta(seconds=31),
+        )
+
+    assert decided is None
+
+    async with database.session() as session:
+        row = await session.scalar(
+            select(HumanVerification).where(
+                HumanVerification.chat_id == -100,
+                HumanVerification.user_id == 10,
+            )
+        )
+
+    assert row is not None
+    assert row.status == "pending"
