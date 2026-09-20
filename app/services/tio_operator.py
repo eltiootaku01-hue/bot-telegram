@@ -78,7 +78,7 @@ class TioOperatorService:
             update(TioOperatorRequest)
             .where(
                 TioOperatorRequest.id == request_id,
-                TioOperatorRequest.status.in_(("pending", "acknowledged", "responding")),
+                TioOperatorRequest.status.in_(("pending", "acknowledged")),
             )
             .values(status="responding", updated_at=utc_now())
         )
