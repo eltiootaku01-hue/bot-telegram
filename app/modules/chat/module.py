@@ -44,7 +44,11 @@ class ChatModule(BotModule):
             return bool(normalized == "bot" or intent)
         return (
             self.characters.target_identity(text) is self.identity
-            and (intent is not None or normalized == self.identity.value)
+            and (
+                intent is not None
+                or normalized == self.identity.value
+                or len(self.characters.target_identities(text)) >= 2
+            )
         )
 
     async def _observe_scene(
