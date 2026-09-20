@@ -65,6 +65,7 @@ class HumanVerification(Base):
     prompt_message_id: Mapped[int | None] = mapped_column(BigInteger)
     default_permissions_json: Mapped[str] = mapped_column(String(4000), default="{}")
     prompted_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
