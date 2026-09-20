@@ -24,7 +24,8 @@ def test_operator_address_requires_explicit_call() -> None:
 
     assert module._should_capture("Tío Otaku, necesito hablar con vos.")
     assert module._should_capture("tío, vení un segundo.")
-    assert module._should_capture("¿Dónde está Tío Otaku?")
+    assert module._should_capture("Oye, Tío Otaku, vení un segundo.")
+    assert not module._should_capture("¿Dónde está Tío Otaku?")
     assert not module._should_capture("Mi tío vive acá.")
     assert not module._should_capture("El tío de Juan llegó.")
 
