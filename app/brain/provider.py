@@ -215,7 +215,8 @@ class BrainClient:
             {"role": "user", "parts": [{"text": item[:800]}]}
             for item in request.recent_context[-8:]
         ]
-        contents.append({"role": "user", "parts": [{"text": request.user_text[:1500]}]})
+        max_user_chars = max(1, request.max_user_chars)
+        contents.append({"role": "user", "parts": [{"text": request.user_text[:max_user_chars]}]})
         payload = {
             "system_instruction": {"parts": [{"text": self._system_prompt(request)}]},
             "contents": contents,
