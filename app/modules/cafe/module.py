@@ -198,6 +198,46 @@ class CafeModule(BotModule):
         await self._observe("mystery_open", message)
 
 
+    async def context_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None or callback.from_user is None:
+            await callback.answer("No pude abrir el momento.", show_alert=True)
+            return
+        await self.context_command(callback.message, user_id=callback.from_user.id)
+        await callback.answer()
+
+    async def context_command(
+        self,
+        message: Message,
+        *,
+        user_id: int | None = None,
+    ) -> None:
+        async with self.database.session() as session:
+            moment = await self.context.moment(
+                session,
+                chat_id=message.chat.id,
+                timezone_name=self.timezone_name,
+            )
+
+        await message.answer(
+            f"🌤️ <b>{moment.speaker.value.title()}</b>\n\n"
+            f"{moment.text}\n\n"
+            "Momento contextual del Café; refleja el estado actual y no modifica el canon."
+        )
+
+        actor_id = user_id or (message.from_user.id if message.from_user else 0)
+        if actor_id == 0:
+            return
+        try:
+            async with self.database.session() as session:
+                await self.world.observe_action(
+                    session,
+                    bot_identity=moment.speaker,
+                    action_key="context_moment",
+                    user_id=actor_id,
+                    chat_id=message.chat.id,
+                )
+        except Exception:
+            pass
     async def event_callback(self, callback: CallbackQuery) -> None:
         if callback.message is None or callback.from_user is None:
             await callback.answer("No pude abrir el evento.", show_alert=True)
