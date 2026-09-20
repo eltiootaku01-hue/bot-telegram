@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -134,4 +135,35 @@ async def test_cafe_event_persists_and_reuses_daily_state() -> None:
     assert rows[0].status == "published"
     assert rows[0].message_id == 501
 
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_cafe_event_callback_attributes_observation_to_clicking_user() -> None:
+    from types import SimpleNamespace
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    module = CafeModule(database)
+
+    observed: list[tuple[str, int]] = []
+
+    async def fake_event_command(message, *, user_id=None):
+        observed.append((str(user_id), message.chat.id))
+
+    module.event_command = fake_event_command
+
+    callback = SimpleNamespace(
+        message=SimpleNamespace(
+            chat=SimpleNamespace(id=-100, type="supergroup"),
+            from_user=SimpleNamespace(id=999, is_bot=True),
+        ),
+        from_user=SimpleNamespace(id=7, is_bot=False),
+        answer=AsyncMock(),
+    )
+
+    await module.event_callback(callback)
+
+    assert observed == [("7", -100)]
+    callback.answer.assert_awaited_once()
     await database.close()
