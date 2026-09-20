@@ -73,6 +73,7 @@ class SystemModule(BotModule):
                 BotCommand(command="start", description="Presentación de Cami"),
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
                 BotCommand(command="catalogo", description="Buscar material publicado"),
+                BotCommand(command="anime", description="Buscar fichas locales de anime/manga"),
                 BotCommand(command="recuperar_publicaciones", description="Revisar entregas ambiguas"),
             ),
             BotIdentity.CHIE: (
