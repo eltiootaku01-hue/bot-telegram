@@ -112,6 +112,6 @@ async def test_normal_gacha_result_includes_authored_sunna_reaction(tmp_path) ->
     await module.gacha_roll(callback)
 
     text = callback.answer.await_args.args[0]
-    assert "<b>Sunna:</b>" in text
+    assert "🐍 Sunna:" in text
     assert any(value in text for value in ("Bien. Lo hiciste.", "Ganaste.", "Fue buena jugada.", "Me alegra."))
     await database.close()
