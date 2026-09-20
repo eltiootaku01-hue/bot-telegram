@@ -10,6 +10,7 @@ from app.services.telegram_setup import (
     TelegramChatCheck,
     build_group_add_link,
     build_private_link,
+    build_start_link,
     check_bot_in_chat,
     required_group_rights,
     verify_bot_token,
