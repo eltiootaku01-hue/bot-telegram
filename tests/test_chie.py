@@ -114,6 +114,9 @@ async def test_chie_group_setup_message_exposes_community_id() -> None:
             return Member()
 
     class FakeSession:
+        def add(self, value) -> None:
+            return None
+
         async def scalar(self, statement):
             return None
 
