@@ -20,8 +20,6 @@ CHARACTERS: dict[str, Character] = {
     for definition in ALL_WAIFUS
 }
 
-# Existing project-original starter character. It is intentionally kept in the
-# playable catalog even though the external popularity snapshot does not rank her.
 CHARACTERS["taiga"] = Character(
     id="taiga",
     name="Taiga Aisaka",
@@ -36,8 +34,6 @@ CHARACTERS["taiga"] = Character(
     popularity_source="Catálogo inicial del proyecto; pendiente de ranking externo.",
 )
 
-# Public wild encounters stop at class C. Higher-rarity candidates remain
-# exceptional gacha/approval content.
 WILD_RARITIES = frozenset({Rarity.D, Rarity.C})
 
 
@@ -52,3 +48,8 @@ def wild_characters() -> tuple[Character, ...]:
         for character in CHARACTERS.values()
         if character.rarity in WILD_RARITIES
     )
+
+
+def catalog_size() -> int:
+    """Return the number of playable characters currently registered."""
+    return len(CHARACTERS)
