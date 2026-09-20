@@ -21,6 +21,7 @@ from app.core.jobs import JobQueue
 from app.core.module import BotModule
 from app.core.time import local_to_utc, utc_now
 from app.services.community import CommunityResolver
+from app.services.requests import RequestService
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import FanRequest, MediaAsset, RequestStatus
@@ -56,6 +57,7 @@ class CamiMediaModule(BotModule):
         self.community = CommunityResolver(self.settings)
         self.anime = AnimeCatalogService()
         self.library = MediaLibrary()
+        self.requests = RequestService()
 
     async def _observe_action(
         self,
@@ -82,6 +84,7 @@ class CamiMediaModule(BotModule):
         self.router.message.register(self.catalog_command, Command("catalogo"))
         self.router.message.register(self.anime_command, Command("anime"))
         self.router.message.register(self.anime_detail_command, Command("anime_ficha"))
+        self.router.message.register(self.request_queue_command, Command("cola_pedidos"))
         self.router.message.register(
             self.receive_schedule_or_tags,
             CamiMediaStates.waiting_tags,
@@ -441,6 +444,62 @@ class CamiMediaModule(BotModule):
             message.from_user.id,
             message.chat.id,
         )
+
+    async def request_queue_command(self, message: Message) -> None:
+        """Show Cami's durable request queue without exposing private user data publicly."""
+        if not self._is_media_staff(message):
+            return
+
+        async with self.database.session() as session:
+            communities = await self.community.configured(session)
+            summaries = [
+                await self.requests.queue_summary(session, chat_id=chat_id)
+                for chat_id in communities
+            ]
+
+        if not summaries:
+            await message.answer(
+                "📭 No hay comunidades autorizadas configuradas para la cola de pedidos."
+            )
+            await self._observe_action("request_queue_empty", message.from_user.id)
+            return
+
+        pending = sum(summary.pending for summary in summaries)
+        processing = sum(summary.processing for summary in summaries)
+        overdue = sum(summary.overdue for summary in summaries)
+        completed_recent = sum(summary.completed_recent for summary in summaries)
+        oldest = min(
+            (
+                summary.oldest_pending_at
+                for summary in summaries
+                if summary.oldest_pending_at is not None
+            ),
+            default=None,
+        )
+        age_text = "sin pedidos pendientes"
+        if oldest is not None:
+            age_minutes = max(0, int((utc_now() - oldest).total_seconds() // 60))
+            if age_minutes < 60:
+                age_text = f"{age_minutes} min"
+            elif age_minutes < 1440:
+                age_text = f"{age_minutes // 60} h {age_minutes % 60} min"
+            else:
+                age_text = f"{age_minutes // 1440} d"
+
+        lines = [
+            "📋 <b>Cola operativa de Cami</b>",
+            "",
+            f"🟡 Pendientes: <b>{pending}</b>",
+            f"🔵 Procesando: <b>{processing}</b>",
+            f"🔴 Vencidos: <b>{overdue}</b>",
+            f"🟢 Completados hoy: <b>{completed_recent}</b>",
+            f"⏱️ Antigüedad del pedido pendiente más antiguo: <b>{age_text}</b>",
+            "",
+            f"🏠 Comunidades activas: <b>{len(communities)}</b>",
+            "La cola usa estados persistentes; reiniciar Cami no borra los pedidos.",
+        ]
+        await message.answer("\n".join(lines))
+        await self._observe_action("request_queue_view", message.from_user.id)
 
     async def recovery_command(self, message: Message) -> None:
         if not self._is_media_staff(message):
