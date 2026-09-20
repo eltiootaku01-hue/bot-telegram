@@ -168,3 +168,51 @@ async def test_create_paid_concurrent_duplicate_source_is_idempotent(tmp_path) -
         await database_a.close()
         await database_b.close()
         await database.close()
+
+
+@pytest.mark.asyncio
+async def test_request_queue_summary_reports_pending_processing_overdue_and_completed(database: Database) -> None:
+    from datetime import timedelta
+
+    await seed_profile(database, user_id=20, chat_id=200, points=200)
+    now = __import__("app.core.time", fromlist=["utc_now"]).utc_now()
+
+    async with database.session() as session:
+        session.add_all(
+            [
+                FanRequest(
+                    user_id=20,
+                    chat_id=200,
+                    description="pending",
+                    points_cost=50,
+                    status="pending_admin",
+                    due_at=now - timedelta(hours=2),
+                ),
+                FanRequest(
+                    user_id=20,
+                    chat_id=200,
+                    description="processing",
+                    points_cost=50,
+                    status="processing",
+                    due_at=now + timedelta(hours=1),
+                ),
+                FanRequest(
+                    user_id=20,
+                    chat_id=200,
+                    description="done",
+                    points_cost=50,
+                    status="completed",
+                    updated_at=now,
+                ),
+            ]
+        )
+
+    service = RequestService()
+    async with database.session() as session:
+        summary = await service.queue_summary(session, chat_id=200)
+
+    assert summary.pending == 1
+    assert summary.processing == 1
+    assert summary.overdue == 1
+    assert summary.completed_recent == 1
+    assert summary.oldest_pending_at is not None
