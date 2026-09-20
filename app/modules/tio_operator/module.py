@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from html import escape
 
 from aiogram import Bot, F
@@ -9,6 +8,7 @@ from aiogram.types import CallbackQuery, Message
 
 from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
+from app.core.operator import is_tio_addressed
 from app.core.module import BotModule
 from app.db.database import Database
 from app.db.models import TioOperatorRequest
@@ -20,8 +20,6 @@ class TioOperatorModule(BotModule):
     """Human-operator bridge; never composes a reply as Tío Otaku."""
 
     name = "tio-operator"
-
-    _ADDRESS_RE = re.compile(r"(?i)(?:^|[!?.,;:]\s*)t(?:í|i)o(?:\s+otaku)?(?=\s*(?:[,;:!?]|$))")
 
     def __init__(self, database: Database, settings: Settings | None = None) -> None:
         super().__init__()
@@ -48,8 +46,7 @@ class TioOperatorModule(BotModule):
         )
 
     def _should_capture(self, text: str) -> bool:
-        normalized = " ".join(text.strip().split())
-        return bool(normalized and self._ADDRESS_RE.search(normalized))
+        return is_tio_addressed(text)
 
     @staticmethod
     def _is_owner_private(message: Message, settings: Settings) -> bool:
