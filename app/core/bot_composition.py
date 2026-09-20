@@ -19,6 +19,7 @@ from app.modules.moderation.module import ModerationModule
 from app.modules.requests.module import RequestModule
 from app.modules.system.module import SystemModule
 from app.modules.trivia.module import TriviaModule
+from app.modules.world.module import WorldCatalogModule
 from app.modules.tio_operator.module import TioOperatorModule
 
 
@@ -35,6 +36,7 @@ def build_bot_modules(
 
     shared = (
         _spec("system", lambda: SystemModule(identity, database, settings=settings)),
+        _spec("world-catalog", lambda: WorldCatalogModule(database), *BotIdentity),
         _spec("social-runtime", lambda: SocialRuntimeModule(database, identity, settings=settings)),
     )
     identity_specific = (
