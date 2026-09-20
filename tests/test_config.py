@@ -39,3 +39,25 @@ def test_zero_media_vault_id_does_not_authorize_any_channel() -> None:
 def test_ai_curator_auto_is_disabled_by_default() -> None:
     settings = Settings()
     assert settings.ai_curator_auto is False
+
+
+def test_master_telegram_id_is_canonical_with_legacy_admin_fallback() -> None:
+    settings = Settings(master_telegram_id=777, admin_user_id=111)
+    assert settings.master_user_id == 777
+    assert settings.is_master(777) is True
+    assert settings.is_master(111) is False
+
+    legacy = Settings(master_telegram_id=0, admin_user_id=111)
+    assert legacy.master_user_id == 111
+    assert legacy.is_master(111) is True
+
+
+def test_private_access_accepts_master_when_admin_alias_is_zero() -> None:
+    settings = Settings(
+        master_telegram_id=777,
+        admin_user_id=0,
+        allow_admin_private_chat=True,
+        allow_user_private_chat=False,
+    )
+    assert settings.is_chat_allowed(777, "private", 777) is True
+    assert settings.is_chat_allowed(777, "private", 778) is False
