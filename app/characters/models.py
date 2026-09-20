@@ -19,6 +19,8 @@ class CharacterIntent(StrEnum):
     BUSY = "busy"
     QUIET = "quiet"
     CELEBRATION = "celebration"
+    GAME_SUCCESS = "game_success"
+    GAME_MISS = "game_miss"
     CONFUSION = "confusion"
 
 
