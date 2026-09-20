@@ -13,6 +13,7 @@ from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.db.database import Database
 from app.db.world_models import WorldProposal, WorldReview
+from app.services.process_catalog import built_in_catalog
 from app.services.world_curator import WorldReviewReport
 
 
@@ -103,6 +104,23 @@ class WorldCuratorAIService:
         )
 
     def _request_for_report(self, report: WorldReviewReport) -> LLMRequest:
+        catalog = built_in_catalog()
+        process_lines: list[str] = []
+        for identity in BotIdentity:
+            for process in catalog.for_identity(identity):
+                process_lines.append(
+                    f"{process.id} | {identity.value} | {process.name} | {process.category}"
+                )
+
+        system_extra = (
+            CURATOR_RULES
+            + " "
+            + "Cuando una propuesta se refiera a una capacidad operativa, solo puede apoyarse "
+              "en un process id de la siguiente lista. No inventes process ids, herramientas ni "
+              "acciones ejecutables fuera de ella:\n"
+            + "\n".join(process_lines)
+        )
+
         return LLMRequest(
             identity=BotIdentity.CHIE,
             user_text=json.dumps(
@@ -111,7 +129,7 @@ class WorldCuratorAIService:
                 separators=(",", ":"),
             ),
             persona=CURATOR_PERSONA,
-            system_extra=CURATOR_RULES,
+            system_extra=system_extra,
             max_tokens=600,
             max_user_chars=8000,
             temperature=0.2,
