@@ -79,3 +79,48 @@ def test_waifu_browser_preserves_filter_across_pages() -> None:
 
 def test_waifu_filter_parser_rejects_unknown_fields() -> None:
     assert WaifuFilter.from_code("x", "anything") is None
+
+
+def test_waifu_catalog_filter_keyboard_uses_compact_telegram_callbacks() -> None:
+    from app.ui.game_keyboards import (
+        waifu_catalog_keyboard,
+        waifu_filter_categories_keyboard,
+        waifu_filter_options_keyboard,
+    )
+
+    active_filter = WaifuFilter(WaifuFilterField.SOURCE, "recent")
+    catalog = waifu_catalog_keyboard(2, 3, active_filter)
+    callbacks = [
+        button.callback_data
+        for row in catalog.inline_keyboard
+        for button in row
+        if button.callback_data
+    ]
+    assert "game:waifus:page:3:s:recent" in callbacks
+    assert "game:waifus:filters" in callbacks
+    assert "game:waifus:clear" in callbacks
+
+    categories = waifu_filter_categories_keyboard()
+    category_callbacks = [
+        button.callback_data
+        for row in categories.inline_keyboard
+        for button in row
+        if button.callback_data
+    ]
+    assert {
+        "game:waifus:filter:e",
+        "game:waifus:filter:c",
+        "game:waifus:filter:r",
+        "game:waifus:filter:s",
+    } <= set(category_callbacks)
+
+    source_options = waifu_filter_options_keyboard("s")
+    source_callbacks = [
+        button.callback_data
+        for row in source_options.inline_keyboard
+        for button in row
+        if button.callback_data
+    ]
+    assert "game:waifus:set:s:ranker" in source_callbacks
+    assert "game:waifus:set:s:recent" in source_callbacks
+    assert "game:waifus:set:s:local" in source_callbacks
