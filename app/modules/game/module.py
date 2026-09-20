@@ -235,6 +235,7 @@ class GameModule(BotModule):
                     page.page,
                     page.total_pages,
                     page.active_filter,
+                    page.characters,
                 ),
             )
         await self._observe_action(
@@ -287,6 +288,7 @@ class GameModule(BotModule):
                     page.page,
                     page.total_pages,
                     page.active_filter,
+                    page.characters,
                 ),
             )
         await self._observe_action("waifu_catalog_page", callback.from_user.id)
