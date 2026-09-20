@@ -2,7 +2,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,15 @@ class PaidRequestResult:
     request: FanRequest
     remaining_points: int
     created: bool
+
+
+@dataclass(frozen=True, slots=True)
+class RequestQueueSummary:
+    pending: int
+    processing: int
+    overdue: int
+    completed_recent: int
+    oldest_pending_at: datetime | None
 
 
 def _is_fan_request_source_conflict(exc: IntegrityError) -> bool:
@@ -203,6 +212,87 @@ class RequestService:
             .limit(limit)
         )
         return list(result)
+
+    async def for_user(
+        self,
+        session: AsyncSession,
+        *,
+        user_id: int,
+        chat_id: int | None = None,
+        limit: int = 10,
+    ) -> list[FanRequest]:
+        if limit <= 0:
+            return []
+        statement = (
+            select(FanRequest)
+            .where(FanRequest.user_id == user_id)
+            .order_by(FanRequest.id.desc())
+            .limit(limit)
+        )
+        if chat_id is not None:
+            statement = statement.where(FanRequest.chat_id == chat_id)
+        return list(await session.scalars(statement))
+
+    async def queue_summary(
+        self,
+        session: AsyncSession,
+        *,
+        chat_id: int | None = None,
+        completed_since: datetime | None = None,
+    ) -> "RequestQueueSummary":
+        now = utc_now()
+        base = [FanRequest.chat_id == chat_id] if chat_id is not None else []
+        pending_statuses = (
+            RequestStatus.NEW.value,
+            RequestStatus.NEEDS_INFO.value,
+            RequestStatus.PENDING_ADMIN.value,
+        )
+        completed_since = completed_since or now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        pending = await session.scalar(
+            select(func.count(FanRequest.id)).where(
+                *base, FanRequest.status.in_(pending_statuses)
+            )
+        )
+        processing = await session.scalar(
+            select(func.count(FanRequest.id)).where(
+                *base, FanRequest.status == RequestStatus.PROCESSING.value
+            )
+        )
+        overdue = await session.scalar(
+            select(func.count(FanRequest.id)).where(
+                *base,
+                FanRequest.status.in_(
+                    pending_statuses
+                    + (
+                        RequestStatus.APPROVED.value,
+                        RequestStatus.SCHEDULED.value,
+                        RequestStatus.PROCESSING.value,
+                    )
+                ),
+                FanRequest.due_at.is_not(None),
+                FanRequest.due_at < now,
+            )
+        )
+        completed_recent = await session.scalar(
+            select(func.count(FanRequest.id)).where(
+                *base,
+                FanRequest.status == RequestStatus.COMPLETED.value,
+                FanRequest.updated_at >= completed_since,
+            )
+        )
+        oldest = await session.scalar(
+            select(func.min(FanRequest.created_at)).where(
+                *base, FanRequest.status.in_(pending_statuses)
+            )
+        )
+        return RequestQueueSummary(
+            pending=int(pending or 0),
+            processing=int(processing or 0),
+            overdue=int(overdue or 0),
+            completed_recent=int(completed_recent or 0),
+            oldest_pending_at=oldest,
+        )
 
     async def set_status(
         self,
