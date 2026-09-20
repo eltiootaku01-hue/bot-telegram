@@ -25,6 +25,7 @@ CAFE_MENU: tuple[tuple[str, str], ...] = (
     ("🎮 Zona de juegos", "Sunna mantiene la zona de juegos y WaifuMon."),
     ("📦 Archivo y publicaciones", "Cami mantiene el material y las publicaciones."),
     ("📋 Recepción y reglas", "Chie organiza avisos, permisos y coordinación."),
+    ("🧠 Trivia", "Cari mantiene la trivia de anime de la comunidad."),
     ("🎨 Pedidos", "La comunidad puede usar puntos para solicitar material mediante Chie."),
 )
 
