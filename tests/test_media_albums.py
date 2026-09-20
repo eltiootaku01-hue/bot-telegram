@@ -1,11 +1,7 @@
-from types import SimpleNamespace
-from unittest.mock import AsyncMock
-
 import pytest
 
-from app.core.config import Settings
 from app.db.database import Database
-from app.db.models import MediaAlbum, MediaAsset
+from app.db.models import MediaAsset
 from app.media.albums import MediaAlbumService
 
 
