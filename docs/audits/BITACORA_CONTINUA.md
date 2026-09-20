@@ -3,7 +3,7 @@
 **Repositorio:** `eltiootaku01-hue/bot-telegram`  
 **Rama operativa:** `main`  
 **Fecha de corte:** 2026-09-20  
-**SHA de corte:** `a79fb778eb9d677ee41d8f9a5d979d31323f402b`  
+**Último checkpoint:** ver sección 23; el encabezado histórico no sustituye ese checkpoint.  
 **Objetivo:** evitar trabajo repetido, conservar evidencia de errores/pruebas y dirigir cada nueva sesión hacia áreas todavía incompletas.
 
 ---
@@ -816,3 +816,214 @@ No volver a auditar el misterio diario ni el botón de navegación salvo regresi
 - Porcentaje global conservador: **79%**.
 - El incremento de este bloque mejora principalmente Ciudad Animals/Café Otaku, pero no justifica elevar artificialmente el global.
 - Próximo foco: situaciones authored nuevas e interacción contextual; no reabrir infraestructura ya cerrada.
+
+---
+
+# 23. CHECKPOINT MAESTRO — 2026-09-20 10:01 ART
+
+## Estado certificado de GitHub
+
+- Rama: `main`
+- SHA actual: `9244bf7ed818a0ec899b8f2dbcbfe65cc0f3c903`
+- Commit actual: `docs: record Cafe mystery validation block`
+- CI #1208: **SUCCESS**
+- Windows Build #838: **SUCCESS**
+- Ambos pipelines corresponden al mismo SHA.
+
+### CI #1208
+
+- Ruff: SUCCESS.
+- Pytest: SUCCESS.
+- Resultado exacto: **412 passed, 52 warnings**.
+- No hubo fallos de pruebas en el SHA actual.
+
+### Windows Build #838
+
+SUCCESS sobre el mismo SHA.
+
+Verificaciones completadas:
+
+- instalación de dependencias;
+- pruebas nativas de media/encoder;
+- Inno Setup;
+- resolución de versión;
+- compilación de los cinco ejecutables;
+- verificación de ejecutables;
+- smoke test de BotManager;
+- instalador;
+- manifest;
+- ZIP portable;
+- SHA-256;
+- subida de artefactos.
+
+Artefactos:
+
+- `bot-telegram-windows-installer`
+  - tamaño: 98,775,170 bytes
+  - digest: `sha256:70dcc5dde5966fe531292c94d46465c4eb489d87d55502a04d724b7b70914376`
+- `bot-telegram-windows-portable`
+  - tamaño: 96,917,008 bytes
+  - digest: `sha256:50c53bc8ea010ca2e8975fec80f4a753e46034402df0baa4e274f3712c9509e1`
+
+## Qué se hizo desde el checkpoint anterior
+
+El delta desde `a79fb778eb9d677ee41d8f9a5d979d31323f402b` contiene 14 commits y se concentró en el Café Otaku:
+
+- Misterio diario determinista.
+- Cinco minicasos cotidianos authored.
+- Separación correcta de callbacks de apertura/respuesta.
+- Integración del misterio en el menú del Café.
+- Observación agregada de apertura/resolución.
+- Inclusión del misterio en el catálogo de Ciudad Animals.
+- Regresiones de misterio, superficie y catálogo.
+- Correcciones de mocks/fixtures descubiertas por CI.
+
+No se inventó canon narrativo nuevo durante este bloque.
+
+## Errores reales registrados y aprendizaje
+
+### 1. Parser de callback del Misterio
+La primera versión reutilizaba el mismo patrón de callback para abrir y responder. El botón de apertura tenía tres segmentos y el parser de respuesta exigía cuatro.
+
+**Corrección:** 
+- apertura: `cafe:mystery:open`;
+- respuesta: `cafe:mystery:<case_index>:<option_index>`.
+
+**Regresión:** `tests/test_cafe_surface.py` y `tests/test_cafe_module.py`.
+
+**Estado:** cerrado y validado.
+
+### 2. Test del menú del Café
+CI detectó un mock que aceptaba solo `text`, mientras producción correctamente pasaba `reply_markup`.
+
+**Corrección:** el test se adaptó al contrato real de Telegram.
+
+**Lección:** no relajar producción para satisfacer un mock incompleto.
+
+**Estado:** cerrado y validado.
+
+### 3. Concurrencia Cami
+El test de carrera del publisher necesitó SQLite respaldado por archivo en vez de `:memory:` para representar conexiones concurrentes reales.
+
+**Lección:** las pruebas de concurrencia deben reproducir la topología de persistencia usada en producción.
+
+**Estado:** cerrado y validado.
+
+### 4. Zona horaria
+Se endurecieron los contratos para rechazar `datetime` timezone-aware donde el sistema espera valores naïve UTC/locales explícitos.
+
+**Estado:** cerrado y validado.
+
+### 5. Acceso de callbacks
+Se corrigió la identificación del actor de callback para usar `callback_query.from_user` en vez del autor del mensaje embebido.
+
+**Estado:** cerrado y validado.
+
+## Capacidades que NO deben rehacerse
+
+No volver a implementar desde cero:
+
+- allowlist y middleware de acceso;
+- autenticación correcta de callbacks;
+- Transaction ownership de MemberSync/RequestService/Trivia;
+- TaskSupervisor fencing;
+- Event/Job lease fencing;
+- puntos idempotentes;
+- Gacha idempotente;
+- WildWaifu expiration/stale cleanup;
+- trivia stale lifecycle y winner fencing;
+- rare approvals;
+- Cami publication claim/reconciliation;
+- catálogo local de anime/manga;
+- búsqueda por personaje/alias;
+- `/anime_ficha`;
+- `/ayuda` por identidad;
+- transporte multi-identidad;
+- relaciones authored y continuidad relacional;
+- Tío Otaku inbox/contexto/respuesta manual;
+- validación del BotManager;
+- catálogo base de Ciudad Animals;
+- observación agregada y curador;
+- menú del Café;
+- recomendación determinista;
+- Misterio diario;
+- empaquetado Windows.
+
+Solo reabrir una de estas áreas ante regresión, cambio de requisito, cambio de arquitectura o evidencia de producción.
+
+## Porcentaje actual
+
+**Estimación global conservadora: 82%.**
+
+No se eleva artificialmente por el éxito de CI o Windows.
+
+| Área | Estimación |
+| --- | ---: |
+| Arquitectura/Core | 95% |
+| Persistencia/transacciones | 97% |
+| Telegram/seguridad/runtime | 96% |
+| Workers/events/jobs | 95% |
+| BotManager/Windows/instalador/portable | 98% |
+| Módulos funcionales | 93% |
+| WaifuMon/progresión/trivia/misterio | 92% |
+| Personajes/canon/repertorio | 84% |
+| Director/rutinas/interacciones | 86% |
+| Ciudad Animals/Café Otaku | 90% |
+| IA secundaria/curaduría | 76% |
+| Puente Tío Otaku | 90% |
+| GUI/UX operador | 50% |
+
+### Por qué sigue en 82%
+
+La base técnica está muy avanzada y el proyecto ya compila/empaqueta de punta a punta, pero todavía falta profundidad de producto:
+
+- más contenido autoral confirmado;
+- escenas contextuales con mayor variedad;
+- superficies de Cari/Cami/Chie todavía delgadas en algunos caminos;
+- mejor experiencia histórica del operador humano;
+- mayor curación y administración del mundo;
+- GUI más completa;
+- release etiquetado final con versionado deliberado.
+
+## Próximo foco obligatorio
+
+La siguiente sesión debe comenzar aquí, no desde infraestructura cerrada:
+
+### Prioridad 1
+Crear escenas authored contextuales nuevas con uso real:
+- llegada;
+- actividad del Café;
+- reacción a victoria/derrota en juegos;
+- ayuda;
+- gratitud;
+- pequeñas escenas de grupo.
+
+Cada bloque necesita código + uso real + telemetría si corresponde + regresión + CI.
+
+### Prioridad 2
+Convertir Ciudad Animals de catálogo/telemetría en eventos cotidianos deterministas, sin inventar canon.
+
+### Prioridad 3
+Mejorar las superficies funcionales todavía simples de Cami/Chie/Cari.
+
+### Prioridad 4
+Seguir mejorando Tío Otaku como operador humano; nunca convertirlo en una quinta IA.
+
+### Prioridad 5
+Diseñar/afinar curación IA como proceso separado:
+observaciones -> informe -> propuesta -> aprobación humana.
+
+## Regla contra repetición accidental
+
+Antes de empezar un nuevo bloque:
+
+1. leer esta sección 23;
+2. consultar `main`;
+3. verificar el último CI y Windows;
+4. escoger un pendiente de producto;
+5. comprobar que no exista ya;
+6. escribir primero código y regresión;
+7. validar;
+8. actualizar esta bitácora con SHA, workflows, errores y decisiones.
+
+La bitácora debe registrar tanto los éxitos como los fallos de CI que hayan provocado cambios.
