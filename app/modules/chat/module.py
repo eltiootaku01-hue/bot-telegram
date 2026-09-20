@@ -53,6 +53,11 @@ class ChatModule(BotModule):
         normalized = text.casefold().strip().strip("!?.,:;")
         intent = self.characters.classify(text)
         target = self.characters.target_identity(text)
+        if self.identity is BotIdentity.CHIE and intent in {
+            CharacterIntent.GREETING,
+            CharacterIntent.FAREWELL,
+        }:
+            return True
         if (
             self.identity is not BotIdentity.CHIE
             and intent in {CharacterIntent.GREETING, CharacterIntent.FAREWELL}
