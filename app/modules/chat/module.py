@@ -150,6 +150,8 @@ class ChatModule(BotModule):
                     bot_identity=self.identity,
                     entry_type="relationship",
                     entry_key=f"{self.identity.value}-{partner.value}",
+                    scope_type="user_chat",
+                    scope_id=f"{message.from_user.id}:{message.chat.id}",
                 )
             response = self.characters.director.choose_interaction(
                 self.identity,
