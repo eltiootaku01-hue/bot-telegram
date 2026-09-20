@@ -10,8 +10,9 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from app.core.identity import BotIdentity
 from app.core.config import Settings
 from app.core.module import BotModule
-from app.core.time import world_now
+from app.core.time import utc_now, world_now
 from app.db.database import Database
+from app.db.models import Chat
 from app.services.cafe_events import CafeEventService
 from app.services.cafe_context import CafeContextService
 from app.services.cafe_mystery import CAFE_MYSTERIES, mystery_for
@@ -308,6 +309,9 @@ class CafeModule(BotModule):
                 round_id=started.round.id,
                 message_id=sent.message_id,
             )
+            chat = await session.get(Chat, message.chat.id)
+            if chat is not None:
+                chat.last_social_event_at = utc_now()
         await self._observe_event_action(
             message,
             user_id=user_id,
