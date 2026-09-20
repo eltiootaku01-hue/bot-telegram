@@ -126,10 +126,11 @@ class CamiMediaPublisher(BotModule):
         if destination == "both" and not self.settings.publish_page_chat_id:
             raise RuntimeError("Media destination 'both' requires PUBLISH_PAGE_CHAT_ID to be configured")
 
-        async with self.database.session(write=True) as session:
+        async with self.database.session() as session:
             asset = await session.get(MediaAsset, asset_id)
             if asset is None or asset.status != "scheduled":
                 return
+
             group_id = asset.publish_group_chat_id
             if group_id is None:
                 configured = list(
@@ -150,20 +151,34 @@ class CamiMediaPublisher(BotModule):
                         "Scheduled media has no target community and multiple Chie communities are configured"
                     )
                 group_id = int(configured[0])
-                asset.publish_group_chat_id = group_id
+
             if not is_authorized_community(self.settings, group_id):
                 raise RuntimeError("Configured community is not authorized for media publishing")
+
             thread_id = await self.topics.get_thread_id(group_id, "noticias")
             if thread_id is None:
                 raise RuntimeError("Configured community has no #noticias topic")
+
             file_id = asset.telegram_file_id
             caption = self._caption(asset)
             group_message_id = asset.published_group_message_id
             page_message_id = asset.published_page_message_id
+
+        async with self.database.session(write=True) as session:
             claimed = await session.execute(
                 update(MediaAsset)
-                .where(MediaAsset.id == asset_id, MediaAsset.status == "scheduled")
-                .values(status="publishing", updated_at=utc_now())
+                .where(
+                    MediaAsset.id == asset_id,
+                    MediaAsset.status == "scheduled",
+                    MediaAsset.published_group_message_id == group_message_id,
+                    MediaAsset.published_page_message_id == page_message_id,
+                    (MediaAsset.publish_group_chat_id.is_(None) | (MediaAsset.publish_group_chat_id == group_id)),
+                )
+                .values(
+                    status="publishing",
+                    publish_group_chat_id=group_id,
+                    updated_at=utc_now(),
+                )
             )
             if claimed.rowcount != 1:
                 await session.rollback()
@@ -172,7 +187,12 @@ class CamiMediaPublisher(BotModule):
 
         try:
             if group_message_id is None:
-                sent = await bot.send_photo(group_id, file_id, message_thread_id=thread_id, caption=caption)
+                sent = await bot.send_photo(
+                    group_id,
+                    file_id,
+                    message_thread_id=thread_id,
+                    caption=caption,
+                )
                 async with self.database.session() as session:
                     current = await session.get(MediaAsset, asset_id)
                     if current is None:
@@ -183,7 +203,11 @@ class CamiMediaPublisher(BotModule):
                         await session.commit()
 
             if destination == "both" and page_message_id is None:
-                sent = await bot.send_photo(self.settings.publish_page_chat_id, file_id, caption=caption)
+                sent = await bot.send_photo(
+                    self.settings.publish_page_chat_id,
+                    file_id,
+                    caption=caption,
+                )
                 async with self.database.session() as session:
                     current = await session.get(MediaAsset, asset_id)
                     if current is None:
@@ -215,7 +239,8 @@ class CamiMediaPublisher(BotModule):
     async def publish_request(self, bot: Bot, payload: dict) -> None:
         asset_id = int(payload["asset_id"])
         request_id = int(payload["request_id"])
-        async with self.database.session(write=True) as session:
+
+        async with self.database.session() as session:
             asset = await session.get(MediaAsset, asset_id)
             request = await session.get(FanRequest, request_id)
             if asset is None or request is None or asset.request_id != request_id:
@@ -242,17 +267,25 @@ class CamiMediaPublisher(BotModule):
             user_tag = f'<a href="tg://user?id={request.user_id}">{user_name}</a>'
             file_id = asset.telegram_file_id
             description = request.description
-            asset.publish_group_chat_id = group_id
+            current_status = asset.status
+
+        async with self.database.session(write=True) as session:
             claimed = await session.execute(
                 update(MediaAsset)
                 .where(
                     MediaAsset.id == asset_id,
-                    MediaAsset.status != "publishing_request",
+                    MediaAsset.request_id == request_id,
+                    MediaAsset.status == current_status,
                     MediaAsset.published_request_message_id.is_(None),
                 )
-                .values(status="publishing_request", updated_at=utc_now())
+                .values(
+                    status="publishing_request",
+                    publish_group_chat_id=group_id,
+                    updated_at=utc_now(),
+                )
             )
             if claimed.rowcount != 1:
+                await session.rollback()
                 return
             await session.commit()
 
@@ -261,7 +294,11 @@ class CamiMediaPublisher(BotModule):
                 group_id,
                 file_id,
                 message_thread_id=thread_id,
-                caption=(f"🎨 <b>Pedido #{request_id} completado</b>\n👤 {user_tag}\n📝 {escape(description)}"),
+                caption=(
+                    f"🎨 <b>Pedido #{request_id} completado</b>\n"
+                    f"👤 {user_tag}\n"
+                    f"📝 {escape(description)}"
+                ),
             )
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
             async with self.database.session() as session:
