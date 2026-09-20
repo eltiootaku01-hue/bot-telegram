@@ -9,7 +9,6 @@ from aiogram.filters import Command
 from aiogram.types import ChatPermissions, Message
 
 from app.core.access import is_chat_staff
-from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.core.time import utc_now
 from app.db.database import Database
