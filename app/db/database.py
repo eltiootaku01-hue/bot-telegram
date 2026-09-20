@@ -49,6 +49,12 @@ def _ensure_compatibility(connection) -> None:
         column["name"] for column in inspect(connection).get_columns("human_verifications")
     }
     _add_column_if_missing(connection, "human_verifications", "expires_at", "DATETIME", verification_columns)
+    connection.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS ix_human_verification_expiry "
+            "ON human_verifications(status, expires_at)"
+        )
+    )
 
     connection.execute(text(
         "CREATE INDEX IF NOT EXISTS idx_media_asset_unique_id "
