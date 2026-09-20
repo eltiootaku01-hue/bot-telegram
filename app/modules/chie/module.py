@@ -664,7 +664,7 @@ class ChieModule(BotModule):
         if missing:
             await callback.answer("Todavía me faltan: " + ", ".join(missing), show_alert=True)
             return
-        topic_keys = ("comandos", "bienvenida", "reglas", "noticias", "undiacomohoy", "recomendaciondiaria", "curiosidades", "estrenos", "memes", "material", "anime", "debates", "trivia", "waifumon", "puntos", "pedidos")
+        topic_keys = ("comandos", "bienvenida", "reglas", "noticias", "undiacomohoy", "recomendaciondiaria", "curiosidades", "estrenos", "memes", "material", "anime", "debates", "trivia", "misterios", "waifumon", "puntos", "pedidos")
         created = 0
         failures: list[str] = []
         for key in topic_keys:
