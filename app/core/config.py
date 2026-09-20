@@ -25,9 +25,13 @@ class Settings(BaseSettings):
     bot_identity: BotIdentity = BotIdentity.CARI
     log_level: str = "INFO"
     database_url: str = "sqlite+aiosqlite:///./data/bot.db"
+    # Canonical owner identity for permissions; ADMIN_USER_ID remains backwards compatible.
+    master_telegram_id: int = 0
+    master_username: str = ""
     admin_user_id: int = 0
     media_storage_chat_id: int = 0
     publish_page_chat_id: int = 0
+    base_group_chat_id: int = 0
 
     # Telegram access is fail-closed: group/supergroup ids must be explicitly authorized.
     authorized_chat_ids: str = ""
@@ -87,6 +91,13 @@ class Settings(BaseSettings):
                 continue
         return frozenset(result)
 
+    @property
+    def master_user_id(self) -> int:
+        return self.master_telegram_id or self.admin_user_id
+
+    def is_master(self, user_id: int | None) -> bool:
+        return bool(user_id and self.master_user_id and user_id == self.master_user_id)
+
     def is_chat_allowed(
         self,
         chat_id: int,
@@ -95,11 +106,7 @@ class Settings(BaseSettings):
     ) -> bool:
         """Return whether this Telegram chat may reach bot application logic."""
         if chat_type == "private":
-            admin_allowed = (
-                self.allow_admin_private_chat
-                and self.admin_user_id != 0
-                and user_id == self.admin_user_id
-            )
+            admin_allowed = self.allow_admin_private_chat and self.is_master(user_id)
             return self.allow_user_private_chat or admin_allowed
         if chat_type in {"group", "supergroup"}:
             return chat_id in self.authorized_chat_ids_set
