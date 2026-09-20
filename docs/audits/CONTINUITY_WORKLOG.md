@@ -334,3 +334,23 @@ Leer este registro antes de modificar el repositorio y comprobar primero el SHA 
 - No elevar el 82% por documentación, tests aislados o hardening menor.
 - No reemplazar el runtime authored por LLM.
 
+
+
+## BLOQUE CERRADO — CATÁLOGO DE WAIFUS INTERACTIVO — 2026-09-20
+
+- Se añadió filtrado local del catálogo por **elemento, carta, clase y procedencia**.
+- La procedencia distingue Ranker 2026, Anime Corner 2025 y el catálogo inicial del proyecto.
+- La paginación conserva el filtro activo y dispone de una acción para quitarlo.
+- Cada personaje visible puede abrir una ficha local con obra, carta, clase, elemento, poder de balance, popularidad normalizada, ranking y procedencia.
+- La ficha deja explícito que el poder es balance del juego y que la popularidad normalizada es relativa a su fuente.
+- Los callbacks incluyen una regresión específica para mantenerse dentro del límite de datos de botones inline de Telegram.
+- Se añadieron pruebas de motor, UI y handler.
+- El trabajo se desarrolló en PR #20 y se integró a `main` mediante squash.
+- SHA integrado: `5571aad65a6a2b455d4c9ab11d64231e417d85cd`.
+- CI del PR #20: #1319 SUCCESS sobre `15a6804107a69c1fc8f93454367f7772ad8f9603`.
+- En `main`, CI #1320 y Windows #942 se ejecutan sobre `5571aad65a6a2b455d4c9ab11d64231e417d85cd`; deben considerarse la validación definitiva del merge.
+- El bloque no introduce consultas web ni LLM en runtime: toda la navegación usa el catálogo local existente.
+
+### Próximo foco
+- Seguir con superficies del mundo/Café o contenido autoral confirmado que aporten capacidad nueva.
+- No rehacer el catálogo, el filtrado ni la ficha salvo regresión o cambio de requisito.
