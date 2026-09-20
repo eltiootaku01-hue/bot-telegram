@@ -196,3 +196,35 @@ def test_cross_character_scenes_remain_authored_and_deterministic() -> None:
     assert first is not None
     assert first.follow_up is not None
     assert first.scene.text == "Cari... gracias por esperarme."
+
+
+def test_director_resolves_authored_pair_interaction() -> None:
+    director = CharacterDirector()
+
+    response = director.choose_interaction(
+        BotIdentity.CAMI,
+        BotIdentity.SUNNA,
+        CharacterIntent.UNKNOWN_TOPIC,
+        roll=0,
+    )
+
+    assert response is not None
+    assert response.scene.key == "group-call-cami-sunna"
+    assert response.scene.speaker is BotIdentity.CAMI
+    assert response.follow_up is not None
+    assert response.follow_up.speaker is BotIdentity.SUNNA
+    assert response.follow_up.text == "Sí... me gustaría."
+
+
+def test_director_can_fallback_to_pair_unknown_scene() -> None:
+    director = CharacterDirector()
+
+    response = director.choose_interaction(
+        BotIdentity.SUNNA,
+        BotIdentity.CARI,
+        CharacterIntent.THANKS,
+        roll=0,
+    )
+
+    assert response is not None
+    assert response.scene.key == "group-call-sunna-cari"
