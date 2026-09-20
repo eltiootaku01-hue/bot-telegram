@@ -566,3 +566,72 @@ async def test_operator_history_is_read_only_and_exposes_direct_navigation(datab
         rows = list(await session.scalars(select(TioOperatorRequest).order_by(TioOperatorRequest.id.asc())))
 
     assert [row.status for row in rows] == ["pending", "resolved"]
+
+
+@pytest.mark.asyncio
+async def test_operator_history_supports_pagination(database: Database) -> None:
+    service = TioOperatorService()
+    module = TioOperatorModule(
+        database,
+        Settings(admin_user_id=77, authorized_chat_ids="-100"),
+    )
+
+    async with database.session() as session:
+        for message_id in range(70, 92):
+            await service.capture(
+                session,
+                chat_id=-100,
+                user_id=7,
+                source_message_id=message_id,
+                text=f"Tío, consulta {message_id}.",
+            )
+
+    message = _owner_message("/tio_historial")
+    await module.history_command(message)
+
+    assert message.answer.await_count == 1
+    first_render = message.answer.await_args.args[0]
+    first_markup = message.answer.await_args.kwargs["reply_markup"].inline_keyboard
+    first_callbacks = [button.callback_data for row in first_markup for button in row]
+
+    assert "página 1" in first_render
+    assert "Siguientes ➡️" in [button.text for row in first_markup for button in row]
+    assert "tio:history:page:2" in first_callbacks
+
+    callback_message = _owner_message("historial")
+    callback_message.edit_text = AsyncMock()
+    callback = SimpleNamespace(
+        message=callback_message,
+        from_user=SimpleNamespace(id=77),
+        data="tio:history:page:2",
+        answer=AsyncMock(),
+    )
+    await module.history_page_callback(callback)
+
+    callback_message.edit_text.assert_awaited_once()
+    second_render = callback_message.edit_text.await_args.args[0]
+    second_markup = callback_message.edit_text.await_args.kwargs["reply_markup"].inline_keyboard
+    second_callbacks = [button.callback_data for row in second_markup for button in row]
+
+    assert "página 2" in second_render
+    assert "⬅️ Anteriores" in [button.text for row in second_markup for button in row]
+    assert "tio:history:page:1" in second_callbacks
+    callback.answer.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_operator_history_rejects_invalid_pagination(database: Database) -> None:
+    module = TioOperatorModule(database, Settings(admin_user_id=77))
+
+    message = _owner_message("/tio_historial 0")
+    await module.history_command(message)
+    assert "página" in message.answer.await_args.args[0]
+
+    callback = SimpleNamespace(
+        message=_owner_message("historial"),
+        from_user=SimpleNamespace(id=77),
+        data="tio:history:page:0",
+        answer=AsyncMock(),
+    )
+    await module.history_page_callback(callback)
+    callback.answer.assert_awaited_once_with("Página inválida.", show_alert=True)
