@@ -295,3 +295,42 @@ Leer este registro antes de modificar el repositorio y comprobar primero el SHA 
   - `bot-telegram-windows-installer`
   - `bot-telegram-windows-portable`
 
+## CHECKPOINT ACTUAL — 2026-09-20
+
+### Estado certificado
+- `main` actual: `d6a5bc1ef752e2030aaa9f374acf3dcc0c4ab2a2`.
+- El último commit solo actualiza este registro de continuidad; no modifica el código funcional.
+- Último SHA funcional validado y empaquetado: `1ef14e764a2d414575007a93f4bb3df082e40678`.
+- CI #1152: SUCCESS sobre `1ef14e764a2d414575007a93f4bb3df082e40678`.
+- Windows Build #782: SUCCESS sobre el mismo SHA.
+- Windows validó cinco ejecutables, smoke test de BotManager, instalador, ZIP portable, checksums y artefactos.
+- El pipeline que corre ahora sobre `d6a5bc1ef752e2030aaa9f374acf3dcc0c4ab2a2` es documentación y no constituye una nueva validación de código funcional.
+
+### Porcentaje de proyecto
+- Producto global: **82%**.
+- Arquitectura/Core: **95%**.
+- Persistencia/transacciones: **97%**.
+- Seguridad/acceso Telegram: **96%**.
+- Workers/eventos/jobs: **95%**.
+- BotManager/Windows/instalador/portable: **97%**.
+- Módulos funcionales: **93%**.
+- WaifuMon/progresión/trivia/misterio: **91%**.
+- Personajes/canon/repertorio: **84%**.
+- Interacciones: **86%**.
+- Ciudad Animals/world ledger/curador: **89%**.
+- IA secundaria/curaduría: **76%**.
+- Puente Tío Otaku: **90%**.
+
+### Pendiente real
+1. Profundizar contenido autoral confirmado sin inventar canon.
+2. Ampliar variedad y continuidad de escenas authored donde haya material confirmado.
+3. Completar superficies funcionales todavía delgadas de Cami/Chie/Cari.
+4. Seguir mejorando la navegación del operador humano de Tío Otaku sin convertirlo en IA autónoma.
+5. Auditar concurrencia solo en rutas aún sin regresiones específicas.
+6. Preparar release etiquetado cuando el siguiente bloque funcional sustancial quede cerrado.
+
+### NO REPETIR
+- No rehacer `/anime_ficha`, catálogo local de anime, relaciones authored, continuidad relacional, Gacha idempotente, Misterio diario, Tío Otaku, Cami Publisher durable, seguridad de callbacks, allowlist, fencing de leases, world ledger, curador diario ni empaquetado Windows salvo que aparezca un defecto concreto.
+- No elevar el 82% por documentación, tests aislados o hardening menor.
+- No reemplazar el runtime authored por LLM.
+
