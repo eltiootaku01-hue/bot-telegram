@@ -18,6 +18,7 @@ from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.services.forum_topics import ForumTopicService
+from app.services.operator_health import OperatorHealthService, format_operator_health
 from app.services.world import WorldService
 from app.ui.control_keyboards import chie_setup_keyboard, command_hub_keyboard
 
@@ -53,6 +54,7 @@ class ChieModule(BotModule):
         self.topics = ForumTopicService(database)
         self.settings = settings or get_settings()
         self.world = WorldService()
+        self.health = OperatorHealthService()
         self.worker = DurableWorker(database, event_bus=EventBus(), poll_seconds=1.0)
         self.bot: Bot | None = None
         super().__init__()
@@ -66,6 +68,7 @@ class ChieModule(BotModule):
         self.router.message.register(self.command_hub_command, Command("comandos"))
         self.router.message.register(self.rules_command, Command("reglas"))
         self.router.message.register(self.world_command, Command("mundo"))
+        self.router.message.register(self.health_command, Command("salud"))
         self.router.message.register(self.clear_my_world_data, Command("borrar_mi_memoria"))
         self.router.chat_member.register(self.member_joined)
 
@@ -303,6 +306,21 @@ class ChieModule(BotModule):
                     lines.append("· sin datos todavía")
                 lines.append("")
         await message.answer("\n".join(lines))
+
+    async def health_command(self, message: Message) -> None:
+        """Show a read-only system health snapshot to the configured owner."""
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or message.from_user.id != self.settings.admin_user_id
+        ):
+            return
+        async with self.database.session() as session:
+            snapshot = await self.health.snapshot(
+                session,
+                authorized_chat_ids=self.settings.authorized_chat_ids_set,
+            )
+        await message.answer(format_operator_health(snapshot))
 
     async def clear_my_world_data(self, message: Message) -> None:
         """Let a user erase their private world-usage statistics."""
