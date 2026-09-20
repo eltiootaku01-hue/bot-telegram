@@ -132,7 +132,7 @@ class HumanVerificationService:
             await session.scalars(
                 select(HumanVerification)
                 .where(
-                    HumanVerification.status.in_(("pending", "expiring")),
+                    HumanVerification.status == "pending",
                     HumanVerification.expires_at.is_not(None),
                     HumanVerification.expires_at <= current,
                 )
