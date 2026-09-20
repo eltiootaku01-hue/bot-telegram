@@ -46,6 +46,9 @@ class SystemModule(BotModule):
             BotIdentity.CARI: (
                 BotCommand(command="start", description="Presentación de Cari"),
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
+                BotCommand(command="cafe", description="Abrir el Café Otaku"),
+                BotCommand(command="menu", description="Ver el menú del Café Otaku"),
+                BotCommand(command="recomendacion", description="Pedir una recomendación del día"),
                 BotCommand(command="advertir", description="Advertir sobre un mensaje"),
                 BotCommand(command="silenciar", description="Silenciar a un integrante"),
                 BotCommand(command="desilenciar", description="Retirar un silencio"),
