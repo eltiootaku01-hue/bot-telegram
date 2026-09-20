@@ -21,7 +21,7 @@ class TioOperatorModule(BotModule):
 
     name = "tio-operator"
 
-    _ADDRESS_RE = re.compile(r"(?i)(?:^|[!?.,;:]\s*)t(?:í|i)o(?:\s+otaku)?(?=\s*(?:[,;:!?]|$|\s))")
+    _ADDRESS_RE = re.compile(r"(?i)(?:^|[!?.,;:]\s*)t(?:í|i)o(?:\s+otaku)?(?=\s*(?:[,;:!?]|$))")
 
     def __init__(self, database: Database, settings: Settings | None = None) -> None:
         super().__init__()
