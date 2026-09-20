@@ -38,6 +38,7 @@ class SystemModule(BotModule):
         self.router.message.register(self.help, Command("ayuda"))
         self.router.callback_query.register(self.help_navigation, F.data.startswith("help:"))
         self.router.message.register(self.ping, Command("ping"))
+        self.router.message.register(self.id_command, Command("id"))
         self.router.message.register(self.ping, F.text.casefold() == "ping")
         if self.identity is BotIdentity.SUNNA:
             self.router.callback_query.register(self.game_hub, F.data == "game:hub")
@@ -53,6 +54,7 @@ class SystemModule(BotModule):
                 BotCommand(command="start", description="Presentación de Cari"),
                 BotCommand(command="ayuda", description="Ver qué puede hacer Cari"),
                 BotCommand(command="ping", description="Comprobar que estoy activa"),
+                BotCommand(command="id", description="Mostrar tu ID y el ID del chat"),
                 BotCommand(command="cafe", description="Abrir el Café Otaku"),
                 BotCommand(command="menu", description="Ver el menú del Café Otaku"),
                 BotCommand(command="recomendacion", description="Pedir una recomendación del día"),
@@ -261,6 +263,16 @@ class SystemModule(BotModule):
             reply_markup=help_keyboard(self.identity, section),
         )
         await callback.answer()
+
+    async def id_command(self, message: Message) -> None:
+        """Show Telegram numeric IDs needed by Bot Manager setup."""
+        user_id = message.from_user.id if message.from_user is not None else "desconocido"
+        await message.answer(
+            f"🆔 <b>ID de usuario:</b> <code>{user_id}</code>\n"
+            f"💬 <b>ID del chat:</b> <code>{message.chat.id}</code>\n\n"
+            "Para Bot Manager, usá tu ID como Maestro/Jefe y, si este es el grupo general, "
+            "usá el ID del chat como Grupo base."
+        )
 
     async def ping(self, message: Message) -> None:
         await message.answer(f"{self.profile.display_name}: pong")
