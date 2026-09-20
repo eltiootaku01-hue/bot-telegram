@@ -15,6 +15,7 @@ except ImportError:  # pragma: no cover - packaged build installs python-dotenv
     set_key = None
     dotenv_values = None
 
+from app.gui.telegram_setup import TelegramSetupAssistant
 from app.services.launcher_supervisor import LauncherSupervisor
 from app.services.process_manager import ProcessManager
 from app.services.runtime_monitor import RuntimeMonitor, RuntimeSnapshot
@@ -71,6 +72,9 @@ class BotLauncher(tk.Tk):
         self.ai_bot_vars: dict[str, tk.BooleanVar] = {}
         self.bot_vars: dict[str, dict[str, tk.StringVar]] = {}
         self.ai_vars: dict[str, tk.StringVar] = {}
+        self.master_var = tk.StringVar(value="0")
+        self.master_username_var = tk.StringVar(value="")
+        self.base_group_var = tk.StringVar(value="0")
         self.status = tk.StringVar(value="Configurá los bots y tocá Comenzar")
         self._dashboard_cards: dict[str, ttk.LabelFrame] = {}
         self._startup_poll_id: str | None = None
@@ -192,14 +196,27 @@ class BotLauncher(tk.Tk):
         infra = ttk.Frame(outer)
         infra.pack(fill="x", pady=(12, 0))
         self.admin_var = tk.StringVar(value=values.get("ADMIN_USER_ID", "0") or "0")
+        self.master_var.set(values.get("MASTER_TELEGRAM_ID", "") or self.admin_var.get() or "0")
+        self.master_username_var.set(values.get("MASTER_USERNAME", "") or "")
+        self.base_group_var.set(values.get("BASE_GROUP_CHAT_ID", "") or "0")
         self.media_var = tk.StringVar(value=values.get("MEDIA_STORAGE_CHAT_ID", "0") or "0")
         self.publish_page_var = tk.StringVar(value=values.get("PUBLISH_PAGE_CHAT_ID", "0") or "0")
-        ttk.Label(infra, text="Admin Telegram ID").grid(row=0, column=0, sticky="w")
-        ttk.Entry(infra, textvariable=self.admin_var, width=16).grid(row=0, column=1, sticky="w", padx=8)
+        ttk.Label(infra, text="Maestro / Jefe · ID Telegram").grid(row=0, column=0, sticky="w")
+        ttk.Entry(infra, textvariable=self.master_var, width=16).grid(row=0, column=1, sticky="w", padx=8)
+        ttk.Label(infra, text="@usuario (referencia)").grid(row=0, column=2, sticky="w", padx=(18, 0))
+        ttk.Entry(infra, textvariable=self.master_username_var, width=18).grid(row=0, column=3, sticky="w", padx=8)
+        ttk.Label(infra, text="Grupo general / bienvenida").grid(row=1, column=0, sticky="w", pady=(8, 0))
+        ttk.Entry(infra, textvariable=self.base_group_var, width=16).grid(row=1, column=1, sticky="w", padx=8, pady=(8, 0))
         ttk.Label(infra, text="Media vault chat ID").grid(row=0, column=2, sticky="w", padx=(20, 0))
         ttk.Entry(infra, textvariable=self.media_var, width=16).grid(row=0, column=3, sticky="w", padx=8)
-        ttk.Label(infra, text="Página/Canal de publicaciones").grid(row=1, column=0, sticky="w", pady=(8, 0))
-        ttk.Entry(infra, textvariable=self.publish_page_var, width=16).grid(row=1, column=1, sticky="w", padx=8, pady=(8, 0))
+        ttk.Label(infra, text="Media vault chat ID").grid(row=0, column=4, sticky="w", padx=(18, 0))
+        ttk.Entry(infra, textvariable=self.media_var, width=16).grid(row=0, column=5, sticky="w", padx=8)
+        ttk.Label(infra, text="Página/Canal de publicaciones").grid(row=1, column=2, sticky="w", pady=(8, 0))
+        ttk.Entry(infra, textvariable=self.publish_page_var, width=16).grid(row=1, column=3, sticky="w", padx=8, pady=(8, 0))
+        ttk.Label(
+            infra,
+            text="El ID de Maestro/Jefe es el que concede acceso administrativo a los bots. El @usuario es solo referencia visual.",
+        ).grid(row=2, column=0, columnspan=6, sticky="w", pady=(6, 0))
 
         note = ttk.Label(
             outer,
@@ -210,7 +227,8 @@ class BotLauncher(tk.Tk):
 
         actions = ttk.Frame(outer)
         actions.pack(fill="x", pady=(4, 0))
-        ttk.Button(actions, text="Guardar configuración", command=self.save_config).pack(side="left")
+        ttk.Button(actions, text="Asistente Telegram", command=self.open_telegram_assistant).pack(side="left")
+        ttk.Button(actions, text="Guardar configuración", command=self.save_config).pack(side="left", padx=8)
         ttk.Button(actions, text="Comenzar", command=self.start_all).pack(side="right")
         ttk.Label(outer, textvariable=self.status, anchor="w").pack(fill="x", pady=(12, 0))
 
@@ -250,7 +268,10 @@ class BotLauncher(tk.Tk):
             "LLM_PROVIDER": self.provider_var.get().strip(),
             "LLM_MODEL": self.model_var.get().strip(),
             "OLLAMA_MODEL": self.model_var.get().strip() or "llama3.2:1b",
-            "ADMIN_USER_ID": self.admin_var.get().strip() or "0",
+            "MASTER_TELEGRAM_ID": self.master_var.get().strip() or "0",
+            "MASTER_USERNAME": self.master_username_var.get().strip(),
+            "ADMIN_USER_ID": self.master_var.get().strip() or self.admin_var.get().strip() or "0",
+            "BASE_GROUP_CHAT_ID": self.base_group_var.get().strip() or "0",
             "MEDIA_STORAGE_CHAT_ID": self.media_var.get().strip() or "0",
             "PUBLISH_PAGE_CHAT_ID": self.publish_page_var.get().strip() or "0",
             "AUTHORIZED_CHAT_IDS": self.authorized_chats_var.get().strip(),
@@ -268,6 +289,15 @@ class BotLauncher(tk.Tk):
             set_key(str(ENV_PATH), key, value, quote_mode="auto")
         self.status.set("Configuración guardada en .env")
         return True
+
+    def open_telegram_assistant(self) -> None:
+        TelegramSetupAssistant(
+            self,
+            bots=BOTS,
+            bot_vars=self.bot_vars,
+            authorized_chats_var=self.authorized_chats_var,
+            base_group_var=self.base_group_var,
+        )
 
     def _missing_required(self) -> list[str]:
         missing: list[str] = []
@@ -288,7 +318,7 @@ class BotLauncher(tk.Tk):
                 for key, fields in self.bot_vars.items()
             },
             authorized_chat_ids=self.authorized_chats_var.get(),
-            admin_user_id=self.admin_var.get(),
+            admin_user_id=self.master_var.get(),
             allow_admin_private_chat=self.allow_admin_private_var.get(),
             allow_user_private_chat=self.allow_user_private_var.get(),
             media_storage_chat_id=self.media_var.get(),
