@@ -36,6 +36,7 @@ WORLD_CATALOG: tuple[WorldCatalogDefinition, ...] = (
     WorldCatalogDefinition(BotIdentity.CARI, "action", "community", "Charla y vida comunitaria", 50),
     WorldCatalogDefinition(BotIdentity.CARI, "action", "cafe_menu", "Menú del Café Otaku", 50),
     WorldCatalogDefinition(BotIdentity.CARI, "action", "daily_recommendation", "Recomendación diaria del Café", 50),
+    WorldCatalogDefinition(BotIdentity.CARI, "action", "cafe_mystery", "Misterio diario del Café", 50),
     WorldCatalogDefinition(
         BotIdentity.SUNNA,
         "place",
