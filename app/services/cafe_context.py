@@ -57,7 +57,7 @@ class CafeContextService:
         "active_wild_encounter": (
             _AuthoredVariant(
                 BotIdentity.SUNNA,
-                "context-active-waifumon-1",
+                "context-active-waifumon",
                 "Hay una waifu suelta. Si querés ayudar, no la dejes esperando.",
                 "active_wild_encounter",
             ),
