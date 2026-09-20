@@ -95,6 +95,7 @@ class SystemModule(BotModule):
                 BotCommand(command="recuperar_publicaciones", description="Revisar entregas ambiguas"),
                 BotCommand(command="cola_media", description="Ver la cola de medios de Cami"),
                 BotCommand(command="cola_pedidos", description="Ver la cola de pedidos de Cami"),
+                BotCommand(command="tablero", description="Ver el tablero operativo de trabajo"),
             ),
             BotIdentity.CHIE: (
                 BotCommand(command="start", description="Abrir el panel de Chie"),
@@ -260,6 +261,11 @@ class SystemModule(BotModule):
                 "archive": (
                     "📊 <b>Archivo</b>\n\n"
                     "Cami mantiene catálogo, publicaciones, pedidos y estadísticas sin convertir la IA en autoridad del archivo."
+                ),
+                "operator": (
+                    "🧭 <b>Tablero operativo</b>\n\n"
+                    "<code>/tablero</code> unifica pedidos y medios pendientes y los ordena por riesgo, urgencia y SLA. "
+                    "La vista propone la siguiente acción; las colas persistentes siguen siendo la fuente de verdad."
                 ),
             },
             BotIdentity.CHIE: {
