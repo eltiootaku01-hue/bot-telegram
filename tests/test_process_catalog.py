@@ -67,3 +67,22 @@ def test_process_catalog_rejects_invalid_definitions() -> None:
         pass
     else:
         raise AssertionError("duplicate process ids must be rejected")
+
+
+def test_specialty_processes_keep_their_declared_owner() -> None:
+    catalog = built_in_catalog()
+
+    expected = {
+        "cari.trivia.round": BotIdentity.CARI,
+        "cari.trivia.answer": BotIdentity.CARI,
+        "cami.mystery.round": BotIdentity.CAMI,
+        "cami.mystery.answer": BotIdentity.CAMI,
+        "chie.human.verify": BotIdentity.CHIE,
+        "chie.community.welcome": BotIdentity.CHIE,
+        "chie.community.goodbye": BotIdentity.CHIE,
+    }
+
+    for process_id, owner in expected.items():
+        process = catalog.get(process_id)
+        assert process is not None
+        assert process.owner is owner
