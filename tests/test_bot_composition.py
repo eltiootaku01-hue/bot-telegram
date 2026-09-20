@@ -21,7 +21,7 @@ from app.db.database import Database
         ),
         (
             BotIdentity.CAMI,
-            {"system", "social_runtime", "chat", "cami-media", "cami-media-publisher", "admin", "brain_chat"},
+            {"system", "social_runtime", "chat", "cami-media", "cami-media-publisher", "brain_chat"},
         ),
         (
             BotIdentity.CHIE,
@@ -75,3 +75,14 @@ def test_cari_cafe_module_receives_configured_world_timezone() -> None:
 
     assert isinstance(cafe, CafeModule)
     assert cafe.timezone_name == "Europe/Madrid"
+
+
+def test_cami_does_not_mount_sunna_gacha_admin_module() -> None:
+    settings = Settings(ai_enabled=False)
+    database = Database("sqlite+aiosqlite:///:memory:")
+
+    modules = build_bot_modules(database, BotIdentity.CAMI, settings)
+    names = {module.name for module in modules}
+
+    assert "admin" not in names
+    assert "cami-admin" not in names
