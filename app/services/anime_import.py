@@ -69,9 +69,12 @@ def _optional_date(data: Mapping[str, object], key: str) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise ValueError(f"field {key!r} must be an ISO datetime") from exc
+    if parsed.tzinfo is not None:
+        raise ValueError(f"field {key!r} must be a timezone-naive ISO datetime")
+    return parsed
 
 
 def _object(value: object, label: str) -> Mapping[str, object]:
