@@ -62,6 +62,7 @@ class SystemModule(BotModule):
                 BotCommand(command="menu", description="Ver el menú del Café Otaku"),
                 BotCommand(command="recomendacion", description="Pedir una recomendación del día"),
                 BotCommand(command="momento", description="Ver un momento contextual del Café"),
+                BotCommand(command="trivia", description="Jugar la trivia de anime de Cari"),
                 BotCommand(command="tio_pendientes", description="Ver solicitudes para Tío Otaku"),
                 BotCommand(command="tio_historial", description="Ver el historial del operador"),
                 BotCommand(command="tio_responder", description="Enviar una respuesta humana a una solicitud"),
@@ -79,9 +80,6 @@ class SystemModule(BotModule):
                 BotCommand(command="gacha", description="Abrir el gacha"),
                 BotCommand(command="inventario", description="Ver tu inventario"),
                 BotCommand(command="combate", description="Abrir combate"),
-                BotCommand(command="misterio", description="Resolver el misterio diario"),
-                BotCommand(command="misiones", description="Ver tus misiones diarias"),
-                BotCommand(command="trivia", description="Consultar la trivia"),
                 BotCommand(command="puntos", description="Consultar tus puntos"),
                 BotCommand(command="ranking", description="Consultar el ranking"),
                 BotCommand(command="gacha_pendientes", description="Revisar drops raros pendientes"),
@@ -97,6 +95,7 @@ class SystemModule(BotModule):
                 BotCommand(command="cola_media", description="Ver la cola de medios de Cami"),
                 BotCommand(command="cola_pedidos", description="Ver la cola de pedidos de Cami"),
                 BotCommand(command="tablero", description="Ver el tablero operativo de trabajo"),
+                BotCommand(command="misterio", description="Resolver el misterio diario de Cami"),
             ),
             BotIdentity.CHIE: (
                 BotCommand(command="start", description="Abrir el panel de Chie"),
@@ -162,6 +161,7 @@ class SystemModule(BotModule):
                 "👋 <b>Ayuda de Cari</b>\n\n"
                 "☕ <code>/cafe</code> — abre el Café Otaku.\n"
                 "🍿 <code>/recomendacion</code> — recomendación diaria.\n"
+                "🧠 <code>/trivia</code> — jugar la trivia de anime de Cari.\n"
                 "💬 Podés hablarme de forma natural sobre anime, manga o pedir ayuda.\n"
                 "🛡️ En grupos, las herramientas de moderación solo funcionan para administradores."
             ),
@@ -177,6 +177,7 @@ class SystemModule(BotModule):
             ),
             BotIdentity.CAMI: (
                 "📚 <b>Ayuda de Cami</b>\n\n"
+                "🕵️ <code>/misterio</code> — jugar el caso diario de Cami.\n"
                 "🗂️ <code>/catalogo</code> — buscar material publicado.\n"
                 "📖 <code>/anime</code> — buscar fichas locales de anime/manga.\n"
                 "🔎 <code>/anime_ficha</code> — abrir una ficha concreta.\n"
@@ -230,8 +231,8 @@ class SystemModule(BotModule):
             },
             BotIdentity.SUNNA: {
                 "games": (
-                    "🎮 <b>Juegos</b>\n\n"
-                    "Abrí <code>/juego</code> para entrar al panel. Desde ahí tenés gacha, inventario, combate y trivia."
+                    "🎮 <b>WaifuMon</b>\n\n"
+                    "Abrí <code>/juego</code> para entrar al panel de Sunna. Desde ahí tenés gacha, inventario, combate y evolución."
                 ),
                 "gacha": (
                     "🎰 <b>Gacha</b>\n\n"
