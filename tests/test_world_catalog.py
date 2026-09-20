@@ -66,3 +66,23 @@ async def test_world_catalog_seed_is_idempotent() -> None:
     keys = [(row.bot_identity, row.entry_type, row.entry_key) for row in rows]
     assert len(keys) == len(set(keys))
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_world_catalog_module_seeds_catalog_at_process_startup() -> None:
+    from unittest.mock import AsyncMock
+
+    from app.db.world_models import WorldCatalogEntry
+    from app.modules.world.module import WorldCatalogModule
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    module = WorldCatalogModule(database)
+
+    await module.on_startup(AsyncMock())
+
+    async with database.session() as session:
+        rows = list(await session.scalars(select(WorldCatalogEntry)))
+
+    assert len(rows) == len(WORLD_CATALOG) + len(REPERTOIRE)
+    await database.close()
