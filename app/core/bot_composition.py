@@ -47,7 +47,6 @@ def build_bot_modules(
         _spec("sunna-admin", lambda: AdminModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("cami-media", lambda: CamiMediaModule(database, settings=settings), BotIdentity.CAMI),
         _spec("cami-publisher", lambda: CamiMediaPublisher(database, settings=settings), BotIdentity.CAMI),
-        _spec("cami-admin", lambda: AdminModule(database, settings=settings), BotIdentity.CAMI),
         _spec("chie", lambda: ChieModule(database, settings=settings), BotIdentity.CHIE),
         _spec("requests", lambda: RequestModule(database), BotIdentity.CHIE),
         _spec("brain-chat", lambda: BrainChatModule(identity, settings=settings)),
