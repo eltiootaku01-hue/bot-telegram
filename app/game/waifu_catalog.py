@@ -144,6 +144,7 @@ RANKED_WAIFUS: tuple[WaifuDefinition, ...] = (
 
 
 RECENT_2025_WAIFUS: tuple[WaifuDefinition, ...] = (
+    _recent("anya-forger", "Anya Forger", "SPY x FAMILY", 7, 28, Element.MIND),
     _recent("maomao", "Maomao", "The Apothecary Diaries Season 2", 1, 45, Element.MIND),
     _recent("kaoruko-waguri", "Kaoruko Waguri", "The Fragrant Flower Blooms with Dignity", 2, 38, Element.LIGHT),
     _recent("momo-ayase", "Momo Ayase", "DAN DA DAN Season 2", 4, 80, Element.WIND),
