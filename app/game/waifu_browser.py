@@ -55,6 +55,8 @@ def _matches(character: Character, active_filter: WaifuFilter | None) -> bool:
             return character.popularity_source == RANKER_2026_SOURCE
         if value == "recent":
             return character.popularity_source == ANIME_CORNER_2025_SOURCE
+        if value == "local":
+            return character.popularity_source == "Catálogo inicial del proyecto; pendiente de ranking externo."
         return False
     return False
 
@@ -113,6 +115,7 @@ def filter_label(active_filter: WaifuFilter | None) -> str:
         (WaifuFilterField.RARITY, "sss"): "Clase: SSS",
         (WaifuFilterField.SOURCE, "ranker"): "Fuente: Ranker 2026",
         (WaifuFilterField.SOURCE, "recent"): "Fuente: Anime Corner 2025",
+        (WaifuFilterField.SOURCE, "local"): "Fuente: catálogo inicial",
     }
     return labels.get((active_filter.field, active_filter.value.casefold()), "Filtro")
 
