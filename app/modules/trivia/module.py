@@ -46,10 +46,21 @@ class TriviaModule(BotModule):
         self.router.message.register(self.ranking_command, Command("ranking"))
         self.router.callback_query.register(self.start_panel, F.data == "game:trivia:start")
         self.router.callback_query.register(self.answer, F.data.startswith("game:trivia:"))
+        self.router.callback_query.register(self.start_callback, F.data == "game:trivia:start")
 
     async def on_startup(self, bot: Bot) -> None:
         self._bot = bot
         self.tasks.start("trivia-scheduler", self._scheduler())
+
+    async def start_callback(self, callback: CallbackQuery) -> None:
+        """Open trivia information from the Sunna game hub."""
+        if callback.message is not None:
+            await callback.message.edit_text(
+                "🧠 <b>Trivia</b>\n\n"
+                "Las rondas aparecen automáticamente en la comunidad configurada.\n"
+                "Cuando haya una activa, podés responder desde sus botones. 🏆"
+            )
+        await callback.answer()
 
     async def start_command(self, message: Message) -> None:
         if message.chat.type != "private":
