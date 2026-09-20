@@ -16,8 +16,8 @@ def cafe_menu_keyboard(settings: Settings) -> InlineKeyboardMarkup:
             callback_data="cafe:recommendation",
         ),
         InlineKeyboardButton(
-            text="🕵️ Misterio",
-            callback_data="cafe:mystery:open",
+            text="🧠 Trivia",
+            callback_data="cafe:trivia:open",
         ),
     )
     builder.row(
