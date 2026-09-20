@@ -139,6 +139,24 @@ class WorldCuratorAIService:
             items=items,
         )
 
+    async def decide(
+        self,
+        session: AsyncSession,
+        *,
+        proposal_id: int,
+        approved: bool,
+    ) -> bool:
+        status = "accepted" if approved else "rejected"
+        result = await session.execute(
+            update(WorldProposal)
+            .where(
+                WorldProposal.id == proposal_id,
+                WorldProposal.status == "pending",
+            )
+            .values(status=status)
+        )
+        return result.rowcount == 1
+
     def _generator_name(self) -> str:
         provider = self.settings.llm_provider.strip().lower() or "auto"
         model = self.settings.llm_model.strip()
