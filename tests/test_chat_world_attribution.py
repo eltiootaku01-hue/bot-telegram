@@ -217,3 +217,43 @@ async def test_interaction_usage_is_recorded_as_relationship(database: Database)
         ))
 
     assert any(row.entry_key == "cari-cami" and row.count == 1 for row in rows)
+
+
+@pytest.mark.asyncio
+async def test_directed_interaction_uses_persisted_relationship_count_to_rotate_authored_scene(
+    database: Database,
+) -> None:
+    module = ChatModule(database)
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=7),
+        chat=SimpleNamespace(id=11, type="supergroup"),
+        text="Cami Sunna no entiendo",
+        answer=answer,
+    )
+
+    await module.handle_text(message)
+    first = list(answers)
+
+    answers.clear()
+    await module.handle_text(message)
+    second = list(answers)
+
+    assert first
+    assert second
+    assert first[0] != second[0]
+    assert first[1] != second[1]
+
+    async with database.session() as session:
+        count = await module.world.usage_count(
+            session,
+            bot_identity=BotIdentity.CAMI,
+            entry_type="relationship",
+            entry_key="cami-sunna",
+        )
+
+    assert count == 2
