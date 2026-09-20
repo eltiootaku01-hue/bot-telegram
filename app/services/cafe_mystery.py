@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 
 
@@ -87,6 +88,6 @@ def mystery_for(day_key: str, chat_id: int) -> CafeMystery:
     if not day_key.strip():
         raise ValueError("day_key must not be empty")
     seed = f"{day_key}:{chat_id}".encode("utf-8")
-    digest = __import__("hashlib").sha256(seed).digest()
+    digest = hashlib.sha256(seed).digest()
     index = int.from_bytes(digest[:8], "big") % len(CAFE_MYSTERIES)
     return CAFE_MYSTERIES[index]
