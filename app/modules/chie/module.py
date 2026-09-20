@@ -342,21 +342,45 @@ class ChieModule(BotModule):
             await callback.answer("Esta verificación ya fue resuelta.", show_alert=True)
             return
 
-        permissions = permissions_from_json(decided.default_permissions_json)
-        if permissions:
-            try:
-                await bot.restrict_chat_member(
-                    chat_id,
-                    target_user_id,
-                    permissions=ChatPermissions(**permissions),
-                    use_independent_chat_permissions=True,
-                )
-            except (TelegramBadRequest, TelegramForbiddenError):
-                logger.exception(
-                    "Could not restore verified member permissions: chat=%s user=%s",
-                    chat_id,
-                    target_user_id,
-                )
+        try:
+            chat_info = await bot.get_chat(chat_id)
+            current_permissions = getattr(chat_info, "permissions", None)
+        except (TelegramBadRequest, TelegramForbiddenError):
+            current_permissions = None
+
+        if not isinstance(current_permissions, ChatPermissions):
+            logger.error(
+                "Verified member has no readable default permissions; leaving member restricted: "
+                "chat=%s user=%s",
+                chat_id,
+                target_user_id,
+            )
+            await callback.answer(
+                "Verificación completada, pero no pude recuperar los permisos del grupo. "
+                "Un administrador deberá habilitar tu participación.",
+                show_alert=True,
+            )
+            return
+
+        try:
+            await bot.restrict_chat_member(
+                chat_id,
+                target_user_id,
+                permissions=current_permissions,
+                use_independent_chat_permissions=True,
+            )
+        except (TelegramBadRequest, TelegramForbiddenError):
+            logger.exception(
+                "Could not restore verified member permissions: chat=%s user=%s",
+                chat_id,
+                target_user_id,
+            )
+            await callback.answer(
+                "Verificación completada, pero no pude restaurar tus permisos. "
+                "Revisá los permisos de Chie.",
+                show_alert=True,
+            )
+            return
 
         await callback.message.edit_text(
             "✅ <b>Verificación completada.</b>\n"
