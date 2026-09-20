@@ -178,6 +178,30 @@ Después de validar este bloque, priorizar superficies aún simples de Cari/Cami
 ### Regla de no repetición
 No recrear `/ranking`, catálogo de Cami ni los paneles de ayuda existentes salvo regresión o cambio de requisitos. Las próximas mejoras de producto deben centrarse en superficies todavía simples que aporten una capacidad nueva.
 
+
+## Cierre de validación — SHA dddd55f40549d71d118f35939f390e8dc7c0459c
+
+### Evidencia final
+- CI #1193: SUCCESS.
+- Windows Build #823: SUCCESS.
+- Los dos pipelines apuntaron al mismo SHA `dddd55f40549d71d118f35939f390e8dc7c0459c`.
+- Windows completó: 5 ejecutables, verificación de tamaños, smoke test de BotManager, instalador Inno Setup, manifest, ZIP portable, SHA-256 y subida de ambos artefactos.
+- Artefacto portable: `bot-telegram-windows-portable`, digest `sha256:dcaca62b7b8ceab0a10e3026b16eabb699d8db0d6ec777bf2ff55447164cf16a`.
+- Artefacto instalador: `bot-telegram-windows-installer`, digest `sha256:05e011633094c39ce2722c5acbab474423f98f357cb0042348e30eb073adebfa`.
+
+### Estado de producto
+- Estimación global conservadora: **79%**.
+- No se incrementa artificialmente por haber cerrado CI/empaquetado: todavía existen trabajo de profundidad autoral, superficies avanzadas, GUI y evolución de la curación IA.
+- El bloque de navegación/operación de esta sesión queda cerrado; no volver a implementarlo salvo regresión o requisito nuevo.
+
+### Registro de decisiones para futuras sesiones
+- No rehacer auditorías de concurrencia ya cerradas sin evidencia nueva.
+- No reimplementar `/ranking`, `/ayuda`, catálogo base de Ciudad Animals ni transporte multi-identidad.
+- Reutilizar `validate_setup()` para nuevas pantallas de configuración.
+- Reutilizar `cafe_menu_keyboard()` para ampliar el Café sin duplicar enlaces.
+- Toda mejora de producto nueva debe añadir código + regresión + CI antes de considerarse terminada.
+- El archivo de continuidad es obligatorio como primera referencia antes de iniciar una nueva tanda.
+
 ## Snapshot 2026-09-20 — actualización posterior
 
 Estado global conservador: 79%. Esta cifra estima cobertura frente a la visión completa del proyecto; no es una métrica de CI.
