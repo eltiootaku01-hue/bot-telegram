@@ -67,3 +67,23 @@ class WorldReview(Base):
     period_key: Mapped[str] = mapped_column(String(64))
     generated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     report_json: Mapped[str] = mapped_column(String(20000))
+
+
+class WorldProposal(Base):
+    """Untrusted AI or human proposal linked to a review; never changes canon itself."""
+
+    __tablename__ = "world_proposals"
+    __table_args__ = (
+        UniqueConstraint(
+            "review_id",
+            "generator",
+            name="uq_world_proposal_generator",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    review_id: Mapped[int] = mapped_column(Integer)
+    generator: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    payload_json: Mapped[str] = mapped_column(String(30000))
