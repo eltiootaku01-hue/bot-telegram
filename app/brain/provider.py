@@ -56,6 +56,7 @@ class LLMRequest:
     persona: str | None = None
     system_extra: str = ""
     max_tokens: int = 180
+    max_user_chars: int = 1500
     temperature: float = 0.8
 
 
@@ -137,7 +138,8 @@ class BrainClient:
         messages = [{"role": "system", "content": self._system_prompt(request)}]
         for item in request.recent_context[-8:]:
             messages.append({"role": "user", "content": item[:800]})
-        messages.append({"role": "user", "content": request.user_text[:1500]})
+        max_user_chars = max(1, request.max_user_chars)
+        messages.append({"role": "user", "content": request.user_text[:max_user_chars]})
         return messages
 
     def _openai_compatible(self, provider: str, request: LLMRequest) -> str:
