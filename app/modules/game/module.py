@@ -12,7 +12,7 @@ from app.characters.models import CharacterIntent
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
-from app.core.time import utc_now, world_now
+from app.core.time import utc_now
 from app.db.database import Database
 from app.db.models import GameAttempt, GameCollection, GameEncounter
 from app.db.repositories import MemberRepository
