@@ -216,3 +216,49 @@ async def test_request_queue_summary_reports_pending_processing_overdue_and_comp
     assert summary.overdue == 1
     assert summary.completed_recent == 1
     assert summary.oldest_pending_at is not None
+
+
+@pytest.mark.asyncio
+async def test_create_paid_assigns_persistent_sla_deadline(database: Database) -> None:
+    from app.services.requests import DEFAULT_REQUEST_SLA_HOURS
+
+    await seed_profile(database, user_id=30, chat_id=300, points=100)
+    service = RequestService()
+
+    before = __import__("app.core.time", fromlist=["utc_now"]).utc_now()
+    async with database.session() as session:
+        result = await service.create_paid(
+            session,
+            user_id=30,
+            chat_id=300,
+            description="Pedido con SLA",
+            source_message_id=3000,
+        )
+
+    assert result is not None
+    assert result.request.due_at is not None
+    assert result.request.due_at >= before + __import__("datetime", fromlist=["timedelta"]).timedelta(hours=DEFAULT_REQUEST_SLA_HOURS)
+
+    async with database.session() as session:
+        persisted = await session.get(FanRequest, result.request.id)
+
+    assert persisted is not None
+    assert persisted.due_at == result.request.due_at
+
+
+@pytest.mark.asyncio
+async def test_create_paid_rejects_non_positive_sla(database: Database) -> None:
+    await seed_profile(database, user_id=31, chat_id=310, points=100)
+    service = RequestService()
+
+    with pytest.raises(ValueError, match="Request SLA"):
+        async with database.session() as session:
+            await service.create_paid(
+                session,
+                user_id=31,
+                chat_id=310,
+                description="SLA inválido",
+                source_message_id=3100,
+                sla_hours=0,
+            )
+
