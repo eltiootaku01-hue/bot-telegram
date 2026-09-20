@@ -64,7 +64,8 @@ class TelegramSetupAssistant(tk.Toplevel):
         ttk.Label(base, text="ID del grupo base").grid(row=0, column=0, sticky="w")
         ttk.Entry(base, textvariable=self.base_group_var, width=22).grid(row=0, column=1, sticky="w", padx=8)
         ttk.Button(base, text="Revisar grupo base", command=self.review_group).grid(row=0, column=2, padx=6)
-        ttk.Button(base, text="Autorizar este grupo", command=self.authorize_base_group).grid(row=0, column=3, padx=6)
+        ttk.Button(base, text="Fijar como hogar", command=self.authorize_base_group).grid(row=0, column=3, padx=6)
+        ttk.Button(base, text="Obtener ID con Chie", command=self.open_chie_id_helper).grid(row=0, column=4, padx=6)
         self.group_state_var = tk.StringVar(value="⚠ todavía no revisado")
         ttk.Label(base, textvariable=self.group_state_var).grid(row=1, column=0, columnspan=4, sticky="w", pady=(8, 0))
         ttk.Label(
