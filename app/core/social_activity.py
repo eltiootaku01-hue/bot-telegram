@@ -21,18 +21,26 @@ class SocialActivity:
     recent_messages: int
     active_users: int
     last_human_message_at: datetime | None
+    last_bot_message_at: datetime | None
+    last_social_event_at: datetime | None
     observed_at: datetime
 
     def to_snapshot(self, memory: SocialMemory) -> SocialSnapshot:
         now = self.observed_at
         last_human = self.last_human_message_at or now
         human_recent = self.active_users >= 2 and (now - last_human).total_seconds() <= 10 * 60
+        last_bot = self.last_bot_message_at or memory.last_bot_message_at
+        last_event = self.last_social_event_at or memory.last_event_at
         return SocialSnapshot(
             recent_messages=self.recent_messages,
             active_users=self.active_users,
             minutes_since_last_message=max(0, int((now - last_human).total_seconds() // 60)),
-            minutes_since_last_bot_message=memory.minutes_since_last_bot_message(now),
-            minutes_since_last_event=memory.minutes_since_last_event(now),
+            minutes_since_last_bot_message=(
+                10**9 if last_bot is None else max(0, int((now - last_bot).total_seconds() // 60))
+            ),
+            minutes_since_last_event=(
+                10**9 if last_event is None else max(0, int((now - last_event).total_seconds() // 60))
+            ),
             conversation_active=human_recent,
         )
 
@@ -65,9 +73,10 @@ class SocialActivityService:
         # Message recency belongs to the chat, not membership presence. The
         # repository updates this field only for human Telegram messages, so
         # bot activity and membership updates cannot masquerade as a message.
-        last_human_message_at = await session.scalar(
-            select(Chat.last_human_message_at).where(Chat.id == chat_id)
-        )
+        chat_row = await session.get(Chat, chat_id)
+        last_human_message_at = chat_row.last_human_message_at if chat_row is not None else None
+        last_bot_message_at = chat_row.last_bot_message_at if chat_row is not None else None
+        last_social_event_at = chat_row.last_social_event_at if chat_row is not None else None
 
         # There is no rolling message-history table yet. Keep this as a bounded
         # activity signal rather than pretending it is an exact message count.
@@ -77,6 +86,8 @@ class SocialActivityService:
             recent_messages=recent_messages,
             active_users=int(active_users),
             last_human_message_at=last_human_message_at,
+            last_bot_message_at=last_bot_message_at,
+            last_social_event_at=last_social_event_at,
             observed_at=observed_at,
         )
 
