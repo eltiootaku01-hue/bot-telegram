@@ -84,10 +84,11 @@ def check_bot_in_chat(
 ) -> TelegramChatCheck:
     try:
         chat = _api_call(token, "getChat", {"chat_id": chat_id})["result"]
+        me = _api_call(token, "getMe")["result"]
         member = _api_call(
             token,
             "getChatMember",
-            {"chat_id": chat_id, "user_id": int(verify_bot_token(token).bot_id or 0)},
+            {"chat_id": chat_id, "user_id": int(me["id"])},
         )["result"]
     except Exception as exc:
         return TelegramChatCheck(ok=False, chat_id=chat_id, error=str(exc))
