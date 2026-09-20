@@ -61,6 +61,13 @@ def mission_for(key: str) -> DailyMissionDefinition:
     raise KeyError(key)
 
 
+@dataclass(frozen=True, slots=True)
+class MissionProgressSnapshot:
+    progress: int
+    target: int
+    claimed: bool
+
+
 class DailyMissionService:
     """Deterministic daily missions with action-level dedupe and one-time rewards."""
 
@@ -144,12 +151,17 @@ class DailyMissionService:
                 session.add(credit)
                 await session.flush()
         except IntegrityError:
-            return await self._ensure_progress(
+            row = await self._ensure_progress(
                 session,
                 user_id=user_id,
                 chat_id=chat_id,
                 day_key=day_key,
                 mission=mission,
+            )
+            return MissionProgressSnapshot(
+                progress=row.progress,
+                target=row.target,
+                claimed=row.claimed,
             )
 
         row = await self._ensure_progress(
@@ -171,7 +183,11 @@ class DailyMissionService:
             )
         )
         await session.refresh(row)
-        return row
+        return MissionProgressSnapshot(
+            progress=row.progress,
+            target=row.target,
+            claimed=row.claimed,
+        )
 
     async def claim(
         self,
