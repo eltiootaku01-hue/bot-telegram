@@ -439,3 +439,77 @@ async def test_operator_inbox_exposes_responding_request_for_manual_resolution(d
     assert call.kwargs["reply_markup"].inline_keyboard[0][0].callback_data == (
         f"tio:request:resolve:{request_id}"
     )
+
+
+def _owner_message(text: str):
+    return SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=77),
+        from_user=SimpleNamespace(id=77),
+        text=text,
+        answer=AsyncMock(),
+        edit_reply_markup=AsyncMock(),
+    )
+
+
+@pytest.mark.asyncio
+async def test_operator_context_command_is_read_only(database: Database) -> None:
+    service = TioOperatorService()
+    module = TioOperatorModule(database, Settings(admin_user_id=77))
+
+    async with database.session() as session:
+        captured = await service.capture(
+            session,
+            chat_id=-100,
+            user_id=7,
+            source_message_id=53,
+            text="Tío Otaku, necesito contarte algo.",
+        )
+        request_id = captured.request.id
+
+    message = _owner_message(f"/tio_ver {request_id}")
+    await module.view_command(message)
+
+    assert message.answer.await_count == 1
+    rendered = message.answer.await_args.args[0]
+    assert f"solicitud #{request_id}" in rendered
+    assert "necesito contarte algo." in rendered
+    assert f"/tio_responder {request_id} tu mensaje" in rendered
+
+    async with database.session() as session:
+        stored = await session.get(TioOperatorRequest, request_id)
+
+    assert stored is not None
+    assert stored.status == "pending"
+
+
+@pytest.mark.asyncio
+async def test_operator_context_callback_does_not_change_request_state(database: Database) -> None:
+    service = TioOperatorService()
+    module = TioOperatorModule(database, Settings(admin_user_id=77))
+
+    async with database.session() as session:
+        captured = await service.capture(
+            session,
+            chat_id=-100,
+            user_id=7,
+            source_message_id=54,
+            text="Tío, necesito contexto.",
+        )
+        request_id = captured.request.id
+
+    callback = SimpleNamespace(
+        message=_owner_message("inbox"),
+        from_user=SimpleNamespace(id=77),
+        data=f"tio:request:view:{request_id}",
+        answer=AsyncMock(),
+    )
+    await module.decide_request(callback)
+
+    callback.answer.assert_awaited_once_with("Contexto mostrado.")
+    callback.message.answer.assert_awaited_once()
+
+    async with database.session() as session:
+        stored = await session.get(TioOperatorRequest, request_id)
+
+    assert stored is not None
+    assert stored.status == "pending"
