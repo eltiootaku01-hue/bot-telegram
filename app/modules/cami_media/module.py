@@ -360,8 +360,7 @@ class CamiMediaModule(BotModule):
                     f"• <code>{escape(row.id)}</code> — <b>{escape(row.title)}</b>"
                     for row in matches
                 )
-                await message.answer("
-".join(lines))
+                await message.answer("\n".join(lines))
                 await self._observe_action(
                     "anime_detail_ambiguous",
                     message.from_user.id,
