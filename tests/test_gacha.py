@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from sqlalchemy import select
 
@@ -286,9 +288,6 @@ async def test_gacha_reference_cannot_be_replayed_for_another_player_or_communit
                 chat_id=-200,
                 seed="owned-by-7",
             )
-
-
-import asyncio
 
 
 @pytest.mark.asyncio
