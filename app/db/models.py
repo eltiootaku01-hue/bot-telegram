@@ -187,6 +187,26 @@ class MediaAsset(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+class CafeDailyEventRound(Base):
+    """One authored non-canonical daily Café Otaku world event per community."""
+
+    __tablename__ = "cafe_daily_event_rounds"
+    __table_args__ = (
+        UniqueConstraint("chat_id", "day_key", name="uq_cafe_daily_event_chat_day"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    day_key: Mapped[str] = mapped_column(String(16))
+    event_key: Mapped[str] = mapped_column(String(100))
+    title: Mapped[str] = mapped_column(String(255))
+    text: Mapped[str] = mapped_column(String(2000))
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    message_id: Mapped[int | None] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class MysteryRound(Base):
     """Daily Café Otaku mystery, one deterministic case per community/day."""
 
