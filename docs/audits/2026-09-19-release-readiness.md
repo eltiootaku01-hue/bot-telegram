@@ -3,9 +3,9 @@
 ## Estado actual
 
 - Rama de entrega: `main`
-- SHA validado: `3f2e4a1261a5ea4b2111e226a6e769e674e6b802`
-- CI #938: **SUCCESS**
-- Windows Build #579: **SUCCESS**
+- SHA validado: `578f0ba9144331b91b89dffdff6049b9899ff489`
+- CI #1028: **SUCCESS**
+- Windows Build #669: **SUCCESS**
 - Las dos canalizaciones terminaron correctamente sobre el mismo SHA.
 
 ## Incluido en este estado
@@ -15,6 +15,8 @@
 - allowlist aplicada también a envíos automáticos;
 - publicaciones de Cami con claim atómico + `BEGIN IMMEDIATE`;
 - catálogo persistente de Ciudad Animals;
+- catálogo local de anime/manga + importador JSON;
+- interacciones authored-only por parejas de personajes;
 - repertorio authored-only y nuevas rutas de interacción;
 - Misterio diario de Sunna con persistencia, recuperación e idempotencia;
 - prueba de carrera con dos conexiones SQLite para demostrar un único ganador/recompensa;
@@ -22,7 +24,7 @@
 
 ## Paquete Windows comprobado
 
-El workflow #579 verificó:
+El workflow #669 verificó:
 - los cuatro bots;
 - BotManager;
 - instalador Inno Setup;

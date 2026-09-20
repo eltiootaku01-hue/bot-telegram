@@ -1,42 +1,44 @@
 # Auditoría viva del proyecto
 
-Fecha de referencia: 2026-09-19
+Fecha de referencia: 2026-09-20
 
 Este documento separa el estado técnico comprobable del avance hacia la visión completa de Ciudad Animals. Los porcentajes son estimaciones de alcance, no métricas automáticas de cobertura.
 
 ## Estado de la plataforma
 
+Corte conservador global: ~67%. Este valor sigue limitado por contenido narrativo, GUI, profundidad del mundo y herramientas del operador; no se incrementa por contar commits o tests.
+
 | Área | Estado |
 | --- | ---: |
-| Arquitectura Core | 87% |
-| Cuatro identidades independientes | 92% |
-| Persistencia / SQLite / transacciones | 91% |
-| Módulos y composición | 88% |
-| Eventos, jobs, turnos y presencia | 84% |
-| WaifuMon / progresión | 82% |
-| Trivia | 80% |
-| Media / archivo / publicaciones | 80% |
-| Solicitudes / puntos | 82% |
-| BotManager / empaquetado Windows | 90% |
+| Arquitectura Core | 88% |
+| Cuatro identidades independientes | 93% |
+| Persistencia / SQLite / transacciones | 93% |
+| Módulos y composición | 90% |
+| Eventos, jobs, turnos y presencia | 87% |
+| WaifuMon / progresión | 85% |
+| Trivia | 84% |
+| Media / archivo / publicaciones | 85% |
+| Solicitudes / puntos | 85% |
+| BotManager / empaquetado Windows | 92% |
 
 ## Estado de personajes y mundo
 
 | Área | Estado |
 | --- | ---: |
-| Canon y perfiles de personajes | 72% |
-| Director determinista | 60% |
-| Repertorio escrito | 47% |
-| Router determinista de intenciones | 50% |
+| Canon y perfiles de personajes | 74% |
+| Director determinista | 70% |
+| Repertorio escrito | 55% |
+| Router determinista de intenciones | 63% |
 | Rutinas y horarios | 52% |
-| Interacciones entre personajes | 29% |
-| Café Otaku | 23% |
-| Ciudad Animals | 35% |
-| Estadísticas del mundo | 40% |
-| Registro automático de uso de escenas | 50% |
+| Interacciones entre personajes | 45% |
+| Café Otaku | 28% |
+| Ciudad Animals | 48% |
+| Estadísticas del mundo | 60% |
+| Registro automático de uso de escenas | 58% |
 | IA como curadora periódica | 20% |
-| Juegos nuevos (misterios, cartas, etc.) | 10% |
+| Juegos nuevos (misterios, cartas, etc.) | 15% |
 | GUI completa de edición | 20% |
-| Base documental anime/maid | 18% |
+| Base documental anime/maid | 32% |
 | Operador humano Tío Otaku | 15% |
 
 ## Riesgos activos detectados por auditoría
@@ -48,14 +50,14 @@ Este documento separa el estado técnico comprobable del avance hacia la visión
 5. Ciudad Animals registra escenas usadas, intención y ámbitos de usuario/chat. Las escenas de seguimiento quedan atribuidas al personaje que realmente habla.
 6. Las rutinas usan `Settings.bot_world_timezone` y convierten UTC a zona IANA. `tzdata` queda declarado para portabilidad de la base horaria en Windows.
 7. El cierre de sesión de `Database.session()` establece explícitamente el límite transaccional: commit al completar el bloque y rollback ante excepciones. Esto corrige el hueco detectado por CI.
-8. Café Otaku y las rutinas del mundo siguen siendo funcionalidad parcial: faltan objetos, servicios, economía, personajes secundarios y eventos conectados a esas rutinas.
-9. La base de comportamiento de maids/tiendas y la base de metadatos de anime son actualmente documentación de referencia; todavía no están convertidas en un catálogo de datos consultable por Cami/Cari.
+8. Café Otaku y las rutinas del mundo siguen siendo funcionalidad parcial: faltan objetos, servicios, economía, personajes secundarios y eventos más profundos conectados a esas rutinas.
+9. La base de comportamiento de maids/tiendas sigue siendo documentación de referencia; el catálogo de metadatos de anime ya tiene modelos locales, servicio de búsqueda, importador JSON y comando `/anime`.
 10. Tío Otaku debe mantenerse como operador humano: el sistema transporta, muestra y registra; la decisión y redacción final pertenecen al operador y la IA no es obligatoria.
 11. La bibliotecaria y las capas de conocimiento deben distinguir entre canon del autor, datos externos normalizados, planificación y propuestas.
 12. Las pruebas deben seguir protegiendo la voz específica de Sunna, Cami y Chie frente a expansiones futuras del repertorio.
 13. CI no se considera verde solo por una corrección local: cada cambio debe tener una ejecución posterior concluida con éxito.
 14. La trivia tenía llamadas directas a `datetime.utcnow()` y defaults de modelo basados en ese reloj, fuera de la abstracción temporal central. Esto se corrigió para usar `app.core.time.utc_now()`, manteniendo el almacenamiento UTC-naive coherente con el resto de la plataforma.
-15. La auditoría de solicitudes detectó una segunda frontera transaccional que debe vigilarse: `RequestService.create_paid()` hace `commit()` y `rollback()` internos aunque el llamador usa `Database.session()` como frontera transaccional. Esto funciona en el flujo actual, pero reduce la composabilidad del servicio y puede confirmar o deshacer trabajo ajeno si el mismo `AsyncSession` se reutiliza. SQLAlchemy recomienda una `AsyncSession` por tarea y una transacción claramente delimitada; la siguiente corrección debe preservar la atomicidad del cobro y de la solicitud sin romper la frontera superior.
+15. `RequestService.create_paid()` ya es componible con la frontera transaccional del llamador; mantiene el cobro y la creación de la solicitud dentro de la misma unidad de trabajo.
 16. `FanRequest` y `PointTransaction` tienen restricciones únicas y el servicio resuelve carreras de mensajes duplicados mediante `source_message_id` y referencias de puntos. Existe una regresión de integración que ejecuta dos intentos concurrentes y verifica que solo uno cobra y crea la solicitud.
 
 ## Canon de personajes incorporado
@@ -129,9 +131,9 @@ La persistencia de observaciones de mundo tiene una frontera transaccional expl�
 
 La auditoría de módulos muestra que WaifuMon/progresión y solicitudes tienen límites transaccionales explícitos en sus flujos actuales, pero solicitudes necesita una corrección posterior para que el servicio no se apropie de la transacción del llamador. La trivia también queda alineada con el reloj central después de la corrección del 16-09-2026. Todavía falta extender de forma deliberada la observación del mundo a eventos de dominio relevantes de juegos, trivia, media y solicitudes; no se añadirá telemetría indiscriminada solo para aumentar estadísticas.
 
-La siguiente fase inmediata es: (1) comprobar el pipeline Linux para el SHA actual, (2) añadir una prueba de concurrencia/idempotencia para solicitudes y puntos, (3) corregir la propiedad de la transacción en `RequestService` sin perder atomicidad, (4) repetir CI Linux + Windows, y (5) continuar con WaifuMon, Trivia y Media bajo el mismo recorrido `Telegram → módulo → servicio de dominio → persistencia → evento/mundo`.
+La siguiente fase inmediata es ampliar la profundidad de Ciudad Animals/Café Otaku, aumentar repertorio e interacciones, incorporar más metadatos locales verificados y construir herramientas del operador humano Tío Otaku; las fronteras críticas de persistencia, seguridad, concurrencia y empaquetado ya tienen validación repetida.
 
-La siguiente fase de producto, después de cerrar esas fronteras, es convertir las bases documentales en datos de dominio consultables, ampliar el repertorio, modelar relaciones/acontecimientos/objetos/estado del Café Otaku y Ciudad Animals, y diseñar la futura interfaz de Tío Otaku como herramienta de operación humana. La IA seguirá siendo opcional.
+La siguiente fase de producto es convertir más documentación de comportamiento en datos de dominio, ampliar el repertorio, modelar relaciones/acontecimientos/objetos/estado del Café Otaku y Ciudad Animals, y diseñar la interfaz de Tío Otaku como herramienta de operación humana. La IA seguirá siendo opcional.
 
 ## Criterio de finalización
 
