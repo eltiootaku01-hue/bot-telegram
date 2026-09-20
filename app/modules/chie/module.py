@@ -101,6 +101,7 @@ class ChieModule(BotModule):
         self.worker.register_event("fan_request.created", self._notify_new_request)
         self.tasks.start("request-notifications", self.worker.run())
         self.tasks.start("world-daily-review", self._daily_world_review_loop())
+        self.tasks.start("human-verification-expiry", self._verification_expiry_loop())
 
     async def _notify_new_request(self, payload: dict) -> None:
         if self.bot is None or not self.settings.master_user_id:
@@ -262,8 +263,9 @@ class ChieModule(BotModule):
                 session,
                 chat_id=chat_id,
                 user_id=user_id,
-                prompt_message_id=sent.message_id,
+                prompt_message_id=sent.message_id if isinstance(getattr(sent, "message_id", None), int) else None,
                 default_permissions_json=permissions_to_json(permissions) if permissions is not None else "{}",
+                timeout_seconds=self.settings.human_verification_timeout_seconds,
             )
         await self._observe_action("verification_prompt", user_id, chat_id)
 
@@ -356,6 +358,74 @@ class ChieModule(BotModule):
         await self._observe_action("verification_verified", target_user_id, chat_id)
         await callback.answer("Verificado/a. ✅")
 
+
+
+    async def _verification_expiry_loop(self) -> None:
+        """Remove unanswered members after the durable verification deadline."""
+        while True:
+            try:
+                if self.bot is not None:
+                    async with self.database.session() as session:
+                        expired = await self.verification.claim_expired(session, limit=50)
+                    for verification in expired:
+                        if not is_authorized_community(self.settings, verification.chat_id):
+                            async with self.database.session() as session:
+                                await self.verification.finish_expiration(
+                                    session,
+                                    verification_id=verification.id,
+                                )
+                            continue
+                        try:
+                            await self.bot.ban_chat_member(
+                                verification.chat_id,
+                                verification.user_id,
+                            )
+                            await self.bot.unban_chat_member(
+                                verification.chat_id,
+                                verification.user_id,
+                            )
+                        except (TelegramBadRequest, TelegramForbiddenError):
+                            logger.exception(
+                                "Could not remove expired human verification: chat=%s user=%s",
+                                verification.chat_id,
+                                verification.user_id,
+                            )
+                            async with self.database.session() as session:
+                                await self.verification.requeue_expiration(
+                                    session,
+                                    verification_id=verification.id,
+                                )
+                            continue
+
+                        async with self.database.session() as session:
+                            finished = await self.verification.finish_expiration(
+                                session,
+                                verification_id=verification.id,
+                            )
+                        if finished and verification.prompt_message_id:
+                            try:
+                                await self.bot.edit_message_text(
+                                    chat_id=verification.chat_id,
+                                    message_id=verification.prompt_message_id,
+                                    text=(
+                                        "⏱️ <b>Verificación vencida.</b>\n"
+                                        "No recibí una respuesta a tiempo, así que Chie te expulsó. "
+                                        "Podés volver a entrar y realizar la verificación nuevamente."
+                                    ),
+                                )
+                            except TelegramBadRequest:
+                                pass
+                        if finished:
+                            await self._observe_action(
+                                "verification_expired",
+                                verification.user_id,
+                                verification.chat_id,
+                            )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Human verification expiry cycle failed")
+            await asyncio.sleep(15)
     async def member_left(self, event: ChatMemberUpdated, bot: Bot) -> None:
         old_status = getattr(event.old_chat_member.status, "value", event.old_chat_member.status)
         new_status = getattr(event.new_chat_member.status, "value", event.new_chat_member.status)
