@@ -13,12 +13,12 @@ def test_provider_order_prefers_configured_provider() -> None:
     assert BrainClient(settings).configured_providers() == ["groq", "gemini", "openrouter", "ollama"]
 
 
-def test_provider_order_without_preference_is_stable() -> None:
+def test_provider_order_without_preference_is_local_first() -> None:
     settings = Settings(
         gemini_api_key="gemi-key",
         cerebras_api_key="c-key",
     )
-    assert BrainClient(settings).configured_providers() == ["gemini", "cerebras", "ollama"]
+    assert BrainClient(settings).configured_providers() == ["ollama", "gemini", "cerebras"]
 
 
 def test_ollama_can_be_the_only_backend() -> None:
