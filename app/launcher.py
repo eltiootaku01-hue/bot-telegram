@@ -453,6 +453,10 @@ class BotLauncher(tk.Tk):
             media_storage_chat_id=self.media_var.get(),
             publish_page_chat_id=self.publish_page_var.get(),
             base_group_chat_id=self.base_group_var.get(),
+            human_verification_timeout_seconds=self.verification_timeout_var.get(),
+            human_verification_raid_window_seconds=self.verification_raid_window_var.get(),
+            human_verification_raid_threshold=self.verification_raid_threshold_var.get(),
+            human_verification_raid_timeout_seconds=self.verification_raid_timeout_var.get(),
         )
         if result.errors:
             messagebox.showerror(
