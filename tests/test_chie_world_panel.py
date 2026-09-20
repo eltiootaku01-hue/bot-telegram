@@ -149,3 +149,46 @@ async def test_rules_command_publishes_deterministic_rules(database: Database) -
     assert answers
     assert "Reglas de Ciudad Animals" in answers[0]
     assert "respeto" in answers[0].casefold()
+
+
+@pytest.mark.asyncio
+async def test_health_command_is_admin_private_only_and_returns_aggregate_report(database: Database) -> None:
+    module = ChieModule(database, Settings(
+        admin_user_id=77,
+        authorized_chat_ids="-100123",
+    ))
+    answers: list[str] = []
+
+    async def answer(text: str) -> None:
+        answers.append(text)
+
+    async with database.session() as session:
+        from app.db.community_models import SetupSession
+        session.add(
+            SetupSession(
+                user_id=77,
+                chat_id=-100123,
+                bot_identity=BotIdentity.CHIE.value,
+                status="configured",
+            )
+        )
+
+    denied = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=88),
+        from_user=SimpleNamespace(id=88),
+        answer=answer,
+    )
+    await module.health_command(denied)
+    assert answers == []
+
+    owner = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=77),
+        from_user=SimpleNamespace(id=77),
+        answer=answer,
+    )
+    await module.health_command(owner)
+
+    assert answers
+    assert "Salud de Ciudad Animals" in answers[-1]
+    assert "Comunidades configuradas: <b>1</b>" in answers[-1]
+    assert "Comunidades autorizadas: <b>1</b>" in answers[-1]
