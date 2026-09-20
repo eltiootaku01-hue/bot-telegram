@@ -102,3 +102,60 @@ async def test_update_metadata_can_join_outer_transaction(tmp_path) -> None:
 
     assert persisted is None
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_media_queue_summary_counts_pipeline_states(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'media-queue.db'}")
+    await database.create_schema()
+    library = MediaLibrary()
+
+    async with database.session() as session:
+        session.add_all(
+            [
+                MediaAsset(
+                    telegram_file_id="q1",
+                    source_chat_id=7,
+                    source_message_id=1,
+                    status="cami_inbox",
+                ),
+                MediaAsset(
+                    telegram_file_id="q2",
+                    source_chat_id=7,
+                    source_message_id=2,
+                    status="needs_tag",
+                ),
+                MediaAsset(
+                    telegram_file_id="q3",
+                    source_chat_id=7,
+                    source_message_id=3,
+                    status="scheduled",
+                ),
+                MediaAsset(
+                    telegram_file_id="q4",
+                    source_chat_id=7,
+                    source_message_id=4,
+                    status="delivery_unknown",
+                ),
+                MediaAsset(
+                    telegram_file_id="q5",
+                    source_chat_id=7,
+                    source_message_id=5,
+                    status="published",
+                ),
+            ]
+        )
+
+    async with database.session() as session:
+        summary = await library.queue_summary(session)
+
+    assert summary.inbox == 1
+    assert summary.needs_tag == 1
+    assert summary.waiting_schedule == 0
+    assert summary.scheduled == 1
+    assert summary.publishing == 0
+    assert summary.delivery_unknown == 1
+    assert summary.published == 1
+    assert summary.oldest_actionable_at is not None
+    await database.close()
+
