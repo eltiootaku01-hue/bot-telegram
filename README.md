@@ -6,10 +6,10 @@ Modular Telegram bot platform built around one rule: **local code first, AI seco
 
 The project runs as four separate Telegram bots that share one authoritative database/services layer:
 
-1. **Cari** — community presence, social interaction and explicit administrator moderation.
-2. **Sunna** — WaifuMon, encounters, collection, progression, combat and trivia.
-3. **Cami** — media catalog, requests, publication, analytics and diagnostics.
-4. **Chie** — onboarding, forum setup, welcome/verification, rules, world metrics and coordination.
+1. **Cari** — community presence, social interaction, trivia and explicit administrator moderation.
+2. **Sunna** — WaifuMon, encounters, collection, progression, combat, gacha and missions.
+3. **Cami** — media catalog, requests, publication, analytics, diagnostics and daily mysteries.
+4. **Chie** — onboarding, forum setup, welcome/farewell, human verification, rules, world metrics and coordination.
 
 The bots are intentionally separate Telegram identities, while the local Core remains authoritative for shared state, points, requests, media and configuration.
 
@@ -142,7 +142,7 @@ The gacha state, approval state and reward transaction are stored in SQLite, so 
 
 ## Misterio diario del Café Otaku
 
-Sunna incorpora un misterio authored que puede iniciarse en la comunidad con `/misterio`. Cada comunidad tiene como máximo una ronda por día del mundo. El caso se elige de forma determinista según la comunidad y la fecha, incluye cuatro pistas y cuatro opciones, y el primer jugador que acierta obtiene **15 puntos**.
+Cami mantiene un misterio authored que puede iniciarse en la comunidad con `/misterio`. Cada comunidad tiene como máximo una ronda por día del mundo. El caso se elige de forma determinista según la comunidad y la fecha, incluye cuatro pistas y cuatro opciones, y el primer jugador que acierta obtiene **15 puntos**.
 
 La ronda y los intentos quedan persistidos en SQLite. Cada jugador puede responder una sola vez, el ganador se reclama con una transición atómica y la recompensa usa una referencia idempotente en el ledger de puntos. Si Telegram rechaza la publicación inicial, la ronda queda marcada para poder reintentarse en lugar de bloquear el día.
 
@@ -225,6 +225,17 @@ The implementation is designed for a future **AI curator** that runs periodicall
 
 See `docs/CIUDAD_ANIMALS_WORLD.md` for the design and current status.
 
+
+## Chie: bienvenida, despedida y verificación humana
+
+Cuando Chie está configurada y autorizada como administradora de la comunidad, observa las actualizaciones de miembros. Un nuevo integrante recibe una restricción inmediata de envío y un teclado de dos botones:
+
+- **🤖 Sí, soy un bot** → Chie expulsa y desbanea al usuario para permitir un nuevo ingreso.
+- **👤 No, soy una persona** → Chie verifica y restaura los permisos vigentes del grupo.
+
+La verificación tiene TTL durable en SQLite. Si no responde, una tarea de limpieza lo expulsa y desbanea. Durante una oleada de entradas, Chie reduce automáticamente el TTL usando los controles `HUMAN_VERIFICATION_RAID_*`.
+
+El polling de los cuatro bots solicita explícitamente los tipos de actualización usados por sus routers. Esto es especialmente importante para `chat_member`, que Telegram no entrega por defecto y requiere especificarlo en `allowed_updates`.
 ## Telegram setup and Bot Manager
 
 The desktop setup screen now includes a local readiness checklist with ✓/⚠/✗ states, per-bot token verification, official Telegram add-to-group links, a base-community/home setting, real group presence/permission checks, a Master/Jefe Telegram ID field, and a direct Chie helper to obtain that ID. The complete operator procedure is in `docs/TELEGRAM_OPERATIONS_MANUAL.md`.
