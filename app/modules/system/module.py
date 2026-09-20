@@ -69,6 +69,7 @@ class SystemModule(BotModule):
                 BotCommand(command="trivia", description="Consultar la trivia"),
                 BotCommand(command="puntos", description="Consultar tus puntos"),
                 BotCommand(command="ranking", description="Consultar el ranking"),
+                BotCommand(command="gacha_pendientes", description="Revisar drops raros pendientes"),
             ),
             BotIdentity.CAMI: (
                 BotCommand(command="start", description="Presentación de Cami"),
