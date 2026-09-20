@@ -428,7 +428,10 @@ class GameModule(BotModule):
                         f"Jugador: <code>{callback.from_user.id}</code>\n"
                         f"Comunidad: <code>{chat_id}</code>\n"
                         f"Personaje: <b>{result.character.name}</b>\n"
-                        f"Rareza: <b>{result.character.rarity.value}</b>\n"
+                        f"Carta: <b>{result.character.card_tier.value}</b> · elemento: <b>{result.character.element.value}</b>\n"
+                        f"Clase: <b>{result.character.rarity.value}</b> · poder: <b>{result.character.power_score}/100</b>\n"
+                        f"Popularidad: <b>{result.character.popularity_score}/100</b>"
+                        f" · ranking: <b>#{result.character.popularity_rank}</b>\n"
                         f"Saldo restante: <b>{result.remaining_points}</b>",
                         reply_markup=rare_approval_keyboard(result.approval.id),
                     )
