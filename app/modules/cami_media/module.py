@@ -25,7 +25,7 @@ from app.services.community import CommunityResolver
 from app.services.requests import RequestService
 from app.db.community_models import SetupSession
 from app.db.database import Database
-from app.db.models import FanRequest, MediaAsset, RequestStatus
+from app.db.models import FanRequest, MediaAlbum, MediaAsset, RequestStatus
 from app.services.forum_topics import ForumTopicService
 from app.services.world import WorldService
 from app.ui.media_keyboards import (
