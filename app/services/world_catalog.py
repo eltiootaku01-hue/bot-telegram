@@ -34,6 +34,8 @@ WORLD_CATALOG: tuple[WorldCatalogDefinition, ...] = (
     WorldCatalogDefinition(BotIdentity.CARI, "topic", "anime", "Anime", 60),
     WorldCatalogDefinition(BotIdentity.CARI, "topic", "manga", "Manga", 60),
     WorldCatalogDefinition(BotIdentity.CARI, "action", "community", "Charla y vida comunitaria", 50),
+    WorldCatalogDefinition(BotIdentity.CARI, "action", "cafe_menu", "Menú del Café Otaku", 50),
+    WorldCatalogDefinition(BotIdentity.CARI, "action", "daily_recommendation", "Recomendación diaria del Café", 50),
     WorldCatalogDefinition(
         BotIdentity.SUNNA,
         "place",
@@ -69,6 +71,7 @@ WORLD_CATALOG: tuple[WorldCatalogDefinition, ...] = (
     WorldCatalogDefinition(BotIdentity.CAMI, "action", "media_catalog", "Catálogo de medios", 80),
     WorldCatalogDefinition(BotIdentity.CAMI, "action", "publication", "Publicaciones", 80),
     WorldCatalogDefinition(BotIdentity.CAMI, "action", "statistics", "Estadísticas", 70),
+    WorldCatalogDefinition(BotIdentity.CAMI, "action", "catalog_search", "Búsqueda del catálogo", 65),
     WorldCatalogDefinition(
         BotIdentity.CHIE,
         "place",
