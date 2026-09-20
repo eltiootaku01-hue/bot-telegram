@@ -49,3 +49,18 @@ def rare_approval_keyboard(approval_id: int) -> InlineKeyboardMarkup:
         ),
     )
     return builder.as_markup()
+
+
+def world_proposal_keyboard(proposal_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✅ Aceptar idea",
+            callback_data=f"chie:world-proposal:accept:{proposal_id}",
+        ),
+        InlineKeyboardButton(
+            text="❌ Rechazar idea",
+            callback_data=f"chie:world-proposal:reject:{proposal_id}",
+        ),
+    )
+    return builder.as_markup()
