@@ -76,11 +76,16 @@ class TioOperatorService:
     ) -> bool:
         if status not in {"acknowledged", "resolved"}:
             raise ValueError("Unsupported operator request status")
+        allowed_current = (
+            ("pending",)
+            if status == "acknowledged"
+            else ("pending", "acknowledged")
+        )
         result = await session.execute(
             update(TioOperatorRequest)
             .where(
                 TioOperatorRequest.id == request_id,
-                TioOperatorRequest.status == "pending",
+                TioOperatorRequest.status.in_(allowed_current),
             )
             .values(status=status, updated_at=utc_now())
         )
@@ -96,7 +101,7 @@ class TioOperatorService:
             raise ValueError("limit must be positive")
         result = await session.scalars(
             select(TioOperatorRequest)
-            .where(TioOperatorRequest.status == "pending")
+            .where(TioOperatorRequest.status.in_(("pending", "acknowledged")))
             .order_by(TioOperatorRequest.id.desc())
             .limit(limit)
         )
