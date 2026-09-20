@@ -135,7 +135,7 @@ class TioOperatorService:
             raise ValueError("limit must be positive")
         result = await session.scalars(
             select(TioOperatorRequest)
-            .where(TioOperatorRequest.status.in_(("pending", "acknowledged")))
+            .where(TioOperatorRequest.status.in_(("pending", "acknowledged", "responding")))
             .order_by(TioOperatorRequest.id.desc())
             .limit(limit)
         )
