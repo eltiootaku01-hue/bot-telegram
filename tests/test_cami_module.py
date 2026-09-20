@@ -251,3 +251,44 @@ async def test_cami_media_long_anime_title_creates_bounded_local_work_id(tmp_pat
     assert len(work.id) <= 128
     assert work.title == long_title
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_cami_photo_reuses_asset_when_file_id_changes_but_unique_id_matches(tmp_path) -> None:
+    from types import SimpleNamespace
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'cami-stable-id.db'}")
+    await database.create_schema()
+    module = CamiMediaModule(database, Settings(admin_user_id=7))
+
+    answers: list[str] = []
+
+    async def answer(text: str, reply_markup=None) -> None:
+        answers.append(text)
+
+    first = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=7),
+        from_user=SimpleNamespace(id=7),
+        message_id=100,
+        photo=[SimpleNamespace(file_id="file-1", file_unique_id="unique-1")],
+        answer=answer,
+    )
+    second = SimpleNamespace(
+        chat=SimpleNamespace(type="private", id=7),
+        from_user=SimpleNamespace(id=7),
+        message_id=101,
+        photo=[SimpleNamespace(file_id="file-2", file_unique_id="unique-1")],
+        answer=answer,
+    )
+
+    await module.receive_photo(first, FakeState(0))
+    await module.receive_photo(second, FakeState(0))
+
+    async with database.session() as session:
+        rows = list(await session.scalars(select(MediaAsset)))
+    
+    assert len(rows) == 1
+    assert rows[0].telegram_file_id == "file-2"
+    assert rows[0].telegram_unique_id == "unique-1"
+    assert any("biblioteca" in value for value in answers)
+    await database.close()
