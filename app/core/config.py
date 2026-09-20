@@ -42,6 +42,9 @@ class Settings(BaseSettings):
 
     # Chie human verification timeout for newly joined members.
     human_verification_timeout_seconds: int = 120
+    human_verification_raid_window_seconds: int = 60
+    human_verification_raid_threshold: int = 5
+    human_verification_raid_timeout_seconds: int = 45
 
     # World time is explicit for schedules; persistence remains UTC.
     bot_world_timezone: str = "America/Argentina/Buenos_Aires"
