@@ -20,6 +20,10 @@ CHARACTERS: dict[str, Character] = {
     for definition in ALL_WAIFUS
 }
 
+# Preserve the original project ID used by existing collections and tests.
+if "anya-forger" in CHARACTERS:
+    CHARACTERS["anya"] = CHARACTERS.pop("anya-forger")
+
 CHARACTERS["taiga"] = Character(
     id="taiga",
     name="Taiga Aisaka",
