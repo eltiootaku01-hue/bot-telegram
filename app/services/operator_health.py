@@ -6,7 +6,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity import BotIdentity
-from app.db.models import BotPresenceState, Chat, DurableJob, DomainEvent, MysteryRound, UserChat
+from app.db.community_models import SetupSession
+from app.db.models import BotPresenceState, DurableJob, DomainEvent, MysteryRound, UserChat
 from app.db.world_models import WorldCatalogEntry, WorldUsageStat
 
 
@@ -40,26 +41,14 @@ class OperatorHealthService:
         *,
         authorized_chat_ids: frozenset[int],
     ) -> OperatorHealthSnapshot:
-        configured = await session.scalar(
-            select(func.count(func.distinct(Chat.id))).where(
-                Chat.id.in_(
-                    select(DurableJob.id).where(False)
-                )
+        configured_rows = await session.scalars(
+            select(SetupSession.chat_id)
+            .where(
+                SetupSession.bot_identity == BotIdentity.CHIE.value,
+                SetupSession.status == "configured",
             )
         )
-        del configured  # Keep all count queries explicit below.
-
-        configured_chats = await session.scalar(
-            select(func.count(func.distinct(UserChat.chat_id))).where(
-                UserChat.chat_id.in_(
-                    select(Chat.id).where(Chat.type.in_(("group", "supergroup")))
-                )
-            )
-        )
-        configured_chat_ids = await session.scalars(
-            select(Chat.id).where(Chat.type.in_(("group", "supergroup")))
-        )
-        configured_ids = {int(chat_id) for chat_id in configured_chat_ids}
+        configured_ids = {int(chat_id) for chat_id in configured_rows}
         authorized_configured = len(configured_ids & set(authorized_chat_ids))
 
         pending_jobs = await session.scalar(
@@ -84,7 +73,9 @@ class OperatorHealthService:
             select(func.count()).select_from(MysteryRound).where(MysteryRound.status == "active")
         )
         catalog_entries = await session.scalar(
-            select(func.count()).select_from(WorldCatalogEntry).where(WorldCatalogEntry.enabled.is_(True))
+            select(func.count())
+            .select_from(WorldCatalogEntry)
+            .where(WorldCatalogEntry.enabled.is_(True))
         )
         world_observations = await session.scalar(
             select(func.coalesce(func.sum(WorldUsageStat.count), 0)).where(
@@ -92,17 +83,18 @@ class OperatorHealthService:
             )
         )
         active_identities = await session.scalar(
-            select(func.count()).select_from(BotPresenceState).where(
-                BotPresenceState.status != "manual_off"
-            )
+            select(func.count())
+            .select_from(BotPresenceState)
+            .where(BotPresenceState.status != "manual_off")
+        )
+        members_seen = await session.scalar(
+            select(func.count()).select_from(UserChat)
         )
 
         return OperatorHealthSnapshot(
-            configured_communities=int(configured_chats or 0),
+            configured_communities=len(configured_ids),
             authorized_communities=authorized_configured,
-            members_seen=int(
-                await session.scalar(select(func.count()).select_from(UserChat)) or 0
-            ),
+            members_seen=int(members_seen or 0),
             pending_jobs=int(pending_jobs or 0),
             processing_jobs=int(processing_jobs or 0),
             failed_jobs=int(failed_jobs or 0),
@@ -118,7 +110,6 @@ class OperatorHealthService:
 
 def format_operator_health(snapshot: OperatorHealthSnapshot) -> str:
     """Render a compact owner-facing report without exposing sensitive data."""
-    identities = ", ".join(identity.value for identity in BotIdentity)
     return (
         "🩺 <b>Salud de Ciudad Animals</b>\n\n"
         f"🏠 Comunidades configuradas: <b>{snapshot.configured_communities}</b>\n"
@@ -133,6 +124,6 @@ def format_operator_health(snapshot: OperatorHealthSnapshot) -> str:
         f"🕵️ Misterios activos: <b>{snapshot.active_mysteries}</b>\n"
         f"🌍 Catálogo: <b>{snapshot.catalog_entries}</b> · "
         f"observaciones globales: <b>{snapshot.world_observations}</b>\n"
-        f"🤖 Identidades activas: <b>{snapshot.active_identities}</b> / {len(identities.split(', '))}\n\n"
+        f"🤖 Identidades activas: <b>{snapshot.active_identities}</b> / {len(BotIdentity)}\n\n"
         "La revisión es de solo lectura; no ejecuta IA ni modifica datos."
     )
