@@ -219,7 +219,9 @@ class ChatModule(BotModule):
                 )
             return
 
-        if is_question_like(text):
+        unresolved_question = is_question_like(text)
+
+        if unresolved_question:
             intent = CharacterIntent.UNKNOWN_TOPIC
 
         response = None
@@ -267,6 +269,8 @@ class ChatModule(BotModule):
             response.scene.text,
             response.scene.weight,
         )
+        if unresolved_question:
+            await self._observe_knowledge(message, None)
         if response.follow_up is not None:
             sent = await self._send_authored_text(
                 message,
