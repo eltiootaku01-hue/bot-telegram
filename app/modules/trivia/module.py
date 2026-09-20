@@ -45,7 +45,6 @@ class TriviaModule(BotModule):
         self.router.message.register(self.start_command, Command("trivia"))
         self.router.message.register(self.points_command, Command("puntos"))
         self.router.message.register(self.ranking_command, Command("ranking"))
-        self.router.callback_query.register(self.start_panel, F.data == "game:trivia:start")
         self.router.callback_query.register(self.open_callback, F.data == "cafe:trivia:open")
         self.router.callback_query.register(self.answer, F.data.startswith("game:trivia:"))
         self.router.callback_query.register(self.start_callback, F.data == "game:trivia:start")
