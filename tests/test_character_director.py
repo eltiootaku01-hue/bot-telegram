@@ -254,3 +254,44 @@ def test_director_covers_additional_cafe_interaction_pairs() -> None:
         assert response is not None
         assert response.follow_up is not None
         assert response.follow_up.speaker is partner
+
+
+def test_each_directed_friendship_has_at_least_two_authored_variants() -> None:
+    director = CharacterDirector()
+    pairs = {
+        (scene.scene.speaker, scene.follow_up.speaker)
+        for scene in (
+            director.choose(identity, intent, roll=roll)
+            for identity in BotIdentity
+            for intent in CharacterIntent
+            for roll in range(32)
+        )
+        if scene is not None
+        and scene.follow_up is not None
+        and scene.follow_up.speaker is not scene.scene.speaker
+    }
+
+    expected_pairs = {
+        (speaker, partner)
+        for speaker in BotIdentity
+        for partner in BotIdentity
+        if speaker is not partner
+    }
+    assert pairs >= expected_pairs
+
+    for speaker, partner in expected_pairs:
+        variants = {
+            scene.scene.key
+            for scene in (
+                director.choose_interaction(
+                    speaker,
+                    partner,
+                    intent,
+                    roll=roll,
+                )
+                for intent in CharacterIntent
+                for roll in range(32)
+            )
+            if scene is not None
+        }
+        assert len(variants) >= 2, (speaker, partner)
