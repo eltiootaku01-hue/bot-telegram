@@ -15,6 +15,7 @@ from app.core.config import Settings, get_settings
 from app.core.events import EventBus
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.core.time import world_now
 from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
 from app.db.database import Database
