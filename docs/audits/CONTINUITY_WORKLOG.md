@@ -105,6 +105,19 @@ El 82% global no significa “82% del código escrito”. Representa cuánto de 
 - Windows #741 está ejecutando el mismo SHA; ya superó checkout/setup y sigue en construcción de ejecutables. Todavía no debe etiquetarse como “Windows validado” hasta terminar.
 - Las modificaciones posteriores a ese SHA que solo cambien documentación no alteran el binario, pero se mantienen fuera de la validación funcional hasta que su propio CI concluya.
 
+## ÚLTIMO BLOQUE EJECUTADO — 2026-09-20
+
+### Corrección de composición
+- Cami dejó de montar `AdminModule`, porque ese módulo es el flujo de aprobación de drops raros de Sunna.
+- Se añadió una regresión en `tests/test_bot_composition.py` para impedir que Cami vuelva a exponer la superficie Gacha de Sunna.
+- Commit del cambio de código: `22804d3cd2fede673ca9299a6c3eec7f79608987`.
+- CI #1114 y Windows #744 quedaron asociados a ese SHA; deben consultarse antes de llamar a este bloque validado.
+
+### Auditoría funcional
+- `/ranking` ya estaba implementado: no volver a tratarlo como pendiente.
+- El catálogo de Ciudad Animals, el ledger, el curador, el puente de Tío Otaku y las interacciones authored ya existen en `main`.
+- No repetir sus implementaciones salvo que una nueva auditoría encuentre un defecto concreto.
+
 ## TRABAJO PENDIENTE / PRÓXIMOS OBJETIVOS
 
 1. Profundizar canon y repertorio solamente usando material autoral confirmado; no inventar hechos narrativos.
