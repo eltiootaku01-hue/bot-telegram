@@ -37,6 +37,10 @@ class TioOperatorModule(BotModule):
             Command("tio_responder"),
         )
         self.router.message.register(
+            self.history_command,
+            Command("tio_historial"),
+        )
+        self.router.message.register(
             self.view_command,
             Command("tio_ver"),
         )
@@ -104,6 +108,60 @@ class TioOperatorModule(BotModule):
                     f"{escape(request.text[:1000])}",
                     reply_markup=keyboard,
                 )
+
+    async def history_command(self, message: Message) -> None:
+        """Show recent operator requests without changing their state."""
+        if not self._is_owner_private(message, self.settings):
+            return
+
+        async with self.database.session() as session:
+            requests = await self.service.recent_history(session, limit=20)
+
+        if not requests:
+            await message.answer("📭 Todavía no hay solicitudes para Tío Otaku.")
+            return
+
+        lines = ["🗃️ <b>Historial de Tío Otaku</b>", ""]
+        labels = {
+            "pending": "🆕 pendiente",
+            "acknowledged": "👀 recibida",
+            "responding": "⏳ respondiendo",
+            "resolved": "✅ resuelta",
+        }
+        for request in requests:
+            user, chat = await self._context_for_history(request)
+            user_name = escape(
+                (user.full_name if user else None)
+                or (user.first_name if user else None)
+                or str(request.user_id)
+            )
+            chat_name = escape(
+                (chat.title if chat else None)
+                or (chat.username if chat else None)
+                or str(request.chat_id)
+            )
+            status = labels.get(request.status, escape(request.status))
+            preview = escape(" ".join(request.text.split())[:160])
+            lines.append(
+                f"<b>#{request.id}</b> · {status}\n"
+                f"👤 {user_name} · 🏠 {chat_name}\n"
+                f"🧾 {preview}"
+            )
+            lines.append(
+                f"   <code>/tio_ver {request.id}</code>"
+                + (
+                    f" · <code>/tio_responder {request.id} ...</code>"
+                    if request.status in {"pending", "acknowledged"}
+                    else ""
+                )
+            )
+            lines.append("")
+
+        await message.answer("\n".join(lines))
+
+    async def _context_for_history(self, request: TioOperatorRequest):
+        async with self.database.session() as session:
+            return await self.service.context(session, request)
 
     async def view_command(self, message: Message) -> None:
         """Show full operator context for one request without changing its state."""
@@ -278,12 +336,6 @@ class TioOperatorModule(BotModule):
 
         parts = (callback.data or "").split(":")
         if len(parts) != 4 or parts[2] not in {"ack", "resolve", "view"}:
-            await callback.answer("Solicitud inválida.", show_alert=True)
-            return
-
-        try:
-            request_id = int(parts[3])
-        except ValueError:
             await callback.answer("Solicitud inválida.", show_alert=True)
             return
 
