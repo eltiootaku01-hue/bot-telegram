@@ -241,7 +241,7 @@ def built_in_catalog() -> ProcessCatalog:
                 inputs=("file_id", "file_unique_id", "source_message_id"),
                 outputs=("asset_id",),
                 actions=("db.upsert", "world.observe"),
-                priority=100,
+                priority=85,
                 cost=0.2,
             ),
             p(
