@@ -12,6 +12,7 @@ from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity, get_profile
 from app.core.module import BotModule
 from app.db.database import Database
+from app.services.process_catalog import built_in_catalog
 from app.services.world import WorldService
 from app.ui.control_keyboards import chie_start_keyboard
 from app.ui.help_keyboards import help_keyboard
@@ -39,6 +40,8 @@ class SystemModule(BotModule):
         self.router.callback_query.register(self.help_navigation, F.data.startswith("help:"))
         self.router.message.register(self.ping, Command("ping"))
         self.router.message.register(self.id_command, Command("id"))
+        if self.identity is BotIdentity.CHIE:
+            self.router.message.register(self.processes_command, Command("procesos"))
         self.router.message.register(self.ping, F.text.casefold() == "ping")
         if self.identity is BotIdentity.SUNNA:
             self.router.callback_query.register(self.game_hub, F.data == "game:hub")
@@ -105,6 +108,7 @@ class SystemModule(BotModule):
                 BotCommand(command="revisar_mundo", description="Ver la revisión diaria del mundo"),
                 BotCommand(command="proponer_mundo", description="Generar propuestas opcionales con IA"),
                 BotCommand(command="salud", description="Revisar la salud del sistema"),
+                BotCommand(command="procesos", description="Ver el catálogo operativo de capacidades"),
                 BotCommand(command="borrar_mi_memoria", description="Borrar tus estadísticas privadas"),
                 BotCommand(command="mis_pedidos", description="Ver el estado de tus pedidos"),
             ),
@@ -288,6 +292,41 @@ class SystemModule(BotModule):
             reply_markup=help_keyboard(self.identity, section),
         )
         await callback.answer()
+
+    async def processes_command(self, message: Message) -> None:
+        """Expose the deterministic capability catalog to the configured administrator."""
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or not self.settings.master_user_id
+            or message.from_user.id != self.settings.master_user_id
+        ):
+            return
+        catalog = built_in_catalog()
+        processes = catalog.all()
+        by_owner: dict[BotIdentity, int] = {identity: 0 for identity in BotIdentity}
+        ai_count = 0
+        for process in processes:
+            by_owner[process.owner] += 1
+            ai_count += int(process.requires_ai)
+        lines = [
+            "🧩 <b>Catálogo operativo</b>",
+            "",
+            f"Capacidades registradas: <b>{len(processes)}</b>",
+            f"Capacidades que requieren IA: <b>{ai_count}</b>",
+            "",
+        ]
+        lines.extend(
+            f"• <b>{identity.value.title()}</b>: {by_owner[identity]}"
+            for identity in BotIdentity
+        )
+        lines.extend(
+            (
+                "",
+                "La IA puede seleccionar entre capacidades existentes, pero no puede inventar una acción ejecutable.",
+            )
+        )
+        await message.answer("\n".join(lines))
 
     async def id_command(self, message: Message) -> None:
         """Show Telegram numeric IDs needed by Bot Manager setup."""
