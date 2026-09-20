@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+from sqlalchemy import select
+
 import pytest
 from aiogram.types import ChatPermissions
 
@@ -116,7 +118,7 @@ async def test_verification_no_restores_saved_permissions() -> None:
 
     async with database.session() as session:
         row = await session.scalar(
-            __import__("sqlalchemy", fromlist=["select"]).select(HumanVerification).where(
+            select(HumanVerification).where(
                 HumanVerification.chat_id == -100,
                 HumanVerification.user_id == 7,
             )
@@ -183,8 +185,7 @@ async def test_verification_yes_kicks_and_allows_rejoin() -> None:
 @pytest.mark.asyncio
 async def test_wrong_user_cannot_use_another_users_verification(database: Database) -> None:
     service = HumanVerificationService()
-    await database.create_schema() if False else None
-
+    
     async with database.session() as session:
         await service.begin(
             session,
