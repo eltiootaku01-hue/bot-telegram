@@ -160,6 +160,25 @@ class GameGachaRoll(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+class MediaAlbum(Base):
+    """Durable identity for one Telegram media group handled as an operator unit."""
+
+    __tablename__ = "media_albums"
+    __table_args__ = (
+        UniqueConstraint("source_chat_id", "media_group_id", name="uq_media_album_source_group"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    source_chat_id: Mapped[int] = mapped_column(BigInteger)
+    media_group_id: Mapped[str] = mapped_column(String(128))
+    owner_user_id: Mapped[int] = mapped_column(BigInteger)
+    status: Mapped[str] = mapped_column(String(32), default="open")
+    item_count: Mapped[int] = mapped_column(Integer, default=0)
+    prompted_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class MediaAsset(Base):
     __tablename__ = "media_assets"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -167,6 +186,7 @@ class MediaAsset(Base):
     telegram_unique_id: Mapped[str | None] = mapped_column(String(255))
     source_chat_id: Mapped[int] = mapped_column(BigInteger)
     source_message_id: Mapped[int] = mapped_column(BigInteger)
+    media_group_id: Mapped[str | None] = mapped_column(String(128))
     media_type: Mapped[str] = mapped_column(String(32), default="photo")
     request_id: Mapped[int | None] = mapped_column(ForeignKey("fan_requests.id", ondelete="SET NULL"))
     character_id: Mapped[str | None] = mapped_column(String(100))
