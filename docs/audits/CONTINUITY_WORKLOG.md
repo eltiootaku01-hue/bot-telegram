@@ -219,3 +219,46 @@ Antes de modificar algo:
 - Tío Otaku UX pasa de pendiente a implementado y validado en CI, quedando pendiente únicamente la certificación Windows del SHA final.
 - No volver a implementar /tio_ver, el botón tio:request:view, ni el contexto read-only salvo que una auditoría futura encuentre un defecto concreto.
 - Progreso global se mantiene en 82%.
+
+## ÚLTIMO BLOQUE EJECUTADO — CONTINUIDAD RELACIONAL AUTHORED — 2026-09-20
+
+### Cerrado
+- `WorldService.usage_count()` expone el contador durable de una señal del mundo sin guardar texto libre.
+- `ChatModule` usa el contador de la relación para desplazar determinísticamente el `roll` del `CharacterDirector`.
+- La continuidad de interacción está aislada por `scope_type=user_chat` y `scope_id=user_id:chat_id`; una comunidad no altera otra.
+- La selección sigue siendo exclusivamente authored/determinista. No se introdujo LLM ni generación libre.
+- Las escenas existentes de Cami↔Sunna ahora pueden alternarse usando historial, manteniendo el mismo repertorio y canon confirmado.
+- Regresión: `tests/test_chat_world_attribution.py::test_directed_interaction_uses_persisted_relationship_count_to_rotate_authored_scene`.
+- CI #1140: SUCCESS sobre SHA de código `2a0c8f8e7a0e02a73ab2cf8827181befbbd2e6ae`.
+- Windows Build #770: SUCCESS sobre el mismo SHA; se verificaron los cinco ejecutables, BotManager, instalador, ZIP portable y checksums.
+
+### Correcciones durante validación
+- CI #1136 detectó una prueba que usaba la identidad Cari al verificar una interacción de Cami; se corrigieron los fixtures.
+- La primera versión del test no usaba una pareja dirigida correctamente y fue corregida antes de la validación final.
+- La consulta de continuidad inicialmente era global; se corrigió para usar alcance `usuario:chat`.
+
+### NO REPETIR
+- No volver a implementar `WorldService.usage_count()` ni el desplazamiento del selector authored por historial relacional.
+- No crear otra tabla de memoria relacional para esta finalidad salvo que una auditoría futura demuestre una necesidad que el ledger actual no pueda cubrir.
+- No volver a convertir el runtime authored en generación LLM.
+
+### Estado de producto
+- Producto global: **82%**.
+- Interacciones: aproximadamente **86%**.
+- Personajes/canon: aproximadamente **84%**.
+- Ciudad Animals/world ledger/curador: aproximadamente **89%**.
+- Seguridad: aproximadamente **96%**.
+- Persistencia/transacciones: aproximadamente **97%**.
+- Runtime/workers/jobs: aproximadamente **95%**.
+- BotManager/Windows/instalador/portable: aproximadamente **97%**.
+
+### Próximos objetivos reales
+1. Profundizar únicamente contenido/canon autoral confirmado.
+2. Añadir más variedad de interacciones sin inventar hechos narrativos.
+3. Completar superficies funcionales de Cami/Chie/Cari donde aún sean superficiales.
+4. Mejorar navegación/trazabilidad del operador humano Tío Otaku.
+5. Añadir regresiones de concurrencia solo en rutas que todavía carezcan de ellas.
+6. Preparar una versión/release cuando el siguiente bloque funcional sustancial esté cerrado.
+
+### Regla permanente
+Leer este registro antes de modificar el repositorio y comprobar primero el SHA actual de `main`.
