@@ -19,6 +19,16 @@ async def database():
     await database.close()
 
 
+def test_operator_address_requires_explicit_call() -> None:
+    module = TioOperatorModule.__new__(TioOperatorModule)
+
+    assert module._should_capture("Tío Otaku, necesito hablar con vos.")
+    assert module._should_capture("tío, vení un segundo.")
+    assert module._should_capture("¿Dónde está Tío Otaku?")
+    assert not module._should_capture("Mi tío vive acá.")
+    assert not module._should_capture("El tío de Juan llegó.")
+
+
 @pytest.mark.asyncio
 async def test_operator_capture_is_idempotent(database: Database) -> None:
     service = TioOperatorService()
