@@ -93,6 +93,7 @@ class WorldCuratorAIService:
             persona=CURATOR_PERSONA,
             system_extra=CURATOR_RULES,
             max_tokens=600,
+            max_user_chars=8000,
             temperature=0.2,
         )
         raw = await self.brain.generate(request)
