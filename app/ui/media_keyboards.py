@@ -13,6 +13,18 @@ def cami_media_actions(asset_id: int) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def cami_album_actions(album_id: int) -> InlineKeyboardMarkup:
+    """Batch controls for one durable Telegram media album."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="🏷️ Etiquetar álbum",
+            callback_data=f"cami:album:tag:{album_id}",
+        ),
+    )
+    return builder.as_markup()
+
+
 def cami_pending_requests(asset_id: int, requests: list[tuple[int, str]]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for request_id, label in requests:
