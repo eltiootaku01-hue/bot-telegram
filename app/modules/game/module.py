@@ -71,6 +71,7 @@ class GameModule(BotModule):
         self.router.callback_query.register(self.fusion, F.data.startswith("game:fusion:"))
         self.router.callback_query.register(self.combat_action, F.data.startswith("game:combat:"))
         self.router.callback_query.register(self.encounter_answer, F.data.startswith("game:encounter:"))
+        self.router.callback_query.register(self.mystery_open, F.data == "game:mystery:open")
         self.router.callback_query.register(self.mystery_answer, F.data.startswith("game:mystery:"))
         self.router.callback_query.register(self.waifu_catalog_page, F.data.startswith("game:waifus:page:"))
 
@@ -276,6 +277,15 @@ class GameModule(BotModule):
         await self._observe_action("game_hub", callback.from_user.id)
         await callback.answer()
 
+    async def mystery_open(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer(
+                "El panel de misterio se abre en la comunidad. Usá /misterio en el grupo.",
+                show_alert=True,
+            )
+            return
+        await self._observe_action("mystery_open", callback.from_user.id)
+        await callback.answer("En el grupo: /misterio. La primera persona en resolverlo gana los puntos. 🕵️", show_alert=True)
     async def mystery_answer(self, callback: CallbackQuery) -> None:
         parts = (callback.data or "").split(":")
         if len(parts) != 4 or parts[0] != "game" or parts[1] != "mystery" or not parts[2].isdigit() or not parts[3].isdigit():
