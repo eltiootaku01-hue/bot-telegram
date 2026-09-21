@@ -22,6 +22,8 @@ downloads/
 wheels/
 share/python-wheels/
 *.egg-info/
+engine/waifumon/target/
+*.class
 .installed.cfg
 *.egg
 MANIFEST
