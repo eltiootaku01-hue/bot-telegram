@@ -23,6 +23,7 @@ from app.modules.system.module import SystemModule
 from app.modules.trivia.module import TriviaModule
 from app.modules.world.module import WorldCatalogModule
 from app.modules.world.presenter import WorldPresentationModule
+from app.modules.world.recovery import WorldEventRecoveryModule
 from app.modules.tio_operator.module import TioOperatorModule
 
 
@@ -60,6 +61,7 @@ def build_bot_modules(
         _spec("cami-media", lambda: CamiMediaModule(database, settings=settings), BotIdentity.CAMI),
         _spec("cami-publisher", lambda: CamiMediaPublisher(database, settings=settings), BotIdentity.CAMI),
         _spec("chie", lambda: ChieModule(database, settings=settings), BotIdentity.CHIE),
+        _spec("world-recovery", lambda: WorldEventRecoveryModule(database, settings=settings), BotIdentity.CHIE),
         _spec("requests", lambda: RequestModule(database), BotIdentity.CHIE),
         _spec("brain-chat", lambda: BrainChatModule(identity, settings=settings)),
         _spec("tio-operator", lambda: TioOperatorModule(database, settings=settings), BotIdentity.CARI),
