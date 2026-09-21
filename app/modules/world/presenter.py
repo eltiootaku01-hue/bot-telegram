@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from app.core.config import Settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
@@ -8,7 +9,7 @@ from app.db.database import Database
 from app.db.models import GameEncounter
 from app.ui.game_keyboards import encounter_keyboard
 from app.world.models import WorldEventType
-from app.world.presenter import WorldPresenter
+from app.world.presenter import WorldPresentationRejected, WorldPresenter
 from app.world.runtime import WorldRuntime
 
 
@@ -35,7 +36,7 @@ class WorldPresentationModule(BotModule):
     async def on_startup(self, bot: Bot) -> None:
         async def send(event) -> int:
             if event.presenter.key != self.identity.value:
-                raise RuntimeError(
+                raise WorldPresentationRejected(
                     f"World event addressed to presenter {event.presenter.key!r}, "
                     f"but this process owns {self.identity.value!r}"
                 )
@@ -45,17 +46,22 @@ class WorldPresentationModule(BotModule):
                 encounter_id = str(event.payload.get("encounter_id") or "")
                 raw_options = event.payload.get("options")
                 if not encounter_id or not isinstance(raw_options, list) or not raw_options:
-                    raise RuntimeError(
+                    raise WorldPresentationRejected(
                         f"Waifu arrival event #{event.event_id} has invalid interaction payload"
                     )
                 options = [str(value) for value in raw_options]
                 reply_markup = encounter_keyboard(encounter_id, options)
 
-            sent = await bot.send_message(
-                event.chat_id,
-                event.render_text(),
-                reply_markup=reply_markup,
-            )
+            try:
+                sent = await bot.send_message(
+                    event.chat_id,
+                    event.render_text(),
+                    reply_markup=reply_markup,
+                )
+            except (TelegramBadRequest, TelegramForbiddenError) as exc:
+                raise WorldPresentationRejected(
+                    f"Telegram rejected world event #{event.event_id}: {exc}"
+                ) from exc
 
             if event.event_type is WorldEventType.WAIFU_ARRIVAL:
                 encounter_id = str(event.payload.get("encounter_id") or "")
