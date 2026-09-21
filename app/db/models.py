@@ -221,7 +221,8 @@ class WaifuGiftDrop(Base):
     day_key: Mapped[str] = mapped_column(String(16))
     slot: Mapped[int] = mapped_column(Integer)
     gift_key: Mapped[str] = mapped_column(String(64))
-    status: Mapped[str] = mapped_column(String(32), default="active")
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    message_id: Mapped[int | None] = mapped_column(BigInteger)
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
