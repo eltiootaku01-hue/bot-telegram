@@ -40,6 +40,8 @@ def _ensure_compatibility(connection) -> None:
 
     gacha_roll_columns = {column["name"] for column in inspect(connection).get_columns("game_gacha_rolls")}
     _add_column_if_missing(connection, "game_gacha_rolls", "pity_triggered", "BOOLEAN NOT NULL DEFAULT 0", gacha_roll_columns)
+    _add_column_if_missing(connection, "game_gacha_rolls", "card_id", "VARCHAR(255)", gacha_roll_columns)
+    _add_column_if_missing(connection, "game_gacha_rolls", "card_variant", "VARCHAR(16)", gacha_roll_columns)
 
     chat_columns = {column["name"] for column in inspect(connection).get_columns("chats")}
     _add_column_if_missing(connection, "chats", "last_human_message_at", "DATETIME", chat_columns)
