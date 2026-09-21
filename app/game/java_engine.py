@@ -194,6 +194,16 @@ class WaifuMonJavaEngine:
             defender_hp=int(result["defender_hp"]),
         )
 
+    def evolution(self, *, level: int) -> dict[str, Any]:
+        response = self._call(
+            player_id=0,
+            community_id=0,
+            command="evolution.resolve",
+            payload={"level": level},
+            idempotency_key=f"evolution:{level}",
+        )
+        return dict(response["payload"])
+
     def stats(
         self,
         *,
