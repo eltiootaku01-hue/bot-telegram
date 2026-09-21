@@ -14,6 +14,9 @@ def test_art_registry_is_deterministic_and_character_specific() -> None:
 
 
 def test_art_registry_rejects_unknown_character() -> None:
+    class_art = rarity_art_candidates_for("yor-forger", "SS")
+    assert class_art[0] == "assets/waifus/yor-forger--class-ss.png"
+
     try:
         art_path_for("not-a-character")
     except KeyError:
@@ -23,7 +26,7 @@ def test_art_registry_rejects_unknown_character() -> None:
 
 
 def test_variant_art_registry_supports_normal_and_shiny_assets() -> None:
-    from app.game.waifu_art import variant_art_candidates_for
+    from app.game.waifu_art import rarity_art_candidates_for, variant_art_candidates_for
 
     normal = variant_art_candidates_for("yor-forger", "normal")
     shiny = variant_art_candidates_for("yor-forger", "shiny")
