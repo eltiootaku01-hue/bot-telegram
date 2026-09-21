@@ -19,6 +19,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Resync Git LFS
+        run: git lfs pull
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -59,29 +61,18 @@ jobs:
       - name: Verify visual assets
         shell: pwsh
         run: |
-          $reference = "dist\assets\waifus\generated\waifu-card-concept.jpg"
-          if (-not (Test-Path $reference)) { throw "Missing visual reference: $reference" }
-          if ((Get-Item $reference).Length -lt 10KB) { throw "Visual reference looks unexpectedly small: $reference" }
-
-          $progress = Get-Content "dist\assets\waifus\art_progress.json" -Raw | ConvertFrom-Json
-          if ($progress.completed_cards -ne $progress.completed_character_ids.Count) {
-            throw "Art progress ledger count does not match completed character ids"
+          if (-not (Test-Path "assets\production\cards")) {
+            throw "Production card asset directory is missing"
           }
-          if ($progress.completed_cards -gt $progress.total_cards) {
-            throw "Completed art count exceeds total card count"
-          }
-
-          foreach ($characterId in $progress.completed_character_ids) {
-            $asset = "dist\assets\waifus\$characterId.svg"
-            if (-not (Test-Path $asset)) { throw "Missing approved character art: $asset" }
-            $svg = Get-Content $asset -Raw
-            if ($svg.Length -lt 1000) { throw "Character art looks unexpectedly small: $asset" }
-            if ($svg -notmatch '<svg\b' -or $svg -notmatch '</svg>') {
-              throw "Character art is not a complete SVG document: $asset"
+          $files = Get-ChildItem "assets\production\cards" -File -Recurse
+          foreach ($file in $files) {
+            if ($file.Extension -ne ".jpg") {
+              throw "Production asset is not JPEG: $($file.FullName)"
             }
           }
+          python tools\validate_card_assets.py
 
-      - name: Validate committed card assets
+      - name: Validate committed production card assets
         run: python tools\\validate_card_assets.py
       - name: Verify Java WaifuMon runtime
         shell: pwsh

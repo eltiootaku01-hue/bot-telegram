@@ -2,7 +2,7 @@
 
 Cartas registradas: **78**.
 
-La carta del juego se identifica por `character_id`; el arte específico se enlaza solamente cuando existe un archivo aprobado en `assets/waifus/<character_id>.png`.
+La carta del juego se identifica por `character_id`. El único arte de producción permitido vive en `assets/production/cards/` y debe ser un JPEG de **1024x1536** validado; una carta sin arte aprobado permanece sin asset y el runtime falla cerrado.
 
 | # | ID | Personaje | Obra | Arte |
 |---:|---|---|---|---|
@@ -83,3 +83,14 @@ La carta del juego se identifica por `character_id`; el arte específico se enla
 | 75 | `reiko-kujirai` | Reiko Kujirai | Rurouni Kenshin | reservado |
 | 76 | `banri-shiunji` | Banri Shiunji | The Shiunji Family Children | reservado |
 | 77 | `ouka-shiunji` | Ouka Shiunji | The Shiunji Family Children | reservado |
+
+  
+## Contrato de producción visual
+
+- Directorio único: `assets/production/cards/`.
+- Formato único: JPEG/JPG.
+- Resolución exacta: **1024 × 1536** píxeles.
+- Las variantes `normal` y `shiny` usan `<character-id>--<variant>.jpg`.
+- El arte evolutivo derivado del nivel usa `<character-id>--stage1.jpg`, `stage2.jpg` y `stage3.jpg`.
+- SVG, WebP, conceptos y borradores permanecen en `assets/quarantine/`.
+- Si falta un asset validado, la carta sigue siendo válida pero el runtime no sustituye la imagen por un fallback genérico.

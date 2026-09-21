@@ -25,8 +25,7 @@ def build_markdown() -> str:
                 "",
             ]
         )
-    return "
-".join(lines)
+    return "\n".join(lines)
 
 
 def main() -> int:

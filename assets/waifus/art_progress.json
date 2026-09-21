@@ -1,31 +1,13 @@
 {
   "total_cards": 78,
-  "completed_cards": 17,
-  "progress_percent": 21.79,
-  "completed_character_ids": [
-    "yor-forger",
-    "ako-tamaki",
-    "taiga",
-    "violet-evergarden",
-    "erza-scarlet",
-    "emilia",
-    "ai-hoshino",
-    "reiko-kujirai",
-    "akane-kurokawa",
-    "rin-tohsaka",
-    "nene-yashiro",
-    "hinata-hyuga",
-    "ino-yamanaka",
-    "akame",
-    "erina-nakiri",
-    "chelsea",
-    "oguri-cap"
-  ],
+  "completed_cards": 0,
+  "progress_percent": 0,
+  "completed_character_ids": [],
   "visual_tiers_completed": {
-    "R": 1,
-    "S": 3,
-    "SR": 9,
-    "UR": 4
+    "R": 0,
+    "S": 0,
+    "SR": 0,
+    "UR": 0
   },
-  "next_rule": "Continue one avatar at a time. Never reuse a generic image as final card art."
+  "next_rule": "Every future production card must be an individually validated JPEG 1024x1536 in assets/production/cards/."
 }

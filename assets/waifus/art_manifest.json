@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "policy": "Character-specific art is versioned one avatar at a time. Legacy generic SVGs are not approved as final art.",
+  "version": 4,
+  "policy": "Only individually approved JPEG 1024x1536 assets in assets/production/cards/ are production art. Legacy vectors, drafts and concepts remain quarantined.",
   "visual_rules": {
     "R": "20% rostro+hombros",
     "S": "40% hasta pecho",
@@ -9,7 +9,7 @@
   },
   "style_policy": "Original polished anime-fantasy illustration; external references are mood-level only, never direct style copying.",
   "total_items": 78,
-  "completed_items": 17,
+  "completed_items": 0,
   "items": [
     {
       "character_id": "ai-hoshino",
@@ -19,8 +19,7 @@
       "art_tier": "SR",
       "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "akame",
@@ -30,8 +29,7 @@
       "art_tier": "UR",
       "visible": "100%+",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "akane-kurokawa",
@@ -41,8 +39,7 @@
       "art_tier": "SR",
       "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "akeno-himejima",
@@ -72,8 +69,7 @@
       "art_tier": "R",
       "visible": "20%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "albedo",
@@ -173,8 +169,7 @@
       "art_tier": "SR",
       "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "chinatsu-kano",
@@ -234,8 +229,7 @@
       "art_tier": "SR",
       "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "erina-nakiri",
@@ -245,8 +239,7 @@
       "art_tier": "S",
       "visible": "40%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "erza-scarlet",
@@ -256,8 +249,7 @@
       "art_tier": "UR",
       "visible": "100%+",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "esdeath",
@@ -297,8 +289,7 @@
       "art_tier": "SR",
       "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "ino-yamanaka",
@@ -308,8 +299,7 @@
       "art_tier": "S",
       "visible": "40%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "irina-shidou",
@@ -519,8 +509,7 @@
       "art_tier": "SR",
       "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "nezuko-kamado",
@@ -570,8 +559,7 @@
       "art_tier": "UR",
       "visible": "100%+",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "orihime-inoue",
@@ -631,8 +619,7 @@
       "art_tier": "SR",
       "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "reze",
@@ -662,8 +649,7 @@
       "art_tier": "SR",
       "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "saeko-busujima",
@@ -713,8 +699,7 @@
       "art_tier": "S",
       "visible": "40%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "takane-takamine",
@@ -764,8 +749,7 @@
       "art_tier": "SR",
       "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "xenovia",
@@ -785,8 +769,7 @@
       "art_tier": "UR",
       "visible": "100%+",
       "direction_status": "custom",
-      "asset_status": "vector-v1",
-      "completed_date": "2026-09-21"
+      "asset_status": "quarantined_noncompliant"
     },
     {
       "character_id": "yoruichi-shihoin",
@@ -809,14 +792,20 @@
       "asset_status": "pending"
     }
   ],
-  "progress_percent": 21.79,
+  "progress_percent": 0,
   "generated_extras": [
     {
       "asset_id": "kuro-shiny-card-v1",
-      "file": "assets/waifus/generated/kuro-shiny-card-v1.jpg",
-      "status": "generated_concept",
+      "file": "assets/quarantine/generated/kuro-shiny-card-v1.jpg",
+      "status": "quarantined_concept",
       "catalog_binding": null,
       "note": "Original OC variant; not a playable catalog character."
     }
-  ]
+  ],
+  "production_contract": {
+    "directory": "assets/production/cards/",
+    "extension": ".jpg",
+    "width": 1024,
+    "height": 1536
+  }
 }

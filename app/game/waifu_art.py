@@ -3,9 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
+from app.game.card_art_assets import CARD_ART_EXTENSION, card_asset_path
 from app.game.catalog import CHARACTERS
+from app.game.waifumon_progression import evolution_stage_for_level
 
-RUNTIME_ART_SUFFIXES = (".png", ".webp", ".jpg", ".jpeg")
+PRODUCTION_ART_ROOT = PurePosixPath("assets", "production", "cards")
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,17 +16,20 @@ class WaifuArt:
     repository_path: str
 
 
+def _production_path(filename: str) -> str:
+    return str(PRODUCTION_ART_ROOT / filename)
+
+
 def art_path_for(character_id: str) -> str:
     if character_id not in CHARACTERS:
         raise KeyError(character_id)
-    return str(PurePosixPath("assets", "waifus", character_id + ".png"))
+    return card_asset_path(character_id, "normal")
 
 
 def art_candidates_for(character_id: str) -> tuple[str, ...]:
     if character_id not in CHARACTERS:
         raise KeyError(character_id)
-    root = PurePosixPath("assets", "waifus")
-    return tuple(str(root / f"{character_id}{suffix}") for suffix in RUNTIME_ART_SUFFIXES)
+    return (art_path_for(character_id),)
 
 
 def declared_art(character_id: str) -> WaifuArt:
@@ -35,45 +40,33 @@ def declared_art_for_catalog() -> tuple[WaifuArt, ...]:
     return tuple(declared_art(character_id) for character_id in sorted(CHARACTERS))
 
 
-
-
 def rarity_art_candidates_for(character_id: str, rarity: str) -> tuple[str, ...]:
-    """Return art candidates for the WaifuMon's combat rarity/class."""
+    """Return the only production JPEG path for a combat-rarity artwork."""
     if character_id not in CHARACTERS:
         raise KeyError(character_id)
     safe_rarity = rarity.upper()
     if safe_rarity not in {"D", "C", "B", "A", "S", "SS", "SSS"}:
         raise ValueError("rarity must be D, C, B, A, S, SS or SSS")
-    root = PurePosixPath("assets", "waifus")
-    return tuple(
-        str(root / f"{character_id}--class-{safe_rarity.casefold()}{suffix}")
-        for suffix in RUNTIME_ART_SUFFIXES
+    return (
+        _production_path(
+            f"{character_id}--class-{safe_rarity.casefold()}{CARD_ART_EXTENSION}"
+        ),
     )
 
 
-
 def variant_art_candidates_for(character_id: str, variant: str) -> tuple[str, ...]:
+    """Return the only production JPEG path for a normal/shiny card variant."""
     if character_id not in CHARACTERS:
         raise KeyError(character_id)
     safe_variant = variant.casefold()
     if safe_variant not in {"normal", "shiny"}:
         raise ValueError("variant must be normal or shiny")
-    root = PurePosixPath("assets", "waifus")
-    return tuple(
-        str(root / f"{character_id}--{safe_variant}{suffix}")
-        for suffix in RUNTIME_ART_SUFFIXES
-    )
+    return (card_asset_path(character_id, safe_variant),)
 
 
 def evolution_art_candidates_for(character_id: str, level: int) -> tuple[str, ...]:
-    """Return base + three level-evolution art candidates for a WaifuMon level."""
+    """Return the only production JPEG path for the level-derived visual stage."""
     if character_id not in CHARACTERS:
         raise KeyError(character_id)
-    from app.game.waifumon_progression import evolution_stage_for_level
-
     stage = evolution_stage_for_level(level).value
-    root = PurePosixPath("assets", "waifus")
-    return tuple(
-        str(root / f"{character_id}--stage{stage}{suffix}")
-        for suffix in RUNTIME_ART_SUFFIXES
-    )
+    return (_production_path(f"{character_id}--stage{stage}.jpg"),)

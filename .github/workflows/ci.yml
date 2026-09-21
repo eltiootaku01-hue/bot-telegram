@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Resync Git LFS
+        run: git lfs pull
       - uses: actions/setup-java@v6
         with:
           distribution: temurin

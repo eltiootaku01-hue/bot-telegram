@@ -27,7 +27,7 @@ def card_asset_path(character_id: str, variant: str = "normal") -> str:
         raise ValueError("character_id must be a safe asset identifier")
     if safe_variant not in {"normal", "shiny"}:
         raise ValueError("variant must be normal or shiny")
-    return f"assets/waifus/{safe_id}--{safe_variant}{CARD_ART_EXTENSION}"
+    return f"assets/production/cards/{safe_id}--{safe_variant}{CARD_ART_EXTENSION}"
 
 
 def jpeg_dimensions(path: Path) -> tuple[int, int] | None:
