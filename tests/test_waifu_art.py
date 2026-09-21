@@ -10,7 +10,7 @@ def test_art_registry_declares_every_playable_character() -> None:
 
 def test_art_registry_is_deterministic_and_character_specific() -> None:
     assert art_path_for("yor-forger") == "assets/production/cards/yor-forger--normal.jpg"
-    assert art_path_for("anya") == "assets/waifus/anya.png"
+    assert art_path_for("anya") == "assets/production/cards/anya--normal.jpg"
 
 
 def test_art_registry_rejects_unknown_character() -> None:
