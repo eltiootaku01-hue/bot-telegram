@@ -129,15 +129,12 @@ class MysteryModule(BotModule):
         try:
             thread_id = await self.topics.get_thread_id(chat_id, "misterios")
             if feedback is not None:
-                await feedback.finish(
+                sent = await feedback.finish(
                     ProcessingResultDTO(
                         text,
                         reply_markup=mystery_keyboard(row.id, started.case.options),
                     )
                 )
-                sent = feedback._transient
-                if sent is None:
-                    sent = source
             elif source is not None and source.chat.id == chat_id:
                 sent = await source.answer(
                     text,
