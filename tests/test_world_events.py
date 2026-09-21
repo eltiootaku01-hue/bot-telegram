@@ -115,7 +115,7 @@ async def test_recover_stale_respects_a_new_heartbeat(database):
     claim_time = utc_now() - timedelta(minutes=10)
 
     async with database.session() as session:
-        await service.schedule_game_news(
+        event = await service.schedule_game_news(
             session,
             chat_id=-100,
             presenter=WorldPresenterRef("sunna", PresenterKind.EXISTING_BOT),
@@ -161,7 +161,7 @@ async def test_claimed_envelope_contains_typed_lease(database):
     service = WorldEventService()
 
     async with database.session() as session:
-        event = await service.schedule_game_news(
+        await service.schedule_game_news(
             session,
             chat_id=-100,
             presenter=WorldPresenterRef("cami", PresenterKind.EXISTING_BOT),
