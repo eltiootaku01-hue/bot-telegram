@@ -34,7 +34,7 @@ def test_sticker_keys_are_unique() -> None:
 def test_sticker_service_resolves_configured_file_id() -> None:
     from app.stickers.service import StickerService
 
-    settings = __import__("app.core.config", fromlist=["Settings"]).Settings(
+    settings = Settings(
         telegram_sticker_file_ids_json='{"cari-celebration-01":"CAAC123"}'
     )
     service = StickerService(settings)
@@ -48,7 +48,7 @@ def test_sticker_service_resolves_configured_file_id() -> None:
 async def test_sticker_service_sends_only_when_configured() -> None:
     from app.stickers.service import StickerService
 
-    settings = __import__("app.core.config", fromlist=["Settings"]).Settings()
+    settings = Settings()
     service = StickerService(settings)
     bot = AsyncMock()
     message = AsyncMock()
