@@ -123,3 +123,17 @@ async def test_fusion_at_level_25_consumes_same_character_copies(tmp_path):
     assert row.copies == 1
 
     await database.close()
+
+
+def test_every_playable_avatar_has_explicit_art_direction() -> None:
+    from app.game.art_directions import ART_DIRECTIONS, direction_for
+    from app.game.catalog import CHARACTERS
+
+    assert set(CHARACTERS).issubset(ART_DIRECTIONS)
+    for character_id in CHARACTERS:
+        direction = direction_for(character_id)
+        assert direction.palette
+        assert direction.expression
+        assert direction.pose
+        assert direction.environment
+        assert direction.motif
