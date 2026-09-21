@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from app.db.database import Database
 from app.game.card_art_assets import (
     CARD_ART_HEIGHT,
     CARD_ART_MAX_BYTES,
@@ -27,9 +28,10 @@ def fake_jpeg(width: int = CARD_ART_WIDTH, height: int = CARD_ART_HEIGHT, paddin
     return b"\xff\xd8" + sof + (b"\x00" * padding) + b"\xff\xd9"
 
 
-def test_card_asset_path_is_deterministic() -> None:
+def test_card_asset_path_supports_canonical_variants() -> None:
     assert card_asset_path("yor-forger", "normal") == "assets/production/cards/yor-forger--normal.jpg"
     assert card_asset_path("yor-forger", "shiny") == "assets/production/cards/yor-forger--shiny.jpg"
+    assert card_asset_path("yor-forger", "ur-alt-holo") == "assets/production/cards/yor-forger--ur-alt-holo.jpg"
 
 
 @pytest.mark.parametrize("variant", ["invalid", ""])
