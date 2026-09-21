@@ -69,10 +69,10 @@ Secrets are saved locally in `.env`; runtime data and `.env` are ignored by Git.
 
 The project now has two distinct Windows distribution forms:
 
-- **Installer (`BotTelegram-Setup-<version>.exe`)** — the recommended download for a normal Windows installation. It installs `BotManager.exe` plus the four bot executables, creates Start Menu/Desktop shortcuts, creates writable `data` and `logs` directories, and can launch Bot Manager after installation.
+- **Installer (`BotTelegram-Setup-<version>.exe`)** — the recommended download for a normal Windows installation. It installs `BotManager.exe`, the five presenter bots and the bundled WaifuMon Java engine/JRE, creates Start Menu/Desktop shortcuts, creates writable `data` and `logs` directories, and can launch Bot Manager after installation.
 - **Portable ZIP (`bot-telegram-windows-portable.zip`)** — the raw executable bundle for users who prefer to extract and run it without an installer.
 
-The GitHub Actions Windows workflow builds the six executables, verifies every expected file, builds the Inno Setup installer, verifies that the installer exists and is non-trivially sized, and uploads both distribution forms as Actions artifacts. The workflow runs on `main`, can be started manually, and runs for `v*` tags. For a `v*` tag it also creates a GitHub Release containing the installer and portable ZIP, making the installer directly downloadable from the release page.
+The GitHub Actions Windows workflow builds the five human-facing presenter bots plus BotManager, and packages the WaifuMon Java engine/runtime, verifies every expected file, builds the Inno Setup installer, verifies that the installer exists and is non-trivially sized, and uploads both distribution forms as Actions artifacts. The workflow runs on `main`, can be started manually, and runs for `v*` tags. For a `v*` tag it also creates a GitHub Release containing the installer and portable ZIP, making the installer directly downloadable from the release page.
 
 ### First launch after installation
 
@@ -111,6 +111,60 @@ dist\\bots\\WorldBot.exe
 ```
 
 The installer definition lives at `installer/bot-telegram.iss` and packages those executables into a normal Windows setup program. GitHub Actions installs Inno Setup, compiles the installer, verifies it, and publishes the resulting artifact/release asset.
+
+## WaifuMon Java Engine
+
+WaifuMon usa ahora una arquitectura de motor único y presentadores múltiples:
+
+```text
+Telegram / JavaFX
+       ↓
+    Adapter
+       ↓
+Java WaifuMon Engine
+       ↓
+Game Rules
+       ↓
+Python persistence / SQLite
+```
+
+El proceso Java es independiente de Telegram y no accede directamente a SQLite. Su contrato NDJSON está versionado como `1.0` y utiliza `snake_case`. Python envía intenciones validadas y persiste el resultado. Java no decide permisos de Telegram ni administra tokens.
+
+Ya están migradas al engine Java las reglas de:
+
+- gacha D/C/B/A/S/SS/SSS;
+- combate determinista;
+- nivel, experiencia y etapa de evolución.
+
+La migración del resto de reglas de WaifuMon es incremental. Estadísticas derivadas, potencial, fusiones, encuentros, misiones, Detector, regalos y otras reglas pendientes deben migrarse antes de ser expuestas como autoridad por otro cliente.
+
+### Build del engine
+
+Requisitos locales:
+
+- JDK 21;
+- Maven 3.x.
+
+En Windows:
+
+```bat
+tools\build_waifumon.bat
+```
+
+El launcher completo ejecuta ese paso automáticamente:
+
+```bat
+tools\build_launcher.bat
+```
+
+Esto genera:
+
+```text
+dist\engine\waifumon-engine.jar
+dist\engine\jre\bin\java.exe
+```
+
+El mismo JAR y runtime se incluyen en el instalador y ZIP portable de Windows. Si una instalación externa ya tiene Java disponible puede definir `WAIFUMON_JAVA_COMMAND`; para una ruta concreta al engine puede definir `WAIFUMON_JAVA_JAR`.
 
 ## Deterministic character conversations
 
