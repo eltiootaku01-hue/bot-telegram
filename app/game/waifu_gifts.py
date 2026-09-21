@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -12,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.time import utc_now
 from app.db.models import (
     GameItemInventory,
-    GameProfile,
     WaifuGiftClaim,
     WaifuGiftDrop,
 )
@@ -84,7 +82,7 @@ class WaifuGiftService:
             day_key=day_key,
             slot=slot,
             gift_key=gift.key,
-            status="active",
+            status="pending",
             expires_at=expires_at or (utc_now() + timedelta(hours=6)),
         )
         try:
