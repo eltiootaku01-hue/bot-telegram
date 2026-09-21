@@ -165,6 +165,146 @@ class GameModule(BotModule):
         )
         return claimed, balance, progress.progress, progress.target
 
+    async def items(self, message: Message) -> None:
+        if message.chat.type != 'private' or message.from_user is None:
+            return
+        chat_id = await self._community_chat_id(message.from_user.id)
+        if chat_id is None:
+            await message.answer('😰 Todavía no hay una comunidad configurada.')
+            return
+        async with self.database.session() as session:
+            profile = await session.scalar(select(GameProfile).where(
+                GameProfile.user_id == message.from_user.id,
+                GameProfile.chat_id == chat_id,
+            ))
+            if profile is None:
+                await message.answer('🎁 Todavía no tenés objetos.')
+                return
+            items = list(await session.scalars(select(GameItemInventory).where(
+                GameItemInventory.profile_id == profile.id,
+                GameItemInventory.quantity > 0,
+            )))
+        if not items:
+            await message.answer('🎁 No tenés objetos para absorber todavía.')
+            return
+        lines = ['🎁 <b>Objetos de Sunna</b>', '']
+        for item in items:
+            gift = self.gift_service.gift_for_key(item.item_key)
+            lines.append(f'• <b>{gift.name}</b> ×{item.quantity} — +{gift.experience} EXP')
+        await message.answer('\n'.join(lines), reply_markup=item_inventory_keyboard(items, []))
+        await self._observe_action('item_inventory', message.from_user.id, chat_id)
+
+    async def gift_claim(self, callback: CallbackQuery) -> None:
+        if callback.message is None or callback.from_user is None:
+            await callback.answer('Regalo inválido.', show_alert=True)
+            return
+        chat = callback.message.chat
+        if chat.type not in {'group', 'supergroup'}:
+            await callback.answer('Este regalo se reclama en la comunidad.', show_alert=True)
+            return
+        if not self.settings.is_chat_allowed(chat.id, chat.type):
+            await callback.answer('Esta comunidad no está autorizada.', show_alert=True)
+            return
+        parts = (callback.data or '').split(':')
+        if len(parts) != 4 or not parts[3].isdigit():
+            await callback.answer('Regalo inválido.', show_alert=True)
+            return
+        async with self.database.session(write=True) as session:
+            profile = await MemberRepository().get_or_create_game_profile(
+                session, callback.from_user.id, chat.id, commit=False
+            )
+            result = await self.gift_service.claim(
+                session,
+                drop_id=int(parts[3]),
+                user_id=callback.from_user.id,
+                chat_id=chat.id,
+                profile_id=profile.id,
+            )
+            if result is None:
+                await callback.answer('Este regalo ya fue reclamado, expiró o sus 3 plazas están ocupadas.', show_alert=True)
+                return
+        await self._observe_action('gift_claim', callback.from_user.id, chat.id)
+        await callback.answer(
+            f'🎁 Recibiste {result.gift.name} ×1. Inventario: {result.quantity}.\n'
+            'Usalo desde /objetos para absorberlo con una waifu.',
+            show_alert=True,
+        )
+
+    async def item_choose(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback) or callback.message is None:
+            await callback.answer('Este panel solo funciona en tu chat privado con Sunna. 😰', show_alert=True)
+            return
+        parts = (callback.data or '').split(':')
+        if len(parts) != 4:
+            await callback.answer('Objeto inválido.', show_alert=True)
+            return
+        item_key = parts[3]
+        chat_id = await self._community_chat_id(callback.from_user.id)
+        if chat_id is None:
+            await callback.answer('No hay una comunidad configurada.', show_alert=True)
+            return
+        async with self.database.session() as session:
+            profile = await session.scalar(select(GameProfile).where(
+                GameProfile.user_id == callback.from_user.id,
+                GameProfile.chat_id == chat_id,
+            ))
+            if profile is None:
+                await callback.answer('No tenés inventario.', show_alert=True)
+                return
+            item = await session.scalar(select(GameItemInventory).where(
+                GameItemInventory.profile_id == profile.id,
+                GameItemInventory.item_key == item_key,
+                GameItemInventory.quantity > 0,
+            ))
+            characters = list(await session.scalars(select(GameCollection).where(
+                GameCollection.profile_id == profile.id,
+            )))
+        if item is None or not characters:
+            await callback.answer('Ese objeto o una waifu elegible no están disponibles.', show_alert=True)
+            return
+        await callback.message.edit_text(
+            f'🎁 <b>{self.gift_service.gift_for_key(item_key).name}</b> — elegí qué waifu lo absorberá.',
+            reply_markup=item_consume_keyboard(item_key, [get_character(row.character_id) for row in characters]),
+        )
+        await callback.answer()
+
+    async def item_absorb(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback) or callback.message is None:
+            await callback.answer('Este panel solo funciona en tu chat privado con Sunna. 😰', show_alert=True)
+            return
+        parts = (callback.data or '').split(':')
+        if len(parts) != 5:
+            await callback.answer('Absorción inválida.', show_alert=True)
+            return
+        item_key, character_id = parts[3], parts[4]
+        chat_id = await self._community_chat_id(callback.from_user.id)
+        if chat_id is None:
+            await callback.answer('No hay una comunidad configurada.', show_alert=True)
+            return
+        async with self.database.session(write=True) as session:
+            profile = await session.scalar(select(GameProfile).where(
+                GameProfile.user_id == callback.from_user.id,
+                GameProfile.chat_id == chat_id,
+            ))
+            if profile is None:
+                await callback.answer('No tenés perfil de juego.', show_alert=True)
+                return
+            new_level = await self.gift_service.absorb(
+                session,
+                profile_id=profile.id,
+                character_id=character_id,
+                item_key=item_key,
+            )
+            if new_level is None:
+                await callback.answer('El objeto ya no está disponible o la waifu no está en tu colección.', show_alert=True)
+                return
+        character = get_character(character_id)
+        await callback.message.edit_text(
+            f'✨ <b>{character.name}</b> absorbió el objeto.\n'
+            f'📈 Nivel actual: <b>{new_level}/25</b>.',
+        )
+        await self._observe_action('item_absorb', callback.from_user.id, chat_id)
+        await callback.answer('EXP aplicada. ✨', show_alert=True)
     async def detector(self, message: Message) -> None:
         if message.chat.type != 'private' or message.from_user is None:
             return
