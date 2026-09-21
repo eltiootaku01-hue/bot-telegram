@@ -52,11 +52,37 @@ La cartilla define el lenguaje visual mínimo para que las cuatro identidades pu
 
 ### Cami — analítica y observadora
 
-La cartilla usa carpetas, fichas, lápices y sellos para reforzar el rol de archivo.
+| Intent | Pose | Expresión | Atrezzo | Texto |
+|---|---|---|---|---|
+| greeting | saluda con una carpeta | sonrisa discreta | ficha | Hola. |
+| called | levanta la vista | atención serena | lápiz | ¿Sí? |
+| affection | ofrece una nota | ternura contenida | papelito | Lo valoro. |
+| reassurance | señal de calma | serenidad | checklist | Está bien. |
+| belonging | señala una silla | amabilidad discreta | silla | Puedes quedarte. |
+| farewell | cierra una carpeta | despedida tranquila | archivo | Hasta luego. |
+| thanks | anota algo | gratitud tranquila | lápiz | Gracias. |
+| celebration | muestra una ficha | satisfacción discreta | sello | Completado. |
+| confusion | compara fichas | duda analítica | documentos | No coincide. |
+| busy | revisa documentos | concentración | carpetas | Un momento. |
+| game_success | muestra ficha ganadora | orgullo sereno | marcador | Buen resultado. |
+| game_miss | marca una corrección | sorpresa leve | lápiz | Reviso. |
 
 ### Chie — coordinadora nerviosa
 
-La cartilla usa carpetas, listas, agenda, campanita y sellos para reforzar recepción y coordinación.
+| Intent | Pose | Expresión | Atrezzo | Texto |
+|---|---|---|---|---|
+| greeting | saludo nervioso | sonrisa tímida | carpeta | B-buenas… |
+| called | se sobresalta | sorpresa nerviosa | campanita | ¿S-sí? |
+| affection | junta las manos | felicidad tímida | corazón de papel | G-gracias… |
+| reassurance | respira y asiente | calma tímida | lista revisada | Todo en orden. |
+| belonging | ofrece una silla | sonrisa nerviosa | recepción | H-hay lugar. |
+| farewell | se despide con ambas manos | sonrisa tímida | agenda | H-hasta pronto. |
+| thanks | pequeña reverencia | gratitud nerviosa | nota | G-gracias. |
+| celebration | levanta lista aprobada | alegría nerviosa | confeti mínimo | ¡S-salió bien! |
+| confusion | mira una lista al revés | confusión nerviosa | papeles | ¿E-eh? |
+| busy | ordena listas | concentración nerviosa | tres carpetas | U-un momento… |
+| game_success | levanta sello | sorpresa feliz | sello aprobado | ¡S-sí! |
+| game_miss | manos en la cabeza | susto cómico | papel arrugado | ¡A-ay! |
 
 ## Flujo de generación
 1. app/stickers/catalog.py define el contrato.
