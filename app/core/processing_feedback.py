@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import secrets
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -38,7 +39,7 @@ class ProcessingFeedback:
         self,
         target: _MessageLike,
         *,
-        chooser: callable | None = None,
+        chooser: Callable[[tuple[str, ...]], str] | None = None,
     ) -> None:
         self._target = target
         self._chooser = chooser or secrets.choice
@@ -51,16 +52,19 @@ class ProcessingFeedback:
         text = self._chooser(WAITING_MESSAGES)
         self._transient = await self._target.answer(text)
 
-    async def finish(self, result: ProcessingResultDTO | str) -> None:
+    async def finish(self, result: ProcessingResultDTO | str) -> Any:
         if isinstance(result, str):
             result = ProcessingResultDTO(text=result)
         if self._transient is None:
-            await self._target.answer(result.text, reply_markup=result.reply_markup)
+            sent = await self._target.answer(
+                result.text,
+                reply_markup=result.reply_markup,
+            )
             self._completed = True
-            return
+            return sent
 
         try:
-            await self._transient.edit_text(
+            sent = await self._transient.edit_text(
                 result.text,
                 reply_markup=result.reply_markup,
             )
@@ -71,11 +75,15 @@ class ProcessingFeedback:
             try:
                 await self._transient.delete()
             finally:
-                await self._target.answer(
+                sent = await self._target.answer(
                     result.text,
                     reply_markup=result.reply_markup,
                 )
+        else:
+            sent = self._transient
+        self._transient = sent
         self._completed = True
+        return sent
 
     async def cleanup(self) -> None:
         if self._completed or self._transient is None:
