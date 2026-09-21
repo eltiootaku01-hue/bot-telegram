@@ -24,7 +24,7 @@ from app.game.fusion import fuse_collection
 from app.game.gacha import GACHA_COST_POINTS, GachaService
 from app.game.missions import DailyMissionService
 from app.game.progression import apply_capture_progression, collection_status
-from app.game.waifu_art import art_candidates_for
+from app.game.waifu_art import art_candidates_for, evolution_art_candidates_for
 from app.game.waifu_browser import (
     WaifuFilter,
     WaifuFilterField,
@@ -894,18 +894,50 @@ class GameModule(BotModule):
             await callback.answer("No encuentro esa waifu.", show_alert=True)
             return
 
+        owned_level = 1
+        chat_id = await self._community_chat_id(callback.from_user.id)
+        if chat_id is not None:
+            async with self.database.session() as session:
+                profile = await session.scalar(
+                    select(GameProfile).where(
+                        GameProfile.user_id == callback.from_user.id,
+                        GameProfile.chat_id == chat_id,
+                    )
+                )
+                if profile is not None:
+                    owned = await session.scalar(
+                        select(GameCollection).where(
+                            GameCollection.profile_id == profile.id,
+                            GameCollection.character_id == character_id,
+                        )
+                    )
+                    if owned is not None:
+                        owned_level = owned.level
+
         if callback.message is not None:
-            detail_text = render_detail(character)
+            detail_text = render_detail(character, owned_level=owned_level)
+            evolution_paths = evolution_art_candidates_for(character_id, owned_level)
             art_file = next(
                 (
                     candidate
                     for candidate in (
-                        resolve_asset(path) for path in art_candidates_for(character_id)
+                        resolve_asset(path) for path in evolution_paths
                     )
                     if candidate is not None
                 ),
                 None,
             )
+            if art_file is None:
+                art_file = next(
+                    (
+                        candidate
+                        for candidate in (
+                            resolve_asset(path) for path in art_candidates_for(character_id)
+                        )
+                        if candidate is not None
+                    ),
+                    None,
+                )
             if art_file is not None:
                 await callback.message.edit_text("🎴 <b>Ficha de waifu</b>")
                 await callback.message.answer_photo(
