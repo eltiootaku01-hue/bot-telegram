@@ -168,9 +168,10 @@ class WaifuDetectorService:
         mob = next((mob for mob in DETECTOR_MOBS if mob.key == row.mob_key), None)
         if mob is None:
             return "invalid", 0, None, None
-        if row.status != "active" or row.expires_at <= utc_now():
-            if row.status == "active":
-                row.status = "expired"
+        if row.status != "active":
+            return "already_fought", 0, None, mob
+        if row.expires_at <= utc_now():
+            row.status = "expired"
             return "expired", 0, None, mob
 
         won = await session.execute(
