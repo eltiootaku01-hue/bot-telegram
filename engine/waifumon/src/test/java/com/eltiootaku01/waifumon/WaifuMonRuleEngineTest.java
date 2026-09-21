@@ -117,6 +117,73 @@ final class WaifuMonRuleEngineTest {
         assertEquals("IDEMPOTENCY_CONFLICT", conflict.errorCode());
     }
 
+
+    @Test
+    void evolutionResolutionReturnsAuthoritativeStageBounds() {
+        ObjectNode payload = mapper.createObjectNode().put("level", 21);
+
+        EngineResponse response = engine.execute(
+            request("evolution.resolve", payload, "evolution-21")
+        );
+
+        assertTrue(response.success());
+        assertEquals(4, response.payload().get("evolution_stage").asInt());
+        assertEquals(21, response.payload().get("min_level").asInt());
+        assertEquals(30, response.payload().get("max_level").asInt());
+        assertEquals(0, response.payload().get("next_level").asInt());
+    }
+
+    @Test
+    void potentialAndElementStyleAreStableRules() {
+        ObjectNode potentialPayload = mapper.createObjectNode().put("potential_seed", "seed-42");
+        EngineResponse potential = engine.execute(
+            request("potential.resolve", potentialPayload, "potential-42")
+        );
+        EngineResponse potentialReplay = engine.execute(
+            request("potential.resolve", potentialPayload, "potential-42", "potential-replay")
+        );
+
+        ObjectNode stylePayload = mapper.createObjectNode().put("element", "rayo");
+        EngineResponse style = engine.execute(
+            request("style.resolve", stylePayload, "style-rayo")
+        );
+
+        assertTrue(potential.success());
+        assertEquals(
+            potential.payload().get("potential_score").asInt(),
+            potentialReplay.payload().get("potential_score").asInt()
+        );
+        assertTrue(style.success());
+        assertEquals("ataque explosivo", style.payload().get("style").asText());
+    }
+
+    @Test
+    void statsResolutionReturnsAllGameplayFields() {
+        ObjectNode character = mapper.createObjectNode()
+            .put("id", "test-waifu")
+            .put("name", "Test Waifu")
+            .put("element", "aire")
+            .put("power_score", 50);
+        ObjectNode payload = mapper.createObjectNode()
+            .set("character", character);
+        payload.put("level", 12);
+        payload.put("rarity", "B");
+        payload.put("potential_seed", "stats-seed");
+
+        EngineResponse response = engine.execute(
+            request("stats.resolve", payload, "stats-12")
+        );
+
+        assertTrue(response.success());
+        assertEquals(12, response.payload().get("level").asInt());
+        assertEquals("B", response.payload().get("rarity").asText());
+        assertEquals(3, response.payload().get("evolution_stage").asInt());
+        assertEquals("velocidad", response.payload().get("style").asText());
+        assertTrue(response.payload().get("max_hp").asInt() > 0);
+        assertTrue(response.payload().get("strength").asInt() > 0);
+        assertTrue(response.payload().get("critical_rate").asInt() <= 95);
+    }
+
     @Test
     void progressionResolvesLevelAndEvolutionStageWithoutChangingCopies() {
         ObjectNode payload = mapper.createObjectNode()
