@@ -85,10 +85,26 @@ def _fighter(settings: Settings, character_id: str, *, team: str, level: int = 1
 
 
 class TmaCombatService:
-    def __init__(self, database: Database, settings: Settings, engine: WaifuMonJavaEngine) -> None:
+    def __init__(
+        self,
+        database: Database,
+        settings: Settings,
+        engine: WaifuMonJavaEngine | None,
+    ) -> None:
         self.database = database
         self.settings = settings
         self.engine = engine
+        self._owns_engine = engine is None
+
+    def _engine_client(self) -> WaifuMonJavaEngine:
+        if self.engine is None:
+            self.engine = WaifuMonJavaEngine()
+        return self.engine
+
+    def close(self) -> None:
+        if self._owns_engine and self.engine is not None:
+            self.engine.close()
+            self.engine = None
 
     async def community_id(self) -> int:
         async with self.database.session() as session:
@@ -205,7 +221,7 @@ class TmaCombatService:
         attacker = _fighter(self.settings, dto.attacker_id, team="player")
         defender = _fighter(self.settings, dto.defender_id, team="enemy")
         server_key = f"tma:{context.user.id}:{community_id}:{dto.idempotency_key}"
-        result = self.engine.combat(
+        result = self._engine_client().combat(
             attacker={
                 "id": attacker.id,
                 "name": attacker.name,
@@ -304,8 +320,6 @@ class TmaApiServer:
         database = self.database or Database(self.settings.database_url)
         await database.create_schema()
         engine = self.engine
-        if engine is None:
-            engine = WaifuMonJavaEngine()
         app = create_tma_app(self.settings, database, engine)
 
         runner = web.AppRunner(app, access_log=logger)
@@ -320,8 +334,7 @@ class TmaApiServer:
             await self._stop_event.wait()
         finally:
             await runner.cleanup()
-            if self.engine is None:
-                engine.close()
+            app["combat_service"].close()
             if self.database is None:
                 await database.close()
 
