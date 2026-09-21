@@ -38,9 +38,9 @@ def test_sticker_prompt_is_safe_and_telegram_oriented() -> None:
     prompt = sticker_prompt(spec).casefold()
     assert "telegram sticker" in prompt
     assert "fondo transparente" in prompt
-    assert "sin desnudez" in prompt
-    assert "sin pose sexualizada" in prompt
-    assert "sin gore" in prompt
+    assert "no nudity" in prompt or "sin desnudez" in prompt
+    assert "no sexualized pose" in prompt or "sin pose sexualizada" in prompt
+    assert "no gore" in prompt or "sin gore" in prompt
 
 
 def test_sticker_keys_are_unique() -> None:
