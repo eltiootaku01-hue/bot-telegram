@@ -86,7 +86,8 @@ jobs:
             "dist\bots\Cari.exe",
             "dist\bots\Sunna.exe",
             "dist\bots\Cami.exe",
-            "dist\bots\Chie.exe"
+            "dist\bots\Chie.exe",
+            "dist\bots\WorldBot.exe"
           )
           foreach ($file in $files) {
             if (-not (Test-Path $file)) { throw "Missing executable: $file" }

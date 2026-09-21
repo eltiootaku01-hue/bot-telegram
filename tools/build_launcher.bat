@@ -20,6 +20,8 @@ pyinstaller --noconfirm --clean --console --onefile --name Cami --distpath dist\
 if errorlevel 1 exit /b %errorlevel%
 pyinstaller --noconfirm --clean --console --onefile --name Chie --distpath dist\bots --workpath build\Chie app\bots\chie.py
 if errorlevel 1 exit /b %errorlevel%
+pyinstaller --noconfirm --clean --console --onefile --name WorldBot --distpath dist\bots --workpath build\WorldBot app\bots\world.py
+if errorlevel 1 exit /b %errorlevel%
 pyinstaller --noconfirm --clean --windowed --onefile --name BotManager --distpath dist --workpath build\BotManager app\launcher.py
 if errorlevel 1 exit /b %errorlevel%
 
@@ -32,6 +34,7 @@ echo Bots:      dist\bots\Cari.exe
 echo           dist\bots\Sunna.exe
 echo           dist\bots\Cami.exe
 echo           dist\bots\Chie.exe
+echo           dist\bots\WorldBot.exe
 echo.
 echo Abri BotManager.exe para configurar enlaces, tokens y APIs,
 echo luego toca Comenzar.

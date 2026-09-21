@@ -15,12 +15,15 @@ class Settings(BaseSettings):
     bot_token_sunna: str = ""
     bot_token_cami: str = ""
     bot_token_chie: str = ""
+    # Optional neutral presenter bot for persistent Game World events.
+    bot_token_world: str = ""
 
     # Optional public Telegram links/usernames for the desktop setup screen.
     bot_link_cari: str = ""
     bot_link_sunna: str = ""
     bot_link_cami: str = ""
     bot_link_chie: str = ""
+    bot_link_world: str = ""
     # Optional Telegram sticker file IDs keyed by the authored sticker catalog key.
     telegram_sticker_file_ids_json: str = "{}"
 

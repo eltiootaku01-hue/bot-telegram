@@ -19,7 +19,7 @@ The bot does not implement a user/password login system. Authentication is deleg
 
 ### Telegram bot authentication
 
-Each identity gets its own Bot API token through `BOT_TOKEN_CARI`, `BOT_TOKEN_SUNNA`, `BOT_TOKEN_CAMI` or `BOT_TOKEN_CHIE`. The legacy `BOT_TOKEN` remains a fallback. `Settings.token_for()` selects the identity-specific token first, and `build_dispatcher()` passes it to aiogram's `Bot` client before polling starts.
+Each human-facing identity gets its own Bot API token through `BOT_TOKEN_CARI`, `BOT_TOKEN_SUNNA`, `BOT_TOKEN_CAMI` or `BOT_TOKEN_CHIE`. The optional neutral presenter uses `BOT_TOKEN_WORLD`. The legacy `BOT_TOKEN` remains a fallback. `Settings.token_for()` selects the identity-specific token first, and `build_dispatcher()` passes it to aiogram's `Bot` client before polling starts.
 
 ```text
 .env
@@ -72,7 +72,7 @@ The project now has two distinct Windows distribution forms:
 - **Installer (`BotTelegram-Setup-<version>.exe`)** — the recommended download for a normal Windows installation. It installs `BotManager.exe` plus the four bot executables, creates Start Menu/Desktop shortcuts, creates writable `data` and `logs` directories, and can launch Bot Manager after installation.
 - **Portable ZIP (`bot-telegram-windows-portable.zip`)** — the raw executable bundle for users who prefer to extract and run it without an installer.
 
-The GitHub Actions Windows workflow builds the five executables, verifies every expected file, builds the Inno Setup installer, verifies that the installer exists and is non-trivially sized, and uploads both distribution forms as Actions artifacts. The workflow runs on `main`, can be started manually, and runs for `v*` tags. For a `v*` tag it also creates a GitHub Release containing the installer and portable ZIP, making the installer directly downloadable from the release page.
+The GitHub Actions Windows workflow builds the six executables, verifies every expected file, builds the Inno Setup installer, verifies that the installer exists and is non-trivially sized, and uploads both distribution forms as Actions artifacts. The workflow runs on `main`, can be started manually, and runs for `v*` tags. For a `v*` tag it also creates a GitHub Release containing the installer and portable ZIP, making the installer directly downloadable from the release page.
 
 ### First launch after installation
 
@@ -333,8 +333,26 @@ Copy `.env.example` to `.env`, configure the tokens and settings, install depend
 python -m app.launcher
 ```
 
-For a single identity without the desktop manager, use its module, for example:
+For a single human-facing identity without the desktop manager, use its module, for example:
 
 ```bat
 python -m app.bots.cari
 ```
+## WorldBot neutral presenter
+
+WorldBot is an optional, outbound-only Telegram process. It does not poll for incoming updates, does not own game rules, does not modify the economy, and does not contain any character personality.
+
+Configure:
+
+```env
+BOT_TOKEN_WORLD=
+BOT_LINK_WORLD=
+```
+
+Then run:
+
+```bat
+python -m app.bots.world
+```
+
+The World Core must already have a persisted event addressed to `world_bot:world`. The presenter module enforces the typed reference and the central authorized-community allowlist before sending. This keeps World Core independent from Telegram and keeps WorldBot interchangeable with Cari, Sunna, Cami or Chie as an event presenter.
