@@ -11,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.time import utc_now
 from app.db.models import GameCollection, GameProfile, WaifuDetectorDailyUsage, WaifuDetectorRound
 from app.game.models import Rarity
+from app.game.catalog import get_character
+from app.game.waifumon_progression import stats_for_character
 from app.game.progression import add_collection_experience
 
 
@@ -55,16 +57,29 @@ class WaifuDetectorService:
 
     @staticmethod
     def _player_power(collection: GameCollection) -> int:
+        character = get_character(collection.character_id)
+        stats = stats_for_character(character, collection.level)
         rarity_bonus = {
             Rarity.D.value: 0,
-            Rarity.C.value: 5,
-            Rarity.B.value: 10,
-            Rarity.A.value: 18,
-            Rarity.S.value: 28,
-            Rarity.SS.value: 40,
-            Rarity.SSS.value: 55,
+            Rarity.C.value: 2,
+            Rarity.B.value: 4,
+            Rarity.A.value: 7,
+            Rarity.S.value: 10,
+            Rarity.SS.value: 14,
+            Rarity.SSS.value: 18,
         }.get(collection.rarity, 0)
-        return collection.level * 3 + rarity_bonus + collection.evolution_stage * 5
+        return (
+            (
+                stats.strength
+                + stats.defense
+                + stats.speed
+                + stats.special_power
+                + stats.healing
+            )
+            // 8
+            + rarity_bonus
+            + collection.evolution_stage * 2
+        )
 
     async def start(
         self,
