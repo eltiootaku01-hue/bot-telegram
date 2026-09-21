@@ -129,6 +129,7 @@ class WildWaifuScheduler:
         characters = wild_characters()
         if not characters:
             return
+
         character = random.choice(characters)
         encounter = new_encounter(character)
         expires = encounter.expires_at
@@ -137,13 +138,15 @@ class WildWaifuScheduler:
             text = (
                 "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
                 f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
-                f"❓ {encounter.question}\n👥 Hasta 3 personas pueden intentarlo. Una oportunidad por persona."
+                f"❓ {encounter.question}\n"
+                "👥 Hasta 3 personas pueden intentarlo. Una oportunidad por persona."
             )
         else:
             text = (
                 "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
                 f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
-                "⚡ ¡Elegí su nombre antes de que desaparezca!\n👥 Hasta 3 personas pueden intentarlo. Una oportunidad por persona."
+                "⚡ ¡Elegí su nombre antes de que desaparezca!\n"
+                "👥 Hasta 3 personas pueden intentarlo. Una oportunidad por persona."
             )
 
         record = GameEncounter(
@@ -155,47 +158,32 @@ class WildWaifuScheduler:
             answer=encounter.answer,
             expires_at=expires,
         )
-        if not is_authorized_community(self.settings, chat_id):
-            return
 
         async with self.database.session(write=True) as session:
             session.add(record)
             try:
+                await session.flush()
+                await self.world_events.schedule_waifu_arrival(
+                    session,
+                    chat_id=chat_id,
+                    presenter=WorldPresenterRef(
+                        key="sunna",
+                        kind=PresenterKind.EXISTING_BOT,
+                    ),
+                    encounter_id=encounter.id,
+                    character_id=character.id,
+                    character_name=character.name,
+                    text=text,
+                    options=tuple(options),
+                    dedupe_key=f"waifu-arrival:{encounter.id}",
+                    expires_at=expires,
+                )
                 await session.commit()
             except IntegrityError:
                 # A second Sunna process may have raced us. The partial unique index
                 # on active encounters makes only one winner possible.
                 await session.rollback()
                 return
-
-        if not is_authorized_community(self.settings, chat_id):
-            async with self.database.session() as session:
-                await session.execute(
-                    update(GameEncounter)
-                    .where(
-                        GameEncounter.id == encounter.id,
-                        GameEncounter.status == "active",
-                    )
-                    .values(status="cancelled")
-                )
-            return
-
-        async with self.database.session() as session:
-            await self.world_events.schedule_waifu_arrival(
-                session,
-                chat_id=chat_id,
-                presenter=WorldPresenterRef(
-                    key="sunna",
-                    kind=PresenterKind.EXISTING_BOT,
-                ),
-                encounter_id=encounter.id,
-                character_id=character.id,
-                character_name=character.name,
-                text=text,
-                options=tuple(options),
-                dedupe_key=f"waifu-arrival:{encounter.id}",
-                expires_at=expires,
-            )
 
         await asyncio.sleep(max(0, (expires - utc_now()).total_seconds()))
         await self.expire(encounter.id, chat_id)
