@@ -389,6 +389,10 @@ class WorldEventService:
         reason: str = "manual retry approved",
     ) -> bool:
         """Requeue an ambiguous delivery only when no Telegram message id is known."""
+        current = utc_now()
+        scheduled_at = run_at or current
+        if scheduled_at.tzinfo is not None:
+            raise ValueError("run_at must be timezone-naive")
         presenter_key = (
             f"{presenter.kind.value}:{presenter.key.strip()}"
             if presenter is not None
@@ -398,11 +402,11 @@ class WorldEventService:
             raise ValueError("presenter key must not be empty")
         values: dict[str, object] = {
             "status": WorldEventStatus.PENDING.value,
-            "run_at": run_at or utc_now(),
+            "run_at": scheduled_at,
             "locked_at": None,
             "heartbeat_at": None,
             "last_error": reason[:4000],
-            "updated_at": utc_now(),
+            "updated_at": current,
         }
         if presenter_key is not None:
             values["presenter_key"] = presenter_key
@@ -412,6 +416,10 @@ class WorldEventService:
                 GameWorldEvent.id == event_id,
                 GameWorldEvent.status == WorldEventStatus.DELIVERY_UNKNOWN.value,
                 GameWorldEvent.message_id.is_(None),
+                (
+                    GameWorldEvent.expires_at.is_(None)
+                    | (GameWorldEvent.expires_at > current)
+                ),
             )
             .values(**values)
         )
