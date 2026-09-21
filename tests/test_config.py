@@ -61,3 +61,18 @@ def test_private_access_accepts_master_when_admin_alias_is_zero() -> None:
     )
     assert settings.is_chat_allowed(777, "private", 777) is True
     assert settings.is_chat_allowed(777, "private", 778) is False
+
+
+def test_sticker_file_id_registry_parses_valid_json() -> None:
+    settings = Settings(
+        telegram_sticker_file_ids_json='{"cari-greeting-01":"CAAC123","sunna-game_success-01":"CAAC456"}'
+    )
+    assert settings.telegram_sticker_file_ids == {
+        "cari-greeting-01": "CAAC123",
+        "sunna-game_success-01": "CAAC456",
+    }
+
+
+def test_sticker_file_id_registry_fails_closed_on_invalid_json() -> None:
+    settings = Settings(telegram_sticker_file_ids_json="{invalid")
+    assert settings.telegram_sticker_file_ids == {}
