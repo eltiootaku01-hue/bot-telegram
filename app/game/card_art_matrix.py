@@ -87,7 +87,8 @@ ART_MATRIX: dict[CardArtTier, CardArtProfile] = {
 
 def art_profile(tier: str | CardArtTier) -> CardArtProfile:
     try:
-        return ART_MATRIX[CardArtTier(str(tier))]
+        resolved = tier if isinstance(tier, CardArtTier) else tier_from_label(tier)
+        return ART_MATRIX[resolved]
     except (KeyError, ValueError) as exc:
         raise ValueError(f"Unsupported card art tier: {tier!r}") from exc
 
