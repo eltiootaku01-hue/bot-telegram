@@ -157,17 +157,12 @@ class TriviaModule(BotModule):
             return False
         try:
             if feedback is not None:
-                await feedback.finish(
+                sent = await feedback.finish(
                     ProcessingResultDTO(
                         text,
                         reply_markup=trivia_keyboard(round_row.id, question.options),
                     )
                 )
-                sent = feedback._transient
-                if sent is None:
-                    # The final response was sent directly by the controller; fetch
-                    # the persisted round message ID from the source chat below.
-                    sent = source
             elif source is not None:
                 sent = await source.answer(
                     text,
