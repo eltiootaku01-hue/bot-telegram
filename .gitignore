@@ -72,3 +72,6 @@ Thumbs.db
 
 # Temporary files
 tempCodeRunnerFile.py
+
+# Local Java WaifuMon packaging staging
+.waifumon-runtime/
