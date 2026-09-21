@@ -24,7 +24,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]" cairosvg pillow
       - name: Export canonical prompt
-        run: python tools/export_card_art_prompts.py --character-id alisa-kujo
+        run: |
+          python tools/export_card_art_prompts.py --character-id alisa-kujo --output docs/generated/WAIFUMON_CARD_001_PROMPT.md
+          python tools/export_card_art_prompts.py --output docs/generated/WAIFUMON_CARD_ART_PROMPTS.md
       - name: Generate Carta 001
         run: python tools/build_card_001_assets.py
       - name: Technical asset validation
@@ -54,7 +56,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/production/cards/alisa-kujo--r.jpg assets/production/cards/alisa-kujo--normal.jpg assets/quarantine/card_stages/alisa-kujo--ur.jpg assets/waifus/art_manifest.json assets/waifus/card_art_prompt_manifest.json assets/waifus/card_art_qa_manifest.json docs/generated/WAIFUMON_CARD_ART_PROMPTS.md docs/generated/WAIFUMON_CARD_001_ALISA_STAGES.md
+          git add assets/production/cards/alisa-kujo--r.jpg assets/production/cards/alisa-kujo--normal.jpg assets/quarantine/card_stages/alisa-kujo--ur.jpg assets/waifus/art_manifest.json assets/waifus/card_art_prompt_manifest.json assets/waifus/card_art_qa_manifest.json docs/generated/WAIFUMON_CARD_ART_PROMPTS.md docs/generated/WAIFUMON_CARD_001_PROMPT.md docs/generated/WAIFUMON_CARD_001_ALISA_STAGES.md
           if git diff --cached --quiet; then
             echo "No generated changes."
             exit 0
