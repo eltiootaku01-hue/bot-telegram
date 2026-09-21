@@ -47,7 +47,7 @@ jobs:
         run: python tools/validate_card_qa.py
       - name: Targeted art tests
         run: |
-          pytest -q tests/test_card_art_manifest.py tests/test_card_art_prompts.py
+          pytest -q tests/test_card_art_manifest.py tests/test_card_art_prompts.py tests/test_card_001_production.py
           ruff check app tests tools
       - name: Commit production outputs
         shell: bash
