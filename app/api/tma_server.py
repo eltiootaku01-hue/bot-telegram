@@ -4,7 +4,6 @@ import asyncio
 import logging
 import threading
 import uuid
-from pathlib import Path
 from urllib.parse import urljoin
 
 from aiohttp import web
@@ -330,10 +329,9 @@ def create_tma_app(
     database: Database,
     engine: WaifuMonJavaEngine,
     *,
-    bot_factory=None,
 ) -> web.Application:
     combat_service = TmaCombatService(database, settings, engine)
-    app = web.Application(middlewares=[_tma_middleware(settings, bot_factory=bot_factory)])
+    app = web.Application(middlewares=[_tma_middleware(settings)])
     app["settings"] = settings
     app["database"] = database
     app["combat_service"] = combat_service
@@ -343,7 +341,7 @@ def create_tma_app(
     return app
 
 
-def _tma_middleware(settings: Settings, *, bot_factory=None):
+def _tma_middleware(settings: Settings):
     @web.middleware
     async def middleware(request: web.Request, handler):
         origin = request.headers.get("Origin")
