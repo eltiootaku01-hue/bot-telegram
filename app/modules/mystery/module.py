@@ -22,6 +22,7 @@ from app.game.mystery import MysteryService
 from app.services.forum_topics import ForumTopicService
 from app.services.world import WorldService
 from app.ui.game_keyboards import mystery_keyboard
+from app.services.telegram_delivery import with_retry_after
 
 logger = logging.getLogger(__name__)
 
@@ -117,11 +118,13 @@ class MysteryModule(BotModule):
                 )
             elif self.bot is not None:
                 kwargs = {"message_thread_id": thread_id} if thread_id is not None else {}
-                sent = await self.bot.send_message(
-                    chat_id,
-                    text,
-                    reply_markup=mystery_keyboard(row.id, started.case.options),
-                    **kwargs,
+                sent = await with_retry_after(
+                    lambda: self.bot.send_message(
+                        chat_id,
+                        text,
+                        reply_markup=mystery_keyboard(row.id, started.case.options),
+                        **kwargs,
+                    )
                 )
             else:
                 raise RuntimeError("Cami mystery bot is not initialized")
