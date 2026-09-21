@@ -83,22 +83,21 @@ CARD_OUTFITS: dict[CardTier, str] = {
 }
 
 
-def card_art_tier(popularity_score: int, power_score: int) -> CardArtTier:
-    """Derive the four visual bands without changing gameplay CardTier."""
-    if not 0 <= popularity_score <= 100 or not 0 <= power_score <= 100:
-        raise ValueError("art scores must be between 0 and 100")
-    combined = (popularity_score + power_score) / 2
-    if combined >= 78:
-        return CardArtTier.UR
-    if combined >= 52:
-        return CardArtTier.SR
-    if combined >= 40:
+def card_art_tier(card_tier: CardTier) -> CardArtTier:
+    """Map the explicit card tier to its matching visual presentation tier."""
+    if card_tier is CardTier.R:
+        return CardArtTier.R
+    if card_tier is CardTier.S:
         return CardArtTier.S
-    return CardArtTier.R
+    if card_tier is CardTier.SR:
+        return CardArtTier.SR
+    if card_tier is CardTier.UR:
+        return CardArtTier.UR
+    raise ValueError(f"unsupported card tier: {card_tier!r}")
 
 
-def art_frame_for(*, popularity_score: int, power_score: int) -> ArtFrameRule:
-    return CARD_ART_RULES[card_art_tier(popularity_score, power_score)]
+def art_frame_for(*, card_tier: CardTier) -> ArtFrameRule:
+    return CARD_ART_RULES[card_art_tier(card_tier)]
 
 
 def art_stage_for_level(level: int) -> ArtStage:
@@ -117,17 +116,24 @@ def art_prompt_spec(
     character_id: str = "",
     level: int,
     card_tier: CardTier,
+    variant: str = "normal",
     popularity_score: int = 50,
     power_score: int = 50,
     unique_direction: str = "",
+    mature_art_allowed: bool = False,
 ) -> str:
     """Return deterministic, safe art direction for a future image provider."""
     stage = art_stage_for_level(level)
-    frame = art_frame_for(
-        popularity_score=popularity_score,
-        power_score=power_score,
-    )
+    frame = art_frame_for(card_tier=card_tier)
     special = CARD_OUTFITS[card_tier]
+    if variant.casefold() not in {"normal", "shiny"}:
+        raise ValueError("variant must be normal or shiny")
+    if variant.casefold() == "shiny" and mature_art_allowed:
+        sensuality = "ecchi elegante y adulto, sugestivo pero no explícito, ropa completamente opaca"
+    elif variant.casefold() == "shiny":
+        sensuality = "vestuario especial atractivo pero totalmente no explícito y apropiado"
+    else:
+        sensuality = "vestuario normal completamente vestido, atractivo y aventurero"
     direction = unique_direction.strip() or "diseño visual propio del personaje"
     direction_key = character_id.strip().casefold() or character_name.casefold().replace(" ", "-")
     visual = direction_for(direction_key)
@@ -136,6 +142,7 @@ def art_prompt_spec(
         f"Visual tier: {frame.tier.value}. Visible composition: {frame.visible_percent}. "
         f"Framing: {frame.framing}. Pose: {frame.pose_direction}. "
         f"Style: {stage.style}. Costume: {stage.outfit}; {special}. "
+        f"Variant: {variant.casefold()}. Visual safety: {sensuality}. "
         f"Unique direction: {direction}. " 
         f"Palette: {visual.palette}; "
         f"Expression: {visual.expression}; "
