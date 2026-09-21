@@ -1,1 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="680"><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#45205b"/><stop offset="1" stop-color="#090c14"/></linearGradient></defs><rect x="8" y="8" width="464" height="664" rx="28" fill="url(#b)" stroke="#d05bdf" stroke-width="8"/><text x="34" y="52" fill="#ffe0ff" font-size="20" font-family="Arial" font-weight="700">WAIFUMON • CARTA 27</text><text x="446" y="52" text-anchor="end" fill="#d05bdf" font-size="26" font-family="Arial" font-weight="700">UR</text><circle cx="240" cy="340" r="138" fill="#0a0d14" opacity=".45"/><path d="M145 340 Q150 215 240 190 Q330 215 335 340 L320 425 Q240 470 160 425Z" fill="#8c5634"/><ellipse cx="240" cy="340" rx="86" ry="112" fill="#f2d1bd"/><path d="M152 312 Q165 205 240 184 Q315 205 328 312 Q284 265 240 282 Q196 265 152 312Z" fill="#8c5634"/><path d="M170 430 Q240 395 310 430 L345 535 L135 535Z" fill="#d05bdf"/><ellipse cx="205" cy="336" rx="12" ry="16" fill="#db8dff"/><ellipse cx="275" cy="336" rx="12" ry="16" fill="#db8dff"/><circle cx="208" cy="339" r="5"/><circle cx="278" cy="339" r="5"/><path d="M216 386 Q240 400 264 386" fill="none" stroke="#9e5c66" stroke-width="5" stroke-linecap="round"/><circle cx="335" cy="250" r="24" fill="#d05bdf"/><text x="335" y="258" text-anchor="middle" fill="#ffe0ff" font-size="20" font-family="Arial">✦</text><rect x="32" y="555" width="416" height="80" rx="18" fill="#0a0d14" stroke="#d05bdf" stroke-width="2"/><text x="48" y="585" fill="#fff" font-size="22" font-family="Arial" font-weight="700">Akane Kurokawa</text><text x="48" y="612" fill="#ffe0ff" font-size="13" font-family="Arial">Oshi no Ko</text><text x="330" y="585" fill="#d05bdf" font-size="20" font-family="Arial" font-weight="700">CLASE A</text><text x="330" y="612" fill="#ffe0ff" font-size="12" font-family="Arial">ARTE ORIGINAL</text><text x="240" y="657" text-anchor="middle" fill="#aab3c7" font-size="11" font-family="Arial">VISUAL NO CANÓNICO • V1</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#20202f"/><stop offset=".52" stop-color="#6b3d58"/><stop offset="1" stop-color="#151d30"/></linearGradient>
+<radialGradient id="p" cx=".5" cy=".2" r=".68"><stop stop-color="#ffd4e6" stop-opacity=".38"/><stop offset=".5" stop-color="#c7a1db" stop-opacity=".12"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#243252"/><stop offset=".55" stop-color="#546487"/><stop offset="1" stop-color="#1c233a"/></linearGradient>
+<linearGradient id="dress" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e9e4f0"/><stop offset=".5" stop-color="#b3aec3"/><stop offset="1" stop-color="#74677f"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#e8bfd8" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#p)"/>
+<text x="52" y="78" fill="#fff2fb" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#efb4db" font-family="Arial" font-size="32" font-weight="800">SR</text>
+<text x="52" y="112" fill="#dfcad7" font-family="Arial" font-size="13" letter-spacing="3">AKANE • 60-80% • TEATRO / OBSERVACIÓN</text>
+
+<g fill="none" stroke="#efc5df" opacity=".3">
+<path d="M74 205 H646"/><path d="M106 240 H614"/><path d="M138 275 H582"/>
+</g>
+<g fill="#ffd7ea" opacity=".68">
+<circle cx="98" cy="320" r="5"/><circle cx="625" cy="344" r="4"/><circle cx="130" cy="716" r="4"/><circle cx="592" cy="692" r="5"/>
+</g>
+
+<!-- spotlight -->
+<path d="M360 130 L218 858 L502 858 Z" fill="#f7e4f1" opacity=".055"/>
+
+<g stroke="#121523" stroke-width="9" stroke-linejoin="round">
+  <!-- hair/head -->
+  <path d="M200 421 Q185 257 259 175 Q358 67 468 165 Q542 236 511 419 Q493 535 446 608 L275 608 Q215 526 200 421Z" fill="url(#hair)"/>
+  <path d="M268 240 Q359 165 451 238 L457 360 Q440 443 359 470 Q278 443 260 360Z" fill="#f2d4c4"/>
+  <path d="M255 252 Q284 154 369 149 Q451 151 470 250 Q430 214 405 239 Q370 192 339 239 Q299 206 255 252Z" fill="url(#hair)"/>
+  <path d="M275 229 Q250 339 280 443" fill="none" stroke="#7186b0" stroke-width="10"/>
+  <path d="M445 226 Q469 340 439 443" fill="none" stroke="#7186b0" stroke-width="10"/>
+  <ellipse cx="320" cy="337" rx="13" ry="19" fill="#55627c"/><ellipse cx="399" cy="337" rx="13" ry="19" fill="#55627c"/>
+  <circle cx="323" cy="331" r="5" fill="#fff" stroke="none"/><circle cx="402" cy="331" r="5" fill="#fff" stroke="none"/>
+  <path d="M338 401 Q359 412 380 401" fill="none" stroke="#a05e72" stroke-width="5"/>
+
+  <!-- torso / costume -->
+  <path d="M286 454 Q359 430 434 454 L482 704 Q438 764 359 781 Q281 764 237 704Z" fill="url(#dress)"/>
+  <path d="M311 463 L359 520 L405 463" fill="none" stroke="#5f6588" stroke-width="8"/>
+  <path d="M359 520 L359 730" stroke="#8f83a0" stroke-width="6"/>
+
+  <!-- one hand near face, analytic gesture -->
+  <path d="M284 484 Q241 522 219 578 Q208 607 228 622 Q248 636 269 608 L330 533" fill="#e9e4f0"/>
+  <path d="M431 484 Q492 527 525 592 Q540 621 519 638 Q497 652 477 622 L398 533" fill="#e9e4f0"/>
+  <path d="M252 574 Q230 539 214 542 Q197 548 206 564 L231 598" fill="#f2d4c4"/>
+
+  <!-- notebook -->
+  <rect x="294" y="585" width="131" height="88" rx="8" fill="#fbf6ef"/>
+  <path d="M305 606 H414 M305 628 H402 M305 650 H390" stroke="#9a8ca1" stroke-width="4"/>
+  <circle cx="359" cy="674" r="7" fill="#c86d92"/>
+
+  <path d="M246 694 Q359 732 472 694 L487 847 Q431 888 359 896 Q287 888 231 847Z" fill="#755b76"/>
+</g>
+
+<g fill="none" stroke="#ffd8ed" opacity=".42">
+<path d="M116 430 q55-70 112 0 q-56 60-112 0z"/><path d="M492 430 q55-70 112 0 q-56 60-112 0z"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#0e1420" opacity=".93" stroke="#e8bfd8" stroke-width="2"/>
+<text x="64" y="929" fill="#fff1fa" font-family="Arial" font-size="22" font-weight="700">Akane Kurokawa</text>
+<text x="64" y="952" fill="#d9c5d5" font-family="Arial" font-size="12">Oshi no Ko • SR visual • 60-80% • interpretación / observación</text>
+<text x="656" y="929" text-anchor="end" fill="#efb4db" font-family="Arial" font-size="14" font-weight="700">TEATRO</text>
+<text x="656" y="952" text-anchor="end" fill="#d9c5d5" font-family="Arial" font-size="11">cuaderno • foco • composición analítica</text>
+</svg>
