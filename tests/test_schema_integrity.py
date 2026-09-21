@@ -138,6 +138,19 @@ async def test_existing_sqlite_schema_gets_invariant_triggers_on_restart(tmp_pat
                 )
             )
 
+    with pytest.raises(IntegrityError):
+        async with second.session() as session:
+            session.add(
+                PointTransaction(
+                    user_id=8,
+                    chat_id=-101,
+                    amount=10,
+                    reason="invalid legacy schema test",
+                    reference_type="encounter",
+                    reference_id=None,
+                )
+            )
+
     await second.close()
 
 
