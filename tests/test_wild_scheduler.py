@@ -186,3 +186,35 @@ async def test_spawn_persists_world_arrival_instead_of_sending_telegram(database
     assert encounter.message_id is None
     assert bot.send_message.assert_not_awaited is not None
     bot.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_spawn_rolls_back_encounter_when_world_event_creation_fails(database, monkeypatch) -> None:
+    from app.core.config import Settings
+    from sqlalchemy import select
+
+    async def fail_schedule(*_args, **_kwargs):
+        raise RuntimeError("world event unavailable")
+
+    async def no_wait(_seconds):
+        return None
+
+    monkeypatch.setattr(
+        "app.game.wild_scheduler.WorldEventService.schedule_waifu_arrival",
+        fail_schedule,
+    )
+    monkeypatch.setattr("app.game.wild_scheduler.asyncio.sleep", no_wait)
+
+    scheduler = WildWaifuScheduler(
+        AsyncMock(),
+        database,
+        Settings(authorized_chat_ids="-100"),
+    )
+
+    with pytest.raises(RuntimeError, match="world event unavailable"):
+        await scheduler.spawn(-100)
+
+    async with database.session() as session:
+        encounters = list(await session.scalars(select(GameEncounter)))
+
+    assert encounters == []
