@@ -916,6 +916,7 @@ class GameModule(BotModule):
                     if owned is not None:
                         owned_level = owned.level
                         owned_seed = owned.potential_seed
+                        owned_seed = owned.potential_seed
 
         if callback.message is not None:
             detail_text = render_detail(
@@ -1282,6 +1283,7 @@ class GameModule(BotModule):
                 profile_id=profile.id,
                 character_id=character.id,
                 rarity=encounter.rarity,
+                potential_seed=f"encounter:{encounter.id}",
             )
             balance = await MemberRepository().add_points(
                 session,
