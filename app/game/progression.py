@@ -39,6 +39,24 @@ class CollectionStatus:
     next_rarity: str | None
 
 
+def add_collection_experience(
+    *,
+    level: int,
+    experience: int,
+    evolution_stage: int,
+    gained: int,
+    copies: int,
+) -> ProgressionResult:
+    """Compatibility wrapper for collection systems using the same XP rules."""
+    return add_character_experience(
+        level=level,
+        experience=experience,
+        evolution_stage=evolution_stage,
+        gained=gained,
+        copies=copies,
+    )
+
+
 def add_character_experience(*, level: int, experience: int, evolution_stage: int, gained: int, copies: int) -> ProgressionResult:
     """Pure XP progression; rank changes happen only through explicit fusion."""
     if gained < 0 or copies < 1:
