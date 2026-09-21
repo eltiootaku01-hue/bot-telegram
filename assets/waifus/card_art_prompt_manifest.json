@@ -12,36 +12,40 @@
   },
   "matrix": {
     "D_C_B_R": {
+      "phase": "Fase 1 / base illustration",
       "framing": "Primer plano / Close-Up",
       "crop": "Rostro y hombros",
-      "wardrobe": "Atuendo base, cotidiano o uniforme",
-      "function": "Legibilidad limpia para avatares y mensajes rápidos",
+      "wardrobe": "Atuendo cotidiano, uniforme escolar o atuendo base completamente cubierto",
+      "function": "Legibilidad e identidad",
       "suggestive_level": "ninguno",
       "inspection": "alto"
     },
     "S": {
+      "phase": "Fase 2 / ascensión intermedia",
       "framing": "Plano medio",
-      "crop": "Tórax; foco en busto, espalda o cadera",
-      "wardrobe": "Vestimenta ajustada, traje de baño o lencería temática solo con elegibilidad adulta explícita",
-      "function": "Glamour moderado sin desnudez",
-      "suggestive_level": "ecchi moderado, no explícito",
+      "crop": "Cabeza a cintura o muslos",
+      "wardrobe": "Pose de combate o atuendo dinámico mejorado, completamente cubierto",
+      "function": "Transición hacia acción premium",
+      "suggestive_level": "glamour no explícito",
       "inspection": "muy alto"
     },
     "SR": {
+      "phase": "Fase 2 / ascensión intermedia avanzada",
       "framing": "Plano tres cuartos",
       "crop": "Casi cuerpo completo",
-      "wardrobe": "Temática de nicho: gothic lolita, kemonomimi, bunny suit elegante, yukata/kimono festivo o combate estilizado",
-      "function": "Pose dinámica y alta fidelidad de vestuario",
-      "suggestive_level": "ecchi avanzado, no explícito",
+      "wardrobe": "Combate estilizado o vestuario temático elegante, no explícito",
+      "function": "Alta fidelidad de vestuario y movimiento",
+      "suggestive_level": "glamour no explícito",
       "inspection": "muy alto"
     },
     "UR": {
+      "phase": "Final Ascension / Magnificent Art",
       "framing": "Plano general",
       "crop": "Cuerpo completo de pies a cabeza",
-      "wardrobe": "Cosplay/crossover conceptual premium; fanservice no explícito solo con elegibilidad adulta explícita",
-      "function": "Edición premium con fondo elaborado",
-      "suggestive_level": "ecchi premium, estrictamente no explícito",
-      "inspection": "doble / máximo"
+      "wardrobe": "Atuendo definitivo de combate, gala, fantasía o concepto premium",
+      "function": "Ilustración definitiva y más impactante",
+      "suggestive_level": "glamour premium; variantes adultas estrictamente no explícitas",
+      "inspection": "máximo / doble revisión"
     }
   },
   "inspection": {
@@ -1511,7 +1515,14 @@
         "fabric_layers",
         "battle_worn_clothing"
       ],
-      "production_filename": "<character-id>--ur-alt-holo.jpg"
+      "production_filename": "<character-id>--ur-alt-holo.jpg",
+      "qa_requirements": [
+        "tier=UR",
+        "adult_eligible=true",
+        "non_explicit=true",
+        "visual_review=true",
+        "second_review=true"
+      ]
     }
   }
 }
