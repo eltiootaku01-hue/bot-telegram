@@ -234,7 +234,7 @@ def _ensure_sqlite_invariant_triggers(connection) -> None:
             "game_encounters",
             "UPDATE OF status",
             """
-            WHEN NEW.status NOT IN ('active', 'captured', 'expired', 'cancelled')
+            WHEN NEW.status NOT IN ('active', 'captured', 'closed', 'expired', 'cancelled')
             BEGIN
                 SELECT RAISE(ABORT, 'invalid game encounter status');
             END
