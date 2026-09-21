@@ -136,13 +136,13 @@ class WildWaifuScheduler:
             text = (
                 "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
                 f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
-                f"❓ {encounter.question}"
+                f"❓ {encounter.question}\n👥 Hasta 3 personas pueden intentarlo. Una oportunidad por persona."
             )
         else:
             text = (
                 "🚨 <b>¡WAIFU SUELTA!</b> 🚨\n\n"
                 f"👤 <b>{character.name}</b> · clase {character.rarity.value}\n"
-                "⚡ ¡Elegí su nombre antes de que desaparezca!"
+                "⚡ ¡Elegí su nombre antes de que desaparezca!\n👥 Hasta 3 personas pueden intentarlo. Una oportunidad por persona."
             )
 
         record = GameEncounter(
