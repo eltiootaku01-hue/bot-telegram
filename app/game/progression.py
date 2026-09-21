@@ -99,21 +99,18 @@ async def apply_capture_progression(
     points = CAPTURE_POINTS_FIRST if first_capture else CAPTURE_POINTS_DUPLICATE
 
     if not first_capture:
-        total_xp = GameCollection.experience + gained
-        level_up = total_xp >= GameCollection.level * 100
-        await session.execute(
-            update(GameCollection)
-            .where(GameCollection.id == collection.id)
-            .values(
-                copies=GameCollection.copies + 1,
-                level=case((level_up, GameCollection.level + 1), else_=GameCollection.level),
-                experience=case(
-                    (level_up, total_xp - (GameCollection.level * 100)),
-                    else_=total_xp,
-                ),
-            )
+        result = add_character_experience(
+            level=collection.level,
+            experience=collection.experience,
+            evolution_stage=collection.evolution_stage,
+            gained=gained,
+            copies=collection.copies + 1,
         )
-        await session.refresh(collection)
+        collection.copies += 1
+        collection.level = result.level
+        collection.experience = result.experience
+        collection.evolution_stage = result.evolution_stage
+        await session.flush()
 
     profile = await session.get(GameProfile, profile_id)
     if profile is None:
