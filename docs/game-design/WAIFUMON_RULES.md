@@ -28,7 +28,7 @@ B, A, S, SS y SSS siguen una ruta de aprobación excepcional antes de entregar e
 
 Cada waifu de una colección tiene:
 
-- nivel 1..25;
+- nivel 1..30;
 - experiencia;
 - copias;
 - rareza;
@@ -36,7 +36,9 @@ Cada waifu de una colección tiene:
 
 Las copias adicionales no desaparecen: aumentan la colección y la progresión.
 
-La evolución normal solo está permitida cuando la waifu alcanza **nivel 25** y se utiliza la misma identidad de personaje.
+La evolución de clase WaifuMon R→S→SR ocurre por nivel: R en niveles 1–10, S en niveles 11–20 y SR en niveles 21–30. Esta evolución cambia la presentación visual y las estadísticas de combate.
+
+La fusión D→C→B→A→S sigue siendo una progresión separada de rareza de combate y conserva su requisito propio de nivel 25 y copias. No debe confundirse con la clase visual R/S/SR.
 
 Reglas actuales de copias:
 
@@ -59,11 +61,9 @@ La progresión visual implementada es deliberadamente no explícita:
 | 16–20 | anime premium, vestuario especial de evento |
 | 21–25 | anime premium, vestuario de forma final |
 
-Las clases mantienen la misma identidad del personaje:
+Las clases de combate y las clases de evolución visual son independientes. La clase WaifuMon R/S/SR depende del nivel; la rareza de combate D/C/B/A/S/SS/SSS depende del balance/obtención; el tier de carta R/S/SR/UR pertenece al sistema de cartas.
 
-- R: versión base.
-- SR: variante especial de profesión/evento.
-- UR: variante especial con escena/efectos exclusivos.
+Para el detalle completo de arte y estadísticas, ver `docs/game-design/WAIFUMON_EVOLUTION_ART_AND_STATS.md`.
 
 No se implementan desnudos, desnudez parcial ni sexualización explícita. La etapa superior sigue siendo una versión premium del personaje con vestuario definido.
 
