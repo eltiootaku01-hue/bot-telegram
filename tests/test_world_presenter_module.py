@@ -88,8 +88,10 @@ async def test_sunna_presenter_publishes_waifu_keyboard_and_records_message(data
 
     assert result.message_id == 987
     bot.send_message.assert_awaited_once()
+    args = bot.send_message.await_args.args
     kwargs = bot.send_message.await_args.kwargs
-    assert kwargs["chat_id"] == -100
+    assert args[0] == -100
+    assert args[1] == "🚨 ¡Apareció!\n\n¡Apareció!"
     markup = kwargs["reply_markup"]
     callbacks = [
         button.callback_data
