@@ -110,3 +110,16 @@ El mundo sigue siendo deliberadamente pequeño y curado: las métricas describen
 ## Juego del Café Otaku
 
 Sunna dispone ahora de un **Misterio diario** local y determinista. Cada comunidad recibe una única ronda por día de mundo, con cinco casos authored, intentos únicos por jugador, ganador único bajo concurrencia y recompensa de puntos protegida por el ledger. La mecánica es un juego del café y no constituye canon narrativo por sí misma.
+
+
+## Recuperación de publicaciones del mundo
+
+Los eventos con entrega ambigua no se consideran automáticamente publicados ni se reenvían a ciegas. `WorldEventService` conserva el estado `delivery_unknown` y permite tres decisiones explícitas del operador maestro:
+
+- confirmar el `message_id` existente y cerrar el evento como `published`;
+- reencolarlo, pudiendo reasignar el presentador;
+- cancelarlo de forma terminal.
+
+La superficie privada de Chie usa `/world_pendientes`, `/world_ver`, `/world_confirmar`, `/world_reintentar` y `/world_cancelar`. Los callbacks son solo para el propietario configurado y no ejecutan reglas de juego.
+
+Una respuesta conocida de Telegram (`BadRequest`/`Forbidden`) se clasifica como `failed`, mientras que una excepción ambigua del transporte se mantiene como `delivery_unknown` para revisión. La finalidad es evitar tanto el reenvío ciego como la falsa certeza sobre la entrega.
