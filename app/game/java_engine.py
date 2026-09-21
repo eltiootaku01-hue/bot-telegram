@@ -148,6 +148,30 @@ class WaifuMonJavaEngine:
                 raise ValueError(f"{code}: {message}")
             return response
 
+    def resolve_gacha(
+        self,
+        *,
+        seed: str,
+        d_streak: int,
+        candidates: list[dict[str, str]],
+        owned_character_ids: set[str] | frozenset[str],
+        player_id: int,
+        community_id: int,
+    ) -> dict[str, Any]:
+        response = self._call(
+            player_id=player_id,
+            community_id=community_id,
+            command="gacha.resolve",
+            payload={
+                "seed": seed,
+                "d_streak": d_streak,
+                "candidates": candidates,
+                "owned_character_ids": sorted(owned_character_ids),
+            },
+            idempotency_key=f"gacha:{community_id}:{player_id}:{seed}",
+        )
+        return dict(response["payload"])
+
     def roll_gacha(self, *, seed: str) -> Rarity:
         response = self._call(
             player_id=0,
