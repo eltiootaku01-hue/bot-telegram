@@ -195,6 +195,122 @@ def _ensure_sqlite_invariant_triggers(connection) -> None:
             """,
         ),
         (
+            "trg_point_transaction_validate_reference_insert",
+            "point_transactions",
+            "INSERT",
+            """
+            WHEN (NEW.reference_type IS NULL AND NEW.reference_id IS NOT NULL)
+              OR (NEW.reference_type IS NOT NULL AND NEW.reference_id IS NULL)
+            BEGIN
+                SELECT RAISE(ABORT, 'point transaction reference pair must be complete');
+            END
+            """,
+        ),
+        (
+            "trg_point_transaction_validate_reference_update",
+            "point_transactions",
+            "UPDATE OF reference_type, reference_id",
+            """
+            WHEN (NEW.reference_type IS NULL AND NEW.reference_id IS NOT NULL)
+              OR (NEW.reference_type IS NOT NULL AND NEW.reference_id IS NULL)
+            BEGIN
+                SELECT RAISE(ABORT, 'point transaction reference pair must be complete');
+            END
+            """,
+        ),
+        (
+            "trg_game_encounter_validate_status_insert",
+            "game_encounters",
+            "INSERT",
+            """
+            WHEN NEW.status NOT IN ('active', 'captured', 'expired', 'cancelled')
+            BEGIN
+                SELECT RAISE(ABORT, 'invalid game encounter status');
+            END
+            """,
+        ),
+        (
+            "trg_game_encounter_validate_status_update",
+            "game_encounters",
+            "UPDATE OF status",
+            """
+            WHEN NEW.status NOT IN ('active', 'captured', 'expired', 'cancelled')
+            BEGIN
+                SELECT RAISE(ABORT, 'invalid game encounter status');
+            END
+            """,
+        ),
+        (
+            "trg_rare_drop_approval_validate_status_insert",
+            "rare_drop_approvals",
+            "INSERT",
+            """
+            WHEN NEW.status NOT IN ('pending', 'approved', 'rejected')
+            BEGIN
+                SELECT RAISE(ABORT, 'invalid rare drop approval status');
+            END
+            """,
+        ),
+        (
+            "trg_rare_drop_approval_validate_status_update",
+            "rare_drop_approvals",
+            "UPDATE OF status",
+            """
+            WHEN NEW.status NOT IN ('pending', 'approved', 'rejected')
+            BEGIN
+                SELECT RAISE(ABORT, 'invalid rare drop approval status');
+            END
+            """,
+        ),
+        (
+            "trg_fan_request_validate_points_insert",
+            "fan_requests",
+            "INSERT",
+            """
+            WHEN NEW.points_cost < 0
+            BEGIN
+                SELECT RAISE(ABORT, 'fan request points cost cannot be negative');
+            END
+            """,
+        ),
+        (
+            "trg_fan_request_validate_points_update",
+            "fan_requests",
+            "UPDATE OF points_cost",
+            """
+            WHEN NEW.points_cost < 0
+            BEGIN
+                SELECT RAISE(ABORT, 'fan request points cost cannot be negative');
+            END
+            """,
+        ),
+        (
+            "trg_trivia_round_validate_insert",
+            "trivia_rounds",
+            "INSERT",
+            """
+            WHEN NEW.status NOT IN ('active', 'won', 'expired', 'failed', 'cancelled')
+              OR NEW.answer_index < 0
+              OR NEW.points <= 0
+            BEGIN
+                SELECT RAISE(ABORT, 'invalid trivia round invariant');
+            END
+            """,
+        ),
+        (
+            "trg_trivia_round_validate_update",
+            "trivia_rounds",
+            "UPDATE OF status, answer_index, points",
+            """
+            WHEN NEW.status NOT IN ('active', 'won', 'expired', 'failed', 'cancelled')
+              OR NEW.answer_index < 0
+              OR NEW.points <= 0
+            BEGIN
+                SELECT RAISE(ABORT, 'invalid trivia round invariant');
+            END
+            """,
+        ),
+        (
             "trg_detector_usage_validate_insert",
             "waifu_detector_daily_usage",
             "INSERT",
