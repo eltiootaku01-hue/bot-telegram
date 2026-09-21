@@ -11,7 +11,7 @@ class TriviaRound(Base):
     __tablename__ = "trivia_rounds"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('active', 'won', 'expired', 'failed', 'cancelled')",
+            "status IN ('active', 'publishing', 'won', 'expired', 'failed', 'delivery_unknown', 'cancelled')",
             name="ck_trivia_round_status",
         ),
         CheckConstraint("answer_index >= 0", name="ck_trivia_answer_index_nonnegative"),
