@@ -239,6 +239,26 @@ class MysteryService:
 
     CASES = MYSTERY_CASES
 
+    def __init__(self) -> None:
+        self.validate_cases()
+
+    @classmethod
+    def validate_cases(cls) -> None:
+        for case in cls.CASES:
+            if len(case.options) != 4:
+                raise ValueError(f"Mystery case {case.key} must have exactly four options")
+            if len(set(option.casefold().strip() for option in case.options)) != len(case.options):
+                raise ValueError(f"Mystery case {case.key} has duplicate options")
+            if not 0 <= case.answer_index < len(case.options):
+                raise ValueError(f"Mystery case {case.key} has an invalid answer index")
+            if len(case.clues) < 3:
+                raise ValueError(f"Mystery case {case.key} needs at least three clues")
+            answer = case.options[case.answer_index].casefold().strip()
+            if not any(answer in clue.casefold() for clue in case.clues):
+                raise ValueError(
+                    f"Mystery case {case.key} has no clue that identifies its answer"
+                )
+
     @classmethod
     def _case_for(cls, chat_id: int, day_key: str) -> MysteryCase:
         digest = hashlib.sha256(f"{chat_id}:{day_key}".encode("utf-8")).digest()
