@@ -63,7 +63,7 @@ def test_visual_art_rules_cover_all_four_tiers():
 
 
 def test_card_tier_outfits_remain_safe_variants():
-    assert set(CARD_OUTFITS) == {CardTier.R, CardTier.SR, CardTier.UR}
+    assert set(CARD_OUTFITS) == {CardTier.R, CardTier.S, CardTier.SR, CardTier.UR}
     assert all("desn" not in text.casefold() for text in CARD_OUTFITS.values())
     assert all("sexual" not in text.casefold() for text in CARD_OUTFITS.values())
 
