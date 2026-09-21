@@ -150,3 +150,51 @@ async def test_pending_gacha_approvals_are_owner_only_and_recoverable(database) 
     assert "Drops raros pendientes: 1" in first_text
     assert "Solicitud #9" in second_text
     assert "Taiga" in second_text
+
+
+@pytest.mark.asyncio
+async def test_unknown_gift_delivery_recovery_is_owner_only(database) -> None:
+    from app.db.models import WaifuGiftDrop
+
+    async with database.session() as session:
+        session.add(
+            WaifuGiftDrop(
+                id=21,
+                chat_id=-100,
+                day_key="2026-09-21",
+                slot=1,
+                gift_key="dessert",
+                status="delivery_unknown",
+                message_id=None,
+            )
+        )
+
+    module = AdminModule(database, Settings(admin_user_id=77))
+
+    denied = SimpleNamespace(
+        from_user=SimpleNamespace(id=88),
+        message=SimpleNamespace(chat=SimpleNamespace(type="private", id=88)),
+        data="admin:gift:confirm:21",
+        answer=AsyncMock(),
+    )
+    await module.gift_delivery_recovery(denied)
+    denied.answer.assert_awaited_once_with("No autorizado.", show_alert=True)
+
+    allowed = SimpleNamespace(
+        from_user=SimpleNamespace(id=77),
+        message=SimpleNamespace(
+            chat=SimpleNamespace(type="private", id=77),
+            edit_text=AsyncMock(),
+        ),
+        data="admin:gift:confirm:21",
+        answer=AsyncMock(),
+    )
+    await module.gift_delivery_recovery(allowed)
+
+    async with database.session() as session:
+        drop = await session.get(WaifuGiftDrop, 21)
+
+    assert drop is not None
+    assert drop.status == "active"
+    allowed.message.edit_text.assert_awaited_once()
+    allowed.answer.assert_awaited_once_with("Estado guardado.")
