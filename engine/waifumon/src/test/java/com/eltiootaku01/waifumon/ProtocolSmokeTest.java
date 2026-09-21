@@ -26,12 +26,14 @@ final class ProtocolSmokeTest {
         );
 
         String wire = mapper.writeValueAsString(request);
-        org.junit.jupiter.api.Assertions.assertTrue(wire.contains(""contract_version":"1.0""));
-        org.junit.jupiter.api.Assertions.assertTrue(wire.contains(""request_id":"request-1""));
-        org.junit.jupiter.api.Assertions.assertTrue(wire.contains(""idempotency_key":"idempotency-1""));
+        assertTrue(wire.contains("\"contract_version\":\"1.0\""));
+        assertTrue(wire.contains("\"request_id\":\"request-1\""));
+        assertTrue(wire.contains("\"idempotency_key\":\"idempotency-1\""));
+
         EngineRequest decoded = mapper.readValue(wire, EngineRequest.class);
         EngineResponse response = new WaifuMonRuleEngine(mapper).execute(decoded);
 
         assertTrue(response.success());
+        assertTrue(mapper.writeValueAsString(response).contains("\"result_type\":\"gacha_roll\""));
     }
 }
