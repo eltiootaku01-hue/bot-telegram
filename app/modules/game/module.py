@@ -12,6 +12,7 @@ from app.core.assets import resolve_asset
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.core.processing_feedback import ProcessingFeedback, ProcessingResultDTO
 from app.db.database import Database
 from app.db.models import GameCardCollection, GameCollection, GameItemInventory, GameProfile
 from app.db.repositories import MemberRepository
@@ -523,11 +524,20 @@ class GameModule(BotModule):
     async def detector(self, message: Message) -> None:
         if message.chat.type != 'private' or message.from_user is None:
             return
-        chat_id = await self._community_chat_id(message.from_user.id)
-        if chat_id is None:
-            await message.answer('😰 Todavía no hay una comunidad configurada para el Detector.')
-            return
-        await self._start_detector(message, message.from_user.id, chat_id, message.text or '')
+        async with ProcessingFeedback(message) as feedback:
+            chat_id = await self._community_chat_id(message.from_user.id)
+            if chat_id is None:
+                await feedback.finish(
+                    ProcessingResultDTO('😰 Todavía no hay una comunidad configurada para el Detector.')
+                )
+                return
+            await self._start_detector(
+                message,
+                message.from_user.id,
+                chat_id,
+                message.text or '',
+                feedback=feedback,
+            )
 
     async def detector_open(self, callback: CallbackQuery) -> None:
         if not self._private_callback(callback):
@@ -537,7 +547,14 @@ class GameModule(BotModule):
         if chat_id is None:
             await callback.answer('Todavía no hay una comunidad configurada.', show_alert=True)
             return
-        await self._start_detector(callback.message, callback.from_user.id, chat_id, '')
+        async with ProcessingFeedback(callback.message) as feedback:
+            await self._start_detector(
+                callback.message,
+                callback.from_user.id,
+                chat_id,
+                '',
+                feedback=feedback,
+            )
         await callback.answer()
 
     async def _start_detector(
@@ -546,6 +563,7 @@ class GameModule(BotModule):
         user_id: int,
         chat_id: int,
         command_text: str,
+        feedback: ProcessingFeedback | None = None,
     ) -> None:
         async with self.database.session(write=True) as session:
             profiles = await session.scalars(
@@ -556,7 +574,7 @@ class GameModule(BotModule):
             )
             profile = profiles.first()
             if profile is None:
-                await source.answer('🎒 Primero necesitás una waifu en tu colección.')
+                await (feedback.finish(ProcessingResultDTO('🎒 Primero necesitás una waifu en tu colección.')) if feedback is not None else source.answer('🎒 Primero necesitás una waifu en tu colección.'))
                 return
             rows = list(await session.scalars(
                 select(GameCollection).where(GameCollection.profile_id == profile.id)
@@ -577,16 +595,22 @@ class GameModule(BotModule):
                 character_id=chosen.character_id,
             )
             if started is None:
-                await source.answer('📡 Ya usaste tus 3 oportunidades del Waifu Detector por hoy.')
+                await (feedback.finish(ProcessingResultDTO('📡 Ya usaste tus 3 oportunidades del Waifu Detector por hoy.')) if feedback is not None else source.answer('📡 Ya usaste tus 3 oportunidades del Waifu Detector por hoy.'))
                 return
         character = get_character(chosen.character_id)
-        await source.answer(
-            f'📡 <b>WAIFU DETECTOR</b> — intento {started.use_number}/3\n\n'
-            f'⚔️ Aparece <b>{started.mob.name}</b> (poder {started.mob.power}).\n'
-            f'🎀 Waifu: <b>{character.name}</b> · Nv.{chosen.level}\n'
-            'Derrotalo para ganar EXP para esa waifu.',
+        result = ProcessingResultDTO(
+            text=(
+                f'📡 <b>WAIFU DETECTOR</b> — intento {started.use_number}/3\n\n'
+                f'⚔️ Aparece <b>{started.mob.name}</b> (poder {started.mob.power}).\n'
+                f'🎀 Waifu: <b>{character.name}</b> · Nv.{chosen.level}\n'
+                'Derrotalo para ganar EXP para esa waifu.'
+            ),
             reply_markup=detector_keyboard(started.round.id),
         )
+        if feedback is not None:
+            await feedback.finish(result)
+        else:
+            await source.answer(result.text, reply_markup=result.reply_markup)
         await self._observe_action('detector_start', user_id, chat_id)
 
     async def detector_fight(self, callback: CallbackQuery) -> None:
