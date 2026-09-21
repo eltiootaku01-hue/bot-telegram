@@ -28,7 +28,7 @@ def fake_jpeg(width: int = CARD_ART_WIDTH, height: int = CARD_ART_HEIGHT, paddin
 
 
 def test_card_asset_path_is_deterministic() -> None:
-    assert card_asset_path("yor-forger", "normal") == "assets/waifus/yor-forger--normal.jpg"
+    assert card_asset_path("yor-forger", "normal") == "assets/production/cards/yor-forger--normal.jpg"
     assert card_asset_path("yor-forger", "shiny") == "assets/waifus/yor-forger--shiny.jpg"
 
 
