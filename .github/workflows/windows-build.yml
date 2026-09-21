@@ -83,6 +83,17 @@ jobs:
 
       - name: Validate committed card assets
         run: python tools\\validate_card_assets.py
+      - name: Verify Java WaifuMon runtime
+        shell: pwsh
+        run: |
+          mvn --batch-mode --no-transfer-progress -f engine\waifumon\pom.xml verify
+          $request = '{"contract_version":"1.0","request_id":"windows-smoke","correlation_id":"windows-smoke","player_id":1,"community_id":-100,"command":"gacha.roll","payload":{"seed":"windows-smoke"},"idempotency_key":"windows-smoke"}'
+          $response = $request | & (Resolve-Path "dist\engine\jre\bin\java.exe") -jar (Resolve-Path "dist\engine\waifumon-engine.jar")
+          if (-not $response) { throw "Java engine returned no response" }
+          $decoded = $response | ConvertFrom-Json
+          if (-not $decoded.success) { throw "Bundled Java engine rejected smoke request: $response" }
+          if ($decoded.result_type -ne "gacha_roll") { throw "Unexpected result_type: $($decoded.result_type)" }
+
       - name: Verify executables
         shell: pwsh
         run: |
