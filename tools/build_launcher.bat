@@ -29,6 +29,28 @@ if errorlevel 1 exit /b %errorlevel%
 pyinstaller --noconfirm --clean --windowed --onefile --name BotManager --distpath dist --workpath build\BotManager app\launcher.py
 if errorlevel 1 exit /b %errorlevel%
 
+if not exist build\waifumon-runtime\waifumon-engine.jar (
+  echo Missing staged WaifuMon engine JAR after executable build.
+  exit /b 1
+)
+if not exist build\waifumon-runtime\jre\bin\java.exe (
+  echo Missing staged Java runtime after executable build.
+  exit /b 1
+)
+
+if exist dist\engine rmdir /s /q dist\engine
+xcopy build\waifumon-runtime dist\engine /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+
+if not exist dist\engine\waifumon-engine.jar (
+  echo Final WaifuMon engine JAR was not restored.
+  exit /b 1
+)
+if not exist dist\engine\jre\bin\java.exe (
+  echo Final Java runtime executable was not restored.
+  exit /b 1
+)
+
 echo.
 echo ============================================
 echo Build completo.
