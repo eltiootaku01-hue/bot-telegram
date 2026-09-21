@@ -1,0 +1,1182 @@
+{
+  "version": 1,
+  "visual_contract": "2026-09-waifumon-dual-hd-pixel-combat-v1",
+  "total_items": 78,
+  "selection_asset": "card.normal",
+  "battle_asset": "battle_sprites",
+  "special_cut_in_ms": 1500,
+  "engine_authority": "WaifuMonRuleEngine.java",
+  "frontend_role": "presentation-only",
+  "items": [
+    {
+      "character_id": "ai-hoshino",
+      "name": "Ai Hoshino",
+      "card": {
+        "normal": "assets/production/cards/ai-hoshino--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/ai-hoshino_idle.png",
+        "attack": "assets/production/sprites/ai-hoshino_attack.png",
+        "hit": "assets/production/sprites/ai-hoshino_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "akame",
+      "name": "Akame",
+      "card": {
+        "normal": "assets/production/cards/akame--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/akame_idle.png",
+        "attack": "assets/production/sprites/akame_attack.png",
+        "hit": "assets/production/sprites/akame_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "akane-kurokawa",
+      "name": "Akane Kurokawa",
+      "card": {
+        "normal": "assets/production/cards/akane-kurokawa--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/akane-kurokawa_idle.png",
+        "attack": "assets/production/sprites/akane-kurokawa_attack.png",
+        "hit": "assets/production/sprites/akane-kurokawa_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "akeno-himejima",
+      "name": "Akeno Himejima",
+      "card": {
+        "normal": "assets/production/cards/akeno-himejima--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/akeno-himejima_idle.png",
+        "attack": "assets/production/sprites/akeno-himejima_attack.png",
+        "hit": "assets/production/sprites/akeno-himejima_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "aki-nijou",
+      "name": "Aki Nijou",
+      "card": {
+        "normal": "assets/production/cards/aki-nijou--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/aki-nijou_idle.png",
+        "attack": "assets/production/sprites/aki-nijou_attack.png",
+        "hit": "assets/production/sprites/aki-nijou_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "ako-tamaki",
+      "name": "Ako Tamaki",
+      "card": {
+        "normal": "assets/production/cards/ako-tamaki--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/ako-tamaki_idle.png",
+        "attack": "assets/production/sprites/ako-tamaki_attack.png",
+        "hit": "assets/production/sprites/ako-tamaki_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "albedo",
+      "name": "Albedo",
+      "card": {
+        "normal": "assets/production/cards/albedo--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/albedo_idle.png",
+        "attack": "assets/production/sprites/albedo_attack.png",
+        "hit": "assets/production/sprites/albedo_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "alisa-kujo",
+      "name": "Alisa Mikhailovna Kujo",
+      "card": {
+        "normal": "assets/production/cards/alisa-kujo--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/alisa-kujo_idle.png",
+        "attack": "assets/production/sprites/alisa-kujo_attack.png",
+        "hit": "assets/production/sprites/alisa-kujo_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "anya-forger",
+      "name": "Anya Forger",
+      "card": {
+        "normal": "assets/production/cards/anya-forger--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/anya-forger_idle.png",
+        "attack": "assets/production/sprites/anya-forger_attack.png",
+        "hit": "assets/production/sprites/anya-forger_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "asuna-yuuki",
+      "name": "Asuna",
+      "card": {
+        "normal": "assets/production/cards/asuna-yuuki--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/asuna-yuuki_idle.png",
+        "attack": "assets/production/sprites/asuna-yuuki_attack.png",
+        "hit": "assets/production/sprites/asuna-yuuki_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "banri-shiunji",
+      "name": "Banri Shiunji",
+      "card": {
+        "normal": "assets/production/cards/banri-shiunji--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/banri-shiunji_idle.png",
+        "attack": "assets/production/sprites/banri-shiunji_attack.png",
+        "hit": "assets/production/sprites/banri-shiunji_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "boa-hancock",
+      "name": "Boa Hancock",
+      "card": {
+        "normal": "assets/production/cards/boa-hancock--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/boa-hancock_idle.png",
+        "attack": "assets/production/sprites/boa-hancock_attack.png",
+        "hit": "assets/production/sprites/boa-hancock_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "cana-alberona",
+      "name": "Cana Alberona",
+      "card": {
+        "normal": "assets/production/cards/cana-alberona--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/cana-alberona_idle.png",
+        "attack": "assets/production/sprites/cana-alberona_attack.png",
+        "hit": "assets/production/sprites/cana-alberona_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "celistia-ralgris",
+      "name": "Celistia Ralgris",
+      "card": {
+        "normal": "assets/production/cards/celistia-ralgris--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/celistia-ralgris_idle.png",
+        "attack": "assets/production/sprites/celistia-ralgris_attack.png",
+        "hit": "assets/production/sprites/celistia-ralgris_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "cha-hae-in",
+      "name": "Cha Hae-In",
+      "card": {
+        "normal": "assets/production/cards/cha-hae-in--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/cha-hae-in_idle.png",
+        "attack": "assets/production/sprites/cha-hae-in_attack.png",
+        "hit": "assets/production/sprites/cha-hae-in_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "chelsea",
+      "name": "Chelsea",
+      "card": {
+        "normal": "assets/production/cards/chelsea--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/chelsea_idle.png",
+        "attack": "assets/production/sprites/chelsea_attack.png",
+        "hit": "assets/production/sprites/chelsea_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "chinatsu-kano",
+      "name": "Chinatsu Kano",
+      "card": {
+        "normal": "assets/production/cards/chinatsu-kano--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/chinatsu-kano_idle.png",
+        "attack": "assets/production/sprites/chinatsu-kano_attack.png",
+        "hit": "assets/production/sprites/chinatsu-kano_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "chisato-hasegawa",
+      "name": "Chisato Hasegawa",
+      "card": {
+        "normal": "assets/production/cards/chisato-hasegawa--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/chisato-hasegawa_idle.png",
+        "attack": "assets/production/sprites/chisato-hasegawa_attack.png",
+        "hit": "assets/production/sprites/chisato-hasegawa_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "chizuru-mizuhara",
+      "name": "Chizuru Mizuhara",
+      "card": {
+        "normal": "assets/production/cards/chizuru-mizuhara--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/chizuru-mizuhara_idle.png",
+        "attack": "assets/production/sprites/chizuru-mizuhara_attack.png",
+        "hit": "assets/production/sprites/chizuru-mizuhara_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "darkness",
+      "name": "Darkness",
+      "card": {
+        "normal": "assets/production/cards/darkness--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/darkness_idle.png",
+        "attack": "assets/production/sprites/darkness_attack.png",
+        "hit": "assets/production/sprites/darkness_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "elizabeth-liones",
+      "name": "Elizabeth Liones",
+      "card": {
+        "normal": "assets/production/cards/elizabeth-liones--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/elizabeth-liones_idle.png",
+        "attack": "assets/production/sprites/elizabeth-liones_attack.png",
+        "hit": "assets/production/sprites/elizabeth-liones_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "emilia",
+      "name": "Emilia",
+      "card": {
+        "normal": "assets/production/cards/emilia--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/emilia_idle.png",
+        "attack": "assets/production/sprites/emilia_attack.png",
+        "hit": "assets/production/sprites/emilia_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "erina-nakiri",
+      "name": "Erina Nakiri",
+      "card": {
+        "normal": "assets/production/cards/erina-nakiri--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/erina-nakiri_idle.png",
+        "attack": "assets/production/sprites/erina-nakiri_attack.png",
+        "hit": "assets/production/sprites/erina-nakiri_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "erza-scarlet",
+      "name": "Erza Scarlet",
+      "card": {
+        "normal": "assets/production/cards/erza-scarlet--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/erza-scarlet_idle.png",
+        "attack": "assets/production/sprites/erza-scarlet_attack.png",
+        "hit": "assets/production/sprites/erza-scarlet_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "esdeath",
+      "name": "Esdeath",
+      "card": {
+        "normal": "assets/production/cards/esdeath--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/esdeath_idle.png",
+        "attack": "assets/production/sprites/esdeath_attack.png",
+        "hit": "assets/production/sprites/esdeath_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "hina-chono",
+      "name": "Hina Chono",
+      "card": {
+        "normal": "assets/production/cards/hina-chono--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/hina-chono_idle.png",
+        "attack": "assets/production/sprites/hina-chono_attack.png",
+        "hit": "assets/production/sprites/hina-chono_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "hinako-yaotose",
+      "name": "Hinako Yaotose",
+      "card": {
+        "normal": "assets/production/cards/hinako-yaotose--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/hinako-yaotose_idle.png",
+        "attack": "assets/production/sprites/hinako-yaotose_attack.png",
+        "hit": "assets/production/sprites/hinako-yaotose_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "hinata-hyuga",
+      "name": "Hinata Hyuga",
+      "card": {
+        "normal": "assets/production/cards/hinata-hyuga--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/hinata-hyuga_idle.png",
+        "attack": "assets/production/sprites/hinata-hyuga_attack.png",
+        "hit": "assets/production/sprites/hinata-hyuga_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "ino-yamanaka",
+      "name": "Ino Yamanaka",
+      "card": {
+        "normal": "assets/production/cards/ino-yamanaka--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/ino-yamanaka_idle.png",
+        "attack": "assets/production/sprites/ino-yamanaka_attack.png",
+        "hit": "assets/production/sprites/ino-yamanaka_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "irina-shidou",
+      "name": "Irina Shidou",
+      "card": {
+        "normal": "assets/production/cards/irina-shidou--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/irina-shidou_idle.png",
+        "attack": "assets/production/sprites/irina-shidou_attack.png",
+        "hit": "assets/production/sprites/irina-shidou_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "jibril",
+      "name": "Jibril",
+      "card": {
+        "normal": "assets/production/cards/jibril--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/jibril_idle.png",
+        "attack": "assets/production/sprites/jibril_attack.png",
+        "hit": "assets/production/sprites/jibril_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "kaoruko-waguri",
+      "name": "Kaoruko Waguri",
+      "card": {
+        "normal": "assets/production/cards/kaoruko-waguri--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/kaoruko-waguri_idle.png",
+        "attack": "assets/production/sprites/kaoruko-waguri_attack.png",
+        "hit": "assets/production/sprites/kaoruko-waguri_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "kuroka",
+      "name": "Kuroka",
+      "card": {
+        "normal": "assets/production/cards/kuroka--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/kuroka_idle.png",
+        "attack": "assets/production/sprites/kuroka_attack.png",
+        "hit": "assets/production/sprites/kuroka_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "kurumi-tokisaki",
+      "name": "Kurumi Tokisaki",
+      "card": {
+        "normal": "assets/production/cards/kurumi-tokisaki--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/kurumi-tokisaki_idle.png",
+        "attack": "assets/production/sprites/kurumi-tokisaki_attack.png",
+        "hit": "assets/production/sprites/kurumi-tokisaki_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "leone",
+      "name": "Leone",
+      "card": {
+        "normal": "assets/production/cards/leone--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/leone_idle.png",
+        "attack": "assets/production/sprites/leone_attack.png",
+        "hit": "assets/production/sprites/leone_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "lilith-asami",
+      "name": "Lilith Asami",
+      "card": {
+        "normal": "assets/production/cards/lilith-asami--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/lilith-asami_idle.png",
+        "attack": "assets/production/sprites/lilith-asami_attack.png",
+        "hit": "assets/production/sprites/lilith-asami_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "lucy-heartfilia",
+      "name": "Lucy Heartfilia",
+      "card": {
+        "normal": "assets/production/cards/lucy-heartfilia--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/lucy-heartfilia_idle.png",
+        "attack": "assets/production/sprites/lucy-heartfilia_attack.png",
+        "hit": "assets/production/sprites/lucy-heartfilia_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "makima",
+      "name": "Makima",
+      "card": {
+        "normal": "assets/production/cards/makima--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/makima_idle.png",
+        "attack": "assets/production/sprites/makima_attack.png",
+        "hit": "assets/production/sprites/makima_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "maomao",
+      "name": "Maomao",
+      "card": {
+        "normal": "assets/production/cards/maomao--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/maomao_idle.png",
+        "attack": "assets/production/sprites/maomao_attack.png",
+        "hit": "assets/production/sprites/maomao_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "marin-kitagawa",
+      "name": "Marin Kitagawa",
+      "card": {
+        "normal": "assets/production/cards/marin-kitagawa--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/marin-kitagawa_idle.png",
+        "attack": "assets/production/sprites/marin-kitagawa_attack.png",
+        "hit": "assets/production/sprites/marin-kitagawa_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "mary-kikakujou",
+      "name": "Mary Kikakujou",
+      "card": {
+        "normal": "assets/production/cards/mary-kikakujou--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/mary-kikakujou_idle.png",
+        "attack": "assets/production/sprites/mary-kikakujou_attack.png",
+        "hit": "assets/production/sprites/mary-kikakujou_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "midnight",
+      "name": "Midnight",
+      "card": {
+        "normal": "assets/production/cards/midnight--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/midnight_idle.png",
+        "attack": "assets/production/sprites/midnight_attack.png",
+        "hit": "assets/production/sprites/midnight_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "mikasa-ackerman",
+      "name": "Mikasa Ackerman",
+      "card": {
+        "normal": "assets/production/cards/mikasa-ackerman--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/mikasa-ackerman_idle.png",
+        "attack": "assets/production/sprites/mikasa-ackerman_attack.png",
+        "hit": "assets/production/sprites/mikasa-ackerman_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "mirajane-strauss",
+      "name": "Mirajane Strauss",
+      "card": {
+        "normal": "assets/production/cards/mirajane-strauss--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/mirajane-strauss_idle.png",
+        "attack": "assets/production/sprites/mirajane-strauss_attack.png",
+        "hit": "assets/production/sprites/mirajane-strauss_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "momo-ayase",
+      "name": "Momo Ayase",
+      "card": {
+        "normal": "assets/production/cards/momo-ayase--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/momo-ayase_idle.png",
+        "attack": "assets/production/sprites/momo-ayase_attack.png",
+        "hit": "assets/production/sprites/momo-ayase_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "momo-yaoyorozu",
+      "name": "Momo Yaoyorozu",
+      "card": {
+        "normal": "assets/production/cards/momo-yaoyorozu--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/momo-yaoyorozu_idle.png",
+        "attack": "assets/production/sprites/momo-yaoyorozu_attack.png",
+        "hit": "assets/production/sprites/momo-yaoyorozu_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "mutsumi-wakaba",
+      "name": "Mutsumi “Mortis” Wakaba",
+      "card": {
+        "normal": "assets/production/cards/mutsumi-wakaba--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/mutsumi-wakaba_idle.png",
+        "attack": "assets/production/sprites/mutsumi-wakaba_attack.png",
+        "hit": "assets/production/sprites/mutsumi-wakaba_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "nami",
+      "name": "Nami",
+      "card": {
+        "normal": "assets/production/cards/nami--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/nami_idle.png",
+        "attack": "assets/production/sprites/nami_attack.png",
+        "hit": "assets/production/sprites/nami_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "nejire-hadou",
+      "name": "Nejire Hado",
+      "card": {
+        "normal": "assets/production/cards/nejire-hadou--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/nejire-hadou_idle.png",
+        "attack": "assets/production/sprites/nejire-hadou_attack.png",
+        "hit": "assets/production/sprites/nejire-hadou_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "nene-yashiro",
+      "name": "Nene Yashiro",
+      "card": {
+        "normal": "assets/production/cards/nene-yashiro--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/nene-yashiro_idle.png",
+        "attack": "assets/production/sprites/nene-yashiro_attack.png",
+        "hit": "assets/production/sprites/nene-yashiro_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "nezuko-kamado",
+      "name": "Nezuko Kamado",
+      "card": {
+        "normal": "assets/production/cards/nezuko-kamado--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/nezuko-kamado_idle.png",
+        "attack": "assets/production/sprites/nezuko-kamado_attack.png",
+        "hit": "assets/production/sprites/nezuko-kamado_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "nico-robin",
+      "name": "Nico Robin",
+      "card": {
+        "normal": "assets/production/cards/nico-robin--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/nico-robin_idle.png",
+        "attack": "assets/production/sprites/nico-robin_attack.png",
+        "hit": "assets/production/sprites/nico-robin_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "nico-wakatsuki",
+      "name": "Nico Wakatsuki",
+      "card": {
+        "normal": "assets/production/cards/nico-wakatsuki--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/nico-wakatsuki_idle.png",
+        "attack": "assets/production/sprites/nico-wakatsuki_attack.png",
+        "hit": "assets/production/sprites/nico-wakatsuki_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "ochako-uraraka",
+      "name": "Ochako Uraraka",
+      "card": {
+        "normal": "assets/production/cards/ochako-uraraka--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/ochako-uraraka_idle.png",
+        "attack": "assets/production/sprites/ochako-uraraka_attack.png",
+        "hit": "assets/production/sprites/ochako-uraraka_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "oguri-cap",
+      "name": "Oguri Cap",
+      "card": {
+        "normal": "assets/production/cards/oguri-cap--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/oguri-cap_idle.png",
+        "attack": "assets/production/sprites/oguri-cap_attack.png",
+        "hit": "assets/production/sprites/oguri-cap_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "orihime-inoue",
+      "name": "Orihime Inoue",
+      "card": {
+        "normal": "assets/production/cards/orihime-inoue--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/orihime-inoue_idle.png",
+        "attack": "assets/production/sprites/orihime-inoue_attack.png",
+        "hit": "assets/production/sprites/orihime-inoue_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "ouka-shiunji",
+      "name": "Ouka Shiunji",
+      "card": {
+        "normal": "assets/production/cards/ouka-shiunji--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/ouka-shiunji_idle.png",
+        "attack": "assets/production/sprites/ouka-shiunji_attack.png",
+        "hit": "assets/production/sprites/ouka-shiunji_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "power",
+      "name": "Power",
+      "card": {
+        "normal": "assets/production/cards/power--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/power_idle.png",
+        "attack": "assets/production/sprites/power_attack.png",
+        "hit": "assets/production/sprites/power_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "rangiku-matsumoto",
+      "name": "Rangiku Matsumoto",
+      "card": {
+        "normal": "assets/production/cards/rangiku-matsumoto--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/rangiku-matsumoto_idle.png",
+        "attack": "assets/production/sprites/rangiku-matsumoto_attack.png",
+        "hit": "assets/production/sprites/rangiku-matsumoto_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "raphtalia",
+      "name": "Raphtalia",
+      "card": {
+        "normal": "assets/production/cards/raphtalia--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/raphtalia_idle.png",
+        "attack": "assets/production/sprites/raphtalia_attack.png",
+        "hit": "assets/production/sprites/raphtalia_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "reiko-kujirai",
+      "name": "Reiko Kujirai",
+      "card": {
+        "normal": "assets/production/cards/reiko-kujirai--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/reiko-kujirai_idle.png",
+        "attack": "assets/production/sprites/reiko-kujirai_attack.png",
+        "hit": "assets/production/sprites/reiko-kujirai_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "reze",
+      "name": "Reze",
+      "card": {
+        "normal": "assets/production/cards/reze--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/reze_idle.png",
+        "attack": "assets/production/sprites/reze_attack.png",
+        "hit": "assets/production/sprites/reze_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "rias-gremory",
+      "name": "Rias Gremory",
+      "card": {
+        "normal": "assets/production/cards/rias-gremory--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/rias-gremory_idle.png",
+        "attack": "assets/production/sprites/rias-gremory_attack.png",
+        "hit": "assets/production/sprites/rias-gremory_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "rin-tohsaka",
+      "name": "Rin Tohsaka",
+      "card": {
+        "normal": "assets/production/cards/rin-tohsaka--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/rin-tohsaka_idle.png",
+        "attack": "assets/production/sprites/rin-tohsaka_attack.png",
+        "hit": "assets/production/sprites/rin-tohsaka_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "saeko-busujima",
+      "name": "Saeko Busujima",
+      "card": {
+        "normal": "assets/production/cards/saeko-busujima--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/saeko-busujima_idle.png",
+        "attack": "assets/production/sprites/saeko-busujima_attack.png",
+        "hit": "assets/production/sprites/saeko-busujima_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "sakiko-togawa",
+      "name": "Sakiko “Oblivionis” Togawa",
+      "card": {
+        "normal": "assets/production/cards/sakiko-togawa--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/sakiko-togawa_idle.png",
+        "attack": "assets/production/sprites/sakiko-togawa_attack.png",
+        "hit": "assets/production/sprites/sakiko-togawa_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "sayaka-kirasaka",
+      "name": "Sayaka Kirasaka",
+      "card": {
+        "normal": "assets/production/cards/sayaka-kirasaka--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/sayaka-kirasaka_idle.png",
+        "attack": "assets/production/sprites/sayaka-kirasaka_attack.png",
+        "hit": "assets/production/sprites/sayaka-kirasaka_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "sinon",
+      "name": "Sinon",
+      "card": {
+        "normal": "assets/production/cards/sinon--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/sinon_idle.png",
+        "attack": "assets/production/sprites/sinon_attack.png",
+        "hit": "assets/production/sprites/sinon_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "taiga",
+      "name": "Taiga Aisaka",
+      "card": {
+        "normal": "assets/production/cards/taiga--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/taiga_idle.png",
+        "attack": "assets/production/sprites/taiga_attack.png",
+        "hit": "assets/production/sprites/taiga_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "takane-takamine",
+      "name": "Takane Takamine",
+      "card": {
+        "normal": "assets/production/cards/takane-takamine--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/takane-takamine_idle.png",
+        "attack": "assets/production/sprites/takane-takamine_attack.png",
+        "hit": "assets/production/sprites/takane-takamine_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "tohka-yatogami",
+      "name": "Tohka Yatogami",
+      "card": {
+        "normal": "assets/production/cards/tohka-yatogami--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/tohka-yatogami_idle.png",
+        "attack": "assets/production/sprites/tohka-yatogami_attack.png",
+        "hit": "assets/production/sprites/tohka-yatogami_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "tsunade",
+      "name": "Tsunade",
+      "card": {
+        "normal": "assets/production/cards/tsunade--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/tsunade_idle.png",
+        "attack": "assets/production/sprites/tsunade_attack.png",
+        "hit": "assets/production/sprites/tsunade_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "venelana-gremory",
+      "name": "Venelana Gremory",
+      "card": {
+        "normal": "assets/production/cards/venelana-gremory--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/venelana-gremory_idle.png",
+        "attack": "assets/production/sprites/venelana-gremory_attack.png",
+        "hit": "assets/production/sprites/venelana-gremory_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "violet-evergarden",
+      "name": "Violet Evergarden",
+      "card": {
+        "normal": "assets/production/cards/violet-evergarden--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/violet-evergarden_idle.png",
+        "attack": "assets/production/sprites/violet-evergarden_attack.png",
+        "hit": "assets/production/sprites/violet-evergarden_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "xenovia",
+      "name": "Xenovia",
+      "card": {
+        "normal": "assets/production/cards/xenovia--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/xenovia_idle.png",
+        "attack": "assets/production/sprites/xenovia_attack.png",
+        "hit": "assets/production/sprites/xenovia_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "yor-forger",
+      "name": "Yor Forger",
+      "card": {
+        "normal": "assets/production/cards/yor-forger--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/yor-forger_idle.png",
+        "attack": "assets/production/sprites/yor-forger_attack.png",
+        "hit": "assets/production/sprites/yor-forger_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "yoruichi-shihoin",
+      "name": "Yoruichi Shihoin",
+      "card": {
+        "normal": "assets/production/cards/yoruichi-shihoin--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/yoruichi-shihoin_idle.png",
+        "attack": "assets/production/sprites/yoruichi-shihoin_attack.png",
+        "hit": "assets/production/sprites/yoruichi-shihoin_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    },
+    {
+      "character_id": "yumeko-jabami",
+      "name": "Yumeko Jabami",
+      "card": {
+        "normal": "assets/production/cards/yumeko-jabami--normal.jpg",
+        "contract": "jpeg-1024x1536"
+      },
+      "battle_sprites": {
+        "idle": "assets/production/sprites/yumeko-jabami_idle.png",
+        "attack": "assets/production/sprites/yumeko-jabami_attack.png",
+        "hit": "assets/production/sprites/yumeko-jabami_hit.png",
+        "contract": "png-128x128-transparent",
+        "status": "pending"
+      }
+    }
+  ]
+}
