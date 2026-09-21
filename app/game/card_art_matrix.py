@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+from app.art.prompt_policy import NO_EXPLICIT_VISUAL_POLICY, STYLE_POLICY
 from enum import StrEnum
 
 
@@ -129,13 +131,12 @@ def build_card_art_prompt(
     if profile.tier is CardArtTier.CLOSE_UP or not adult_eligible:
         safety = (
             "NON-SUGGESTIVE PRODUCTION MODE: no erotic emphasis, no lingerie, no swimwear, "
-            "no nudity, no transparent clothing, no sexual pose."
+            f"no transparent clothing, no sexual pose. {NO_EXPLICIT_VISUAL_POLICY}"
         )
     else:
         safety = (
-            "ADULT-ELIGIBLE NON-EXPLICIT MODE: tasteful glamour only; no nudity, "
-            "no exposed genitals, no exposed nipples, no explicit sexual activity, "
-            "no fetishized anatomy, no sexualized minors."
+            "ADULT-ELIGIBLE NON-EXPLICIT MODE: tasteful glamour only; "
+            f"{NO_EXPLICIT_VISUAL_POLICY}"
         )
 
     strictness = (
@@ -149,7 +150,7 @@ def build_card_art_prompt(
         f"Wardrobe: {profile.wardrobe}. "
         f"Function: {profile.function}. "
         f"{safety} "
-        "Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. "
+        f"{STYLE_POLICY} "
         "No watermark, no logos, no text baked into the image. "
         f"{strictness} "
         + " ".join(extras)
