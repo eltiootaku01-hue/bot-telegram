@@ -24,6 +24,49 @@ def _add_column_if_missing(connection, table: str, column: str, definition: str,
             raise
 
 
+
+def _migrate_game_collection_remove_evolution_stage(connection) -> None:
+    """Rebuild the legacy collection table without persisted evolution state."""
+    columns = {column["name"] for column in inspect(connection).get_columns("game_collection")}
+    if "evolution_stage" not in columns:
+        return
+
+    connection.execute(text("DROP TRIGGER IF EXISTS trg_game_collection_validate_insert"))
+    connection.execute(text("DROP TRIGGER IF EXISTS trg_game_collection_validate_update"))
+    connection.execute(text("""
+        CREATE TABLE game_collection__p0 (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            profile_id INTEGER NOT NULL REFERENCES game_profiles(id) ON DELETE CASCADE,
+            character_id VARCHAR(100) NOT NULL,
+            rarity VARCHAR(32) NOT NULL,
+            level INTEGER NOT NULL DEFAULT 1,
+            copies INTEGER NOT NULL DEFAULT 1,
+            experience INTEGER NOT NULL DEFAULT 0,
+            potential_seed VARCHAR(128),
+            obtained_at DATETIME NOT NULL,
+            CONSTRAINT uq_collection_character UNIQUE (profile_id, character_id),
+            CONSTRAINT ck_game_collection_level_bounds CHECK (level >= 1 AND level <= 30),
+            CONSTRAINT ck_game_collection_copies_positive CHECK (copies >= 1),
+            CONSTRAINT ck_game_collection_experience_nonnegative CHECK (experience >= 0)
+        )
+    """))
+    connection.execute(text("""
+        INSERT INTO game_collection__p0 (
+            id, profile_id, character_id, rarity, level, copies, experience,
+            potential_seed, obtained_at
+        )
+        SELECT
+            id, profile_id, character_id, rarity, level, copies, experience,
+            potential_seed, obtained_at
+        FROM game_collection
+    """))
+    connection.execute(text("DROP TABLE game_collection"))
+    connection.execute(text("ALTER TABLE game_collection__p0 RENAME TO game_collection"))
+    connection.execute(text("""
+        INSERT OR REPLACE INTO sqlite_sequence(name, seq)
+        VALUES ('game_collection', COALESCE((SELECT MAX(id) FROM game_collection), 0))
+    """))
+
 def _ensure_compatibility(connection) -> None:
     """Apply small additive migrations that create_all cannot perform."""
     inspector = inspect(connection)
@@ -59,6 +102,7 @@ def _ensure_compatibility(connection) -> None:
         "VARCHAR(128)",
         game_collection_columns,
     )
+    _migrate_game_collection_remove_evolution_stage(connection)
 
     event_columns = {column["name"] for column in inspect(connection).get_columns("domain_events")}
     _add_column_if_missing(connection, "domain_events", "heartbeat_at", "DATETIME", event_columns)
@@ -150,9 +194,9 @@ def _ensure_sqlite_invariant_triggers(connection) -> None:
             "INSERT",
             """
             WHEN NEW.level < 1
+              OR NEW.level > 30
               OR NEW.copies < 1
               OR NEW.experience < 0
-              OR NEW.evolution_stage < 1
             BEGIN
                 SELECT RAISE(ABORT, 'invalid game collection invariant');
             END
@@ -161,12 +205,12 @@ def _ensure_sqlite_invariant_triggers(connection) -> None:
         (
             "trg_game_collection_validate_update",
             "game_collection",
-            "UPDATE OF level, copies, experience, evolution_stage",
+            "UPDATE OF level, copies, experience",
             """
             WHEN NEW.level < 1
+              OR NEW.level > 30
               OR NEW.copies < 1
               OR NEW.experience < 0
-              OR NEW.evolution_stage < 1
             BEGIN
                 SELECT RAISE(ABORT, 'invalid game collection invariant');
             END

@@ -159,10 +159,12 @@ class GameCollection(Base):
     __tablename__ = "game_collection"
     __table_args__ = (
         UniqueConstraint("profile_id", "character_id", name="uq_collection_character"),
-        CheckConstraint("level >= 1", name="ck_game_collection_level_positive"),
+        CheckConstraint(
+            "level >= 1 AND level <= 30",
+            name="ck_game_collection_level_bounds",
+        ),
         CheckConstraint("copies >= 1", name="ck_game_collection_copies_positive"),
         CheckConstraint("experience >= 0", name="ck_game_collection_experience_nonnegative"),
-        CheckConstraint("evolution_stage >= 1", name="ck_game_collection_stage_positive"),
     )
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(ForeignKey("game_profiles.id", ondelete="CASCADE"))
@@ -171,7 +173,6 @@ class GameCollection(Base):
     level: Mapped[int] = mapped_column(Integer, default=1)
     copies: Mapped[int] = mapped_column(Integer, default=1)
     experience: Mapped[int] = mapped_column(Integer, default=0)
-    evolution_stage: Mapped[int] = mapped_column(Integer, default=1)
     potential_seed: Mapped[str | None] = mapped_column(String(128))
     obtained_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
