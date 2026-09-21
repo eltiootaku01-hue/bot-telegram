@@ -9,6 +9,7 @@ from app.core.identity import BotIdentity
 from app.db.database import Database
 from app.db.models import GameEncounter
 from app.db.world_models import GameWorldEvent
+from app.game.catalog import wild_characters
 from app.game.encounters import encounter_options, new_encounter
 from app.modules.world.presenter import WorldPresentationModule
 from app.world.models import PresenterKind, WorldEventType, WorldPresenterRef
@@ -44,7 +45,7 @@ async def test_presenter_module_owns_only_its_identity_world_claims(database):
 
 @pytest.mark.asyncio
 async def test_sunna_presenter_publishes_waifu_keyboard_and_records_message(database):
-    character = new_encounter.__globals__["wild_characters"]()[0]
+    character = wild_characters()[0]
     encounter = new_encounter(character)
     options = encounter_options(encounter)
 
@@ -60,7 +61,7 @@ async def test_sunna_presenter_publishes_waifu_keyboard_and_records_message(data
         )
         session.add(record)
         await session.flush()
-        event = await WorldEventService().schedule_waifu_arrival(
+        await WorldEventService().schedule_waifu_arrival(
             session,
             chat_id=-100,
             presenter=WorldPresenterRef("sunna", PresenterKind.EXISTING_BOT),
