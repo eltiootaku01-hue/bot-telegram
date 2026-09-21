@@ -54,6 +54,10 @@ def test_ranked_catalog_has_unique_ids_and_rankings() -> None:
 
 
 def test_card_tier_boundaries_are_stable() -> None:
-    assert card_tier_from_scores(50, 50) is CardTier.R
-    assert card_tier_from_scores(55, 50) is CardTier.SR
+    assert card_tier_from_scores(39, 39) is CardTier.R
+    assert card_tier_from_scores(40, 40) is CardTier.S
+    assert card_tier_from_scores(51, 51) is CardTier.S
+    assert card_tier_from_scores(52, 52) is CardTier.SR
+    assert card_tier_from_scores(77, 77) is CardTier.SR
+    assert card_tier_from_scores(78, 78) is CardTier.UR
     assert card_tier_from_scores(80, 80) is CardTier.UR
