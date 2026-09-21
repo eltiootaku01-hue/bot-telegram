@@ -45,6 +45,7 @@ class WaifuCard:
     tier: CardTier
     variant: CardVariant
     outfit: str
+    design_id: str
     fusion_of: tuple[str, str] = ()
     adult_style_allowed: bool = False
 
@@ -129,13 +130,15 @@ def card_for_character(
     resolved_variant = variant or _variant_for_seed(seed)
     outfit = _outfit_for_seed(seed, resolved_variant)
     return WaifuCard(
-        card_id=f"{character.id}:{character.card_tier.value}:{resolved_variant.value}:{outfit}",
+        design_id = _digest(f"{seed}:design").hex()[:6]
+    card_id=f"{character.id}:{character.card_tier.value}:{resolved_variant.value}:{outfit}:{design_id}",
         character_id=character.id,
         name=character.name,
         anime=character.anime,
         tier=character.card_tier,
         variant=resolved_variant,
         outfit=outfit,
+        design_id=design_id,
         adult_style_allowed=(
             adult_style_is_allowed(character.id)
             and mature_art_allowed
@@ -152,19 +155,21 @@ def fusion_card_for_characters(
     mature_art_allowed: bool = False,
 ) -> WaifuCard:
     if first.id == second.id:
-        raise ValueError("UR fusion requires two different waifus")
+        raise ValueError("Una UR necesita dos waifus diferentes")
 
     parents = tuple(sorted((first.id, second.id)))
     variant = _variant_for_seed(seed)
     outfit = _outfit_for_seed(seed, variant)
     return WaifuCard(
-        card_id=f"ur-fusion:{parents[0]}+{parents[1]}:{variant.value}:{outfit}",
+        design_id = _digest(f"{seed}:design").hex()[:6]
+    card_id=f"ur-fusion:{parents[0]}+{parents[1]}:{variant.value}:{outfit}:{design_id}",
         character_id=f"fusion:{parents[0]}+{parents[1]}",
         name=f"{first.name} × {second.name}",
         anime=f"{first.anime} × {second.anime}",
         tier=CardTier.UR,
         variant=variant,
         outfit=outfit,
+        design_id=design_id,
         fusion_of=parents,
         adult_style_allowed=(
             mature_art_allowed
