@@ -358,8 +358,8 @@ class GameModule(BotModule):
                 result = await self.card_service.fuse(
                     session,
                     profile_id=profile.id,
-                    first_card_id=str(selected),
-                    second_card_id=str(row_id),
+                    first_collection_id=selected,
+                    second_collection_id=row_id,
                     seed=f"card-fusion:{callback.id}",
                 )
         except ValueError as exc:
@@ -375,7 +375,7 @@ class GameModule(BotModule):
             f"🏷️ UR · {'✨ SHINY' if result.card.variant.value == 'shiny' else 'Normal'}\n"
             f"👗 {result.card.outfit}\n"
             "La fusión consumió una copia de cada carta base.",
-            reply_markup=cards_keyboard([result.card], 1, 1),
+            reply_markup=cards_keyboard([], 1, 1),
         )
         await callback.answer("¡Fusión UR completada! 💠", show_alert=True)
 
