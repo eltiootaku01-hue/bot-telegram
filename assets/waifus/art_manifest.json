@@ -9,7 +9,7 @@
   },
   "style_policy": "Original polished anime-fantasy illustration; references are mood-level only, not direct style copying.",
   "total_items": 78,
-  "completed_items": 0,
+  "completed_items": 1,
   "items": [
     {
       "character_id": "ai-hoshino",
@@ -769,7 +769,8 @@
       "art_tier": "S",
       "visible": "40%",
       "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "svg-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "yoruichi-shihoin",
@@ -791,5 +792,6 @@
       "direction_status": "fallback",
       "asset_status": "pending"
     }
-  ]
+  ],
+  "progress_percent": 1.28
 }
