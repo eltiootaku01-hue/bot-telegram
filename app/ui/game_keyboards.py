@@ -201,6 +201,7 @@ def waifu_filter_options_keyboard(field: str) -> InlineKeyboardMarkup:
         ),
         "c": (
             ("R", "r"),
+            ("S", "s"),
             ("SR", "sr"),
             ("UR", "ur"),
         ),
