@@ -53,17 +53,14 @@ def rarity_from_power(power_score: int) -> Rarity:
 
 
 def card_tier_from_scores(popularity_score: int, power_score: int) -> CardTier:
-    """Derive the four presentation classes from the two independent game axes."""
+    """Derive R/S/SR from popularity; UR is reserved for fusion cards."""
     if not 0 <= popularity_score <= 100:
         raise ValueError("popularity_score must be between 0 and 100")
     if not 0 <= power_score <= 100:
         raise ValueError("power_score must be between 0 and 100")
-    combined = (popularity_score + power_score) / 2
-    if combined >= 78:
-        return CardTier.UR
-    if combined >= 52:
+    if popularity_score >= 70:
         return CardTier.SR
-    if combined >= 40:
+    if popularity_score >= 40:
         return CardTier.S
     return CardTier.R
 
