@@ -118,6 +118,35 @@ final class WaifuMonRuleEngineTest {
     }
 
 
+
+    @Test
+    void gachaResolutionOwnsPityAndCharacterSelection() {
+        ObjectNode candidates = mapper.createArrayNode()
+            .add(mapper.createObjectNode().put("id", "zeta").put("rarity", "D"))
+            .add(mapper.createObjectNode().put("id", "alpha").put("rarity", "D"))
+            .add(mapper.createObjectNode().put("id", "beta").put("rarity", "C"));
+        ObjectNode payload = mapper.createObjectNode()
+            .put("seed", "gacha-pity")
+            .put("d_streak", 6);
+        payload.set("candidates", candidates);
+        payload.set("owned_character_ids", mapper.createArrayNode().add("alpha"));
+
+        EngineResponse response = engine.execute(
+            request("gacha.resolve", payload, "gacha-pity")
+        );
+
+        assertTrue(response.success());
+        assertTrue(
+            response.payload().get("rolled_rarity").asText().equals("C")
+                || response.payload().get("rolled_rarity").asText().equals("D")
+        );
+        if (response.payload().get("pity_triggered").asBoolean()) {
+            assertEquals("C", response.payload().get("rolled_rarity").asText());
+            assertEquals(0, response.payload().get("d_streak").asInt());
+            assertEquals("beta", response.payload().get("character_id").asText());
+        }
+    }
+
     @Test
     void evolutionResolutionReturnsAuthoritativeStageBounds() {
         ObjectNode payload = mapper.createObjectNode().put("level", 21);
