@@ -13,9 +13,11 @@ from app.game.fusion import fuse_collection
         (1, "chibi"),
         (5, "chibi"),
         (6, "anime"),
-        (15, "anime"),
-        (16, "anime premium"),
-        (25, "anime premium"),
+        (10, "anime"),
+        (11, "anime premium"),
+        (20, "anime premium"),
+        (21, "anime premium"),
+        (30, "anime premium"),
     ],
 )
 def test_art_stage_matches_level_band(level, style):
