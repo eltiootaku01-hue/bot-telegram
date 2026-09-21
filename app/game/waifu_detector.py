@@ -137,36 +137,36 @@ class WaifuDetectorService:
                 if usage is None:
                     raise
 
-        claimed = await session.execute(
-            update(WaifuDetectorDailyUsage)
-            .where(
-                WaifuDetectorDailyUsage.id == usage.id,
-                WaifuDetectorDailyUsage.uses < MAX_DAILY_DETECTOR_USES,
+        async with session.begin_nested():
+            claimed = await session.execute(
+                update(WaifuDetectorDailyUsage)
+                .where(
+                    WaifuDetectorDailyUsage.id == usage.id,
+                    WaifuDetectorDailyUsage.uses < MAX_DAILY_DETECTOR_USES,
+                )
+                .values(uses=WaifuDetectorDailyUsage.uses + 1)
             )
-            .values(uses=WaifuDetectorDailyUsage.uses + 1)
-        )
-        if claimed.rowcount != 1:
-            return None
+            if claimed.rowcount != 1:
+                return None
 
-        await session.refresh(usage)
-        use_number = usage.uses
-        mob = self._mob_for(user_id, chat_id, day_key, use_number)
-        row = WaifuDetectorRound(
-            user_id=user_id,
-            chat_id=chat_id,
-            day_key=day_key,
-            use_number=use_number,
-            character_id=character_id,
-            mob_key=mob.key,
-            status="active",
-            expires_at=utc_now() + timedelta(seconds=DETECTOR_ROUND_SECONDS),
-        )
-        try:
-            async with session.begin_nested():
+            await session.refresh(usage)
+            use_number = usage.uses
+            mob = self._mob_for(user_id, chat_id, day_key, use_number)
+            row = WaifuDetectorRound(
+                user_id=user_id,
+                chat_id=chat_id,
+                day_key=day_key,
+                use_number=use_number,
+                character_id=character_id,
+                mob_key=mob.key,
+                status="active",
+                expires_at=utc_now() + timedelta(seconds=DETECTOR_ROUND_SECONDS),
+            )
+            try:
                 session.add(row)
                 await session.flush()
-        except IntegrityError:
-            return None
+            except IntegrityError:
+                return None
         return DetectorStart(round=row, mob=mob, use_number=use_number)
 
     async def fight(
