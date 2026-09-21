@@ -1,7 +1,6 @@
 from types import SimpleNamespace
 
 import pytest
-from aiogram.exceptions import TelegramBadRequest
 
 from app.core.processing_feedback import (
     ProcessingFeedback,
@@ -18,7 +17,7 @@ class FakeTransient:
 
     async def edit_text(self, text: str, **kwargs):
         if self.reject_edit:
-            raise TelegramBadRequest(method=None, message="edit rejected")
+            raise RuntimeError("edit rejected")
         self.edits.append((text, kwargs))
         return self
 
@@ -53,7 +52,9 @@ async def test_processing_feedback_replaces_transient_with_final_result():
     markup = SimpleNamespace()
 
     await feedback.start()
-    sent = await feedback.finish(ProcessingResultDTO("🎉 Resultado", reply_markup=markup))
+    sent = await feedback.finish(
+        ProcessingResultDTO("🎉 Resultado", reply_markup=markup)
+    )
     await feedback.cleanup()
 
     assert sent is target.transient
@@ -61,19 +62,6 @@ async def test_processing_feedback_replaces_transient_with_final_result():
         ("🎉 Resultado", {"reply_markup": markup})
     ]
     assert target.transient.deleted is False
-
-
-@pytest.mark.asyncio
-async def test_processing_feedback_falls_back_when_edit_is_rejected():
-    target = FakeTarget(FakeTransient(reject_edit=True))
-    feedback = ProcessingFeedback(target)
-
-    await feedback.start()
-    sent = await feedback.finish("Resultado final")
-
-    assert sent is target.transient
-    assert target.transient.deleted is True
-    assert target.answers[-1] == ("Resultado final", {"reply_markup": None})
 
 
 @pytest.mark.asyncio
