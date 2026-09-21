@@ -42,6 +42,16 @@ jobs:
         run: python tools/validate_card_qa.py
       - name: Validate combat sprite contract
         run: python tools/validate_combat_sprites.py
+      - name: Validate Telegram Mini App
+        shell: bash
+        run: |
+          test -f webapp/index.html
+          test -f webapp/css/style.css
+          test -f webapp/js/main.js
+          test -f webapp/js/combat.js
+          grep -q 'telegram-web-app.js' webapp/index.html
+          node --check webapp/js/main.js
+          node --check webapp/js/combat.js
       - name: Export card art prompts
         run: python tools/export_card_art_prompts.py --output /tmp/WAIFUMON_CARD_ART_PROMPTS.md
       - name: Export sticker prompts
