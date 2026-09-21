@@ -23,8 +23,8 @@
   ],
   "visual_tiers_completed": {
     "R": 1,
-    "S": 4,
-    "SR": 8,
+    "S": 3,
+    "SR": 9,
     "UR": 4
   },
   "next_rule": "Continue one avatar at a time. Never reuse a generic image as final card art."
