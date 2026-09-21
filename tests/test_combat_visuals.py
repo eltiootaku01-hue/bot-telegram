@@ -54,12 +54,14 @@ def fake_png(
 
     color_type = 6 if alpha else 2
     ihdr = struct.pack(">IIBBBBB", width, height, 8, color_type, 0, 0, 0)
-    chunk = lambda name, payload: (
-        len(payload).to_bytes(4, "big")
-        + name
-        + payload
-        + zlib.crc32(name + payload).to_bytes(4, "big")
-    )
+    def chunk(name: bytes, payload: bytes) -> bytes:
+        return (
+            len(payload).to_bytes(4, "big")
+            + name
+            + payload
+            + zlib.crc32(name + payload).to_bytes(4, "big")
+        )
+
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IEND", b"")
 
 
