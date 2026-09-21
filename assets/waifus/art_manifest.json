@@ -1,11 +1,39 @@
 {
-  "version": 4,
-  "policy": "Only individually approved JPEG 1024x1536 assets in assets/production/cards/ are production art. Legacy vectors, drafts and concepts remain quarantined.",
+  "version": 5,
+  "policy": "Only individually approved JPG/JPEG 1024x1536 assets in assets/production/cards/ are production art. Legacy vectors, drafts, concepts and failed visual audits remain quarantined.",
   "visual_rules": {
-    "R": "20% rostro+hombros",
-    "S": "40% hasta pecho",
-    "SR": "60-80% medio cuerpo amplio",
-    "UR": "100%+ cuerpo completo y composición abierta"
+    "D_C_B_R": {
+      "framing": "Primer plano / Close-Up",
+      "crop": "Rostro y hombros",
+      "wardrobe": "Atuendo base, cotidiano o uniforme",
+      "function": "Legibilidad limpia para avatares y mensajes rápidos",
+      "suggestive_level": "ninguno",
+      "inspection": "alto"
+    },
+    "S": {
+      "framing": "Plano medio",
+      "crop": "Tórax; foco en busto, espalda o cadera",
+      "wardrobe": "Vestimenta ajustada, traje de baño o lencería temática solo con elegibilidad adulta explícita",
+      "function": "Glamour moderado sin desnudez",
+      "suggestive_level": "ecchi moderado, no explícito",
+      "inspection": "muy alto"
+    },
+    "SR": {
+      "framing": "Plano tres cuartos",
+      "crop": "Casi cuerpo completo",
+      "wardrobe": "Temática de nicho: gothic lolita, kemonomimi, bunny suit elegante, yukata/kimono festivo o combate estilizado",
+      "function": "Pose dinámica y alta fidelidad de vestuario",
+      "suggestive_level": "ecchi avanzado, no explícito",
+      "inspection": "muy alto"
+    },
+    "UR": {
+      "framing": "Plano general",
+      "crop": "Cuerpo completo de pies a cabeza",
+      "wardrobe": "Cosplay/crossover conceptual premium; fanservice no explícito solo con elegibilidad adulta explícita",
+      "function": "Edición premium con fondo elaborado",
+      "suggestive_level": "ecchi premium, estrictamente no explícito",
+      "inspection": "doble / máximo"
+    }
   },
   "style_policy": "Original polished anime-fantasy illustration; external references are mood-level only, never direct style copying.",
   "total_items": 78,
@@ -17,9 +45,10 @@
       "popularity_rank": 25,
       "power_score": 45,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "akame",
@@ -27,9 +56,10 @@
       "popularity_rank": 24,
       "power_score": 91,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "akane-kurokawa",
@@ -37,9 +67,10 @@
       "popularity_rank": 27,
       "power_score": 48,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "akeno-himejima",
@@ -47,9 +78,10 @@
       "popularity_rank": 5,
       "power_score": 91,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "aki-nijou",
@@ -57,9 +89,10 @@
       "popularity_rank": 8,
       "power_score": 58,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "ako-tamaki",
@@ -67,9 +100,10 @@
       "popularity_rank": 59,
       "power_score": 40,
       "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "D_C_B_R",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "albedo",
@@ -77,9 +111,10 @@
       "popularity_rank": 9,
       "power_score": 93,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "alisa-kujo",
@@ -87,9 +122,10 @@
       "popularity_rank": 1,
       "power_score": 42,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "anya-forger",
@@ -97,9 +133,10 @@
       "popularity_rank": 7,
       "power_score": 28,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "asuna-yuuki",
@@ -107,9 +144,10 @@
       "popularity_rank": 10,
       "power_score": 86,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "banri-shiunji",
@@ -117,9 +155,10 @@
       "popularity_rank": 19,
       "power_score": 42,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "boa-hancock",
@@ -127,9 +166,10 @@
       "popularity_rank": 35,
       "power_score": 86,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "cana-alberona",
@@ -137,9 +177,10 @@
       "popularity_rank": 53,
       "power_score": 67,
       "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "S",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "celistia-ralgris",
@@ -147,9 +188,10 @@
       "popularity_rank": 23,
       "power_score": 67,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "cha-hae-in",
@@ -157,9 +199,10 @@
       "popularity_rank": 38,
       "power_score": 91,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "chelsea",
@@ -167,9 +210,10 @@
       "popularity_rank": 42,
       "power_score": 65,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "chinatsu-kano",
@@ -177,9 +221,10 @@
       "popularity_rank": 15,
       "power_score": 48,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "chisato-hasegawa",
@@ -187,9 +232,10 @@
       "popularity_rank": 41,
       "power_score": 70,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "chizuru-mizuhara",
@@ -197,9 +243,10 @@
       "popularity_rank": 11,
       "power_score": 40,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "darkness",
@@ -207,9 +254,10 @@
       "popularity_rank": 29,
       "power_score": 79,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "elizabeth-liones",
@@ -217,9 +265,10 @@
       "popularity_rank": 17,
       "power_score": 78,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "emilia",
@@ -227,9 +276,10 @@
       "popularity_rank": 26,
       "power_score": 86,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "erina-nakiri",
@@ -237,9 +287,10 @@
       "popularity_rank": 40,
       "power_score": 43,
       "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "S",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "erza-scarlet",
@@ -247,9 +298,10 @@
       "popularity_rank": 16,
       "power_score": 89,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "esdeath",
@@ -257,9 +309,10 @@
       "popularity_rank": 4,
       "power_score": 98,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "hina-chono",
@@ -267,9 +320,10 @@
       "popularity_rank": 14,
       "power_score": 43,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "hinako-yaotose",
@@ -277,9 +331,10 @@
       "popularity_rank": 13,
       "power_score": 39,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "hinata-hyuga",
@@ -287,9 +342,10 @@
       "popularity_rank": 19,
       "power_score": 76,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "ino-yamanaka",
@@ -297,9 +353,10 @@
       "popularity_rank": 46,
       "power_score": 60,
       "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "S",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "irina-shidou",
@@ -307,9 +364,10 @@
       "popularity_rank": 51,
       "power_score": 72,
       "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "S",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "jibril",
@@ -317,9 +375,10 @@
       "popularity_rank": 44,
       "power_score": 97,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "kaoruko-waguri",
@@ -327,9 +386,10 @@
       "popularity_rank": 2,
       "power_score": 38,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "kuroka",
@@ -337,9 +397,10 @@
       "popularity_rank": 7,
       "power_score": 90,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "kurumi-tokisaki",
@@ -347,9 +408,10 @@
       "popularity_rank": 49,
       "power_score": 97,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "leone",
@@ -357,9 +419,10 @@
       "popularity_rank": 47,
       "power_score": 83,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "lilith-asami",
@@ -367,9 +430,10 @@
       "popularity_rank": 39,
       "power_score": 72,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "lucy-heartfilia",
@@ -377,9 +441,10 @@
       "popularity_rank": 33,
       "power_score": 84,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "makima",
@@ -387,9 +452,10 @@
       "popularity_rank": 12,
       "power_score": 96,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "maomao",
@@ -397,9 +463,10 @@
       "popularity_rank": 1,
       "power_score": 45,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "marin-kitagawa",
@@ -407,9 +474,10 @@
       "popularity_rank": 5,
       "power_score": 37,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "mary-kikakujou",
@@ -417,9 +485,10 @@
       "popularity_rank": 30,
       "power_score": 52,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "midnight",
@@ -427,9 +496,10 @@
       "popularity_rank": 34,
       "power_score": 68,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "mikasa-ackerman",
@@ -437,9 +507,10 @@
       "popularity_rank": 36,
       "power_score": 84,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "mirajane-strauss",
@@ -447,9 +518,10 @@
       "popularity_rank": 32,
       "power_score": 92,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "momo-ayase",
@@ -457,9 +529,10 @@
       "popularity_rank": 4,
       "power_score": 80,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "momo-yaoyorozu",
@@ -467,9 +540,10 @@
       "popularity_rank": 28,
       "power_score": 70,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "mutsumi-wakaba",
@@ -477,9 +551,10 @@
       "popularity_rank": 12,
       "power_score": 69,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "nami",
@@ -487,9 +562,10 @@
       "popularity_rank": 6,
       "power_score": 76,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "nejire-hadou",
@@ -497,9 +573,10 @@
       "popularity_rank": 31,
       "power_score": 74,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "nene-yashiro",
@@ -507,9 +584,10 @@
       "popularity_rank": 16,
       "power_score": 61,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "nezuko-kamado",
@@ -517,9 +595,10 @@
       "popularity_rank": 48,
       "power_score": 86,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "nico-robin",
@@ -527,9 +606,10 @@
       "popularity_rank": 13,
       "power_score": 79,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "nico-wakatsuki",
@@ -537,9 +617,10 @@
       "popularity_rank": 17,
       "power_score": 66,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "ochako-uraraka",
@@ -547,9 +628,10 @@
       "popularity_rank": 6,
       "power_score": 72,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "oguri-cap",
@@ -557,9 +639,10 @@
       "popularity_rank": 9,
       "power_score": 76,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "orihime-inoue",
@@ -567,9 +650,10 @@
       "popularity_rank": 58,
       "power_score": 79,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "ouka-shiunji",
@@ -577,9 +661,10 @@
       "popularity_rank": 20,
       "power_score": 43,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "power",
@@ -587,9 +672,10 @@
       "popularity_rank": 22,
       "power_score": 88,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "rangiku-matsumoto",
@@ -597,9 +683,10 @@
       "popularity_rank": 43,
       "power_score": 78,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "raphtalia",
@@ -607,9 +694,10 @@
       "popularity_rank": 20,
       "power_score": 73,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "reiko-kujirai",
@@ -617,9 +705,10 @@
       "popularity_rank": 18,
       "power_score": 47,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "reze",
@@ -627,9 +716,10 @@
       "popularity_rank": 57,
       "power_score": 89,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "rias-gremory",
@@ -637,9 +727,10 @@
       "popularity_rank": 3,
       "power_score": 92,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "rin-tohsaka",
@@ -647,9 +738,10 @@
       "popularity_rank": 37,
       "power_score": 77,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "saeko-busujima",
@@ -657,9 +749,10 @@
       "popularity_rank": 50,
       "power_score": 84,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "sakiko-togawa",
@@ -667,9 +760,10 @@
       "popularity_rank": 10,
       "power_score": 71,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "sayaka-kirasaka",
@@ -677,9 +771,10 @@
       "popularity_rank": 56,
       "power_score": 68,
       "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "S",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "sinon",
@@ -687,9 +782,10 @@
       "popularity_rank": 52,
       "power_score": 81,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "taiga",
@@ -697,9 +793,10 @@
       "popularity_rank": null,
       "power_score": 50,
       "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "S",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "takane-takamine",
@@ -707,9 +804,10 @@
       "popularity_rank": 55,
       "power_score": 40,
       "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "D_C_B_R",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "tohka-yatogami",
@@ -717,9 +815,10 @@
       "popularity_rank": 60,
       "power_score": 90,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "tsunade",
@@ -727,9 +826,10 @@
       "popularity_rank": 21,
       "power_score": 93,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "venelana-gremory",
@@ -737,9 +837,10 @@
       "popularity_rank": 45,
       "power_score": 84,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "violet-evergarden",
@@ -747,9 +848,10 @@
       "popularity_rank": 15,
       "power_score": 48,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "xenovia",
@@ -757,9 +859,10 @@
       "popularity_rank": 54,
       "power_score": 80,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "yor-forger",
@@ -767,9 +870,10 @@
       "popularity_rank": 2,
       "power_score": 86,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "quarantined_noncompliant"
+      "asset_status": "quarantined_noncompliant",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "yoruichi-shihoin",
@@ -777,9 +881,10 @@
       "popularity_rank": 14,
       "power_score": 91,
       "art_tier": "UR",
-      "visible": "100%+",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "UR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     },
     {
       "character_id": "yumeko-jabami",
@@ -787,9 +892,10 @@
       "popularity_rank": 18,
       "power_score": 38,
       "art_tier": "SR",
-      "visible": "60-80%",
-      "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "pending",
+      "framing_profile": "SR",
+      "adult_eligible": false,
+      "visual_audit_status": "not_inspected"
     }
   ],
   "progress_percent": 0,
@@ -804,8 +910,32 @@
   ],
   "production_contract": {
     "directory": "assets/production/cards/",
-    "extension": ".jpg",
+    "extensions": [
+      ".jpg",
+      ".jpeg"
+    ],
+    "canonical_extension": ".jpg",
     "width": 1024,
-    "height": 1536
+    "height": 1536,
+    "max_bytes": 8388608,
+    "min_bytes": 51200,
+    "quarantine_directory": "assets/quarantine/"
+  },
+  "matrix_version": "2026-09-card-art-matrix-v1",
+  "execution_rules": {
+    "one_card_at_a_time": true,
+    "visual_audit_required": true,
+    "anatomy_checks": [
+      "proportions",
+      "hands",
+      "fingers",
+      "limbs",
+      "joints",
+      "facial_features",
+      "perspective"
+    ],
+    "ur_double_review": true,
+    "failed_assets_directory": "assets/quarantine/",
+    "production_output": "JPG/JPEG 1024x1536"
   }
 }
