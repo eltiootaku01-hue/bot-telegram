@@ -23,7 +23,7 @@ from app.game.fusion import fuse_collection
 from app.game.gacha import GACHA_COST_POINTS, GachaService
 from app.game.missions import DailyMissionService
 from app.game.progression import apply_capture_progression, collection_status
-from app.game.waifu_art import art_path_for
+from app.game.waifu_art import art_candidates_for
 from app.game.waifu_browser import (
     WaifuFilter,
     WaifuFilterField,
@@ -695,7 +695,16 @@ class GameModule(BotModule):
 
         if callback.message is not None:
             detail_text = render_detail(character)
-            art_file = resolve_asset(art_path_for(character_id))
+            art_file = next(
+                (
+                    candidate
+                    for candidate in (
+                        resolve_asset(path) for path in art_candidates_for(character_id)
+                    )
+                    if candidate is not None
+                ),
+                None,
+            )
             if art_file is not None:
                 await callback.message.edit_text("🎴 <b>Ficha de waifu</b>")
                 await callback.message.answer_photo(
