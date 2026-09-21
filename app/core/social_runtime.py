@@ -21,6 +21,7 @@ from app.core.social_wake import SocialWakeController
 from app.core.social_wake_store import SocialWakeStore
 from app.core.time import localize_utc, utc_now
 from app.db.database import Database
+from app.services.telegram_delivery import with_retry_after
 from app.db.models import Chat
 
 logger = logging.getLogger(__name__)
@@ -213,7 +214,7 @@ class SocialRuntime:
                 async with self.database.session() as session:
                     await self.turns.abandon(session, turn, reason="chat no longer authorized")
                 return False
-            await bot.send_message(chat_id, message)
+            await with_retry_after(lambda: bot.send_message(chat_id, message))
         except Exception as exc:
             async with self.database.session() as session:
                 await self.turns.abandon(session, turn, reason=str(exc))
