@@ -124,6 +124,7 @@ def card_for_character(
     *,
     seed: str,
     variant: CardVariant | None = None,
+    mature_art_allowed: bool = False,
 ) -> WaifuCard:
     resolved_variant = variant or _variant_for_seed(seed)
     outfit = _outfit_for_seed(seed, resolved_variant)
@@ -137,7 +138,8 @@ def card_for_character(
         outfit=outfit,
         adult_style_allowed=(
             adult_style_is_allowed(character.id)
-            and variant is CardVariant.SHINY
+            and mature_art_allowed
+            and resolved_variant is CardVariant.SHINY
         ),
     )
 
@@ -147,6 +149,7 @@ def fusion_card_for_characters(
     second: Character,
     *,
     seed: str,
+    mature_art_allowed: bool = False,
 ) -> WaifuCard:
     if first.id == second.id:
         raise ValueError("UR fusion requires two different waifus")
@@ -164,7 +167,8 @@ def fusion_card_for_characters(
         outfit=outfit,
         fusion_of=parents,
         adult_style_allowed=(
-            variant is CardVariant.SHINY
+            mature_art_allowed
+            and variant is CardVariant.SHINY
             and adult_style_is_allowed(first.id)
             and adult_style_is_allowed(second.id)
         ),
