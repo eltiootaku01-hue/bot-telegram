@@ -87,3 +87,12 @@ def test_validate_card_asset_rejects_tiny_file(tmp_path: Path) -> None:
     assert result.valid is False
     assert result.size_bytes < CARD_ART_MIN_BYTES
     assert "small" in result.reason
+
+
+def test_validate_card_asset_accepts_jpeg_extension(tmp_path: Path) -> None:
+    path = tmp_path / "sample.jpeg"
+    path.write_bytes(fake_jpeg())
+
+    result = validate_card_asset(path)
+
+    assert result.valid is True
