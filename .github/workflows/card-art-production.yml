@@ -3,8 +3,6 @@ name: Card art production
 on:
   push:
     branches: [main]
-    paths:
-      - "tools/build_card_001_assets.py"
   workflow_dispatch:
 
 permissions:
