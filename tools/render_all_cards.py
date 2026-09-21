@@ -7,7 +7,7 @@ from pathlib import Path
 from app.game.cards import CardVariant
 from app.game.catalog import CHARACTERS
 from app.game.card_art_assets import card_asset_path
-from tools.render_card_asset import DEFAULT_MAX_ATTEMPTS, DEFAULT_TIMEOUT_SECONDS, render_card_asset
+from render_card_asset import DEFAULT_MAX_ATTEMPTS, DEFAULT_TIMEOUT_SECONDS, render_card_asset
 
 
 def main() -> int:
