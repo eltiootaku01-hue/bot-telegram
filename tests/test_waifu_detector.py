@@ -134,7 +134,6 @@ async def test_detector_concurrent_daily_starts_never_allocate_a_fourth_use(tmp_
                 level=10,
                 experience=0,
                 copies=1,
-                evolution_stage=1,
             )
         )
 
