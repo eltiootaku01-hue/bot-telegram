@@ -40,7 +40,11 @@ class EncounterStore:
         begins IMMEDIATE, so participant-count and attempt insertion are serialized.
         """
         encounter = await session.get(GameEncounter, encounter_id)
-        if encounter is None or encounter.status != "active" or encounter.expires_at <= utc_now():
+        if encounter is None:
+            return EncounterAttemptResult.EXPIRED
+        if encounter.status == "closed":
+            return EncounterAttemptResult.FULL
+        if encounter.status != "active" or encounter.expires_at <= utc_now():
             return EncounterAttemptResult.EXPIRED
 
         existing = await session.scalar(
