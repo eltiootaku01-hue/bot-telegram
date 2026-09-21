@@ -10,7 +10,6 @@ from app.db.models import (
     User,
     Chat,
     WaifuGiftClaim,
-    WaifuGiftDrop,
 )
 from app.game.models import Rarity
 from app.game.waifu_gifts import (
