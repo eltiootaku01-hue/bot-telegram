@@ -3,11 +3,12 @@ import logging
 
 from aiogram import Bot, F
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message
 from sqlalchemy import select
 
 from app.characters.director import CharacterDirector
 from app.characters.models import CharacterIntent
+from app.core.assets import resolve_asset
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
@@ -22,6 +23,7 @@ from app.game.fusion import fuse_collection
 from app.game.gacha import GACHA_COST_POINTS, GachaService
 from app.game.missions import DailyMissionService
 from app.game.progression import apply_capture_progression, collection_status
+from app.game.waifu_art import art_path_for
 from app.game.waifu_browser import (
     WaifuFilter,
     WaifuFilterField,
@@ -692,13 +694,26 @@ class GameModule(BotModule):
             return
 
         if callback.message is not None:
-            await callback.message.edit_text(
-                render_detail(character),
-                reply_markup=waifu_catalog_detail_keyboard(
-                    page_number,
-                    active_filter,
-                ),
-            )
+            detail_text = render_detail(character)
+            art_file = resolve_asset(art_path_for(character_id))
+            if art_file is not None:
+                await callback.message.edit_text("🎴 <b>Ficha de waifu</b>")
+                await callback.message.answer_photo(
+                    FSInputFile(str(art_file)),
+                    caption=detail_text,
+                    reply_markup=waifu_catalog_detail_keyboard(
+                        page_number,
+                        active_filter,
+                    ),
+                )
+            else:
+                await callback.message.edit_text(
+                    detail_text,
+                    reply_markup=waifu_catalog_detail_keyboard(
+                        page_number,
+                        active_filter,
+                    ),
+                )
         await self._observe_action("waifu_detail", callback.from_user.id)
         await callback.answer()
 
