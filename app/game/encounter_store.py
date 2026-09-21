@@ -78,9 +78,20 @@ class EncounterStore:
             else EncounterAttemptResult.WRONG
         )
 
+    async def participant_count(self, session: AsyncSession, encounter_id: str) -> int:
+        """Return the number of distinct players who have used their one attempt."""
+        return int(
+            await session.scalar(
+                select(func.count(GameAttempt.id)).where(
+                    GameAttempt.encounter_id == encounter_id,
+                )
+            )
+            or 0
+        )
+
     async def finish(self, session: AsyncSession, encounter_id: str, status: str = "expired") -> bool:
         """Move an active encounter to one terminal state exactly once."""
-        if status not in {"expired", "cancelled", "captured"}:
+        if status not in {"expired", "cancelled", "captured", "closed"}:
             raise ValueError(f"Unsupported encounter terminal status: {status}")
         result = await session.execute(
             update(GameEncounter)
