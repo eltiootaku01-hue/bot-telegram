@@ -90,6 +90,20 @@ def main() -> int:
         else:
             expected_variants = {"normal"}
 
+        art_item = art_items[character_id]
+        art_adult_eligible = bool(art_item.get("adult_eligible", False))
+        if art_adult_eligible and (
+            item["art_tier"] != "UR"
+            or "ur-alt-holo" not in set(item.get("variant_support", []))
+        ):
+            failures.append(
+                f"{character_id}: adult_eligible=true is only valid for UR cards with UR_ALT_HOLO support"
+            )
+        if bool(item.get("adult_eligible", False)) != art_adult_eligible:
+            failures.append(
+                f"{character_id}: QA adult_eligible does not match art manifest"
+            )
+
         declared = set(item.get("variant_support", []))
         if declared != expected_variants:
             failures.append(
@@ -106,6 +120,12 @@ def main() -> int:
             failures.append(f"{character_id}: variant list does not match supported variants")
 
         for variant in variants:
+            if variant.get("variant_id") == "ur-alt-holo" and bool(
+                variant.get("adult_eligible", False)
+            ) != art_adult_eligible:
+                failures.append(
+                    f"{character_id}/ur-alt-holo: adult_eligible does not match art manifest"
+                )
             _validate_variant(qa=qa, item=item, variant=variant, failures=failures)
 
         checks = item["checks"]
