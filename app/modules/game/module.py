@@ -159,6 +159,121 @@ class GameModule(BotModule):
         )
         return claimed, balance, progress.progress, progress.target
 
+    async def detector(self, message: Message) -> None:
+        if message.chat.type != 'private' or message.from_user is None:
+            return
+        chat_id = await self._community_chat_id(message.from_user.id)
+        if chat_id is None:
+            await message.answer('😰 Todavía no hay una comunidad configurada para el Detector.')
+            return
+        await self._start_detector(message, message.from_user.id, chat_id, message.text or '')
+
+    async def detector_open(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer('El Waifu Detector funciona en tu chat privado con Sunna. 😰', show_alert=True)
+            return
+        chat_id = await self._community_chat_id(callback.from_user.id)
+        if chat_id is None:
+            await callback.answer('Todavía no hay una comunidad configurada.', show_alert=True)
+            return
+        await self._start_detector(callback.message, callback.from_user.id, chat_id, '')
+        await callback.answer()
+
+    async def _start_detector(
+        self,
+        source: Message,
+        user_id: int,
+        chat_id: int,
+        command_text: str,
+    ) -> None:
+        async with self.database.session(write=True) as session:
+            profiles = await session.scalars(
+                select(GameProfile).where(
+                    GameProfile.user_id == user_id,
+                    GameProfile.chat_id == chat_id,
+                )
+            )
+            profile = profiles.first()
+            if profile is None:
+                await source.answer('🎒 Primero necesitás una waifu en tu colección.')
+                return
+            rows = list(await session.scalars(
+                select(GameCollection).where(GameCollection.profile_id == profile.id)
+            ))
+            if not rows:
+                await source.answer('🎒 Primero necesitás una waifu en tu colección.')
+                return
+            parts = command_text.split(maxsplit=1)
+            requested = parts[1].strip() if len(parts) == 2 else ''
+            chosen = next((row for row in rows if row.character_id == requested), None)
+            if chosen is None:
+                chosen = max(rows, key=lambda row: (row.level, row.experience, row.character_id))
+            started = await self.detector_service.start(
+                session,
+                user_id=user_id,
+                chat_id=chat_id,
+                day_key=self._mission_day_key(),
+                character_id=chosen.character_id,
+            )
+            if started is None:
+                await source.answer('📡 Ya usaste tus 3 oportunidades del Waifu Detector por hoy.')
+                return
+        character = get_character(chosen.character_id)
+        await source.answer(
+            f'📡 <b>WAIFU DETECTOR</b> — intento {started.use_number}/3\n\n'
+            f'⚔️ Aparece <b>{started.mob.name}</b> (poder {started.mob.power}).\n'
+            f'🎀 Waifu: <b>{character.name}</b> · Nv.{chosen.level}\n'
+            'Derrotalo para ganar EXP para esa waifu.',
+            reply_markup=detector_keyboard(started.round.id),
+        )
+        await self._observe_action('detector_start', user_id, chat_id)
+
+    async def detector_fight(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer('Este panel solo funciona en tu chat privado con Sunna. 😰', show_alert=True)
+            return
+        parts = (callback.data or '').split(':')
+        if len(parts) != 4 or not parts[3].isdigit() or callback.message is None:
+            await callback.answer('Combate inválido.', show_alert=True)
+            return
+        chat_id = await self._community_chat_id(callback.from_user.id)
+        if chat_id is None:
+            await callback.answer('No hay una comunidad configurada.', show_alert=True)
+            return
+        async with self.database.session(write=True) as session:
+            result, level_or_power, collection, mob = await self.detector_service.fight(
+                session,
+                round_id=int(parts[3]),
+                user_id=callback.from_user.id,
+                chat_id=chat_id,
+            )
+        if result == 'already_fought':
+            await callback.answer('Este combate ya fue resuelto.', show_alert=True)
+            return
+        if result == 'expired':
+            await callback.message.edit_text('📡 El combate del Detector expiró.')
+            await callback.answer('Expiró.', show_alert=True)
+            return
+        if result == 'invalid' or mob is None or collection is None:
+            await callback.answer('No pude validar este combate.', show_alert=True)
+            return
+        name = get_character(collection.character_id).name
+        if result == 'won':
+            await callback.message.edit_text(
+                f'🏆 <b>Detector completado</b>\n\n'
+                f'🐾 {mob.name} derrotado.\n'
+                f'🎀 {name} quedó en <b>Nv.{collection.level}</b> · EXP {collection.experience}.\n'
+                '✨ La EXP se aplicó una sola vez.',
+            )
+            await self._observe_action('detector_win', callback.from_user.id, chat_id)
+            await callback.answer('¡Victoria! ⚔️', show_alert=True)
+            return
+        await callback.message.edit_text(
+            f'💥 <b>Derrota</b>\n\n🐾 {mob.name} tenía más poder esta vez.\n'
+            f'🎀 {name}: Nv.{collection.level}.',
+        )
+        await self._observe_action('detector_loss', callback.from_user.id, chat_id)
+        await callback.answer('Perdiste este combate.', show_alert=True)
     async def missions_open(self, callback: CallbackQuery) -> None:
         if not self._private_callback(callback):
             await callback.answer("Este panel solo funciona en tu chat privado con Sunna. 😰", show_alert=True)
