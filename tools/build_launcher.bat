@@ -2,6 +2,10 @@
 setlocal
 cd /d "%~dp0.."
 
+if exist dist rmdir /s /q dist
+if exist build rmdir /s /q build
+mkdir dist\bots
+
 call tools\build_waifumon.bat
 if errorlevel 1 exit /b %errorlevel%
 
@@ -10,9 +14,6 @@ if errorlevel 1 exit /b %errorlevel%
 python -m pip install pyinstaller==6.22.2 pyinstaller-hooks-contrib==2026.7
 if errorlevel 1 exit /b %errorlevel%
 
-if exist dist rmdir /s /q dist
-if exist build rmdir /s /q build
-mkdir dist\bots
 if exist assets xcopy assets dist\assets /E /I /Y >nul
 
 pyinstaller --noconfirm --clean --console --onefile --name Cari --distpath dist\bots --workpath build\Cari app\bots\cari.py
@@ -40,9 +41,6 @@ echo           dist\bots\Sunna.exe
 echo           dist\bots\Cami.exe
 echo           dist\bots\Chie.exe
 echo           dist\bots\WorldBot.exe
-echo.
-echo Abri BotManager.exe para configurar enlaces, tokens y APIs,
-echo luego toca Comenzar.
 echo ============================================
 echo.
 exit /b 0
