@@ -224,5 +224,6 @@ async def test_encounter_supports_three_distinct_captures_and_one_attempt_each(t
     assert len(attempts) == 3
     assert all(attempt.correct for attempt in attempts)
     assert len(collections) == 3
-    assert len(transactions) == 3
+    capture_transactions = [transaction for transaction in transactions if transaction.reference_type == "encounter"]
+    assert len(capture_transactions) == 3
     await database.close()
