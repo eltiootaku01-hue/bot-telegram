@@ -116,3 +116,37 @@ async def test_start_round_keeps_existing_live_round(database):
 
     assert first is not None
     assert second is None
+
+
+@pytest.mark.asyncio
+async def test_start_round_does_not_duplicate_delivery_unknown_round(database):
+    service = TriviaService()
+
+    async with database.session() as session:
+        row = TriviaRound(
+            chat_id=-100,
+            question="ambigua",
+            options='["a", "b"]',
+            answer_index=0,
+            explanation="",
+            points=10,
+            status="delivery_unknown",
+            expires_at=utc_now() + timedelta(seconds=60),
+            message_id=None,
+        )
+        session.add(row)
+
+    async with database.session(write=True) as session:
+        created = await service.start_round(session, -100)
+
+    assert created is None
+
+    async with database.session() as session:
+        stored = await session.scalar(
+            select(TriviaRound).where(
+                TriviaRound.chat_id == -100,
+                TriviaRound.status == "delivery_unknown",
+            )
+        )
+
+    assert stored is not None
