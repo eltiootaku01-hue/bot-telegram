@@ -15,7 +15,7 @@ def test_art_registry_is_deterministic_and_character_specific() -> None:
 
 def test_art_registry_rejects_unknown_character() -> None:
     class_art = rarity_art_candidates_for("yor-forger", "SS")
-    assert class_art[0] == "assets/waifus/yor-forger--class-ss.png"
+    assert class_art[0] == "assets/production/cards/yor-forger--class-ss.jpg"
 
     try:
         art_path_for("not-a-character")
