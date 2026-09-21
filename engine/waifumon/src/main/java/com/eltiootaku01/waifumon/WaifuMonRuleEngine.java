@@ -210,29 +210,29 @@ public final class WaifuMonRuleEngine {
             ? payload.path("potential_seed").asText()
             : "preview-neutral";
 
-        int foundation = 45 + pyRound((powerScore * 0.55);
+        int foundation = 45 + pyRound(powerScore * 0.55);
         double rarityScale = rarityScale(rarity);
-        int maxHp = pyRound((foundation * 2.20 * rarityScale);
-        int strength = pyRound((foundation * 0.55 * rarityScale);
-        int defense = pyRound((foundation * 0.50 * rarityScale);
-        int speed = pyRound((foundation * 0.50 * rarityScale);
-        int healing = pyRound(((10 + foundation * 0.16) * rarityScale));
-        int special = pyRound((foundation * 0.60 * rarityScale);
-        int fire = pyRound((foundation * 0.55 * rarityScale);
+        int maxHp = pyRound(foundation * 2.20 * rarityScale);
+        int strength = pyRound(foundation * 0.55 * rarityScale);
+        int defense = pyRound(foundation * 0.50 * rarityScale);
+        int speed = pyRound(foundation * 0.50 * rarityScale);
+        int healing = pyRound((10 + foundation * 0.16) * rarityScale);
+        int special = pyRound(foundation * 0.60 * rarityScale);
+        int fire = pyRound(foundation * 0.55 * rarityScale);
         int critical = Math.max(
             1,
-            pyRound(((4 + foundation * 0.04) * (0.8 + 0.2 * rarityScale)))
+            pyRound((4 + foundation * 0.04) * (0.8 + 0.2 * rarityScale))
         );
 
         double levelFactor = 1.0 + (level - 1) * 0.038;
-        maxHp = Math.max(1, pyRound((maxHp * levelFactor * (1.0 + variation(seed, "max_hp"))));
-        strength = Math.max(1, pyRound((strength * levelFactor * (1.0 + variation(seed, "strength"))));
-        defense = Math.max(1, pyRound((defense * levelFactor * (1.0 + variation(seed, "defense"))));
-        speed = Math.max(1, pyRound((speed * levelFactor * (1.0 + variation(seed, "speed"))));
-        healing = Math.max(1, pyRound((healing * levelFactor * (1.0 + variation(seed, "healing"))));
-        special = Math.max(1, pyRound((special * levelFactor * (1.0 + variation(seed, "special"))));
-        fire = Math.max(1, pyRound((fire * levelFactor * (1.0 + variation(seed, "fire"))));
-        critical = Math.max(1, pyRound((critical * levelFactor * (1.0 + variation(seed, "critical"))));
+        maxHp = Math.max(1, pyRound(maxHp * levelFactor * (1.0 + variation(seed, "max_hp"))));
+        strength = Math.max(1, pyRound(strength * levelFactor * (1.0 + variation(seed, "strength"))));
+        defense = Math.max(1, pyRound(defense * levelFactor * (1.0 + variation(seed, "defense"))));
+        speed = Math.max(1, pyRound(speed * levelFactor * (1.0 + variation(seed, "speed"))));
+        healing = Math.max(1, pyRound(healing * levelFactor * (1.0 + variation(seed, "healing"))));
+        special = Math.max(1, pyRound(special * levelFactor * (1.0 + variation(seed, "special"))));
+        fire = Math.max(1, pyRound(fire * levelFactor * (1.0 + variation(seed, "fire"))));
+        critical = Math.max(1, pyRound(critical * levelFactor * (1.0 + variation(seed, "critical"))));
 
         String style = styleForElement(element);
         switch (style) {
@@ -303,6 +303,7 @@ public final class WaifuMonRuleEngine {
             request.requestId(), "stats_result", result, 0L, List.of(), List.of()
         );
     }
+
 
     private EngineResponse styleResolve(EngineRequest request) {
         String element = requiredText(request.payload(), "element");
