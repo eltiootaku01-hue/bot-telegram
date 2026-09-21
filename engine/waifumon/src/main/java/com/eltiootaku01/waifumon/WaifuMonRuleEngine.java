@@ -20,13 +20,28 @@ public final class WaifuMonRuleEngine {
     };
 
     private final ObjectMapper mapper;
+    private final java.util.Map<String, CachedResponse> idempotencyCache =
+        new java.util.LinkedHashMap<>(256, 0.75f, true);
 
     public WaifuMonRuleEngine(ObjectMapper mapper) {
         this.mapper = mapper;
     }
 
-    public EngineResponse execute(EngineRequest request) {
-        return switch (request.command()) {
+    public synchronized EngineResponse execute(EngineRequest request) {
+        String fingerprint = request.command() + "|" + request.payload().toString();
+        CachedResponse cached = idempotencyCache.get(request.idempotencyKey());
+        if (cached != null) {
+            if (!cached.fingerprint().equals(fingerprint)) {
+                return EngineResponse.failure(
+                    request.requestId(),
+                    "IDEMPOTENCY_CONFLICT",
+                    "Idempotency key was already used with a different request"
+                );
+            }
+            return cached.responseFor(request.requestId());
+        }
+
+        EngineResponse response = switch (request.command()) {
             case "gacha.roll" -> gachaRoll(request);
             case "combat.resolve" -> combatResolve(request);
             case "progression.resolve" -> progressionResolve(request);
@@ -36,6 +51,31 @@ public final class WaifuMonRuleEngine {
                 "Unsupported command: " + request.command()
             );
         };
+        putCached(request.idempotencyKey(), fingerprint, response);
+        return response;
+    }
+
+    private void putCached(String key, String fingerprint, EngineResponse response) {
+        idempotencyCache.put(key, new CachedResponse(fingerprint, response));
+        while (idempotencyCache.size() > 10_000) {
+            idempotencyCache.remove(idempotencyCache.keySet().iterator().next());
+        }
+    }
+
+    private record CachedResponse(String fingerprint, EngineResponse response) {
+        private EngineResponse responseFor(String requestId) {
+            return new EngineResponse(
+                requestId,
+                response.success(),
+                response.resultType(),
+                response.payload() == null ? null : response.payload().deepCopy(),
+                response.stateVersion(),
+                response.eventIds(),
+                response.rewardIds(),
+                response.errorCode(),
+                response.errorMessage()
+            );
+        }
     }
 
     private EngineResponse gachaRoll(EngineRequest request) {
