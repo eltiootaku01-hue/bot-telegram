@@ -70,3 +70,44 @@ def test_card_art_prompt_manifest_tracks_only_known_tiers() -> None:
     )
     allowed = {CardArtTier.CLOSE_UP.value, "S", "SR", "UR"}
     assert {item["framing_profile"] for item in data["items"]} <= allowed
+
+
+def test_card_art_prompt_export_rejects_ur_holo_without_adult_gate(tmp_path: Path) -> None:
+    output = tmp_path / "blocked.md"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/export_card_art_prompts.py",
+            "--character-id",
+            "asuna-yuuki",
+            "--variant",
+            "ur-alt-holo",
+            "--output",
+            str(output),
+        ],
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode != 0
+    assert "adult_eligible=true" in result.stderr
+
+
+def test_card_art_prompt_export_supports_variant_metadata_for_normal(tmp_path: Path) -> None:
+    output = tmp_path / "normal.md"
+    subprocess.run(
+        [
+            sys.executable,
+            "tools/export_card_art_prompts.py",
+            "--character-id",
+            "asuna-yuuki",
+            "--variant",
+            "normal",
+            "--output",
+            str(output),
+        ],
+        check=True,
+    )
+    markdown = output.read_text(encoding="utf-8")
+    assert "Variante exportada: normal." in markdown
+    assert "Variantes soportadas: normal, ur-alt-holo" in markdown
