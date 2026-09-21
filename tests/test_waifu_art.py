@@ -32,7 +32,7 @@ def test_variant_art_registry_supports_normal_and_shiny_assets() -> None:
     shiny = variant_art_candidates_for("yor-forger", "shiny")
 
     assert normal[0] == "assets/production/cards/yor-forger--normal.jpg"
-    assert shiny[0] == "assets/waifus/yor-forger--shiny.png"
+    assert shiny[0] == "assets/production/cards/yor-forger--shiny.jpg"
 
 
 def test_variant_art_registry_rejects_unknown_variant() -> None:
