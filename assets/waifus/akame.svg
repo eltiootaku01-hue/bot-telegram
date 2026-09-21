@@ -1,1 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="680"><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17313b"/><stop offset="1" stop-color="#090c14"/></linearGradient></defs><rect x="8" y="8" width="464" height="664" rx="28" fill="url(#b)" stroke="#65cbd3" stroke-width="8"/><text x="34" y="52" fill="#d8ffff" font-size="20" font-family="Arial" font-weight="700">WAIFUMON • CARTA 24</text><text x="446" y="52" text-anchor="end" fill="#65cbd3" font-size="26" font-family="Arial" font-weight="700">SR</text><circle cx="240" cy="340" r="138" fill="#0a0d14" opacity=".45"/><path d="M145 340 Q150 215 240 190 Q330 215 335 340 L320 425 Q240 470 160 425Z" fill="#8c6b58"/><ellipse cx="240" cy="340" rx="86" ry="112" fill="#f2d1bd"/><path d="M152 312 Q165 205 240 184 Q315 205 328 312 Q284 265 240 282 Q196 265 152 312Z" fill="#8c6b58"/><path d="M170 430 Q240 395 310 430 L345 535 L135 535Z" fill="#65cbd3"/><ellipse cx="205" cy="336" rx="12" ry="16" fill="#8de58e"/><ellipse cx="275" cy="336" rx="12" ry="16" fill="#8de58e"/><circle cx="208" cy="339" r="5"/><circle cx="278" cy="339" r="5"/><path d="M216 386 Q240 400 264 386" fill="none" stroke="#9e5c66" stroke-width="5" stroke-linecap="round"/><circle cx="335" cy="250" r="24" fill="#65cbd3"/><text x="335" y="258" text-anchor="middle" fill="#d8ffff" font-size="20" font-family="Arial">✦</text><rect x="32" y="555" width="416" height="80" rx="18" fill="#0a0d14" stroke="#65cbd3" stroke-width="2"/><text x="48" y="585" fill="#fff" font-size="22" font-family="Arial" font-weight="700">Akame</text><text x="48" y="612" fill="#d8ffff" font-size="13" font-family="Arial">Akame ga Kill!</text><text x="330" y="585" fill="#65cbd3" font-size="20" font-family="Arial" font-weight="700">CLASE A</text><text x="330" y="612" fill="#d8ffff" font-size="12" font-family="Arial">ARTE ORIGINAL</text><text x="240" y="657" text-anchor="middle" fill="#aab3c7" font-size="11" font-family="Arial">VISUAL NO CANÓNICO • V1</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#090d18"/><stop offset=".42" stop-color="#2a0f19"/><stop offset="1" stop-color="#0b1424"/></linearGradient>
+<radialGradient id="r" cx=".5" cy=".38" r=".65"><stop stop-color="#c83c58" stop-opacity=".28"/><stop offset=".6" stop-color="#5b182b" stop-opacity=".12"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#121b28"/><stop offset=".5" stop-color="#30465a"/><stop offset="1" stop-color="#10141c"/></linearGradient>
+<linearGradient id="dress" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#253144"/><stop offset=".5" stop-color="#141b27"/><stop offset="1" stop-color="#090e16"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#d8a363" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#r)"/>
+<text x="52" y="78" fill="#fff1dd" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#e4b26b" font-family="Arial" font-size="32" font-weight="800">UR</text>
+<text x="52" y="112" fill="#d8c9bc" font-family="Arial" font-size="13" letter-spacing="3">AKAME • CUERPO COMPLETO • 100%+ • NOCHE</text>
+
+<g fill="none" stroke="#a4b8c8" opacity=".25">
+<path d="M88 170 Q150 110 212 170"/><path d="M510 170 Q572 110 634 170"/>
+<path d="M86 850 Q360 950 634 850"/>
+</g>
+
+<!-- moon -->
+<circle cx="574" cy="225" r="74" fill="#dce7ef" opacity=".12"/>
+<circle cx="598" cy="205" r="74" fill="#0b1220"/>
+
+<g stroke="#0b1118" stroke-width="9" stroke-linejoin="round">
+<path d="M229 414 Q207 260 268 177 Q357 70 468 165 Q541 228 514 418 Q497 535 445 608 L274 608 Q216 526 229 414Z" fill="url(#hair)"/>
+<path d="M269 239 Q359 165 451 238 L457 362 Q440 444 359 472 Q279 444 261 361Z" fill="#f0d0bf"/>
+<path d="M256 250 Q286 151 366 149 Q450 151 469 250 Q430 213 405 239 Q371 190 339 239 Q299 206 256 250Z" fill="url(#hair)"/>
+<path d="M274 227 Q252 338 280 443" fill="none" stroke="#526d83" stroke-width="10"/>
+<path d="M445 225 Q468 338 439 443" fill="none" stroke="#526d83" stroke-width="10"/>
+<ellipse cx="320" cy="337" rx="13" ry="19" fill="#8b1f32"/><ellipse cx="399" cy="337" rx="13" ry="19" fill="#8b1f32"/>
+<circle cx="323" cy="331" r="5" fill="#ffe9c1" stroke="none"/><circle cx="402" cy="331" r="5" fill="#ffe9c1" stroke="none"/>
+<path d="M338 401 Q359 412 380 401" fill="none" stroke="#9f5c68" stroke-width="5"/>
+
+<!-- dark uniform -->
+<path d="M286 452 Q359 425 434 452 L482 706 Q438 765 359 780 Q281 764 237 706Z" fill="url(#dress)"/>
+<path d="M314 458 L359 509 L405 458" fill="none" stroke="#b72d43" stroke-width="8"/>
+<path d="M359 509 L359 729" stroke="#4e6276" stroke-width="5"/>
+
+<!-- arms and sword -->
+<path d="M286 474 Q233 513 188 592 Q172 622 193 642 Q217 662 240 633 L321 542" fill="#1a2432"/>
+<path d="M431 474 Q487 513 531 595 Q548 624 527 642 Q503 662 480 635 L398 542" fill="#1a2432"/>
+<path d="M531 590 L652 290 L666 297 L545 605Z" fill="#dce6ec"/>
+<path d="M656 291 L674 265 L640 277 L630 295Z" fill="#d6a158"/>
+<path d="M246 696 Q359 731 472 696 L507 840 Q438 890 359 898 Q281 889 212 840Z" fill="#111925"/>
+
+<!-- legs -->
+<path d="M291 829 L345 832 L331 950 Q319 974 293 964 L269 942Z" fill="#eed0bd"/>
+<path d="M375 832 L429 829 L454 942 Q444 966 418 965 L396 945Z" fill="#eed0bd"/>
+<path d="M269 941 L333 941 L342 978 L286 984 L251 968Z" fill="#0b111a"/>
+<path d="M397 944 L454 941 L474 970 L431 985 L401 969Z" fill="#0b111a"/>
+</g>
+
+<g fill="#d6a158" opacity=".85">
+<circle cx="118" cy="410" r="5"/><circle cx="604" cy="454" r="4"/><circle cx="148" cy="702" r="3"/><circle cx="582" cy="704" r="5"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#090e16" opacity=".94" stroke="#d8a363" stroke-width="2"/>
+<text x="64" y="929" fill="#fff1dd" font-family="Arial" font-size="22" font-weight="700">Akame</text>
+<text x="64" y="952" fill="#cfbfb4" font-family="Arial" font-size="12">Akame ga Kill! • UR visual • cuerpo completo • espada</text>
+<text x="656" y="929" text-anchor="end" fill="#e4b26b" font-family="Arial" font-size="14" font-weight="700">SILENCIO / ACERO</text>
+<text x="656" y="952" text-anchor="end" fill="#cfbfb4" font-family="Arial" font-size="11">luna • sombras • dirección unitaria</text>
+</svg>
