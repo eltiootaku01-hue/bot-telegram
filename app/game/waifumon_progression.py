@@ -225,7 +225,6 @@ def level_floor_for_class(waifumon_class: WaifuMonClass) -> int:
 def promotion_message(from_class: WaifuMonClass, to_class: WaifuMonClass) -> str:
     return (
         f"✨ Evolución WaifuMon: <b>{from_class.value}</b> → "
-        f"<b>{to_class.value}</b>.
-"
+        f"<b>{to_class.value}</b>.\n"
         "Nuevo diseño desbloqueado y estadísticas de la nueva clase."
     )
