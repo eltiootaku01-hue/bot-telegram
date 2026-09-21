@@ -1,1 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="680"><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#3a2711"/><stop offset="1" stop-color="#090c14"/></linearGradient></defs><rect x="8" y="8" width="464" height="664" rx="28" fill="url(#b)" stroke="#d39b3d" stroke-width="8"/><text x="34" y="52" fill="#fff0b5" font-size="20" font-family="Arial" font-weight="700">WAIFUMON • CARTA 21</text><text x="446" y="52" text-anchor="end" fill="#d39b3d" font-size="26" font-family="Arial" font-weight="700">SR</text><circle cx="240" cy="340" r="138" fill="#0a0d14" opacity=".45"/><path d="M145 340 Q150 215 240 190 Q330 215 335 340 L320 425 Q240 470 160 425Z" fill="#d8af4d"/><ellipse cx="240" cy="340" rx="86" ry="112" fill="#f2d1bd"/><path d="M152 312 Q165 205 240 184 Q315 205 328 312 Q284 265 240 282 Q196 265 152 312Z" fill="#d8af4d"/><path d="M170 430 Q240 395 310 430 L345 535 L135 535Z" fill="#d39b3d"/><ellipse cx="205" cy="336" rx="12" ry="16" fill="#f5f7ff"/><ellipse cx="275" cy="336" rx="12" ry="16" fill="#f5f7ff"/><circle cx="208" cy="339" r="5"/><circle cx="278" cy="339" r="5"/><path d="M216 386 Q240 400 264 386" fill="none" stroke="#9e5c66" stroke-width="5" stroke-linecap="round"/><circle cx="335" cy="250" r="24" fill="#d39b3d"/><text x="335" y="258" text-anchor="middle" fill="#fff0b5" font-size="20" font-family="Arial">✦</text><rect x="32" y="555" width="416" height="80" rx="18" fill="#0a0d14" stroke="#d39b3d" stroke-width="2"/><text x="48" y="585" fill="#fff" font-size="22" font-family="Arial" font-weight="700">Tsunade</text><text x="48" y="612" fill="#fff0b5" font-size="13" font-family="Arial">Naruto</text><text x="330" y="585" fill="#d39b3d" font-size="20" font-family="Arial" font-weight="700">CLASE SS</text><text x="330" y="612" fill="#fff0b5" font-size="12" font-family="Arial">ARTE ORIGINAL</text><text x="240" y="657" text-anchor="middle" fill="#aab3c7" font-size="11" font-family="Arial">VISUAL NO CANÓNICO • V1</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#18271e"/><stop offset=".5" stop-color="#58734a"/><stop offset="1" stop-color="#101a1a"/></linearGradient>
+<radialGradient id="g" cx=".5" cy=".3" r=".68"><stop stop-color="#dff0c4" stop-opacity=".3"/><stop offset=".58" stop-color="#a5c06e" stop-opacity=".09"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d7d3ba"/><stop offset=".52" stop-color="#b7ad83"/><stop offset="1" stop-color="#756d50"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#d4e6ad" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#g)"/>
+<text x="52" y="78" fill="#f2fae4" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#d9ecae" font-family="Arial" font-size="32" font-weight="800">UR</text>
+<text x="52" y="112" fill="#cedcc3" font-family="Arial" font-size="13" letter-spacing="3">TSUNADE • CUERPO COMPLETO • 100%+ • FUERZA / MEDICINA</text>
+
+<g stroke="#cde6a9" opacity=".35">
+<path d="M82 190 H638"/><path d="M92 225 H628"/><path d="M78 860 Q360 930 642 860"/>
+</g>
+
+<g stroke="#151a13" stroke-width="9" stroke-linejoin="round">
+<path d="M210 412 Q196 256 264 177 Q356 72 468 166 Q543 232 514 420 Q497 536 445 608 L275 608 Q215 526 210 412Z" fill="url(#hair)"/>
+<path d="M269 239 Q359 165 451 238 L457 362 Q439 445 359 472 Q279 445 261 361Z" fill="#f2d2c0"/>
+<path d="M256 250 Q285 151 366 149 Q450 151 470 250 Q430 214 405 239 Q371 191 339 239 Q299 206 256 250Z" fill="url(#hair)"/>
+<path d="M274 228 Q251 338 280 444" fill="none" stroke="#e9e0be" stroke-width="10"/>
+<path d="M445 226 Q468 338 439 444" fill="none" stroke="#e9e0be" stroke-width="10"/>
+<ellipse cx="320" cy="337" rx="13" ry="19" fill="#4b6951"/><ellipse cx="399" cy="337" rx="13" ry="19" fill="#4b6951"/>
+<circle cx="323" cy="331" r="5" fill="#fff" stroke="none"/><circle cx="402" cy="331" r="5" fill="#fff" stroke="none"/>
+<path d="M338 401 Q359 412 380 401" fill="none" stroke="#a15f70" stroke-width="5"/>
+
+<path d="M286 452 Q359 426 434 452 L482 705 Q438 764 359 780 Q281 764 237 705Z" fill="#dce4d7"/>
+<path d="M314 458 L359 512 L405 458" fill="none" stroke="#7f9469" stroke-width="8"/>
+<path d="M359 512 L359 729" stroke="#a3b292" stroke-width="5"/>
+
+<!-- powerful stance -->
+<path d="M286 478 Q223 496 165 553 Q147 573 161 596 Q176 620 202 604 L315 535" fill="#dbe4d8"/>
+<path d="M432 478 Q493 496 555 548 Q577 568 561 593 Q543 616 515 598 L397 535" fill="#dbe4d8"/>
+
+<!-- fists -->
+<path d="M155 554 Q129 557 123 582 Q121 608 145 619 Q171 626 189 605 L179 579Z" fill="#f0d0bd"/>
+<path d="M555 549 Q580 553 590 576 Q596 602 570 615 Q544 622 529 598 L538 575Z" fill="#f0d0bd"/>
+
+<!-- medical seal -->
+<circle cx="359" cy="620" r="46" fill="none" stroke="#79a35e" stroke-width="7"/>
+<path d="M359 588 V652 M327 620 H391" stroke="#79a35e" stroke-width="9"/>
+<circle cx="359" cy="620" r="12" fill="#c6e0a4"/>
+
+<!-- skirt/legs -->
+<path d="M240 694 Q359 730 478 694 L512 814 Q439 868 359 877 Q278 868 207 814Z" fill="#4d6b4c"/>
+<path d="M289 827 L343 832 L329 950 Q318 974 293 964 L268 942Z" fill="#f1ceb9"/>
+<path d="M375 832 L429 827 L455 942 Q444 966 419 964 L398 944Z" fill="#f1ceb9"/>
+<path d="M268 940 L332 941 L341 978 L286 984 L251 968Z" fill="#edf3e7"/>
+<path d="M398 944 L455 940 L475 970 L431 985 L401 969Z" fill="#edf3e7"/>
+</g>
+
+<g fill="#d8efa9">
+<circle cx="110" cy="370" r="5"/><circle cx="607" cy="386" r="4"/><circle cx="144" cy="712" r="4"/><circle cx="585" cy="716" r="5"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#0b1410" opacity=".94" stroke="#d4e6ad" stroke-width="2"/>
+<text x="64" y="929" fill="#f1fae5" font-family="Arial" font-size="22" font-weight="700">Tsunade</text>
+<text x="64" y="952" fill="#cbd9c1" font-family="Arial" font-size="12">Naruto • UR visual • cuerpo completo • fuerza y medicina</text>
+<text x="656" y="929" text-anchor="end" fill="#d9ecae" font-family="Arial" font-size="14" font-weight="700">FUERZA</text>
+<text x="656" y="952" text-anchor="end" fill="#cbd9c1" font-family="Arial" font-size="11">sello médico • puños • entrenamiento • dirección unitaria</text>
+</svg>
