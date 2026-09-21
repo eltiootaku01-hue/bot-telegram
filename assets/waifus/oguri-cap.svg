@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#10221b"/><stop offset=".52" stop-color="#507b5a"/><stop offset="1" stop-color="#0f1720"/></linearGradient>
+<radialGradient id="s" cx=".5" cy=".2" r=".7"><stop stop-color="#d9f4cf" stop-opacity=".32"/><stop offset=".55" stop-color="#a1d68e" stop-opacity=".1"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dce9f3"/><stop offset=".55" stop-color="#adc0d0"/><stop offset="1" stop-color="#6c8296"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#cce7a9" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#s)"/>
+<text x="52" y="78" fill="#efffea" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#cce7a9" font-family="Arial" font-size="32" font-weight="800">UR</text>
+<text x="52" y="112" fill="#cadbc5" font-family="Arial" font-size="13" letter-spacing="3">OGURI CAP • CUERPO COMPLETO • 100%+</text>
+
+<g stroke="#18201b" stroke-width="9" stroke-linejoin="round">
+<path d="M215 412 Q196 252 265 171 Q355 65 468 166 Q545 230 514 417 Q498 533 445 606 L274 606 Q216 523 215 412Z" fill="url(#hair)"/>
+<path d="M268 238 Q359 164 451 238 L456 362 Q439 445 359 472 Q279 444 261 361Z" fill="#f2d5c3"/>
+<path d="M256 251 Q285 151 367 149 Q450 151 470 251 Q430 214 405 239 Q371 191 339 239 Q299 207 256 251Z" fill="url(#hair)"/>
+<path d="M274 228 Q251 338 280 443" fill="none" stroke="#eef8ff" stroke-width="10"/>
+<path d="M445 226 Q468 338 439 443" fill="none" stroke="#eef8ff" stroke-width="10"/>
+<ellipse cx="320" cy="338" rx="13" ry="19" fill="#4e6b50"/><ellipse cx="399" cy="338" rx="13" ry="19" fill="#4e6b50"/>
+<circle cx="323" cy="331" r="5" fill="#fff" stroke="none"/><circle cx="402" cy="331" r="5" fill="#fff" stroke="none"/>
+<path d="M338 401 Q359 412 380 401" fill="none" stroke="#9f6070" stroke-width="5"/>
+
+<!-- athletic race uniform -->
+<path d="M286 452 Q359 426 434 452 L481 700 Q438 762 359 779 Q281 762 238 700Z" fill="#f0efe8"/>
+<path d="M314 459 L359 512 L405 459" fill="none" stroke="#4f805b" stroke-width="8"/>
+<path d="M359 512 L359 731" stroke="#80a78b" stroke-width="5"/>
+<path d="M278 486 Q222 526 182 599 Q167 628 189 648 Q213 668 237 638 L321 545" fill="#eef0e9"/>
+<path d="M432 486 Q489 526 532 598 Q550 627 528 648 Q504 667 480 638 L398 545" fill="#eef0e9"/>
+
+<!-- race gesture -->
+<path d="M192 598 L150 515 L171 504 L216 587Z" fill="#d5e4d8"/>
+<path d="M150 515 L133 494 L164 496 L177 507Z" fill="#e4c86d"/>
+<path d="M526 594 L568 511 L590 522 L545 610Z" fill="#d5e4d8"/>
+<path d="M568 511 L585 488 L555 496 L548 516Z" fill="#e4c86d"/>
+
+<path d="M245 691 Q359 725 474 691 L494 814 Q433 863 359 870 Q286 861 226 814Z" fill="#3e6547"/>
+<path d="M294 806 L342 811 L329 951 Q317 973 294 963 L270 942Z" fill="#f2d0bd"/>
+<path d="M378 811 L426 806 L452 942 Q442 966 419 964 L398 944Z" fill="#f2d0bd"/>
+<path d="M270 940 L331 941 L341 976 L286 984 L252 968Z" fill="#e5efe7"/>
+<path d="M398 944 L452 941 L474 969 L432 984 L401 969Z" fill="#e5efe7"/>
+</g>
+
+<g fill="#d9efc8">
+<path d="M111 736 l11 21 23 3 -17 15 5 22 -22-12 -21 12 5-22 -17-15 23-3z"/>
+<path d="M584 724 l9 18 21 3 -15 13 4 20 -19-11 -18 11 4-20 -15-13 21-3z"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#0b1410" opacity=".94" stroke="#cce7a9" stroke-width="2"/>
+<text x="64" y="929" fill="#efffea" font-family="Arial" font-size="22" font-weight="700">Oguri Cap</text>
+<text x="64" y="952" fill="#cfe0ca" font-family="Arial" font-size="12">Cuerpo completo • UR visual • energía de carrera</text>
+<text x="656" y="929" text-anchor="end" fill="#cce7a9" font-family="Arial" font-size="14" font-weight="700">VELOCIDAD</text>
+<text x="656" y="952" text-anchor="end" fill="#cfe0ca" font-family="Arial" font-size="11">verde / blanco • dirección unitaria</text>
+</svg>
