@@ -428,7 +428,20 @@
           "approved": true,
           "production_file": "assets/production/cards/alisa-kujo--normal.jpg",
           "adult_gate_required": false,
-          "variant_policy": "canonical non-explicit"
+          "variant_policy": "canonical non-explicit",
+          "reviewer": "OpenAI visual QA",
+          "reviewed_at": "2026-09-21T17:49:00-03:00",
+          "checks": {
+            "anatomy": true,
+            "hands_and_fingers": true,
+            "limbs_and_joints": true,
+            "face_and_identity": true,
+            "perspective": true,
+            "crop_and_framing": true,
+            "wardrobe_and_style": true,
+            "no_explicit_content": true,
+            "adult_gate_consistent": true
+          }
         }
       ]
     },
