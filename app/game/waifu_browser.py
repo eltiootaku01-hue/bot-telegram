@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from app.game.art_progression import art_frame_for
 from app.game.catalog import CHARACTERS
 from app.game.models import Character
 from app.game.waifumon_progression import stats_for_character, class_band_for_level
@@ -178,7 +179,8 @@ def render_detail(character: Character, *, owned_level: int | None = None) -> st
             f"📺 {character.anime}",
             "",
             evolution_line,
-            f"🎨 Arte: <b>{stats.waifumon_class.value}</b> · {band.visible_percent} del personaje visible · arte evolutivo",
+            f"🎨 Arte: carta <b>{character.card_tier.value}</b> · {art_frame_for(card_tier=character.card_tier).visible_percent}",
+            f"🧬 Arte evolutivo: <b>{stats.waifumon_class.value}</b> · {band.visible_percent} del personaje visible",
             f"🥊 Estilo de pelea: <b>{stats.style.value}</b>",
             "",
             f"❤️ Vida: <b>{stats.max_hp}</b>",
@@ -193,7 +195,7 @@ def render_detail(character: Character, *, owned_level: int | None = None) -> st
             f"🏷️ Carta: <b>{character.card_tier.value}</b>",
             f"💠 Clase: <b>{character.rarity.value}</b> · rareza de combate",
             f"🌟 Elemento: <b>{character.element.value}</b>",
-            f"⚡ Poder de balance del catálogo: <b>{character.power_score}/100</b>",
+            f"⚡ Poder de balance: <b>{character.power_score}/100</b> · catálogo",
             f"⭐ Popularidad normalizada: <b>{character.popularity_score}/100</b>",
             f"📊 Ranking de referencia: <b>{ranking}</b>",
             f"📚 Procedencia: {source_label(character)}",
