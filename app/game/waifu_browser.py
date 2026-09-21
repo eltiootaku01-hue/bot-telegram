@@ -6,6 +6,7 @@ from enum import StrEnum
 from app.game.art_progression import art_frame_for
 from app.game.catalog import CHARACTERS
 from app.game.models import Character
+from app.game.waifumon_progression import stats_for_character, waifumon_class_for_level, level_cap_for_class, class_band_for_level
 from app.game.waifu_catalog import ANIME_CORNER_2025_SOURCE, RANKER_2026_SOURCE
 
 
@@ -154,26 +155,50 @@ def source_label(character: Character) -> str:
     return "Catálogo inicial del proyecto"
 
 
-def render_detail(character: Character) -> str:
+def render_detail(character: Character, *, owned_level: int | None = None) -> str:
+    level = owned_level or 1
+    stats = stats_for_character(character, level)
+    band = class_band_for_level(level)
+    next_class = (
+        class_band_for_level(band.max_level + 1).waifumon_class.value
+        if band.max_level < 30
+        else None
+    )
     ranking = (
         f"#{character.popularity_rank}"
         if character.popularity_rank is not None
         else "sin ranking externo"
+    )
+    evolution_line = (
+        f"🧬 WaifuMon: <b>{stats.waifumon_class.value}</b> · Nv.{stats.level}/30"
+        + (f" · próxima clase: <b>{next_class}</b> al nivel {band.max_level + 1}" if next_class else " · clase máxima")
     )
     return "\n".join(
         (
             f"🎴 <b>{character.name}</b>",
             f"📺 {character.anime}",
             "",
+            evolution_line,
+            f"🎨 Arte evolutivo: <b>{stats.waifumon_class.value}</b> · {band.visible_percent} del personaje visible",
+            f"🥊 Estilo de pelea: <b>{stats.style.value}</b>",
+            "",
+            f"❤️ Vida: <b>{stats.max_hp}</b>",
+            f"💪 Fuerza: <b>{stats.strength}</b>",
+            f"🛡️ Dureza: <b>{stats.defense}</b>",
+            f"💨 Velocidad: <b>{stats.speed}</b>",
+            f"💚 Curación: <b>{stats.healing}</b>",
+            f"✨ Poder especial: <b>{stats.special_power}</b>",
+            f"🔥 Habilidad de fuego: <b>{stats.fire_skill}</b>",
+            f"🎯 Crítico: <b>{stats.critical_rate}%</b>",
+            "",
             f"🏷️ Carta: <b>{character.card_tier.value}</b>",
-            f"🎨 Arte: <b>{art_frame_for(card_tier=character.card_tier).tier.value}</b> · {art_frame_for(card_tier=character.card_tier).visible_percent}",
-            f"💠 Clase: <b>{character.rarity.value}</b>",
+            f"💠 Rareza de combate: <b>{character.rarity.value}</b>",
             f"🌟 Elemento: <b>{character.element.value}</b>",
-            f"⚡ Poder de balance: <b>{character.power_score}/100</b>",
+            f"⚡ Poder de balance del catálogo: <b>{character.power_score}/100</b>",
             f"⭐ Popularidad normalizada: <b>{character.popularity_score}/100</b>",
             f"📊 Ranking de referencia: <b>{ranking}</b>",
             f"📚 Procedencia: {source_label(character)}",
             "",
-            "El poder es balance local del juego; la popularidad es una escala derivada de la fuente y no un porcentaje universal.",
+            "La clase WaifuMon evoluciona por nivel; la rareza D–SSS y el tier de carta son sistemas independientes.",
         )
     )
