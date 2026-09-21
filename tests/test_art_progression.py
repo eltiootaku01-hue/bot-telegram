@@ -35,10 +35,11 @@ def test_four_visual_card_tiers_are_deterministic(tier, visible):
         (5, "chibi"),
         (6, "anime"),
         (10, "anime"),
-        (11, "anime"),
+        (11, "anime premium"),
         (20, "anime premium"),
         (21, "anime premium"),
         (25, "anime premium"),
+        (30, "anime premium"),
     ],
 )
 def test_art_progression_is_deterministic_and_safe(level, style):
@@ -47,7 +48,7 @@ def test_art_progression_is_deterministic_and_safe(level, style):
     assert "ropa" in stage.outfit.casefold() or "vestuario" in stage.outfit.casefold()
 
 
-@pytest.mark.parametrize("level", [0, 26])
+@pytest.mark.parametrize("level", [0, 31])
 def test_art_progression_rejects_out_of_range_levels(level):
     with pytest.raises(ValueError):
         art_stage_for_level(level)
