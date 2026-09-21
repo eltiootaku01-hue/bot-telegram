@@ -9,6 +9,7 @@ def game_hub_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🎒 Inventario", callback_data="game:inventory:open"),
     )
     builder.row(InlineKeyboardButton(text="📚 Catálogo de waifus", callback_data="game:waifus:page:1"))
+    builder.row(InlineKeyboardButton(text="🎴 Mis cartas", callback_data="game:cards:page:1"))
     builder.row(
         InlineKeyboardButton(text="⚔️ Combate", callback_data="game:combat:open"),
         InlineKeyboardButton(text="📡 Waifu Detector", callback_data="game:detector:open"),
@@ -304,4 +305,42 @@ def item_consume_keyboard(item_key: str, characters) -> InlineKeyboardMarkup:
             )
         )
     builder.adjust(2)
+    return builder.as_markup()
+
+
+
+def cards_keyboard(rows, page: int, total_pages: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for row in rows:
+        label = f"🎴 {row.card_tier} · {row.variant} · ×{row.copies}"
+        builder.add(
+            InlineKeyboardButton(
+                text=label[:40],
+                callback_data=f"game:card:pick:{row.id}",
+            )
+        )
+    if rows:
+        builder.adjust(1)
+
+    navigation = []
+    if page > 1:
+        navigation.append(
+            InlineKeyboardButton(
+                text="⬅️",
+                callback_data=f"game:cards:page:{page - 1}",
+            )
+        )
+    if page < total_pages:
+        navigation.append(
+            InlineKeyboardButton(
+                text="➡️",
+                callback_data=f"game:cards:page:{page + 1}",
+            )
+        )
+    if navigation:
+        builder.row(*navigation)
+    builder.row(
+        InlineKeyboardButton(text="🎲 Gacha", callback_data="game:gacha:open"),
+        InlineKeyboardButton(text="🎮 Zona de juegos", callback_data="game:game_hub"),
+    )
     return builder.as_markup()
