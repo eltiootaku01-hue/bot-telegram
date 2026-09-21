@@ -58,7 +58,7 @@ Todos usan el modo premium no explícito: sin desnudez, sin exposición íntima,
 
 ## 5. QA
 
-Card Art Production `#46` terminó en `SUCCESS`.
+Card Art Production `#46` y la revalidación `#47` terminaron en `SUCCESS`.
 
 La etapa exacta:
 
@@ -68,7 +68,7 @@ produjo:
 
 `Card visual QA contract validated: 78 cards tracked, 1 canonical cards approved, 1 variants approved.`
 
-También terminaron correctamente la validación técnica de assets y los tests específicos de arte.
+También terminaron correctamente la validación técnica de assets y los tests específicos de arte. La ejecución `#47` corrió sobre el SHA que ya contiene las seis elegibilidades.
 
 ## 6. Evidencia externa de edad
 
