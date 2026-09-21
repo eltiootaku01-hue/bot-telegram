@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from app.game.art_progression import waifumon_rarity_art_visibility
+from app.game.art_progression import art_frame_for, waifumon_rarity_art_visibility
 from app.game.catalog import CHARACTERS
 from app.game.models import Character
 from app.game.waifumon_progression import evolution_band_for_level, stats_for_character
@@ -168,12 +168,14 @@ def render_detail(
         else "sin ranking externo"
     )
     rarity_art = waifumon_rarity_art_visibility(character.rarity)
+    card_frame = art_frame_for(card_tier=character.card_tier)
     lines = [
         f"🎴 <b>{character.name}</b>",
         f"📺 {character.anime}",
         "",
         f"💠 Clase WaifuMon: <b>{character.rarity.value}</b> · estadísticas de combate reales",
         f"🌟 Elemento: <b>{character.element.value}</b>",
+        f"🎨 Arte: <b>{card_frame.tier.value}</b> · {card_frame.visible_percent}",
         f"🎨 Arte de clase: hasta <b>{rarity_art}</b> de visibilidad",
         f"🏷️ Carta: <b>{character.card_tier.value}</b> · datos mínimos",
     ]
