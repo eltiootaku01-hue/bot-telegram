@@ -87,3 +87,21 @@ def test_art_prompt_spec_keeps_identity_and_unique_direction():
     assert "luz cálida" in prompt
     assert "desn" not in prompt.casefold()
     assert "sexual" not in prompt.casefold()
+
+
+def test_art_prompt_prefers_explicit_character_id_for_visual_direction() -> None:
+    from app.game.models import CardTier
+
+    prompt = art_prompt_spec(
+        character_name="Alisa Mikhailovna Kujo",
+        anime="Alya Sometimes Hides Her Feelings in Russian",
+        character_id="alisa-kujo",
+        level=25,
+        card_tier=CardTier.SR,
+        popularity_score=100,
+        power_score=42,
+    )
+
+    assert "azul hielo" in prompt
+    assert "cafetería escolar" in prompt
+    assert "Character: Alisa Mikhailovna Kujo" in prompt
