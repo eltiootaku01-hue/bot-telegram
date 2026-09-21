@@ -56,7 +56,7 @@ def save_image(tier: str, target: Path) -> None:
 def update_manifests() -> None:
     qa = json.loads(QA.read_text(encoding="utf-8"))
     art = json.loads(ART.read_text(encoding="utf-8"))
-    prompts = json.loads(PROMPT_MANIFEST.read_text(encoding="utf-8"))
+    prompts = json.loads(PROMPTS.read_text(encoding="utf-8"))
     item = next(x for x in qa["items"] if x["character_id"] == CHARACTER_ID)
     item.update({
         "approved": True,
@@ -81,7 +81,7 @@ def update_manifests() -> None:
     art["completed_items"] = qa["completed_items"]; art["progress_percent"] = qa["progress_percent"]
     p = next(x for x in prompts["items"] if x["character_id"] == CHARACTER_ID)
     p["asset_status"] = "production_approved"; p["visual_audit_status"] = "approved"
-    for path, data in ((QA,qa),(ART,art),(PROMPT_MANIFEST,prompts)):
+    for path, data in ((QA,qa),(ART,art),(PROMPTS,prompts)):
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 def write_report() -> None:
