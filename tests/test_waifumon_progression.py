@@ -3,70 +3,91 @@ import pytest
 from app.game.models import Character, Element, Rarity
 from app.game.waifumon_progression import (
     CombatStyle,
-    WaifuMonClass,
-    class_band_for_level,
+    EvolutionStage,
     combat_style_for_element,
+    evolution_band_for_level,
+    evolution_next_level,
     stats_for_character,
-    waifumon_class_for_level,
 )
 
 
-def _character(element: Element) -> Character:
+def _character(element: Element, rarity: Rarity = Rarity.B, power: int = 50) -> Character:
     return Character(
-        id=f"test-{element.value}",
+        id=f"test-{element.value}-{rarity.value}-{power}",
         name="Test Waifu",
         anime="Ciudad Animals",
-        rarity=Rarity.B,
+        rarity=rarity,
         element=element,
         popularity_score=50,
-        power_score=50,
+        power_score=power,
     )
 
 
 @pytest.mark.parametrize(
-    ("level", "expected"),
+    ("level", "stage", "next_level"),
     [
-        (1, WaifuMonClass.R),
-        (10, WaifuMonClass.R),
-        (11, WaifuMonClass.S),
-        (20, WaifuMonClass.S),
-        (21, WaifuMonClass.SR),
-        (30, WaifuMonClass.SR),
+        (1, EvolutionStage.BASE, 6),
+        (5, EvolutionStage.BASE, 6),
+        (6, EvolutionStage.EVOLUTION_1, 11),
+        (10, EvolutionStage.EVOLUTION_1, 11),
+        (11, EvolutionStage.EVOLUTION_2, 21),
+        (20, EvolutionStage.EVOLUTION_2, 21),
+        (21, EvolutionStage.EVOLUTION_3, None),
+        (30, EvolutionStage.EVOLUTION_3, None),
     ],
 )
-def test_waifumon_class_promotes_by_level(level, expected) -> None:
-    assert waifumon_class_for_level(level) is expected
+def test_level_maps_to_four_evolution_stages(level, stage, next_level) -> None:
+    band = evolution_band_for_level(level)
+    assert band.stage is stage
+    assert evolution_next_level(stage) == next_level
 
 
 @pytest.mark.parametrize("level", [0, 31])
-def test_waifumon_class_rejects_invalid_levels(level) -> None:
+def test_evolution_stage_rejects_invalid_levels(level) -> None:
     with pytest.raises(ValueError):
-        class_band_for_level(level)
+        evolution_band_for_level(level)
 
 
-def test_s_level_11_is_stronger_than_r_level_10_but_lower_than_sr_level_21() -> None:
-    character = _character(Element.NEUTRAL)
+def test_rarity_is_independent_from_level() -> None:
+    character = _character(Element.NEUTRAL, Rarity.S)
+    level_one = stats_for_character(character, 1, rarity=Rarity.S, potential_seed="fixed")
+    level_twenty = stats_for_character(character, 20, rarity=Rarity.S, potential_seed="fixed")
 
-    r10 = stats_for_character(character, 10)
-    s11 = stats_for_character(character, 11)
-    sr21 = stats_for_character(character, 21)
+    assert level_one.rarity is Rarity.S
+    assert level_twenty.rarity is Rarity.S
+    assert level_one.evolution_stage is EvolutionStage.BASE
+    assert level_twenty.evolution_stage is EvolutionStage.EVOLUTION_2
+    assert level_twenty.level == 20
+    assert level_twenty.strength > level_one.strength
 
-    assert r10.waifumon_class is WaifuMonClass.R
-    assert s11.waifumon_class is WaifuMonClass.S
-    assert sr21.waifumon_class is WaifuMonClass.SR
 
-    for field in (
-        "max_hp",
-        "strength",
-        "defense",
-        "speed",
-        "healing",
-        "special_power",
-        "fire_skill",
-        "critical_rate",
-    ):
-        assert getattr(r10, field) < getattr(s11, field)
-        assert getattr(s11, field) < getattr(sr21, field)
+def test_class_changes_stats_independently_of_level() -> None:
+    character = _character(Element.NEUTRAL, Rarity.B)
+    r20 = stats_for_character(character, 20, rarity=Rarity.D, potential_seed="fixed")
+    s20 = stats_for_character(character, 20, rarity=Rarity.S, potential_seed="fixed")
+
+    assert r20.level == s20.level == 20
+    assert s20.rarity is Rarity.S
+    assert r20.rarity is Rarity.D
+    assert s20.max_hp > r20.max_hp
+    assert s20.strength > r20.strength
+    assert s20.defense > r20.defense
+    assert s20.speed > r20.speed
+
+
+def test_same_potential_seed_is_reproducible() -> None:
+    character = _character(Element.LIGHTNING, Rarity.A)
+    first = stats_for_character(character, 12, potential_seed="potential-42")
+    second = stats_for_character(character, 12, potential_seed="potential-42")
+    assert first == second
+
+
+def test_different_potential_seeds_can_produce_different_stats() -> None:
+    character = _character(Element.LIGHTNING, Rarity.A)
+    first = stats_for_character(character, 12, potential_seed="potential-a")
+    second = stats_for_character(character, 12, potential_seed="potential-b")
+    assert first != second
+    assert first.potential_score != second.potential_score or first.strength != second.strength
 
 
 @pytest.mark.parametrize(
@@ -85,32 +106,32 @@ def test_s_level_11_is_stronger_than_r_level_10_but_lower_than_sr_level_21() -> 
         (Element.ARCANE, CombatStyle.ARCANE),
     ],
 )
-def test_elements_map_to_a_distinct_fighting_specialty(element, style) -> None:
+def test_elements_map_to_a_fighting_specialty(element, style) -> None:
     assert combat_style_for_element(element) is style
 
 
 def test_wind_focuses_speed() -> None:
-    stats = stats_for_character(_character(Element.WIND), 11)
+    stats = stats_for_character(_character(Element.WIND), 12, rarity=Rarity.B, potential_seed="fixed")
     assert stats.speed > stats.strength
 
 
 def test_earth_focuses_durability() -> None:
-    stats = stats_for_character(_character(Element.EARTH), 11)
-    assert stats.max_hp > 135
+    stats = stats_for_character(_character(Element.EARTH), 12, rarity=Rarity.B, potential_seed="fixed")
+    assert stats.max_hp > stats.speed
     assert stats.defense > stats.speed
 
 
 def test_fire_focuses_fire_skill() -> None:
-    stats = stats_for_character(_character(Element.FIRE), 11)
+    stats = stats_for_character(_character(Element.FIRE), 12, rarity=Rarity.B, potential_seed="fixed")
     assert stats.fire_skill > stats.strength
     assert stats.special_power > 25
 
 
 def test_water_focuses_healing() -> None:
-    stats = stats_for_character(_character(Element.WATER), 11)
+    stats = stats_for_character(_character(Element.WATER), 12, rarity=Rarity.B, potential_seed="fixed")
     assert stats.healing > stats.strength
 
 
 def test_physical_focuses_raw_strength() -> None:
-    stats = stats_for_character(_character(Element.NEUTRAL), 11)
+    stats = stats_for_character(_character(Element.NEUTRAL), 12, rarity=Rarity.B, potential_seed="fixed")
     assert stats.strength > stats.defense
