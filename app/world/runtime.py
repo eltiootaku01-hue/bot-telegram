@@ -5,7 +5,6 @@ import logging
 
 from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
-from app.core.time import utc_now
 from app.db.database import Database
 from app.world.presenter import WorldPresenter
 from app.world.service import WorldEventService
