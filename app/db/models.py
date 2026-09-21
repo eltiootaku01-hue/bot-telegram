@@ -145,6 +145,7 @@ class GameCollection(Base):
     copies: Mapped[int] = mapped_column(Integer, default=1)
     experience: Mapped[int] = mapped_column(Integer, default=0)
     evolution_stage: Mapped[int] = mapped_column(Integer, default=1)
+    potential_seed: Mapped[str | None] = mapped_column(String(128))
     obtained_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
