@@ -76,8 +76,14 @@ def main() -> int:
 
     manifest = load_manifest(args.manifest)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(build_markdown(manifest), encoding="utf-8")
-    print(f"Wrote {len(manifest['items'])} card prompts to {args.output}")
+    selected = [item for item in manifest["items"] if args.character_id is None or item.get("character_id") == args.character_id]
+    if args.character_id is not None and not selected:
+        raise ValueError(f"Unknown character_id: {args.character_id}")
+    args.output.write_text(
+        build_markdown(manifest, character_id=args.character_id),
+        encoding="utf-8",
+    )
+    print(f"Wrote {len(selected)} card prompt(s) to {args.output}")
     return 0
 
 
