@@ -6,7 +6,7 @@ import logging
 from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.db.database import Database
-from app.world.presenter import WorldPresenter
+from app.world.presenter import WorldPresentationRejected, WorldPresenter
 from app.world.service import WorldEventService
 from app.world.tools import WorldToolPolicy
 
@@ -102,6 +102,16 @@ class WorldRuntime:
         )
         try:
             result = await self.presenter.present(event)
+        except WorldPresentationRejected as exc:
+            async with self.database.session() as session:
+                await self.events.fail(
+                    session,
+                    event_id=event.event_id,
+                    lock_time=event.lock_time,
+                    error=str(exc),
+                )
+            logger.warning("World presentation rejected event=%s: %s", event.event_id, exc)
+            return True
         except Exception as exc:
             async with self.database.session() as session:
                 await self.events.mark_delivery_unknown(
