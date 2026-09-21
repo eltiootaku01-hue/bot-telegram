@@ -31,7 +31,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -47,7 +48,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/ai-hoshino--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -65,7 +67,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -82,7 +85,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/akame--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -107,7 +111,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -125,7 +140,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -141,7 +157,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/akane-kurokawa--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -159,7 +176,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -176,7 +194,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/akeno-himejima--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -201,7 +220,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -219,7 +249,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -235,7 +266,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/aki-nijou--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -253,7 +285,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -269,7 +302,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/ako-tamaki--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -287,7 +321,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -304,7 +339,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/albedo--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -329,7 +365,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -346,7 +393,8 @@
         "perspective": true,
         "crop_and_framing": true,
         "wardrobe_and_style": true,
-        "no_explicit_content": true
+        "no_explicit_content": true,
+        "adult_gate_consistent": true
       },
       "reviewer": "OpenAI visual QA",
       "second_reviewer": "",
@@ -379,7 +427,8 @@
           "role": "canonical",
           "approved": true,
           "production_file": "assets/production/cards/alisa-kujo--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -397,7 +446,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -413,7 +463,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/anya-forger--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -431,7 +482,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -448,7 +500,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/asuna-yuuki--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -473,7 +526,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -491,7 +555,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -507,7 +572,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/banri-shiunji--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -525,7 +591,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -541,7 +608,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/boa-hancock--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -559,7 +627,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -575,7 +644,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/cana-alberona--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -593,7 +663,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -609,7 +680,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/celistia-ralgris--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -627,7 +699,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -643,7 +716,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/cha-hae-in--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -661,7 +735,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -677,7 +752,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/chelsea--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -695,7 +771,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -711,7 +788,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/chinatsu-kano--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -729,7 +807,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -745,7 +824,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/chisato-hasegawa--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -763,7 +843,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -779,7 +860,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/chizuru-mizuhara--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -797,7 +879,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -813,7 +896,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/darkness--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -831,7 +915,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -847,7 +932,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/elizabeth-liones--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -865,7 +951,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -881,7 +968,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/emilia--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -899,7 +987,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -915,7 +1004,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/erina-nakiri--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -933,7 +1023,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -950,7 +1041,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/erza-scarlet--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -975,7 +1067,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -993,7 +1096,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1010,7 +1114,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/esdeath--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -1035,7 +1140,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -1053,7 +1169,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1069,7 +1186,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/hina-chono--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1087,7 +1205,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1103,7 +1222,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/hinako-yaotose--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1121,7 +1241,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1137,7 +1258,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/hinata-hyuga--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1155,7 +1277,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1171,7 +1294,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/ino-yamanaka--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1189,7 +1313,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1205,7 +1330,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/irina-shidou--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1223,7 +1349,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1239,7 +1366,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/jibril--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1257,7 +1385,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1273,7 +1402,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/kaoruko-waguri--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1291,7 +1421,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1308,7 +1439,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/kuroka--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -1333,7 +1465,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -1351,7 +1494,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1367,7 +1511,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/kurumi-tokisaki--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1385,7 +1530,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1401,7 +1547,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/leone--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1419,7 +1566,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1435,7 +1583,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/lilith-asami--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1453,7 +1602,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1469,7 +1619,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/lucy-heartfilia--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1487,7 +1638,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1504,7 +1656,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/makima--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -1529,7 +1682,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -1547,7 +1711,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1563,7 +1728,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/maomao--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1581,7 +1747,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1597,7 +1764,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/marin-kitagawa--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1615,7 +1783,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1631,7 +1800,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/mary-kikakujou--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1649,7 +1819,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1665,7 +1836,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/midnight--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1683,7 +1855,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1699,7 +1872,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/mikasa-ackerman--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1717,7 +1891,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1733,7 +1908,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/mirajane-strauss--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1751,7 +1927,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1768,7 +1945,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/momo-ayase--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -1793,7 +1971,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -1811,7 +2000,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1827,7 +2017,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/momo-yaoyorozu--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1845,7 +2036,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1861,7 +2053,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/mutsumi-wakaba--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1879,7 +2072,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1896,7 +2090,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/nami--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -1921,7 +2116,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -1939,7 +2145,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1955,7 +2162,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/nejire-hadou--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -1973,7 +2181,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -1989,7 +2198,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/nene-yashiro--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2007,7 +2217,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2023,7 +2234,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/nezuko-kamado--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2041,7 +2253,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2058,7 +2271,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/nico-robin--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -2083,7 +2297,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -2101,7 +2326,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2117,7 +2343,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/nico-wakatsuki--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2135,7 +2362,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2152,7 +2380,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/ochako-uraraka--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -2177,7 +2406,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -2195,7 +2435,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2212,7 +2453,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/oguri-cap--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -2237,7 +2479,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -2255,7 +2508,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2271,7 +2525,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/orihime-inoue--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2289,7 +2544,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2305,7 +2561,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/ouka-shiunji--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2323,7 +2580,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2340,7 +2598,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/power--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -2365,7 +2624,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -2383,7 +2653,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2399,7 +2670,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/rangiku-matsumoto--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2417,7 +2689,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2433,7 +2706,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/raphtalia--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2451,7 +2725,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2467,7 +2742,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/reiko-kujirai--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2485,7 +2761,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2501,7 +2778,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/reze--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2519,7 +2797,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2536,7 +2815,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/rias-gremory--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -2561,7 +2841,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -2579,7 +2870,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2595,7 +2887,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/rin-tohsaka--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2613,7 +2906,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2629,7 +2923,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/saeko-busujima--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2647,7 +2942,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2664,7 +2960,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/sakiko-togawa--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -2689,7 +2986,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -2707,7 +3015,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2723,7 +3032,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/sayaka-kirasaka--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2741,7 +3051,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2757,7 +3068,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/sinon--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2775,7 +3087,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2791,7 +3104,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/taiga--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2809,7 +3123,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2825,7 +3140,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/takane-takamine--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2843,7 +3159,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2859,7 +3176,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/tohka-yatogami--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2877,7 +3195,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2894,7 +3213,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/tsunade--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -2919,7 +3239,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -2937,7 +3268,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2953,7 +3285,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/venelana-gremory--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -2971,7 +3304,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -2987,7 +3321,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/violet-evergarden--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -3005,7 +3340,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -3021,7 +3357,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/xenovia--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     },
@@ -3039,7 +3376,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -3056,7 +3394,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/yor-forger--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -3081,7 +3420,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -3099,7 +3449,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -3116,7 +3467,8 @@
           "role": "ur_canonical",
           "approved": false,
           "production_file": "assets/production/cards/yoruichi-shihoin--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "UR canonical; non-explicit by default"
         },
         {
           "variant_id": "ur-alt-holo",
@@ -3141,7 +3493,18 @@
           "reviewer": "",
           "second_reviewer": "",
           "reviewed_at": null,
-          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review.",
+          "variant_policy": "adult-gated, non-explicit premium glamour; strategic environmental occlusion only",
+          "occlusion_strategy": [
+            "backlighting",
+            "bright_light_beams",
+            "steam_or_mist",
+            "foreground_shadows",
+            "flowing_hair",
+            "ribbons",
+            "fabric_layers",
+            "battle_worn_clothing"
+          ]
         }
       ]
     },
@@ -3159,7 +3522,8 @@
         "crop_and_framing": false,
         "wardrobe_and_style": false,
         "no_explicit_content": false,
-        "second_review": false
+        "second_review": false,
+        "adult_gate_consistent": true
       },
       "reviewer": "",
       "second_reviewer": "",
@@ -3175,7 +3539,8 @@
           "role": "canonical",
           "approved": false,
           "production_file": "assets/production/cards/yumeko-jabami--normal.jpg",
-          "adult_gate_required": false
+          "adult_gate_required": false,
+          "variant_policy": "canonical non-explicit"
         }
       ]
     }
