@@ -5,7 +5,6 @@ from aiogram import Bot, F
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
-from sqlalchemy.exc import IntegrityError
 
 from app.characters.director import CharacterDirector
 from app.characters.models import CharacterIntent
@@ -33,6 +32,8 @@ from app.game.waifu_browser import (
 )
 from app.game.wild_scheduler import WildWaifuScheduler
 from app.game.waifu_detector import WaifuDetectorService
+from app.game.waifu_gift_scheduler import WaifuGiftScheduler
+from app.game.waifu_gifts import WaifuGiftService
 from app.services.community import CommunityResolver
 from app.services.world import WorldService
 from app.ui.control_keyboards import rare_approval_keyboard
@@ -46,6 +47,9 @@ from app.ui.game_keyboards import (
     waifu_filter_categories_keyboard,
     waifu_filter_options_keyboard,
     detector_keyboard,
+    gift_keyboard,
+    item_consume_keyboard,
+    item_inventory_keyboard,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,6 +67,8 @@ class GameModule(BotModule):
         self.missions = DailyMissionService()
         self.encounters = EncounterStore()
         self.detector_service = WaifuDetectorService()
+        self.gift_service = WaifuGiftService()
+        self.gift_scheduler: WaifuGiftScheduler | None = None
         self.wild: WildWaifuScheduler | None = None
         self.world = WorldService()
         self.community = CommunityResolver(self.settings)
