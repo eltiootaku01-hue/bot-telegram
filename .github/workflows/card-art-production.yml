@@ -1,0 +1,65 @@
+name: Card art production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/build_card_001_assets.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  card-001:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install art dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" cairosvg pillow
+      - name: Export canonical prompt
+        run: python tools/export_card_art_prompts.py --character-id alisa-kujo
+      - name: Generate Carta 001
+        run: python tools/build_card_001_assets.py
+      - name: Technical asset validation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from app.game.card_art_assets import validate_card_asset
+          paths = [
+              Path("assets/production/cards/alisa-kujo--r.jpg"),
+              Path("assets/production/cards/alisa-kujo--normal.jpg"),
+              Path("assets/quarantine/card_stages/alisa-kujo--ur.jpg"),
+          ]
+          for path in paths:
+              result = validate_card_asset(path)
+              print(path, result)
+              if not result.valid or (result.width, result.height) != (1024, 1536):
+                  raise SystemExit(f"invalid asset: {path}: {result.reason}")
+          PY
+      - name: Card QA contract
+        run: python tools/validate_card_qa.py
+      - name: Targeted art tests
+        run: |
+          pytest -q tests/test_card_art_manifest.py tests/test_card_art_prompts.py
+          ruff check app tests tools
+      - name: Commit production outputs
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/production/cards/alisa-kujo--r.jpg assets/production/cards/alisa-kujo--normal.jpg assets/quarantine/card_stages/alisa-kujo--ur.jpg assets/waifus/art_manifest.json assets/waifus/card_art_prompt_manifest.json assets/waifus/card_art_qa_manifest.json docs/generated/WAIFUMON_CARD_ART_PROMPTS.md docs/generated/WAIFUMON_CARD_001_ALISA_STAGES.md
+          if git diff --cached --quiet; then
+            echo "No generated changes."
+            exit 0
+          fi
+          git commit -m "feat(art): produce WaifuMon card 001 assets [skip ci]"
+          git push origin HEAD:main
