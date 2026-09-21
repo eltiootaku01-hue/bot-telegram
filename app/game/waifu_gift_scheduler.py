@@ -5,7 +5,7 @@ import logging
 from datetime import timedelta
 
 from aiogram import Bot
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
