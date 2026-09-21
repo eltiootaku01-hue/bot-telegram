@@ -18,21 +18,37 @@ if not exist "%JAVA_HOME%\bin\jlink.exe" (
   exit /b 1
 )
 
+set "ENGINE_STAGE=build\waifumon-runtime"
+
+if exist "%ENGINE_STAGE%" rmdir /s /q "%ENGINE_STAGE%"
+mkdir "%ENGINE_STAGE%"
+
 mvn --batch-mode --no-transfer-progress -f engine\waifumon\pom.xml clean package -DskipTests
 if errorlevel 1 exit /b %errorlevel%
 
-if not exist dist\engine mkdir dist\engine
-copy /Y engine\waifumon\target\waifumon-engine.jar dist\engine\waifumon-engine.jar >nul
+copy /Y engine\waifumon\target\waifumon-engine.jar "%ENGINE_STAGE%\waifumon-engine.jar" >nul
 if errorlevel 1 exit /b %errorlevel%
 
-if exist dist\engine\jre rmdir /s /q dist\engine\jre
 "%JAVA_HOME%\bin\jlink.exe" ^
   --add-modules java.base ^
   --strip-debug ^
   --no-man-pages ^
   --no-header-files ^
   --compress=2 ^
-  --output dist\engine\jre
+  --output "%ENGINE_STAGE%\jre"
+if errorlevel 1 exit /b %errorlevel%
+
+if not exist "%ENGINE_STAGE%\waifumon-engine.jar" (
+  echo Staged WaifuMon engine JAR was not created.
+  exit /b 1
+)
+if not exist "%ENGINE_STAGE%\jre\bin\java.exe" (
+  echo Staged Java runtime executable was not created.
+  exit /b 1
+)
+
+if exist dist\engine rmdir /s /q dist\engine
+xcopy "%ENGINE_STAGE%" dist\engine /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 
 echo.
@@ -41,6 +57,7 @@ echo WaifuMon Java engine listo.
 echo.
 echo JAR: dist\engine\waifumon-engine.jar
 echo JRE: dist\engine\jre
+echo Staging: %ENGINE_STAGE%
 echo ============================================
 echo.
 exit /b 0
