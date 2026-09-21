@@ -1,5 +1,4 @@
 import asyncio
-from datetime import timedelta
 
 import pytest
 
@@ -50,9 +49,7 @@ async def test_runtime_presents_and_completes_authorized_event(database):
         event_id = event.id
 
     assert await runtime.tick() is True
-    assert sent == [("sunna", -100, "Noticias
-
-Una noticia")]
+    assert sent == [("sunna", -100, "Noticias\n\nUna noticia")]
 
     async with database.session() as session:
         event = await session.get(GameWorldEvent, event_id)
@@ -132,7 +129,11 @@ async def test_runtime_heartbeat_keeps_long_presentation_alive(database):
 
     async def counted_renew(session, *, event_id: int, lock_time):
         nonlocal renewals
-        result = await original_renew(session, event_id=event_id, lock_time=lock_time)
+        result = await original_renew(
+            session,
+            event_id=event_id,
+            lock_time=lock_time,
+        )
         renewals += int(result)
         return result
 
