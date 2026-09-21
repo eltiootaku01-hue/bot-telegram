@@ -51,7 +51,7 @@ jobs:
       - name: Build executables
         shell: cmd
         run: tools\build_launcher.bat
-          - name: Verify visual assets
+      - name: Verify visual assets
         shell: pwsh
         run: |
           $reference = "dist\assets\waifus\generated\waifu-card-concept.jpg"
