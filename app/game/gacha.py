@@ -7,11 +7,12 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import GameCardCollection, GameCollection, GameGachaRoll, GameProfile, RareDropApproval
+from app.db.models import GameCollection, GameGachaRoll, GameProfile, RareDropApproval
 from app.db.repositories import MemberRepository
 from app.game.card_service import CardCollectionService, card_for_gacha_character
 from app.game.catalog import CHARACTERS, get_character
 from app.game.engine import GameEngine
+from app.game.cards import WaifuCard
 from app.game.models import Character, Rarity
 from app.game.progression import apply_capture_progression
 from app.core.time import utc_now
@@ -27,7 +28,7 @@ _RARITY_ORDER = {rarity: index for index, rarity in enumerate(Rarity)}
 class GachaResult:
     rolled_rarity: Rarity
     character: Character
-    card: object
+    card: WaifuCard
     remaining_points: int
     approval: RareDropApproval | None = None
     granted: bool = False
