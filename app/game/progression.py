@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+from functools import lru_cache
 from dataclasses import dataclass
 from enum import IntEnum, StrEnum
 from typing import Protocol
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.time import utc_now
 from app.db.models import GameCollection, GameProfile
 from app.game.evolution import next_fusion
+from app.game.java_engine import WaifuMonJavaEngine, default_java_engine
 from app.game.models import Character, Element, Rarity
 
 
@@ -344,6 +346,11 @@ def add_collection_experience(
     )
 
 
+@lru_cache(maxsize=1)
+def _java_rules() -> WaifuMonJavaEngine:
+    return default_java_engine()
+
+
 def add_character_experience(
     *,
     level: int,
@@ -352,28 +359,20 @@ def add_character_experience(
     gained: int,
     copies: int,
 ) -> ProgressionResult:
-    """Pure level progression; XP never promotes rarity/class."""
-    if gained < 0 or copies < 1:
-        raise ValueError("Progression values cannot be negative")
-    old_stage = evolution_stage_for_level(max(1, min(MAX_WAIFUMON_LEVEL, level)))
-    current_level = min(MAX_WAIFUMON_LEVEL, max(1, level))
-    total = max(0, experience) + gained
-
-    while current_level < MAX_WAIFUMON_LEVEL and total >= current_level * 100:
-        total -= current_level * 100
-        current_level += 1
-
-    if current_level >= MAX_WAIFUMON_LEVEL:
-        current_level = MAX_WAIFUMON_LEVEL
-        total = 0
-
-    new_stage = evolution_stage_for_level(current_level)
+    """Resolve level/XP progression in Java; Python only maps the DTO."""
+    result = _java_rules().progression(
+        level=level,
+        experience=experience,
+        evolution_stage=evolution_stage,
+        gained=gained,
+        copies=copies,
+    )
     return ProgressionResult(
-        current_level,
-        total,
-        new_stage.value,
-        new_stage is not old_stage,
-        0,
+        level=int(result["level"]),
+        experience=int(result["experience"]),
+        evolution_stage=int(result["evolution_stage"]),
+        evolved=bool(result["evolved"]),
+        points_gained=0,
     )
 
 
