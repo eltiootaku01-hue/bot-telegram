@@ -55,6 +55,17 @@ class Settings(BaseSettings):
     # World time is explicit for schedules; persistence remains UTC.
     bot_world_timezone: str = "America/Argentina/Buenos_Aires"
 
+    # Telegram Mini App API bridge hosted by Bot Manager.
+    tma_api_enabled: bool = True
+    tma_api_host: str = "127.0.0.1"
+    tma_api_port: int = 8765
+    tma_bot_identity: BotIdentity = BotIdentity.SUNNA
+    tma_init_data_max_age_seconds: int = 3600
+    tma_allowed_origins: str = ""
+    tma_frontend_base_url: str = ""
+    tma_premium_ticket_price_stars: int = 10
+    tma_starter_pack_price_stars: int = 25
+
     # Global/per-bot AI gates. Features must check these before invoking any LLM.
     ai_enabled: bool = False
     ai_enabled_cari: bool | None = None
