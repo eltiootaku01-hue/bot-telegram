@@ -1,7 +1,7 @@
 {
-  "version": 1,
-  "matrix_version": "2026-09-card-art-matrix-v1",
-  "policy": "An asset may be marked approved only after all required visual checks are true. UR requires a second independent review.",
+  "version": 2,
+  "matrix_version": "2026-09-card-art-matrix-v2",
+  "policy": "An asset may be marked approved only after all required visual checks are true. UR canonical and UR alternate variants require a second independent review. UR alternate holographic variants additionally require explicit adult eligibility and a non-explicit content review.",
   "required_checks": [
     "anatomy",
     "hands_and_fingers",
@@ -10,7 +10,8 @@
     "perspective",
     "crop_and_framing",
     "wardrobe_and_style",
-    "no_explicit_content"
+    "no_explicit_content",
+    "adult_gate_consistent"
   ],
   "ur_checks": [
     "second_review"
@@ -36,7 +37,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/ai-hoshino--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "akame",
@@ -58,7 +71,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/akame--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/akame--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "akane-kurokawa",
@@ -80,7 +131,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/akane-kurokawa--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "akeno-himejima",
@@ -102,7 +165,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/akeno-himejima--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/akeno-himejima--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "aki-nijou",
@@ -124,7 +225,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/aki-nijou--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "ako-tamaki",
@@ -146,7 +259,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/ako-tamaki--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "albedo",
@@ -168,7 +293,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/albedo--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/albedo--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "alisa-kujo",
@@ -206,6 +369,18 @@
           "file": "assets/quarantine/card_stages/alisa-kujo--ur.jpg",
           "status": "primary_review_passed_second_review_required"
         }
+      ],
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": true,
+          "production_file": "assets/production/cards/alisa-kujo--normal.jpg",
+          "adult_gate_required": false
+        }
       ]
     },
     {
@@ -228,7 +403,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/anya-forger--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "asuna-yuuki",
@@ -250,7 +437,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/asuna-yuuki--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/asuna-yuuki--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "banri-shiunji",
@@ -272,7 +497,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/banri-shiunji--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "boa-hancock",
@@ -294,7 +531,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/boa-hancock--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "cana-alberona",
@@ -316,7 +565,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/cana-alberona--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "celistia-ralgris",
@@ -338,7 +599,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/celistia-ralgris--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "cha-hae-in",
@@ -360,7 +633,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/cha-hae-in--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "chelsea",
@@ -382,7 +667,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/chelsea--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "chinatsu-kano",
@@ -404,7 +701,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/chinatsu-kano--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "chisato-hasegawa",
@@ -426,7 +735,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/chisato-hasegawa--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "chizuru-mizuhara",
@@ -448,7 +769,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/chizuru-mizuhara--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "darkness",
@@ -470,7 +803,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/darkness--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "elizabeth-liones",
@@ -492,7 +837,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/elizabeth-liones--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "emilia",
@@ -514,7 +871,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/emilia--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "erina-nakiri",
@@ -536,7 +905,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/erina-nakiri--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "erza-scarlet",
@@ -558,7 +939,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/erza-scarlet--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/erza-scarlet--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "esdeath",
@@ -580,7 +999,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/esdeath--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/esdeath--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "hina-chono",
@@ -602,7 +1059,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/hina-chono--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "hinako-yaotose",
@@ -624,7 +1093,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/hinako-yaotose--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "hinata-hyuga",
@@ -646,7 +1127,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/hinata-hyuga--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "ino-yamanaka",
@@ -668,7 +1161,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/ino-yamanaka--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "irina-shidou",
@@ -690,7 +1195,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/irina-shidou--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "jibril",
@@ -712,7 +1229,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/jibril--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "kaoruko-waguri",
@@ -734,7 +1263,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/kaoruko-waguri--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "kuroka",
@@ -756,7 +1297,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/kuroka--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/kuroka--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "kurumi-tokisaki",
@@ -778,7 +1357,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/kurumi-tokisaki--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "leone",
@@ -800,7 +1391,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/leone--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "lilith-asami",
@@ -822,7 +1425,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/lilith-asami--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "lucy-heartfilia",
@@ -844,7 +1459,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/lucy-heartfilia--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "makima",
@@ -866,7 +1493,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/makima--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/makima--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "maomao",
@@ -888,7 +1553,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/maomao--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "marin-kitagawa",
@@ -910,7 +1587,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/marin-kitagawa--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "mary-kikakujou",
@@ -932,7 +1621,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/mary-kikakujou--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "midnight",
@@ -954,7 +1655,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/midnight--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "mikasa-ackerman",
@@ -976,7 +1689,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/mikasa-ackerman--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "mirajane-strauss",
@@ -998,7 +1723,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/mirajane-strauss--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "momo-ayase",
@@ -1020,7 +1757,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/momo-ayase--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/momo-ayase--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "momo-yaoyorozu",
@@ -1042,7 +1817,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/momo-yaoyorozu--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "mutsumi-wakaba",
@@ -1064,7 +1851,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/mutsumi-wakaba--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "nami",
@@ -1086,7 +1885,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/nami--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/nami--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "nejire-hadou",
@@ -1108,7 +1945,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/nejire-hadou--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "nene-yashiro",
@@ -1130,7 +1979,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/nene-yashiro--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "nezuko-kamado",
@@ -1152,7 +2013,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/nezuko-kamado--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "nico-robin",
@@ -1174,7 +2047,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/nico-robin--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/nico-robin--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "nico-wakatsuki",
@@ -1196,7 +2107,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/nico-wakatsuki--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "ochako-uraraka",
@@ -1218,7 +2141,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/ochako-uraraka--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/ochako-uraraka--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "oguri-cap",
@@ -1240,7 +2201,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/oguri-cap--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/oguri-cap--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "orihime-inoue",
@@ -1262,7 +2261,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/orihime-inoue--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "ouka-shiunji",
@@ -1284,7 +2295,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/ouka-shiunji--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "power",
@@ -1306,7 +2329,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/power--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/power--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "rangiku-matsumoto",
@@ -1328,7 +2389,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/rangiku-matsumoto--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "raphtalia",
@@ -1350,7 +2423,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/raphtalia--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "reiko-kujirai",
@@ -1372,7 +2457,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/reiko-kujirai--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "reze",
@@ -1394,7 +2491,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/reze--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "rias-gremory",
@@ -1416,7 +2525,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/rias-gremory--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/rias-gremory--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "rin-tohsaka",
@@ -1438,7 +2585,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/rin-tohsaka--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "saeko-busujima",
@@ -1460,7 +2619,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/saeko-busujima--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "sakiko-togawa",
@@ -1482,7 +2653,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/sakiko-togawa--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/sakiko-togawa--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "sayaka-kirasaka",
@@ -1504,7 +2713,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/sayaka-kirasaka--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "sinon",
@@ -1526,7 +2747,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/sinon--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "taiga",
@@ -1548,7 +2781,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/taiga--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "takane-takamine",
@@ -1570,7 +2815,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/takane-takamine--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "tohka-yatogami",
@@ -1592,7 +2849,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/tohka-yatogami--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "tsunade",
@@ -1614,7 +2883,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/tsunade--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/tsunade--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "venelana-gremory",
@@ -1636,7 +2943,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/venelana-gremory--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "violet-evergarden",
@@ -1658,7 +2977,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/violet-evergarden--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "xenovia",
@@ -1680,7 +3011,19 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/xenovia--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     },
     {
       "character_id": "yor-forger",
@@ -1702,7 +3045,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/yor-forger--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/yor-forger--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "yoruichi-shihoin",
@@ -1724,7 +3105,45 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "ur_canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/yoruichi-shihoin--normal.jpg",
+          "adult_gate_required": false
+        },
+        {
+          "variant_id": "ur-alt-holo",
+          "role": "alternate_glamour",
+          "supported": true,
+          "approved": false,
+          "adult_gate_required": true,
+          "adult_eligible": false,
+          "production_file": "assets/production/cards/yoruichi-shihoin--ur-alt-holo.jpg",
+          "checks": {
+            "anatomy": false,
+            "hands_and_fingers": false,
+            "limbs_and_joints": false,
+            "face_and_identity": false,
+            "perspective": false,
+            "crop_and_framing": false,
+            "wardrobe_and_style": false,
+            "no_explicit_content": false,
+            "adult_gate_consistent": false,
+            "second_review": false
+          },
+          "reviewer": "",
+          "second_reviewer": "",
+          "reviewed_at": null,
+          "notes": "Not approved by default; requires explicit adult eligibility and independent second review."
+        }
+      ]
     },
     {
       "character_id": "yumeko-jabami",
@@ -1746,7 +3165,42 @@
       "second_reviewer": "",
       "reviewed_at": null,
       "notes": "",
-      "approved": false
+      "approved": false,
+      "variant_support": [
+        "normal"
+      ],
+      "variants": [
+        {
+          "variant_id": "normal",
+          "role": "canonical",
+          "approved": false,
+          "production_file": "assets/production/cards/yumeko-jabami--normal.jpg",
+          "adult_gate_required": false
+        }
+      ]
     }
-  ]
+  ],
+  "ur_variants": {
+    "enabled": true,
+    "normal": {
+      "label": "UR Canónica",
+      "approval_rule": "same required visual checks; second review required"
+    },
+    "ur-alt-holo": {
+      "label": "UR Alternate Holo / Shiny",
+      "approval_rule": "UR only; adult_eligible=true; all required checks; second independent review",
+      "required_checks": [
+        "anatomy",
+        "hands_and_fingers",
+        "limbs_and_joints",
+        "face_and_identity",
+        "perspective",
+        "crop_and_framing",
+        "wardrobe_and_style",
+        "no_explicit_content",
+        "adult_gate_consistent"
+      ],
+      "production_pattern": "assets/production/cards/<character-id>--ur-alt-holo.jpg"
+    }
+  }
 }
