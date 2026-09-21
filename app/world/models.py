@@ -50,6 +50,7 @@ class WorldEventEnvelope:
     title: str
     payload: Mapping[str, object]
     status: WorldEventStatus
+    lock_time: object
 
     def render_text(self) -> str:
         body = self.payload.get("text")
