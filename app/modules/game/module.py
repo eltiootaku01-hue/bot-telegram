@@ -4,16 +4,15 @@ import logging
 from aiogram import Bot, F
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from app.characters.director import CharacterDirector
 from app.characters.models import CharacterIntent
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
-from app.core.time import utc_now
 from app.db.database import Database
-from app.db.models import GameCollection, GameItemInventory, GameProfile, GameEncounter
+from app.db.models import GameCollection, GameItemInventory, GameProfile
 from app.db.repositories import MemberRepository
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterAttemptResult, EncounterStore
@@ -220,7 +219,6 @@ class GameModule(BotModule):
         if len(parts) != 4 or not parts[3].isdigit():
             await callback.answer('Regalo inválido.', show_alert=True)
             return
-        wrong_response: str | None = None
         async with self.database.session(write=True) as session:
             profile = await MemberRepository().get_or_create_game_profile(
                 session, callback.from_user.id, chat.id, commit=False
