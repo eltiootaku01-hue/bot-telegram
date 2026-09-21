@@ -104,8 +104,14 @@ class GameModule(BotModule):
         self.router.callback_query.register(self.waifu_catalog_page, F.data.startswith("game:waifus:page:"))
 
     async def on_startup(self, bot: Bot) -> None:
-        self.wild = WildWaifuScheduler(bot, self.database)
+        self.wild = WildWaifuScheduler(bot, self.database, settings=self.settings)
         self.wild.start()
+        self.gift_scheduler = WaifuGiftScheduler(
+            bot,
+            self.database,
+            settings=self.settings,
+        )
+        self.gift_scheduler.start()
 
     async def on_shutdown(self) -> None:
         if self.gift_scheduler is not None:
