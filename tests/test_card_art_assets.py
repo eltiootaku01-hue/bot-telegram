@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pytest
 
-from app.db.database import Database
 from app.game.card_art_assets import (
     CARD_ART_HEIGHT,
     CARD_ART_MAX_BYTES,
