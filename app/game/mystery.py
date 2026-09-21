@@ -338,6 +338,57 @@ class MysteryService:
             answer_index=row.answer_index,
         )
 
+    @staticmethod
+    async def mark_publication_unknown(
+        session: AsyncSession,
+        *,
+        round_id: int,
+    ) -> bool:
+        result = await session.execute(
+            update(MysteryRound)
+            .where(
+                MysteryRound.id == round_id,
+                MysteryRound.status == "publishing",
+                MysteryRound.message_id.is_(None),
+            )
+            .values(status="delivery_unknown", updated_at=utc_now())
+        )
+        return result.rowcount == 1
+
+    @staticmethod
+    async def confirm_unknown_delivery(
+        session: AsyncSession,
+        *,
+        round_id: int,
+    ) -> bool:
+        result = await session.execute(
+            update(MysteryRound)
+            .where(
+                MysteryRound.id == round_id,
+                MysteryRound.status == "delivery_unknown",
+                MysteryRound.message_id.is_(None),
+            )
+            .values(status="active", updated_at=utc_now())
+        )
+        return result.rowcount == 1
+
+    @staticmethod
+    async def requeue_unknown_delivery(
+        session: AsyncSession,
+        *,
+        round_id: int,
+    ) -> bool:
+        result = await session.execute(
+            update(MysteryRound)
+            .where(
+                MysteryRound.id == round_id,
+                MysteryRound.status == "delivery_unknown",
+                MysteryRound.message_id.is_(None),
+            )
+            .values(status="failed", updated_at=utc_now())
+        )
+        return result.rowcount == 1
+
     async def answer(
         self,
         session: AsyncSession,
