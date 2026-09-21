@@ -76,6 +76,8 @@ jobs:
             }
           }
 
+      - name: Validate committed card assets
+        run: python tools\\validate_card_assets.py
       - name: Verify executables
         shell: pwsh
         run: |

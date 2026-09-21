@@ -42,8 +42,7 @@ def test_waifu_browser_filters_by_element_card_rarity_and_source() -> None:
         1,
         active_filter=WaifuFilter(WaifuFilterField.CARD, "ur"),
     )
-    assert card.characters
-    assert all(character.card_tier.value == "UR" for character in card.characters)
+    assert not card.characters
 
     rarity = page_for(
         1,

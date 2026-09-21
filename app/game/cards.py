@@ -45,6 +45,7 @@ class WaifuCard:
     tier: CardTier
     variant: CardVariant
     outfit: str
+    design_id: str
     fusion_of: tuple[str, str] = ()
     adult_style_allowed: bool = False
 
@@ -71,8 +72,6 @@ SHINY_OUTFITS = tuple(item.value for item in ShinyOutfit) + (
     "uniforme_reportera",
 )
 
-# Only explicitly approved adult characters may receive the optional adult
-# visual direction. All other characters always use the standard safe direction.
 ADULT_STYLE_ALLOWED_CHARACTER_IDS = frozenset(
     {
         "yor-forger",
@@ -119,25 +118,36 @@ def _outfit_for_seed(seed: str, variant: CardVariant) -> str:
     return pool[int.from_bytes(digest[:8], "big") % len(pool)]
 
 
+def _design_id_for_seed(seed: str) -> str:
+    return _digest(f"{seed}:design").hex()[:6]
+
+
 def card_for_character(
     character: Character,
     *,
     seed: str,
     variant: CardVariant | None = None,
+    mature_art_allowed: bool = False,
 ) -> WaifuCard:
     resolved_variant = variant or _variant_for_seed(seed)
     outfit = _outfit_for_seed(seed, resolved_variant)
+    design_id = _design_id_for_seed(seed)
     return WaifuCard(
-        card_id=f"{character.id}:{character.card_tier.value}:{resolved_variant.value}:{outfit}",
+        card_id=(
+            f"{character.id}:{character.card_tier.value}:"
+            f"{resolved_variant.value}:{outfit}:{design_id}"
+        ),
         character_id=character.id,
         name=character.name,
         anime=character.anime,
         tier=character.card_tier,
         variant=resolved_variant,
         outfit=outfit,
+        design_id=design_id,
         adult_style_allowed=(
-            adult_style_is_allowed(character.id)
-            and variant is CardVariant.SHINY
+            mature_art_allowed
+            and adult_style_is_allowed(character.id)
+            and resolved_variant is CardVariant.SHINY
         ),
     )
 
@@ -147,24 +157,31 @@ def fusion_card_for_characters(
     second: Character,
     *,
     seed: str,
+    mature_art_allowed: bool = False,
 ) -> WaifuCard:
     if first.id == second.id:
-        raise ValueError("UR fusion requires two different waifus")
+        raise ValueError("Una UR necesita dos waifus diferentes")
 
     parents = tuple(sorted((first.id, second.id)))
     variant = _variant_for_seed(seed)
     outfit = _outfit_for_seed(seed, variant)
+    design_id = _design_id_for_seed(seed)
     return WaifuCard(
-        card_id=f"ur-fusion:{parents[0]}+{parents[1]}:{variant.value}:{outfit}",
+        card_id=(
+            f"ur-fusion:{parents[0]}+{parents[1]}:"
+            f"{variant.value}:{outfit}:{design_id}"
+        ),
         character_id=f"fusion:{parents[0]}+{parents[1]}",
         name=f"{first.name} × {second.name}",
         anime=f"{first.anime} × {second.anime}",
         tier=CardTier.UR,
         variant=variant,
         outfit=outfit,
+        design_id=design_id,
         fusion_of=parents,
         adult_style_allowed=(
-            variant is CardVariant.SHINY
+            mature_art_allowed
+            and variant is CardVariant.SHINY
             and adult_style_is_allowed(first.id)
             and adult_style_is_allowed(second.id)
         ),
@@ -201,6 +218,7 @@ def generic_r_card(seed: str) -> WaifuCard:
     archetype = archetypes[digest[0] % len(archetypes)]
     accent = colors[digest[1] % len(colors)]
     token = digest.hex()[:10]
+    design_id = digest.hex()[10:16]
     return WaifuCard(
         card_id=f"generic-r:{token}",
         character_id=f"generic-r:{token}",
@@ -209,6 +227,7 @@ def generic_r_card(seed: str) -> WaifuCard:
         tier=CardTier.R,
         variant=CardVariant.NORMAL,
         outfit=f"{archetype} · acento {accent}",
+        design_id=design_id,
     )
 
 

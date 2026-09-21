@@ -20,3 +20,24 @@ def test_art_registry_rejects_unknown_character() -> None:
         pass
     else:
         raise AssertionError("expected KeyError")
+
+
+def test_variant_art_registry_supports_normal_and_shiny_assets() -> None:
+    from app.game.waifu_art import variant_art_candidates_for
+
+    normal = variant_art_candidates_for("yor-forger", "normal")
+    shiny = variant_art_candidates_for("yor-forger", "shiny")
+
+    assert normal[0] == "assets/waifus/yor-forger--normal.png"
+    assert shiny[0] == "assets/waifus/yor-forger--shiny.png"
+
+
+def test_variant_art_registry_rejects_unknown_variant() -> None:
+    from app.game.waifu_art import variant_art_candidates_for
+
+    try:
+        variant_art_candidates_for("yor-forger", "unknown")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError")

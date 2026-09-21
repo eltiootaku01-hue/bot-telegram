@@ -186,7 +186,7 @@ class GameModule(BotModule):
         return claimed, balance, progress.progress, progress.target
 
     async def cards(self, message: Message) -> None:
-        if message.chat.type != "private" || message.from_user is None:
+        if message.chat.type != "private" or message.from_user is None:
             return
         chat_id = await self._community_chat_id(message.from_user.id)
         if chat_id is None:
@@ -1137,7 +1137,10 @@ class GameModule(BotModule):
         result_text = (
             f"🎉 ¡Salió {result.character.name} ({result.character.card_tier.value})! "
             f"Clase {result.character.rarity.value} · elemento {result.character.element.value} · "
-            f"Saldo: {mission_balance if mission_claimed else result.remaining_points}"
+            f"Saldo: {mission_balance if mission_claimed else result.remaining_points}\n"
+            f"🎴 Carta: {result.card.tier.value} · "
+            f"{'✨ SHINY' if result.card.variant.value == 'shiny' else 'Normal'} · "
+            f"{result.card.outfit}"
         )
         if mission_claimed:
             result_text += "\n🎯 Misión diaria completada: +10 puntos."
