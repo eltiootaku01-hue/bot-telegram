@@ -18,6 +18,7 @@ class TriviaRound(Base):
     points: Mapped[int] = mapped_column(Integer, default=10)
     status: Mapped[str] = mapped_column(String(32), default="active")
     winner_user_id: Mapped[int | None] = mapped_column(BigInteger)
+    message_id: Mapped[int | None] = mapped_column(BigInteger)
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     won_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
