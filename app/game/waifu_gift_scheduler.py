@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import timedelta
 
 from aiogram import Bot
 from sqlalchemy import select, update
@@ -12,7 +13,7 @@ from app.core.time import utc_now, world_now
 from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import WaifuGiftDrop
-from app.game.waifu_gifts import WaifuGiftService, GIFTS
+from app.game.waifu_gifts import WaifuGiftService
 from app.services.telegram_delivery import with_retry_after
 from app.ui.game_keyboards import gift_keyboard
 
