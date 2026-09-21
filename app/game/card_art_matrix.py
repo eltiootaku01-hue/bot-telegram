@@ -134,7 +134,14 @@ def build_card_art_prompt(
             "NON-SUGGESTIVE PRODUCTION MODE: no erotic emphasis, no lingerie, no swimwear, "
             f"no transparent clothing, no sexual pose. {NO_EXPLICIT_VISUAL_POLICY}"
         )
+        wardrobe_direction = (
+            profile.wardrobe
+            if profile.tier is CardArtTier.CLOSE_UP
+            else "vestuario tematico completamente cubierto y no sugestivo; "
+            "la direccion ecchi permanece bloqueada hasta la aprobacion adulta"
+        )
     else:
+        wardrobe_direction = profile.wardrobe
         safety = (
             "ADULT-ELIGIBLE NON-EXPLICIT MODE: tasteful glamour only; "
             f"{NO_EXPLICIT_VISUAL_POLICY}"
@@ -148,7 +155,7 @@ def build_card_art_prompt(
     return (
         f"WaifuMon card art for {character_name} from {anime}. "
         f"Production tier: {profile.tier.value}. {profile.prompt_direction} "
-        f"Wardrobe: {profile.wardrobe}. "
+        f"Wardrobe: {wardrobe_direction}. "
         f"Function: {profile.function}. "
         f"{safety} "
         f"{STYLE_POLICY} "
