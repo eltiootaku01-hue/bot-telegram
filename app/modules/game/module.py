@@ -638,6 +638,8 @@ class GameModule(BotModule):
         )
         if mission_claimed:
             result_text += "\n🎯 Misión diaria completada: +10 puntos."
+        if result.pity_triggered:
+            result_text += "\n✨ Protección de suerte activada."
         if reaction:
             result_text += f"\n\n🐍 Sunna: {reaction}"
         await callback.answer(result_text, show_alert=True)
