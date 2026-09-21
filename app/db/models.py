@@ -139,6 +139,11 @@ class PointTransaction(Base):
             name="uq_point_transaction_reference",
         ),
         CheckConstraint("amount <> 0", name="ck_point_transaction_amount_nonzero"),
+        CheckConstraint(
+            "(reference_type IS NULL AND reference_id IS NULL) "
+            "OR (reference_type IS NOT NULL AND reference_id IS NOT NULL)",
+            name="ck_point_transaction_reference_pair",
+        ),
     )
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -173,6 +178,12 @@ class GameCollection(Base):
 
 class GameEncounter(Base):
     __tablename__ = "game_encounters"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('active', 'captured', 'expired', 'cancelled')",
+            name="ck_game_encounter_status",
+        ),
+    )
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     chat_id: Mapped[int] = mapped_column(BigInteger)
     character_id: Mapped[str] = mapped_column(String(100))
@@ -197,6 +208,12 @@ class GameAttempt(Base):
 
 class RareDropApproval(Base):
     __tablename__ = "rare_drop_approvals"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected')",
+            name="ck_rare_drop_approval_status",
+        ),
+    )
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     character_id: Mapped[str] = mapped_column(String(100))
     rarity: Mapped[str] = mapped_column(String(32))
@@ -550,6 +567,10 @@ class RequestStatus(StrEnum):
 
 class FanRequest(Base):
     __tablename__ = "fan_requests"
+    __table_args__ = (
+        UniqueConstraint("user_id", "chat_id", "source_message_id", name="uq_fan_request_source"),
+        CheckConstraint("points_cost >= 0", name="ck_fan_request_points_cost_nonnegative"),
+    )
     __table_args__ = (UniqueConstraint("user_id", "chat_id", "source_message_id", name="uq_fan_request_source"),)
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
