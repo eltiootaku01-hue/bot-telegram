@@ -90,9 +90,21 @@ async def test_chie_group_setup_message_exposes_community_id() -> None:
     module._observe_action = lambda *args, **kwargs: __import__("asyncio").sleep(0)
 
     answers: list[str] = []
+    edits: list[tuple[str, dict]] = []
 
-    async def answer(text: str, **kwargs) -> None:
+    class Transient:
+        async def edit_text(self, text: str, **kwargs):
+            edits.append((text, kwargs))
+            return self
+
+        async def delete(self):
+            return None
+
+    transient = Transient()
+
+    async def answer(text: str, **kwargs):
         answers.append(text)
+        return transient
 
     message = SimpleNamespace(
         chat=SimpleNamespace(id=-100123, type="supergroup"),
@@ -114,7 +126,6 @@ async def test_chie_group_setup_message_exposes_community_id() -> None:
                 can_restrict_members=True,
                 can_manage_topics=True,
             )
-
 
     class FakeSession:
         def add(self, value) -> None:
@@ -138,5 +149,12 @@ async def test_chie_group_setup_message_exposes_community_id() -> None:
     await module.configure_group(message, Bot())
 
     assert answers
-    assert "-100123" in answers[0]
-    assert "Grupo general / bienvenida" in answers[0]
+    assert answers[0] in {
+        "Mmm... dame un segundo ⏳",
+        "Un minuto más, lo prometo...",
+        "¡Lo tengo! ✨",
+    }
+    assert edits
+    final_text = edits[-1][0]
+    assert "-100123" in final_text
+    assert "Grupo general / bienvenida" in final_text
