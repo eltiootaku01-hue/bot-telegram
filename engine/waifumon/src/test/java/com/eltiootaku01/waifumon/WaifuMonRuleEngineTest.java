@@ -3,6 +3,7 @@ package com.eltiootaku01.waifumon;
 import com.eltiootaku01.waifumon.contract.EngineRequest;
 import com.eltiootaku01.waifumon.contract.EngineResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 
@@ -121,7 +122,7 @@ final class WaifuMonRuleEngineTest {
 
     @Test
     void gachaResolutionOwnsPityAndCharacterSelection() {
-        ObjectNode candidates = mapper.createArrayNode()
+        ArrayNode candidates = mapper.createArrayNode()
             .add(mapper.createObjectNode().put("id", "zeta").put("rarity", "D"))
             .add(mapper.createObjectNode().put("id", "alpha").put("rarity", "D"))
             .add(mapper.createObjectNode().put("id", "beta").put("rarity", "C"));
