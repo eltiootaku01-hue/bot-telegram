@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from app.game.art_directions import direction_for
-from app.game.models import CardTier
-from app.game.waifumon_progression import class_band_for_level
+from app.game.models import CardTier, Rarity
+from app.game.waifumon_progression import evolution_band_for_level
 
 
 class CardArtTier(StrEnum):
@@ -75,6 +75,22 @@ SAFE_ART_STAGES: tuple[ArtStage, ...] = (
 )
 
 
+WAIFUMON_RARITY_ART_VISIBILITY: dict[Rarity, str] = {
+    Rarity.D: "15%",
+    Rarity.C: "20%",
+    Rarity.B: "30%",
+    Rarity.A: "45%",
+    Rarity.S: "60%",
+    Rarity.SS: "80%",
+    Rarity.SSS: "100%",
+}
+
+
+def waifumon_rarity_art_visibility(rarity: Rarity | str) -> str:
+    resolved = rarity if isinstance(rarity, Rarity) else Rarity(rarity)
+    return WAIFUMON_RARITY_ART_VISIBILITY[resolved]
+
+
 CARD_OUTFITS: dict[CardTier, str] = {
     CardTier.R: "versión base",
     CardTier.S: "variante destacada de profesión o evento",
@@ -134,7 +150,7 @@ def art_prompt_spec(
         sensuality = "vestuario especial atractivo pero totalmente no explícito y apropiado"
     else:
         sensuality = "vestuario normal completamente vestido, atractivo y aventurero"
-    evolution_band = class_band_for_level(level)
+    evolution_band = evolution_band_for_level(level)
     direction = unique_direction.strip() or "diseño visual propio del personaje"
     direction_key = character_id.strip().casefold() or character_name.casefold().replace(" ", "-")
     visual = direction_for(direction_key)
@@ -142,12 +158,12 @@ def art_prompt_spec(
         f"Character: {character_name}. Source work: {anime}. "
         f"Visual tier: {frame.tier.value}. Visible composition: {frame.visible_percent}. "
         f"Framing: {frame.framing}. Pose: {frame.pose_direction}. "
-        f"WaifuMon evolution class: {evolution_band.waifumon_class.value}. "
+        f"WaifuMon evolution stage: {evolution_band.stage.value}. "
         f"Evolution design language: {evolution_band.design_language}. "
         f"Evolution framing: {evolution_band.framing}. "
         f"Style: {stage.style}. Costume: {stage.outfit}; {special}. "
         f"Variant: {variant.casefold()}. Visual safety: {sensuality}. "
-        f"Design change requirement: class {evolution_band.waifumon_class.value} must be visually distinct from the previous class through costume, pose, silhouette, accessories and lighting; do not merely crop or recolor the previous art. " 
+        f"Design change requirement: evolution stage {evolution_band.stage.value} must be visually distinct from the previous stage through costume, pose, silhouette, accessories and lighting; do not merely crop or recolor the previous art. " 
         f"Unique direction: {direction}. " 
         f"Palette: {visual.palette}; "
         f"Expression: {visual.expression}; "
