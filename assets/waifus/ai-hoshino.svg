@@ -1,1 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="680"><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#18365a"/><stop offset="1" stop-color="#090c14"/></linearGradient></defs><rect x="8" y="8" width="464" height="664" rx="28" fill="url(#b)" stroke="#8bd7ff" stroke-width="8"/><text x="34" y="52" fill="#eafaff" font-size="20" font-family="Arial" font-weight="700">WAIFUMON • CARTA 25</text><text x="446" y="52" text-anchor="end" fill="#8bd7ff" font-size="26" font-family="Arial" font-weight="700">R</text><circle cx="240" cy="340" r="138" fill="#0a0d14" opacity=".45"/><path d="M145 340 Q150 215 240 190 Q330 215 335 340 L320 425 Q240 470 160 425Z" fill="#8c6b58"/><ellipse cx="240" cy="340" rx="86" ry="112" fill="#f2d1bd"/><path d="M152 312 Q165 205 240 184 Q315 205 328 312 Q284 265 240 282 Q196 265 152 312Z" fill="#8c6b58"/><path d="M170 430 Q240 395 310 430 L345 535 L135 535Z" fill="#8bd7ff"/><ellipse cx="205" cy="336" rx="12" ry="16" fill="#ff7d91"/><ellipse cx="275" cy="336" rx="12" ry="16" fill="#ff7d91"/><circle cx="208" cy="339" r="5"/><circle cx="278" cy="339" r="5"/><path d="M216 386 Q240 400 264 386" fill="none" stroke="#9e5c66" stroke-width="5" stroke-linecap="round"/><circle cx="335" cy="250" r="24" fill="#8bd7ff"/><text x="335" y="258" text-anchor="middle" fill="#eafaff" font-size="20" font-family="Arial">✦</text><rect x="32" y="555" width="416" height="80" rx="18" fill="#0a0d14" stroke="#8bd7ff" stroke-width="2"/><text x="48" y="585" fill="#fff" font-size="22" font-family="Arial" font-weight="700">Ai Hoshino</text><text x="48" y="612" fill="#eafaff" font-size="13" font-family="Arial">Oshi no Ko</text><text x="330" y="585" fill="#8bd7ff" font-size="20" font-family="Arial" font-weight="700">CLASE S</text><text x="330" y="612" fill="#eafaff" font-size="12" font-family="Arial">ARTE ORIGINAL</text><text x="240" y="657" text-anchor="middle" fill="#aab3c7" font-size="11" font-family="Arial">VISUAL NO CANÓNICO • V1</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1b0f2d"/><stop offset=".5" stop-color="#59205e"/><stop offset="1" stop-color="#0a152a"/></linearGradient>
+<radialGradient id="stage" cx=".5" cy=".18" r=".75"><stop stop-color="#ffb4f1" stop-opacity=".5"/><stop offset=".45" stop-color="#b46cff" stop-opacity=".2"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f5c1ee"/><stop offset=".5" stop-color="#b169c7"/><stop offset="1" stop-color="#61358e"/></linearGradient>
+<linearGradient id="dress" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0fb"/><stop offset=".5" stop-color="#e2a5dc"/><stop offset="1" stop-color="#8f3a9d"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#f5c5ef" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#stage)"/>
+<text x="52" y="78" fill="#fff4ff" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#e6a8ff" font-family="Arial" font-size="32" font-weight="800">SR</text>
+<text x="52" y="112" fill="#e0c9e4" font-family="Arial" font-size="13" letter-spacing="3">AI HOSHINO • 60-80% • IDOL / ESCENARIO</text>
+
+<g opacity=".48" fill="#fff">
+<circle cx="111" cy="228" r="42"/><circle cx="610" cy="232" r="36"/><circle cx="145" cy="308" r="18"/><circle cx="577" cy="300" r="19"/>
+</g>
+<g stroke="#f8baf2" fill="none" opacity=".58">
+<path d="M84 216 L148 264 L112 305 L76 256Z"/><path d="M575 218 L639 262 L603 306 L567 257Z"/>
+</g>
+
+<!-- upper-body stage composition -->
+<g stroke="#140d19" stroke-width="9" stroke-linejoin="round">
+<path d="M199 474 Q183 304 250 215 Q356 82 480 206 Q547 282 512 465 Q495 575 444 626 L278 626 Q214 574 199 474Z" fill="url(#hair)"/>
+<path d="M267 278 Q359 205 452 278 L457 408 Q441 486 360 512 Q278 487 262 408Z" fill="#f3d3c3"/>
+<path d="M252 292 Q283 194 368 194 Q449 198 469 293 Q430 260 403 285 Q370 235 340 285 Q299 249 252 292Z" fill="url(#hair)"/>
+<path d="M273 274 Q247 383 276 478" fill="none" stroke="#ffd5f7" stroke-width="10"/>
+<path d="M447 272 Q470 383 441 478" fill="none" stroke="#ffd5f7" stroke-width="10"/>
+<ellipse cx="319" cy="386" rx="15" ry="20" fill="#463a93"/><ellipse cx="400" cy="386" rx="15" ry="20" fill="#463a93"/>
+<circle cx="323" cy="379" r="6" fill="#fff" stroke="none"/><circle cx="404" cy="379" r="6" fill="#fff" stroke="none"/>
+<circle cx="319" cy="386" r="4" fill="#f7bdf0" stroke="none"/><circle cx="400" cy="386" r="4" fill="#f7bdf0" stroke="none"/>
+<path d="M339 447 Q360 458 381 447" fill="none" stroke="#a35d74" stroke-width="5"/>
+
+<path d="M283 506 Q360 478 437 506 L481 724 Q436 774 360 788 Q283 774 239 724Z" fill="url(#dress)"/>
+<path d="M316 511 L360 559 L403 511" fill="none" stroke="#fff1fd" stroke-width="8"/>
+<path d="M360 560 L360 742" stroke="#8e3c9c" stroke-width="6"/>
+<path d="M250 530 Q195 568 174 641 Q165 668 188 682 Q213 696 232 669 L314 574" fill="url(#dress)"/>
+<path d="M431 530 Q489 566 520 640 Q533 668 511 684 Q486 698 465 670 L398 574" fill="url(#dress)"/>
+
+<!-- microphone and hand -->
+<path d="M509 616 L555 503" stroke="#e9d6ef" stroke-width="10"/>
+<circle cx="561" cy="492" r="18" fill="#c4a4d7"/>
+<path d="M482 645 Q512 631 530 654 Q538 681 514 693 Q487 694 474 670Z" fill="#f2d1c0"/>
+
+<path d="M245 700 Q360 735 475 700 L500 810 Q435 853 360 858 Q285 853 219 810Z" fill="#7b308c"/>
+</g>
+
+<g fill="#fff4ff">
+<path d="M102 742 l18 34 38 5 -28 26 8 38 -36 -19 -36 19 8-38 -28-26 38-5z"/>
+<path d="M598 740 l15 29 33 4 -25 23 7 33 -30-16 -31 16 7-33 -25-23 33-4z"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#0c1220" opacity=".92" stroke="#f5c5ef" stroke-width="2"/>
+<text x="64" y="929" fill="#fff2fd" font-family="Arial" font-size="22" font-weight="700">Ai Hoshino</text>
+<text x="64" y="952" fill="#d9c4df" font-family="Arial" font-size="12">Oshi no Ko • SR visual • medio cuerpo amplio • escenario idol</text>
+<text x="656" y="929" text-anchor="end" fill="#e6a8ff" font-family="Arial" font-size="14" font-weight="700">LUZ / ESCENA</text>
+<text x="656" y="952" text-anchor="end" fill="#d9c4df" font-family="Arial" font-size="11">micrófono • estrellas • composición propia</text>
+</svg>
