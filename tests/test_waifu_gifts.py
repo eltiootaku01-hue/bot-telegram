@@ -201,3 +201,30 @@ async def test_concurrent_gift_claims_allow_only_three_winners(tmp_path):
     assert len(claims) == 3
     await database_a.close()
     await database_b.close()
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_gift_delivery_is_fenced_until_manual_recovery(database):
+    service = WaifuGiftService()
+
+    async with database.session(write=True) as session:
+        drop = await service.create_drop(
+            session,
+            chat_id=-100,
+            day_key="2026-09-21",
+            slot=5,
+        )
+        claimed = await service.claim_publication(session, drop_id=drop.id)
+        assert claimed is True
+
+    async with database.session(write=True) as session:
+        changed = await service.mark_publication_unknown(session, drop_id=drop.id)
+
+    assert changed is True
+
+    async with database.session() as session:
+        drop = await session.get(WaifuGiftDrop, drop.id)
+
+    assert drop is not None
+    assert drop.status == "delivery_unknown"
+    await database.close()
