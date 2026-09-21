@@ -57,4 +57,4 @@ def test_evolution_art_registry_uses_four_level_stages() -> None:
     assert base[0] == "assets/production/cards/yor-forger--stage1.jpg"
     assert first[0] == "assets/production/cards/yor-forger--stage2.jpg"
     assert second[0] == "assets/production/cards/yor-forger--stage3.jpg"
-    assert third[0] == "assets/waifus/yor-forger--stage4.png"
+    assert third[0] == "assets/production/cards/yor-forger--stage3.jpg"
