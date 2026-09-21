@@ -12,7 +12,7 @@ from app.core.time import utc_now
 from app.db.models import GameCollection, GameProfile, WaifuDetectorDailyUsage, WaifuDetectorRound
 from app.game.models import Rarity
 from app.game.catalog import get_character
-from app.game.waifumon_progression import stats_for_character
+from app.game.waifumon_progression import stats_for_collection
 from app.game.progression import add_collection_experience
 
 
@@ -58,7 +58,7 @@ class WaifuDetectorService:
     @staticmethod
     def _player_power(collection: GameCollection) -> int:
         character = get_character(collection.character_id)
-        stats = stats_for_character(character, collection.level)
+        stats = stats_for_collection(character, collection)
         rarity_bonus = {
             Rarity.D.value: 0,
             Rarity.C.value: 2,
