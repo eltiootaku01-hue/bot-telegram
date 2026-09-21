@@ -467,7 +467,7 @@
       "anime": "Fairy Tail",
       "art_tier": "UR",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
       "production_file": "assets/production/cards/erza-scarlet--normal.jpg",
@@ -479,10 +479,12 @@
       "ur_alt_holo": {
         "supported": true,
         "adult_gate_required": true,
-        "adult_eligible": false,
+        "adult_eligible": true,
         "prompt_mode": "non-explicit-premium-glamour",
-        "production_file": "assets/production/cards/erza-scarlet--ur-alt-holo.jpg"
-      }
+        "production_file": "assets/production/cards/erza-scarlet--ur-alt-holo.jpg",
+        "adult_eligibility_basis": "canon_age: 19 (X784); adult"
+      },
+      "adult_eligibility_basis": "canon_age: 19 (X784); adult"
     },
     {
       "character_id": "esdeath",
@@ -490,7 +492,7 @@
       "anime": "Akame ga Kill!",
       "art_tier": "UR",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
       "production_file": "assets/production/cards/esdeath--normal.jpg",
@@ -502,10 +504,12 @@
       "ur_alt_holo": {
         "supported": true,
         "adult_gate_required": true,
-        "adult_eligible": false,
+        "adult_eligible": true,
         "prompt_mode": "non-explicit-premium-glamour",
-        "production_file": "assets/production/cards/esdeath--ur-alt-holo.jpg"
-      }
+        "production_file": "assets/production/cards/esdeath--ur-alt-holo.jpg",
+        "adult_eligibility_basis": "canon_age: 20; adult"
+      },
+      "adult_eligibility_basis": "canon_age: 20; adult"
     },
     {
       "character_id": "hina-chono",
@@ -886,7 +890,7 @@
       "anime": "One Piece",
       "art_tier": "UR",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
       "production_file": "assets/production/cards/nami--normal.jpg",
@@ -898,10 +902,12 @@
       "ur_alt_holo": {
         "supported": true,
         "adult_gate_required": true,
-        "adult_eligible": false,
+        "adult_eligible": true,
         "prompt_mode": "non-explicit-premium-glamour",
-        "production_file": "assets/production/cards/nami--ur-alt-holo.jpg"
-      }
+        "production_file": "assets/production/cards/nami--ur-alt-holo.jpg",
+        "adult_eligibility_basis": "post_timeskip_age: 20; adult"
+      },
+      "adult_eligibility_basis": "post_timeskip_age: 20; adult"
     },
     {
       "character_id": "nejire-hadou",
@@ -957,7 +963,7 @@
       "anime": "One Piece",
       "art_tier": "UR",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
       "production_file": "assets/production/cards/nico-robin--normal.jpg",
@@ -969,10 +975,12 @@
       "ur_alt_holo": {
         "supported": true,
         "adult_gate_required": true,
-        "adult_eligible": false,
+        "adult_eligible": true,
         "prompt_mode": "non-explicit-premium-glamour",
-        "production_file": "assets/production/cards/nico-robin--ur-alt-holo.jpg"
-      }
+        "production_file": "assets/production/cards/nico-robin--ur-alt-holo.jpg",
+        "adult_eligibility_basis": "post_timeskip_age: 30; adult"
+      },
+      "adult_eligibility_basis": "post_timeskip_age: 30; adult"
     },
     {
       "character_id": "nico-wakatsuki",
@@ -1319,7 +1327,7 @@
       "anime": "Naruto",
       "art_tier": "UR",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
       "production_file": "assets/production/cards/tsunade--normal.jpg",
@@ -1331,10 +1339,12 @@
       "ur_alt_holo": {
         "supported": true,
         "adult_gate_required": true,
-        "adult_eligible": false,
+        "adult_eligible": true,
         "prompt_mode": "non-explicit-premium-glamour",
-        "production_file": "assets/production/cards/tsunade--ur-alt-holo.jpg"
-      }
+        "production_file": "assets/production/cards/tsunade--ur-alt-holo.jpg",
+        "adult_eligibility_basis": "canon_age: 50-51 in Part I; adult"
+      },
+      "adult_eligibility_basis": "canon_age: 50-51 in Part I; adult"
     },
     {
       "character_id": "venelana-gremory",
@@ -1390,7 +1400,7 @@
       "anime": "SPY x FAMILY",
       "art_tier": "UR",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
       "production_file": "assets/production/cards/yor-forger--normal.jpg",
@@ -1402,10 +1412,12 @@
       "ur_alt_holo": {
         "supported": true,
         "adult_gate_required": true,
-        "adult_eligible": false,
+        "adult_eligible": true,
         "prompt_mode": "non-explicit-premium-glamour",
-        "production_file": "assets/production/cards/yor-forger--ur-alt-holo.jpg"
-      }
+        "production_file": "assets/production/cards/yor-forger--ur-alt-holo.jpg",
+        "adult_eligibility_basis": "canon_age: 27; adult"
+      },
+      "adult_eligibility_basis": "canon_age: 27; adult"
     },
     {
       "character_id": "yoruichi-shihoin",
