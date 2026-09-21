@@ -1,7 +1,7 @@
 {
   "total_cards": 78,
-  "completed_cards": 7,
-  "progress_percent": 8.97,
+  "completed_cards": 9,
+  "progress_percent": 11.54,
   "completed_character_ids": [
     "yor-forger",
     "ako-tamaki",
@@ -9,12 +9,14 @@
     "violet-evergarden",
     "erza-scarlet",
     "emilia",
-    "ai-hoshino"
+    "ai-hoshino",
+    "reiko-kujirai",
+    "akane-kurokawa"
   ],
   "visual_tiers_completed": {
     "R": 1,
     "S": 1,
-    "SR": 2,
+    "SR": 4,
     "UR": 3
   },
   "next_rule": "Continue one avatar at a time. Never reuse a generic image as final card art."
