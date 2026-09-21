@@ -96,6 +96,7 @@ class GameProfile(Base):
     experience: Mapped[int] = mapped_column(Integer, default=0)
     points: Mapped[int] = mapped_column(Integer, default=0)
     coins: Mapped[int] = mapped_column(Integer, default=0)
+    gacha_d_streak: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
@@ -179,6 +180,7 @@ class GameGachaRoll(Base):
     character_id: Mapped[str] = mapped_column(String(100))
     approval_id: Mapped[int | None] = mapped_column(ForeignKey("rare_drop_approvals.id", ondelete="SET NULL"))
     granted: Mapped[bool] = mapped_column(default=False)
+    pity_triggered: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
