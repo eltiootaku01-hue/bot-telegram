@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from app.game.art_progression import art_frame_for
 from app.game.catalog import CHARACTERS
 from app.game.models import Character
 from app.game.waifu_catalog import ANIME_CORNER_2025_SOURCE, RANKER_2026_SOURCE
@@ -165,6 +166,7 @@ def render_detail(character: Character) -> str:
             f"📺 {character.anime}",
             "",
             f"🏷️ Carta: <b>{character.card_tier.value}</b>",
+            f"🎨 Arte: <b>{art_frame_for(popularity_score=character.popularity_score, power_score=character.power_score).tier.value}</b> · {art_frame_for(popularity_score=character.popularity_score, power_score=character.power_score).visible_percent}",
             f"💠 Clase: <b>{character.rarity.value}</b>",
             f"🌟 Elemento: <b>{character.element.value}</b>",
             f"⚡ Poder de balance: <b>{character.power_score}/100</b>",
