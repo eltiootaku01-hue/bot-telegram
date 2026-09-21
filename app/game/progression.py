@@ -350,8 +350,7 @@ async def apply_capture_progression(
         result = add_character_experience(
             level=collection.level,
             experience=collection.experience,
-            evolution_stage=collection.evolution_stage,
-            gained=gained,
+                        gained=gained,
             copies=collection.copies + 1,
         )
         claimed = await session.execute(
