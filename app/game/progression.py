@@ -63,11 +63,11 @@ def add_character_experience(*, level: int, experience: int, evolution_stage: in
         raise ValueError("Progression values cannot be negative")
     total = experience + gained
     current_level = max(1, level)
-    while current_level < 25 and total >= current_level * 100:
+    while current_level < 30 and total >= current_level * 100:
         total -= current_level * 100
         current_level += 1
-    if current_level >= 25:
-        current_level = 25
+    if current_level >= 30:
+        current_level = 30
         total = 0
     return ProgressionResult(current_level, total, max(1, evolution_stage), False, 0)
 
