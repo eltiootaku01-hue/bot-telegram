@@ -122,6 +122,12 @@ def test_waifu_catalog_filter_keyboard_uses_compact_telegram_callbacks() -> None
         for button in row
         if button.callback_data
     ]
+    assert "game:waifus:set:c:s" in [
+        button.callback_data
+        for row in __import__("app.ui.game_keyboards", fromlist=["waifu_filter_options_keyboard"]).waifu_filter_options_keyboard("c").inline_keyboard
+        for button in row
+        if button.callback_data
+    ]
     assert "game:waifus:set:s:ranker" in source_callbacks
     assert "game:waifus:set:s:recent" in source_callbacks
     assert "game:waifus:set:s:local" in source_callbacks
