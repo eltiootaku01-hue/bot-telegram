@@ -981,6 +981,10 @@ class GameModule(BotModule):
             if result is EncounterAttemptResult.FULL:
                 await callback.answer('Este encuentro ya tiene sus 3 oportunidades ocupadas.', show_alert=True)
                 return
+            participant_count = await self.encounters.participant_count(session, encounter_id)
+            if participant_count >= 3:
+                await self.encounters.finish(session, encounter_id, "closed")
+
             if result is EncounterAttemptResult.WRONG:
                 reaction = self._game_reaction(
                     CharacterIntent.GAME_MISS,
