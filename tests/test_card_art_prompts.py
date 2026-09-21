@@ -113,31 +113,26 @@ def test_card_art_prompt_export_supports_variant_metadata_for_normal(tmp_path: P
     assert "Variantes soportadas: normal, ur-alt-holo" in markdown
 
 
-def test_adult_eligibility_gate_is_fail_closed_for_non_ur_cards(tmp_path: Path) -> None:
-    manifest = {
-        "version": 5,
-        "matrix_version": "2026-09-card-art-matrix-v2",
-        "items": [
-            {
-                "character_id": "adult-sr",
-                "name": "Adult SR",
-                "anime": "Original",
-                "art_tier": "SR",
-                "adult_eligible": True,
-                "variant_support": ["normal"],
-            }
-        ],
+
+def test_adult_eligibility_is_limited_to_verified_adult_ur_cards() -> None:
+    data = json.loads(Path("assets/waifus/art_manifest.json").read_text(encoding="utf-8"))
+    adult_ids = {
+        item["character_id"]
+        for item in data["items"]
+        if item.get("adult_eligible") is True
     }
-    path = tmp_path / "art_manifest.json"
-    path.write_text(json.dumps(manifest), encoding="utf-8")
-    validator = subprocess.run(
-        [
-            sys.executable,
-            "tools/validate_card_qa.py",
-        ],
-        cwd=Path.cwd(),
-        text=True,
-        capture_output=True,
-    )
-    # The repository validator must reject adult eligibility that cannot unlock UR ALT.
-    assert validator.returncode == 0
+    assert adult_ids == {
+        "erza-scarlet",
+        "esdeath",
+        "nami",
+        "nico-robin",
+        "tsunade",
+        "yor-forger",
+    }
+
+    for item in data["items"]:
+        if item["character_id"] in adult_ids:
+            assert item["art_tier"] == "UR"
+            assert "ur-alt-holo" in item["variant_support"]
+        else:
+            assert item.get("adult_eligible") is False
