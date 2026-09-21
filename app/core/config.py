@@ -1,3 +1,4 @@
+import json
 from functools import lru_cache
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -20,6 +21,8 @@ class Settings(BaseSettings):
     bot_link_sunna: str = ""
     bot_link_cami: str = ""
     bot_link_chie: str = ""
+    # Optional Telegram sticker file IDs keyed by the authored sticker catalog key.
+    telegram_sticker_file_ids_json: str = "{}"
 
     # One process per configured identity.
     bot_identity: BotIdentity = BotIdentity.CARI
@@ -89,6 +92,21 @@ class Settings(BaseSettings):
         except ZoneInfoNotFoundError as exc:
             raise ValueError(f"unknown IANA timezone: {value}") from exc
         return value
+
+    @property
+    def telegram_sticker_file_ids(self) -> dict[str, str]:
+        """Parse optional sticker file IDs; malformed values fail closed."""
+        try:
+            raw = json.loads(self.telegram_sticker_file_ids_json)
+        except json.JSONDecodeError:
+            return {}
+        if not isinstance(raw, dict):
+            return {}
+        result: dict[str, str] = {}
+        for key, value in raw.items():
+            if isinstance(key, str) and isinstance(value, str) and key.strip() and value.strip():
+                result[key.strip()] = value.strip()
+        return result
 
     @property
     def authorized_chat_ids_set(self) -> frozenset[int]:
