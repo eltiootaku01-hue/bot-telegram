@@ -22,7 +22,7 @@ if exist "dist\engine" rmdir /s /q "dist\engine"
 mkdir "dist\engine"
 if errorlevel 1 exit /b %errorlevel%
 
-mvn --batch-mode --no-transfer-progress -f engine\waifumon\pom.xml clean package -DskipTests
+call mvn --batch-mode --no-transfer-progress -f engine\waifumon\pom.xml clean package -DskipTests
 if errorlevel 1 exit /b %errorlevel%
 
 copy /Y "engine\waifumon\target\waifumon-engine.jar" "dist\engine\waifumon-engine.jar" >nul
