@@ -38,11 +38,9 @@ La dirección se mantiene en `app/game/art_directions.py`. Cuando un personaje n
 
 La biblioteca de producción contiene **78 cartas jugables** en cola.
 
-La primera pieza completada en esta etapa es:
+Las piezas completadas se registran individualmente en el manifiesto.
 
-- `yor-forger.svg` — **UR**, cuerpo completo, dirección de asesina elegante, escenario nocturno y composición propia.
-
-El resto permanece en `pending` hasta producirse de forma individual.
+El manifiesto y `art_progress.json` contienen el estado unitario actual de cada avatar. Las piezas raster aptas para el runtime deben quedar en `assets/waifus/<character_id>.png`.
 
 ## Referencia visual
 
