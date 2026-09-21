@@ -177,3 +177,45 @@ async def test_claimed_envelope_contains_typed_lease(database):
     assert envelope.event_type is WorldEventType.GAME_NEWS
     assert envelope.presenter.key == "cami"
     assert envelope.lock_time is not None
+
+
+@pytest.mark.asyncio
+async def test_claim_due_can_be_scoped_to_one_presenter(database):
+    service = WorldEventService()
+
+    async with database.session() as session:
+        await service.schedule_game_news(
+            session,
+            chat_id=-100,
+            presenter=WorldPresenterRef("sunna", PresenterKind.EXISTING_BOT),
+            title="Sunna",
+            text="Solo Sunna",
+            dedupe_key="presenter-sunna",
+        )
+        await service.schedule_game_news(
+            session,
+            chat_id=-100,
+            presenter=WorldPresenterRef("cami", PresenterKind.EXISTING_BOT),
+            title="Cami",
+            text="Solo Cami",
+            dedupe_key="presenter-cami",
+        )
+        await session.commit()
+
+    async with database.session(write=True) as session:
+        claimed = await service.claim_due(
+            session,
+            presenter_key="existing_bot:sunna",
+        )
+
+    assert claimed is not None
+    assert claimed.presenter.key == "sunna"
+
+    async with database.session() as session:
+        rows = list(
+            await session.scalars(
+                select(GameWorldEvent).order_by(GameWorldEvent.id.asc())
+            )
+        )
+
+    assert [row.status for row in rows] == ["publishing", "pending"]
