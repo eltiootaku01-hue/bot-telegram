@@ -51,7 +51,7 @@ jobs:
       - name: Build executables
         shell: cmd
         run: tools\build_launcher.bat
-      - name: Verify visual assets
+          - name: Verify visual assets
         shell: pwsh
         run: |
           $reference = "dist\assets\waifus\generated\waifu-card-concept.jpg"
@@ -69,7 +69,11 @@ jobs:
           foreach ($characterId in $progress.completed_character_ids) {
             $asset = "dist\assets\waifus\$characterId.svg"
             if (-not (Test-Path $asset)) { throw "Missing approved character art: $asset" }
-            if ((Get-Item $asset).Length -lt 5KB) { throw "Character art looks unexpectedly small: $asset" }
+            $svg = Get-Content $asset -Raw
+            if ($svg.Length -lt 1000) { throw "Character art looks unexpectedly small: $asset" }
+            if ($svg -notmatch '<svg\b' -or $svg -notmatch '</svg>') {
+              throw "Character art is not a complete SVG document: $asset"
+            }
           }
 
       - name: Verify executables
