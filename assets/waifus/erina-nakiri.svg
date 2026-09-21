@@ -1,1 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="680"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#"/><stop offset="1" stop-color="#090c14"/></linearGradient></defs><rect x="8" y="8" width="464" height="664" rx="28" fill="url(#g)" stroke="2" stroke-width="8"/><text x="34" y="52" fill="0" font-size="20" font-family="Arial" font-weight="700">WAIFUMON • CARTA 40</text><text x="446" y="52" text-anchor="end" fill="2" font-size="26" font-family="Arial" font-weight="700">R</text><circle cx="240" cy="336" r="140" fill="#090c14" opacity=".55"/><path d="M145 338 Q150 220 240 190 Q330 220 335 338 L322 420 Q240 470 158 420Z" fill="#4a5060"/><ellipse cx="240" cy="338" rx="86" ry="112" fill="#f2d1bd"/><path d="M152 312 Q160 210 240 184 Q320 210 328 312 Q282 270 240 282 Q198 270 152 312Z" fill="#4a5060"/><path d="M170 430 Q240 395 310 430 L345 535 L135 535Z" fill="2"/><ellipse cx="205" cy="336" rx="12" ry="16" fill="0"/><ellipse cx="275" cy="336" rx="12" ry="16" fill="0"/><circle cx="208" cy="339" r="5"/><circle cx="278" cy="339" r="5"/><path d="M216 386 Q240 400 264 386" fill="none" stroke="#9e5c66" stroke-width="5" stroke-linecap="round"/><circle cx="335" cy="248" r="24" fill="2"/><text x="335" y="256" text-anchor="middle" fill="0" font-size="20" font-family="Arial">✦</text><rect x="32" y="555" width="416" height="80" rx="18" fill="#0a0d14" stroke="2" stroke-width="2"/><text x="48" y="585" fill="#fff" font-size="22" font-family="Arial" font-weight="700">Erina Nakiri</text><text x="48" y="612" fill="0" font-size="13" font-family="Arial">Food Wars!: Shokugeki no Soma</text><text x="330" y="585" fill="2" font-size="20" font-family="Arial" font-weight="700">CLASE S</text><text x="330" y="612" fill="0" font-size="12" font-family="Arial">ARTE ORIGINAL</text><text x="240" y="657" text-anchor="middle" fill="#aab3c7" font-size="11" font-family="Arial">VISUAL NO CANÓNICO • V1</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#23120f"/><stop offset=".48" stop-color="#6d4430"/><stop offset="1" stop-color="#151f2a"/></linearGradient>
+<radialGradient id="k" cx=".5" cy=".22" r=".68"><stop stop-color="#ffdca3" stop-opacity=".36"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c79b89"/><stop offset=".52" stop-color="#e2b6a0"/><stop offset="1" stop-color="#8a6159"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#f0c78b" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#k)"/>
+<text x="52" y="78" fill="#fff2de" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#f0cf93" font-family="Arial" font-size="32" font-weight="800">S</text>
+<text x="52" y="112" fill="#dbc9b9" font-family="Arial" font-size="13" letter-spacing="3">ERINA • 40% • COCINA / PRECISIÓN</text>
+
+<g opacity=".5" stroke="#f4d59b" fill="none">
+<path d="M80 210 H640"/><path d="M112 242 H608"/>
+</g>
+
+<g stroke="#17120f" stroke-width="9" stroke-linejoin="round">
+<path d="M208 402 Q195 260 267 176 Q359 70 469 167 Q544 234 513 406 Q498 515 446 590 L274 590 Q216 514 208 402Z" fill="url(#hair)"/>
+<path d="M268 239 Q359 165 451 238 L456 362 Q439 445 359 472 Q279 444 261 361Z" fill="#f4d5c2"/>
+<path d="M256 250 Q285 151 367 148 Q451 151 469 250 Q430 214 404 239 Q371 191 339 239 Q299 206 256 250Z" fill="url(#hair)"/>
+<path d="M274 228 Q251 337 280 443" fill="none" stroke="#f1d2bf" stroke-width="10"/>
+<path d="M445 226 Q468 338 439 443" fill="none" stroke="#f1d2bf" stroke-width="10"/>
+<ellipse cx="320" cy="338" rx="13" ry="19" fill="#7a3d4c"/><ellipse cx="399" cy="338" rx="13" ry="19" fill="#7a3d4c"/>
+<circle cx="323" cy="331" r="5" fill="#fff3d9" stroke="none"/><circle cx="402" cy="331" r="5" fill="#fff3d9" stroke="none"/>
+<path d="M338 401 Q359 412 380 401" fill="none" stroke="#a35c6e" stroke-width="5"/>
+
+<path d="M286 452 Q359 426 434 452 L479 700 Q437 756 359 773 Q281 756 240 700Z" fill="#f0ece5"/>
+<path d="M313 460 L359 513 L405 460" fill="none" stroke="#bb6c50" stroke-width="8"/>
+<path d="M359 513 L359 724" stroke="#c7b59d" stroke-width="5"/>
+
+<!-- culinary pose -->
+<path d="M283 477 Q238 526 206 593 Q192 622 214 641 Q238 659 258 629 L322 545" fill="#e8e3dc"/>
+<path d="M432 477 Q486 521 522 585 Q537 614 516 636 Q492 655 470 626 L398 545" fill="#e8e3dc"/>
+<path d="M184 592 L232 601 L215 642 L173 627Z" fill="#d89a5f"/>
+<path d="M205 570 Q218 548 239 565 L232 600 L207 597Z" fill="#f4d5c2"/>
+<path d="M494 568 Q520 552 538 576 L520 607 L496 600Z" fill="#f4d5c2"/>
+
+<!-- plate -->
+<ellipse cx="359" cy="646" rx="82" ry="26" fill="#fffaf0"/>
+<ellipse cx="359" cy="640" rx="62" ry="16" fill="#dca267"/>
+<path d="M326 639 q15-22 30 0 q15-22 30 0 q-15 22-30 0 q-15 22-30 0z" fill="#f7d27b"/>
+
+<path d="M245 690 Q359 723 473 690 L489 816 Q431 858 359 866 Q288 858 231 816Z" fill="#805b47"/>
+</g>
+
+<g fill="#ffd99a" opacity=".75">
+<circle cx="114" cy="372" r="4"/><circle cx="600" cy="372" r="5"/><circle cx="150" cy="730" r="3"/><circle cx="570" cy="726" r="4"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#0d141b" opacity=".94" stroke="#f0c78b" stroke-width="2"/>
+<text x="64" y="929" fill="#fff0dc" font-family="Arial" font-size="22" font-weight="700">Erina Nakiri</text>
+<text x="64" y="952" fill="#d8c7b5" font-family="Arial" font-size="12">Food Wars! • S visual • 40% • composición culinaria</text>
+<text x="656" y="929" text-anchor="end" fill="#f0cf93" font-family="Arial" font-size="14" font-weight="700">PRECISIÓN</text>
+<text x="656" y="952" text-anchor="end" fill="#d8c7b5" font-family="Arial" font-size="11">plato • gesto técnico • dirección unitaria</text>
+</svg>
