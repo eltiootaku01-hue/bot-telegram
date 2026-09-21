@@ -51,7 +51,7 @@ async def test_story_advance_rejects_stale_buttons_and_completes_exactly_once(da
     await database.create_schema()
 
     async with database.session(write=True) as session:
-        first = await StoryService.current(session, chat_id=-100)
+        await StoryService.current(session, chat_id=-100)
         advanced, changed = await StoryService.advance(
             session,
             chat_id=-100,
