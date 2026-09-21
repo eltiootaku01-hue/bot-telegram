@@ -91,3 +91,30 @@ async def test_waifu_detail_rejects_foreign_private_message(database: Database) 
         "Este catálogo solo funciona en tu chat privado con Sunna. 😰",
         show_alert=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_waifu_detail_sends_character_art_when_asset_exists(database, tmp_path, monkeypatch) -> None:
+    module = GameModule(database, Settings(admin_user_id=77))
+    art = tmp_path / "yor-forger.png"
+    art.write_bytes(b"not-real-image")
+    monkeypatch.setattr("app.modules.game.module.resolve_asset", lambda path: art)
+    callback_message = SimpleNamespace(
+        chat=SimpleNamespace(id=77, type="private"),
+        edit_text=AsyncMock(),
+        answer_photo=AsyncMock(),
+    )
+    callback = SimpleNamespace(
+        message=callback_message,
+        from_user=SimpleNamespace(id=77),
+        data="game:waifu:d:yor-forger:1",
+        answer=AsyncMock(),
+    )
+
+    await module.waifu_detail(callback)
+
+    callback_message.edit_text.assert_awaited_once_with("🎴 <b>Ficha de waifu</b>")
+    callback_message.answer_photo.assert_awaited_once()
+    assert callback_message.answer_photo.await_args.kwargs["reply_markup"] is not None
+    assert "Yor Forger" in callback_message.answer_photo.await_args.kwargs["caption"]
+    callback.answer.assert_awaited_once()
