@@ -13,7 +13,7 @@ from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.core.time import utc_now
 from app.db.database import Database
-from app.db.models import GameCollection, GameEncounter, GameItemInventory, GameProfile
+from app.db.models import GameCollection, GameItemInventory, GameProfile, GameEncounter
 from app.db.repositories import MemberRepository
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterAttemptResult, EncounterStore
@@ -47,7 +47,6 @@ from app.ui.game_keyboards import (
     waifu_filter_categories_keyboard,
     waifu_filter_options_keyboard,
     detector_keyboard,
-    gift_keyboard,
     item_consume_keyboard,
     item_inventory_keyboard,
 )
