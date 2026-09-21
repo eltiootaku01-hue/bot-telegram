@@ -77,8 +77,9 @@ SAFE_ART_STAGES: tuple[ArtStage, ...] = (
 
 CARD_OUTFITS: dict[CardTier, str] = {
     CardTier.R: "versión base",
-    CardTier.SR: "versión especial de profesión o evento",
-    CardTier.UR: "versión ultra con escenario y efectos exclusivos",
+    CardTier.S: "variante destacada de profesión o evento",
+    CardTier.SR: "versión premium especial de profesión o evento",
+    CardTier.UR: "versión ultra con escenario, pose y efectos exclusivos",
 }
 
 
