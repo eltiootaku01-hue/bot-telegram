@@ -241,6 +241,7 @@ class GachaService:
             profile_id=profile.id,
             character_id=character.id,
             rarity=character.rarity.value,
+            potential_seed=f"gacha:{seed}",
         )
         await self.cards.grant(session, profile_id=profile.id, card=card)
         roll.granted = True
@@ -322,6 +323,7 @@ class GachaService:
             profile_id=profile.id,
             character_id=approval.character_id,
             rarity=approval.rarity,
+            potential_seed=f"gacha:{roll.roll_id}",
         )
         card = card_for_gacha_character(
             get_character(approval.character_id),
