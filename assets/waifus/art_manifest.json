@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "policy": "Character-specific art is versioned one avatar at a time. Legacy generic SVGs are not approved as final art.",
   "visual_rules": {
     "R": "20% rostro+hombros",
@@ -7,48 +7,51 @@
     "SR": "60-80% medio cuerpo amplio",
     "UR": "100%+ cuerpo completo y composición abierta"
   },
-  "style_policy": "Original polished anime-fantasy illustration; references are mood-level only, not direct style copying.",
+  "style_policy": "Original polished anime-fantasy illustration; external references are mood-level only, never direct style copying.",
   "total_items": 78,
-  "completed_items": 1,
+  "completed_items": 17,
   "items": [
     {
       "character_id": "ai-hoshino",
       "name": "Ai Hoshino",
       "popularity_rank": 25,
       "power_score": 45,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "akame",
       "name": "Akame",
       "popularity_rank": 24,
       "power_score": 91,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
-      "asset_status": "pending"
+      "art_tier": "UR",
+      "visible": "100%+",
+      "direction_status": "custom",
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "akane-kurokawa",
       "name": "Akane Kurokawa",
       "popularity_rank": 27,
       "power_score": 48,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
-      "asset_status": "pending"
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "akeno-himejima",
       "name": "Akeno Himejima",
       "popularity_rank": 5,
       "power_score": 91,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "UR",
+      "visible": "100%+",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -56,9 +59,9 @@
       "name": "Aki Nijou",
       "popularity_rank": 8,
       "power_score": 58,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -66,18 +69,19 @@
       "name": "Ako Tamaki",
       "popularity_rank": 59,
       "power_score": 40,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
-      "asset_status": "pending"
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "custom",
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "albedo",
       "name": "Albedo",
       "popularity_rank": 9,
       "power_score": 93,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "UR",
+      "visible": "100%+",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -86,9 +90,9 @@
       "name": "Alisa Mikhailovna Kujo",
       "popularity_rank": 1,
       "power_score": 42,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -96,9 +100,9 @@
       "name": "Anya Forger",
       "popularity_rank": 7,
       "power_score": 28,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -106,8 +110,8 @@
       "name": "Asuna",
       "popularity_rank": 10,
       "power_score": 86,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "UR",
+      "visible": "100%+",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -116,9 +120,9 @@
       "name": "Banri Shiunji",
       "popularity_rank": 19,
       "power_score": 42,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -126,9 +130,9 @@
       "name": "Boa Hancock",
       "popularity_rank": 35,
       "power_score": 86,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -136,9 +140,9 @@
       "name": "Cana Alberona",
       "popularity_rank": 53,
       "power_score": 67,
-      "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "fallback",
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -146,9 +150,9 @@
       "name": "Celistia Ralgris",
       "popularity_rank": 23,
       "power_score": 67,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -156,8 +160,8 @@
       "name": "Cha Hae-In",
       "popularity_rank": 38,
       "power_score": 91,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -166,19 +170,20 @@
       "name": "Chelsea",
       "popularity_rank": 42,
       "power_score": 65,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
-      "asset_status": "pending"
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "chinatsu-kano",
       "name": "Chinatsu Kano",
       "popularity_rank": 15,
       "power_score": 48,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -186,9 +191,9 @@
       "name": "Chisato Hasegawa",
       "popularity_rank": 41,
       "power_score": 70,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -196,9 +201,9 @@
       "name": "Chizuru Mizuhara",
       "popularity_rank": 11,
       "power_score": 40,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -206,9 +211,9 @@
       "name": "Darkness",
       "popularity_rank": 29,
       "power_score": 79,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -216,9 +221,9 @@
       "name": "Elizabeth Liones",
       "popularity_rank": 17,
       "power_score": 78,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -226,10 +231,11 @@
       "name": "Emilia",
       "popularity_rank": 26,
       "power_score": 86,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "erina-nakiri",
@@ -238,26 +244,28 @@
       "power_score": 43,
       "art_tier": "S",
       "visible": "40%",
-      "direction_status": "fallback",
-      "asset_status": "pending"
+      "direction_status": "custom",
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "erza-scarlet",
       "name": "Erza Scarlet",
       "popularity_rank": 16,
       "power_score": 89,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "UR",
+      "visible": "100%+",
       "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "esdeath",
       "name": "Esdeath",
       "popularity_rank": 4,
       "power_score": 98,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "UR",
+      "visible": "100%+",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -266,9 +274,9 @@
       "name": "Hina Chono",
       "popularity_rank": 14,
       "power_score": 43,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -276,9 +284,9 @@
       "name": "Hinako Yaotose",
       "popularity_rank": 13,
       "power_score": 39,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -286,29 +294,31 @@
       "name": "Hinata Hyuga",
       "popularity_rank": 19,
       "power_score": 76,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "ino-yamanaka",
       "name": "Ino Yamanaka",
       "popularity_rank": 46,
       "power_score": 60,
-      "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "fallback",
-      "asset_status": "pending"
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "irina-shidou",
       "name": "Irina Shidou",
       "popularity_rank": 51,
       "power_score": 72,
-      "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "fallback",
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -316,8 +326,8 @@
       "name": "Jibril",
       "popularity_rank": 44,
       "power_score": 97,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -326,9 +336,9 @@
       "name": "Kaoruko Waguri",
       "popularity_rank": 2,
       "power_score": 38,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -336,9 +346,9 @@
       "name": "Kuroka",
       "popularity_rank": 7,
       "power_score": 90,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "UR",
+      "visible": "100%+",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -346,8 +356,8 @@
       "name": "Kurumi Tokisaki",
       "popularity_rank": 49,
       "power_score": 97,
-      "art_tier": "R",
-      "visible": "20%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -356,9 +366,9 @@
       "name": "Leone",
       "popularity_rank": 47,
       "power_score": 83,
-      "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -366,9 +376,9 @@
       "name": "Lilith Asami",
       "popularity_rank": 39,
       "power_score": 72,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -376,8 +386,8 @@
       "name": "Lucy Heartfilia",
       "popularity_rank": 33,
       "power_score": 84,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -386,8 +396,8 @@
       "name": "Makima",
       "popularity_rank": 12,
       "power_score": 96,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "UR",
+      "visible": "100%+",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -396,8 +406,8 @@
       "name": "Maomao",
       "popularity_rank": 1,
       "power_score": 45,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -406,9 +416,9 @@
       "name": "Marin Kitagawa",
       "popularity_rank": 5,
       "power_score": 37,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -416,9 +426,9 @@
       "name": "Mary Kikakujou",
       "popularity_rank": 30,
       "power_score": 52,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -426,9 +436,9 @@
       "name": "Midnight",
       "popularity_rank": 34,
       "power_score": 68,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -436,8 +446,8 @@
       "name": "Mikasa Ackerman",
       "popularity_rank": 36,
       "power_score": 84,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -446,8 +456,8 @@
       "name": "Mirajane Strauss",
       "popularity_rank": 32,
       "power_score": 92,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -456,9 +466,9 @@
       "name": "Momo Ayase",
       "popularity_rank": 4,
       "power_score": 80,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "UR",
+      "visible": "100%+",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -466,9 +476,9 @@
       "name": "Momo Yaoyorozu",
       "popularity_rank": 28,
       "power_score": 70,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -476,9 +486,9 @@
       "name": "Mutsumi “Mortis” Wakaba",
       "popularity_rank": 12,
       "power_score": 69,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -486,8 +496,8 @@
       "name": "Nami",
       "popularity_rank": 6,
       "power_score": 76,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "UR",
+      "visible": "100%+",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -496,9 +506,9 @@
       "name": "Nejire Hado",
       "popularity_rank": 31,
       "power_score": 74,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -506,19 +516,20 @@
       "name": "Nene Yashiro",
       "popularity_rank": 16,
       "power_score": 61,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
-      "asset_status": "pending"
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "nezuko-kamado",
       "name": "Nezuko Kamado",
       "popularity_rank": 48,
       "power_score": 86,
-      "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -526,9 +537,9 @@
       "name": "Nico Robin",
       "popularity_rank": 13,
       "power_score": 79,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "UR",
+      "visible": "100%+",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -536,9 +547,9 @@
       "name": "Nico Wakatsuki",
       "popularity_rank": 17,
       "power_score": 66,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -546,9 +557,9 @@
       "name": "Ochako Uraraka",
       "popularity_rank": 6,
       "power_score": 72,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "UR",
+      "visible": "100%+",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -556,19 +567,20 @@
       "name": "Oguri Cap",
       "popularity_rank": 9,
       "power_score": 76,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
-      "asset_status": "pending"
+      "art_tier": "UR",
+      "visible": "100%+",
+      "direction_status": "custom",
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "orihime-inoue",
       "name": "Orihime Inoue",
       "popularity_rank": 58,
       "power_score": 79,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -576,9 +588,9 @@
       "name": "Ouka Shiunji",
       "popularity_rank": 20,
       "power_score": 43,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -586,8 +598,8 @@
       "name": "Power",
       "popularity_rank": 22,
       "power_score": 88,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "UR",
+      "visible": "100%+",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -596,9 +608,9 @@
       "name": "Rangiku Matsumoto",
       "popularity_rank": 43,
       "power_score": 78,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -606,9 +618,9 @@
       "name": "Raphtalia",
       "popularity_rank": 20,
       "power_score": 73,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -616,19 +628,20 @@
       "name": "Reiko Kujirai",
       "popularity_rank": 18,
       "power_score": 47,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
-      "asset_status": "pending"
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "reze",
       "name": "Reze",
       "popularity_rank": 57,
       "power_score": 89,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -636,8 +649,8 @@
       "name": "Rias Gremory",
       "popularity_rank": 3,
       "power_score": 92,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "UR",
+      "visible": "100%+",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -646,19 +659,20 @@
       "name": "Rin Tohsaka",
       "popularity_rank": 37,
       "power_score": 77,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "saeko-busujima",
       "name": "Saeko Busujima",
       "popularity_rank": 50,
       "power_score": 84,
-      "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -666,9 +680,9 @@
       "name": "Sakiko “Oblivionis” Togawa",
       "popularity_rank": 10,
       "power_score": 71,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "UR",
+      "visible": "100%+",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -678,7 +692,7 @@
       "power_score": 68,
       "art_tier": "S",
       "visible": "40%",
-      "direction_status": "fallback",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -686,9 +700,9 @@
       "name": "Sinon",
       "popularity_rank": 52,
       "power_score": 81,
-      "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -698,17 +712,18 @@
       "power_score": 50,
       "art_tier": "S",
       "visible": "40%",
-      "direction_status": "fallback",
-      "asset_status": "pending"
+      "direction_status": "custom",
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "takane-takamine",
       "name": "Takane Takamine",
       "popularity_rank": 55,
       "power_score": 40,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -716,9 +731,9 @@
       "name": "Tohka Yatogami",
       "popularity_rank": 60,
       "power_score": 90,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -726,8 +741,8 @@
       "name": "Tsunade",
       "popularity_rank": 21,
       "power_score": 93,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "UR",
+      "visible": "100%+",
       "direction_status": "custom",
       "asset_status": "pending"
     },
@@ -736,9 +751,9 @@
       "name": "Venelana Gremory",
       "popularity_rank": 45,
       "power_score": 84,
-      "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -746,19 +761,20 @@
       "name": "Violet Evergarden",
       "popularity_rank": 15,
       "power_score": 48,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "SR",
+      "visible": "60-80%",
       "direction_status": "custom",
-      "asset_status": "pending"
+      "asset_status": "vector-v1",
+      "completed_date": "2026-09-21"
     },
     {
       "character_id": "xenovia",
       "name": "Xenovia",
       "popularity_rank": 54,
       "power_score": 80,
-      "art_tier": "R",
-      "visible": "20%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -766,10 +782,10 @@
       "name": "Yor Forger",
       "popularity_rank": 2,
       "power_score": 86,
-      "art_tier": "S",
-      "visible": "40%",
+      "art_tier": "UR",
+      "visible": "100%+",
       "direction_status": "custom",
-      "asset_status": "svg-v1",
+      "asset_status": "vector-v1",
       "completed_date": "2026-09-21"
     },
     {
@@ -777,9 +793,9 @@
       "name": "Yoruichi Shihoin",
       "popularity_rank": 14,
       "power_score": 91,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "UR",
+      "visible": "100%+",
+      "direction_status": "custom",
       "asset_status": "pending"
     },
     {
@@ -787,11 +803,11 @@
       "name": "Yumeko Jabami",
       "popularity_rank": 18,
       "power_score": 38,
-      "art_tier": "S",
-      "visible": "40%",
-      "direction_status": "fallback",
+      "art_tier": "SR",
+      "visible": "60-80%",
+      "direction_status": "custom",
       "asset_status": "pending"
     }
   ],
-  "progress_percent": 1.28
+  "progress_percent": 21.79
 }
