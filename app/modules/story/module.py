@@ -85,6 +85,19 @@ class StoryModule(BotModule):
             return
 
         data = (callback.data or "").split(":")
+        if data == ["cafe", "story", "open"]:
+            await callback.answer()
+            view = await self._view(chat_id)
+            await callback.message.edit_text(
+                self._render(view),
+                reply_markup=story_keyboard(
+                    view.progress.chapter,
+                    view.progress.completed,
+                ),
+            )
+            await self._observe(chat_id, callback.from_user.id, "story_view")
+            return
+
         if len(data) != 4 or data[0:3] != ["cafe", "story", "next"] or not data[3].isdigit():
             await callback.answer("Capítulo inválido.", show_alert=True)
             return
