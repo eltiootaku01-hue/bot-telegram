@@ -40,6 +40,8 @@ jobs:
         run: python tools/validate_card_assets.py
       - name: Validate card visual QA
         run: python tools/validate_card_qa.py
+      - name: Validate combat sprite contract
+        run: python tools/validate_combat_sprites.py
       - name: Export card art prompts
         run: python tools/export_card_art_prompts.py --output /tmp/WAIFUMON_CARD_ART_PROMPTS.md
       - name: Export sticker prompts
