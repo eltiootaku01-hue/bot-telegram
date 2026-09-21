@@ -19,6 +19,25 @@ class GameEngine:
     def roll_gacha(self, seed: str | None = None) -> Rarity:
         return self._java.roll_gacha(seed=seed or "gacha:anonymous")
 
+    def resolve_gacha(
+        self,
+        *,
+        seed: str,
+        d_streak: int,
+        candidates: list[dict[str, str]],
+        owned_character_ids: set[str] | frozenset[str],
+        player_id: int,
+        community_id: int,
+    ) -> dict[str, object]:
+        return self._java.resolve_gacha(
+            seed=seed,
+            d_streak=d_streak,
+            candidates=candidates,
+            owned_character_ids=owned_character_ids,
+            player_id=player_id,
+            community_id=community_id,
+        )
+
     def combat(
         self,
         attacker: Character,
