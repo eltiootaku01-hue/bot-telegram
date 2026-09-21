@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
+RUNTIME_ART_SUFFIXES = (".png", ".webp", ".jpg", ".jpeg")
+
 from app.game.catalog import CHARACTERS
 
 
@@ -16,6 +18,13 @@ def art_path_for(character_id: str) -> str:
     if character_id not in CHARACTERS:
         raise KeyError(character_id)
     return str(PurePosixPath("assets", "waifus", character_id + ".png"))
+
+
+def art_candidates_for(character_id: str) -> tuple[str, ...]:
+    if character_id not in CHARACTERS:
+        raise KeyError(character_id)
+    root = PurePosixPath("assets", "waifus")
+    return tuple(str(root / f"{character_id}{suffix}") for suffix in RUNTIME_ART_SUFFIXES)
 
 
 def declared_art(character_id: str) -> WaifuArt:
