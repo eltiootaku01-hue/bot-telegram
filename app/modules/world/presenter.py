@@ -9,7 +9,7 @@ from app.core.module import BotModule
 from app.db.database import Database
 from app.db.models import GameEncounter
 from app.ui.game_keyboards import encounter_keyboard
-from app.world.models import WorldEventType, WorldPresenterRef
+from app.world.models import PresenterKind, WorldEventType, WorldPresenterRef
 from app.world.presenter import WorldPresentationRejected, WorldPresenter
 from app.world.runtime import WorldRuntime
 
@@ -30,7 +30,7 @@ class WorldPresentationModule(BotModule):
         if presenter is None:
             if identity is None:
                 raise ValueError("identity or presenter must be provided")
-            presenter = WorldPresenterRef(identity.value, kind="existing_bot")
+            presenter = WorldPresenterRef(identity.value, kind=PresenterKind.EXISTING_BOT)
         self.database = database
         self.identity = identity
         self.settings = settings
