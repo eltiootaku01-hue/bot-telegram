@@ -10,14 +10,12 @@ from app.game.fusion import fuse_collection
 @pytest.mark.parametrize(
     ("level", "style"),
     [
-        (1, "chibi"),
-        (5, "chibi"),
-        (6, "anime"),
+        (1, "anime"),
         (10, "anime"),
         (11, "anime premium"),
         (20, "anime premium"),
-        (21, "anime premium"),
-        (30, "anime premium"),
+        (21, "anime premium final"),
+        (30, "anime premium final"),
     ],
 )
 def test_art_stage_matches_level_band(level, style):
@@ -44,7 +42,7 @@ def test_art_prompt_is_deterministic_and_character_focused():
 
 
 @pytest.mark.asyncio
-async def test_fusion_requires_level_25(tmp_path):
+async def test_fusion_needs_only_the_required_copies(tmp_path):
     database = Database(f"sqlite+aiosqlite:///{tmp_path / 'fusion.db'}")
     await database.create_schema()
 
@@ -60,8 +58,8 @@ async def test_fusion_requires_level_25(tmp_path):
                 profile_id=profile.id,
                 character_id="anya",
                 rarity="D",
-                level=24,
-                experience=0,
+                level=1,
+                experience=75,
                 copies=10,
             )
         )
@@ -69,14 +67,32 @@ async def test_fusion_requires_level_25(tmp_path):
     async with database.session(write=True) as session:
         profile = await session.scalar(select(GameProfile).where(GameProfile.user_id == 7))
         assert profile is not None
-        with pytest.raises(ValueError, match="nivel 25"):
-            await fuse_collection(session, profile_id=profile.id, character_id="anya")
+        result = await fuse_collection(session, profile_id=profile.id, character_id="anya")
+
+    assert result.from_rarity == "D"
+    assert result.to_rarity == "C"
+    assert result.consumed == 10
+
+    async with database.session() as session:
+        row = await session.scalar(
+            select(GameCollection).where(
+                GameCollection.profile_id == profile.id,
+                GameCollection.character_id == "anya",
+            )
+        )
+
+    assert row is not None
+    assert row.rarity == "C"
+    assert row.level == 1
+    assert row.experience == 0
+    assert row.copies == 1
 
     await database.close()
 
 
+
 @pytest.mark.asyncio
-async def test_fusion_at_level_25_consumes_same_character_copies(tmp_path):
+async def test_fusion_at_level_30_consumes_same_character_copies(tmp_path):
     database = Database(f"sqlite+aiosqlite:///{tmp_path / 'fusion-ok.db'}")
     await database.create_schema()
 
@@ -92,8 +108,8 @@ async def test_fusion_at_level_25_consumes_same_character_copies(tmp_path):
                 profile_id=profile.id,
                 character_id="anya",
                 rarity="D",
-                level=25,
-                experience=0,
+                level=30,
+                experience=777,
                 copies=10,
             )
         )

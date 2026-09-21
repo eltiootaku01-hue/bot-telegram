@@ -173,7 +173,7 @@ final class WaifuMonRuleEngineTest {
         );
 
         assertTrue(response.success());
-        assertEquals(4, response.payload().get("evolution_stage").asInt());
+        assertEquals(3, response.payload().get("evolution_stage").asInt());
         assertEquals(21, response.payload().get("min_level").asInt());
         assertEquals(30, response.payload().get("max_level").asInt());
         assertEquals(0, response.payload().get("next_level").asInt());
@@ -223,7 +223,7 @@ final class WaifuMonRuleEngineTest {
         assertTrue(response.success());
         assertEquals(12, response.payload().get("level").asInt());
         assertEquals("B", response.payload().get("rarity").asText());
-        assertEquals(3, response.payload().get("evolution_stage").asInt());
+        assertEquals(2, response.payload().get("evolution_stage").asInt());
         assertEquals("velocidad", response.payload().get("style").asText());
         assertTrue(response.payload().get("max_hp").asInt() > 0);
         assertTrue(response.payload().get("strength").asInt() > 0);
@@ -231,11 +231,10 @@ final class WaifuMonRuleEngineTest {
     }
 
     @Test
-    void progressionResolvesLevelAndEvolutionStageWithoutChangingCopies() {
+    void progressionResolvesLevelAndDerivedEvolutionStageWithoutChangingCopies() {
         ObjectNode payload = mapper.createObjectNode()
             .put("level", 5)
             .put("experience", 495)
-            .put("evolution_stage", 1)
             .put("gained", 10)
             .put("copies", 3);
 
@@ -246,8 +245,42 @@ final class WaifuMonRuleEngineTest {
         assertTrue(response.success());
         assertEquals(6, response.payload().get("level").asInt());
         assertEquals(5, response.payload().get("experience").asInt());
-        assertEquals(2, response.payload().get("evolution_stage").asInt());
-        assertTrue(response.payload().get("evolved").asBoolean());
+        assertEquals(1, response.payload().get("evolution_stage").asInt());
+        assertFalse(response.payload().get("evolved").asBoolean());
         assertEquals(3, response.payload().get("copies").asInt());
     }
+    @Test
+    void progressionRejectsPersistedEvolutionStageInput() {
+        ObjectNode payload = mapper.createObjectNode()
+            .put("level", 10)
+            .put("experience", 0)
+            .put("evolution_stage", 99)
+            .put("gained", 0)
+            .put("copies", 1);
+
+        EngineResponse response = engine.execute(
+            request("progression.resolve", payload, "progress-derived-stage-conflict")
+        );
+
+        assertFalse(response.success());
+        assertEquals("INVALID_REQUEST", response.errorCode());
+    }
+
+    @Test
+    void evolutionBoundariesUseExactlyThreeStages() {
+        int[] levels = {1, 10, 11, 20, 21, 30};
+        int[] stages = {1, 1, 2, 2, 3, 3};
+        int[] next = {11, 11, 21, 21, 0, 0};
+
+        for (int index = 0; index < levels.length; index++) {
+            ObjectNode payload = mapper.createObjectNode().put("level", levels[index]);
+            EngineResponse response = engine.execute(
+                request("evolution.resolve", payload, "evolution-boundary-" + levels[index])
+            );
+            assertTrue(response.success());
+            assertEquals(stages[index], response.payload().get("evolution_stage").asInt());
+            assertEquals(next[index], response.payload().get("next_level").asInt());
+        }
+    }
+
 }

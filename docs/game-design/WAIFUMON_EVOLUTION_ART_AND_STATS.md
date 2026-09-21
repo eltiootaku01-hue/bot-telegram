@@ -2,88 +2,79 @@
 
 Fecha: 2026-09-21
 
-## Regla principal
+## Regla canónica de nivel
 
-La **clase WaifuMon** representa la evolución de la criatura que el jugador posee.
+El nivel de una WaifuMon es un valor durable de **1 a 30**.
 
-Es independiente de:
+La etapa visual no es un estado independiente. Se deriva siempre y únicamente del nivel:
 
-- la rareza de obtención/combatiente D, C, B, A, S, SS, SSS;
-- el tier visual/coleccionable de una carta R, S, SR, UR;
-- la popularidad del personaje;
-- el poder de balance del catálogo.
+| Nivel | Etapa visual |
+|---|---|
+| **1–10** | **Etapa 1** |
+| **11–20** | **Etapa 2** |
+| **21–30** | **Etapa 3** |
 
-La clase evolutiva usa el nivel de la colección:
+La función `evolution_stage_for_level(level)` implementa esta relación como función pura. SQLite no guarda una columna de etapa.
 
-| Nivel global | Clase | Significado |
-|---|---|---|
-| 1–10 | R | monstruo/waifumon novato |
-| 11–20 | S | primera evolución |
-| 21–30 | SR | evolución avanzada |
+## Fusión de rareza
 
-La promoción ocurre al conseguir el siguiente nivel. Un R Lv.10 pasa a S Lv.11; un S Lv.20 pasa a SR Lv.21.
+La fusión de gameplay es independiente de la etapa visual.
+
+| Rareza actual | Rareza nueva | Copias consumidas |
+|---|---|---:|
+| D | C | 10 |
+| C | B | 40 |
+| B | A | 60 |
+| A | S | 80 |
+
+La fusión:
+
+1. consume las copias requeridas;
+2. incrementa exactamente una rareza;
+3. fija el nivel en **1**;
+4. fija la EXP en **0**;
+5. no escribe ninguna etapa visual;
+6. por consecuencia de nivel 1, la etapa resultante es **Etapa 1**.
+
+No existe una regla de nivel mínimo adicional en esta fusión.
 
 ## Arte evolutivo
 
-Cada clase exige una ilustración distinta.
+El arte evolutivo usa tres etapas derivadas del nivel:
 
-### R — novata
+### Etapa 1 — niveles 1–10
 
-- visible aproximadamente 20%;
-- rostro, cuello y hombros pequeños;
-- silueta cerrada;
-- vestuario sencillo;
-- expresión que presente la personalidad;
-- sensación de criatura recién obtenida.
+`assets/production/cards/<character-id>--stage1.jpg`
 
-Archivo canónico esperado:
+### Etapa 2 — niveles 11–20
 
-`assets/waifus/<character_id>--r.jpg`
+`assets/production/cards/<character-id>--stage2.jpg`
 
-### S — primera evolución
+### Etapa 3 — niveles 21–30
 
-- visible aproximadamente 45%;
-- cabeza, hombros, torso y parte de la cintura;
-- nuevo vestuario, accesorio, armadura o detalle relacionado con su especialidad;
-- pose más segura;
-- silueta claramente distinta de R;
-- iluminación superior.
+`assets/production/cards/<character-id>--stage3.jpg`
 
-Archivo:
+Cada archivo de producción debe ser JPEG exacto de **1024×1536** y aprobar el validador.
 
-`assets/waifus/<character_id>--s.jpg`
+La ausencia de un archivo aprobado nunca activa un fallback visual genérico.
 
-### SR — evolución avanzada
+## Rareza, carta y etapa son conceptos distintos
 
-- visible aproximadamente 70–80%;
-- medio cuerpo amplio hasta cintura o muslos;
-- arte premium;
-- pose de combate o pose icónica;
-- efectos y escenario narrativo;
-- vestuario de forma avanzada;
-- silueta mucho más abierta que S.
+Una ficha puede mostrar:
 
-Archivo:
+`Carta: SR`
+`Rareza de combate: A`
+`Nivel: 21`
+`Etapa visual: 3`
+`Elemento: agua`
 
-`assets/waifus/<character_id>--sr.jpg`
-
-### UR
-
-UR no es una cuarta evolución automática.
-
-UR continúa siendo la clase especial de **fusión de dos cartas base**. Su arte es una composición independiente y puede utilizar cuerpo completo.
+Cada dato responde a una regla diferente.
 
 ## Estadísticas
 
-Todos los personajes comparten una base por clase, pero cada WaifuMon recibe una especialidad.
+Las estadísticas de combate siguen siendo calculadas por el motor Java a partir de nivel, rareza, elemento, poder de catálogo y potencial.
 
-La jerarquía fundamental es:
-
-`R Lv.10 < S Lv.11 < SR Lv.21`
-
-para las estadísticas generales.
-
-S está diseñado para comenzar por encima de un R al final de su etapa, mientras permanece por debajo de la entrada de SR.
+El nivel 30 es el máximo. Un nivel superior es inválido y debe fallar cerrado.
 
 ## Especialidades
 
@@ -104,22 +95,6 @@ La especialidad se deriva inicialmente del elemento:
 | arcano | poder arcano |
 
 Cada especialidad aumenta una familia principal de estadísticas, pero nunca deja las restantes en cero.
-
-Ejemplos:
-
-- aire: velocidad y movilidad;
-- tierra: vida máxima y defensa;
-- fuego: especial y daño de fuego;
-- agua: curación;
-- neutro: fuerza bruta y algo de defensa;
-- hielo: control y poder especial;
-- luz: soporte/curación secundaria;
-- oscuridad: crítico;
-- rayo: explosión de daño + velocidad;
-- mente: precisión + crítico;
-- arcano: poder especial.
-
-La asignación por elemento es un valor inicial del sistema y puede evolucionar posteriormente hacia una especialidad explícita por personaje cuando exista suficiente diseño.
 
 ## Relación entre evolución y combate
 

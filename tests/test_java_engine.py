@@ -102,14 +102,14 @@ def test_java_engine_resolves_evolution_and_stats_contracts() -> None:
     finally:
         engine.close()
 
-    assert evolution["evolution_stage"] == 4
+    assert evolution["evolution_stage"] == 3
     assert evolution["min_level"] == 21
     assert evolution["max_level"] == 30
     assert evolution["next_level"] == 0
 
     assert stats["level"] == 12
     assert stats["rarity"] == "B"
-    assert stats["evolution_stage"] == 3
+    assert stats["evolution_stage"] == 2
     assert stats["style"] == "velocidad"
     assert stats["max_hp"] > 0
     assert stats["potential_score"] == potential
@@ -121,7 +121,6 @@ def test_java_engine_resolves_progression_contract() -> None:
         result = engine.progression(
             level=5,
             experience=495,
-            evolution_stage=1,
             gained=10,
             copies=3,
         )
@@ -130,6 +129,6 @@ def test_java_engine_resolves_progression_contract() -> None:
 
     assert result["level"] == 6
     assert result["experience"] == 5
-    assert result["evolution_stage"] == 2
-    assert result["evolved"] is True
+    assert result["evolution_stage"] == 1
+    assert result["evolved"] is False
     assert result["copies"] == 3

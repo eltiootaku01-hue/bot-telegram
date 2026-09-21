@@ -26,17 +26,15 @@ def _character(element: Element, rarity: Rarity = Rarity.B, power: int = 50) -> 
 @pytest.mark.parametrize(
     ("level", "stage", "next_level"),
     [
-        (1, EvolutionStage.BASE, 6),
-        (5, EvolutionStage.BASE, 6),
-        (6, EvolutionStage.EVOLUTION_1, 11),
-        (10, EvolutionStage.EVOLUTION_1, 11),
-        (11, EvolutionStage.EVOLUTION_2, 21),
-        (20, EvolutionStage.EVOLUTION_2, 21),
-        (21, EvolutionStage.EVOLUTION_3, None),
-        (30, EvolutionStage.EVOLUTION_3, None),
+        (1, EvolutionStage.BASE, 11),
+        (10, EvolutionStage.BASE, 11),
+        (11, EvolutionStage.EVOLUTION_1, 21),
+        (20, EvolutionStage.EVOLUTION_1, 21),
+        (21, EvolutionStage.EVOLUTION_2, None),
+        (30, EvolutionStage.EVOLUTION_2, None),
     ],
 )
-def test_level_maps_to_four_evolution_stages(level, stage, next_level) -> None:
+def test_level_maps_to_three_derived_evolution_stages(level, stage, next_level) -> None:
     band = evolution_band_for_level(level)
     assert band.stage is stage
     assert evolution_next_level(stage) == next_level
@@ -56,7 +54,7 @@ def test_rarity_is_independent_from_level() -> None:
     assert level_one.rarity is Rarity.S
     assert level_twenty.rarity is Rarity.S
     assert level_one.evolution_stage is EvolutionStage.BASE
-    assert level_twenty.evolution_stage is EvolutionStage.EVOLUTION_2
+    assert level_twenty.evolution_stage is EvolutionStage.EVOLUTION_1
     assert level_twenty.level == 20
     assert level_twenty.strength > level_one.strength
 

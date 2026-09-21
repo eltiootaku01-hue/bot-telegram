@@ -28,7 +28,7 @@ Java contiene actualmente las fórmulas migradas de:
 
 - gacha D/C/B/A/S/SS/SSS;
 - combate;
-- progresión de nivel, experiencia y etapa.
+- progresión de nivel y experiencia; la etapa se deriva exclusivamente del nivel.
 
 Python conserva:
 
@@ -141,8 +141,13 @@ La construcción Windows debe comprobar también el JAR y el JRE bundled.
 
 ## Siguiente auditoría
 
-Migrar y validar **stats/potential + fusión/evolución**, empezando por eliminar cualquier fórmula duplicada y estableciendo un DTO de estadísticas versionado.
+Mantener Java como autoridad de gameplay y verificar que nivel/etapa y arte compartan contratos únicos.
 
 ## Bitácora
 
 Este documento registra el ciclo de migración y sus controles. Cada nueva regla migrada debe añadir sus pruebas Java y la regresión Python correspondiente antes de convertirse en autoridad oficial.
+
+
+## Regla P0 de etapa
+
+Nivel 1–10 → etapa 1, nivel 11–20 → etapa 2, nivel 21–30 → etapa 3. La etapa no se persiste en SQLite ni se acepta como entrada de progresión.

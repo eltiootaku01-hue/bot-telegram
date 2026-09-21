@@ -1,84 +1,71 @@
 # WAIFUMON — reglas técnicas y de diseño
 
+Fecha: 2026-09-21
 
 ## 0. Autoridad de reglas
 
+Java es la autoridad de las reglas migradas de gameplay: gacha, combate, progresión y resolución derivada de etapa.
 
-Reglas actualmente delegadas a Java:
+Python conserva validación, orquestación, persistencia, ledger y presentación.
 
-- rareza determinista del gacha;
-- resolución determinista de combate;
-- progresión de nivel, experiencia y etapa.
-
-La migración es incremental. Las reglas que todavía viven en Python deben migrarse antes de que otra interfaz las use como autoridad. No se permiten dos implementaciones activas de la misma fórmula.
-
-
-Fecha: 2026-09-21
+La etapa visual de WaifuMon es una función pura del nivel y no un estado persistente.
 
 ## 1. Separación de sistemas
 
-Hay tres ejes diferentes y no deben mezclarse:
+Hay tres conceptos diferentes:
 
 - **Rareza de gameplay:** D, C, B, A, S, SS, SSS.
-- **Nivel de la waifu:** 1 a 25.
-- **Clase de carta:** R, S, SR, UR.
+- **Nivel WaifuMon:** 1 a 30.
+- **Tier de carta:** R, S, SR, UR.
 
-La rareza decide principalmente disponibilidad y requisitos de evolución. El nivel determina la progresión de poder/arte. La clase de carta identifica una presentación especial de la misma waifu.
+No deben utilizarse como sinónimos.
 
-## 2. Gacha
+## 2. Nivel y etapa visual
 
-Una tirada cuesta 10 puntos.
+El nivel permitido es exactamente **1..30**.
 
-Cada tirada queda registrada en `game_gacha_rolls` con un `roll_id` estable. Repetir el mismo callback no debe crear otra tirada ni volver a cobrar.
+La etapa se deriva de forma pura:
 
-La mala suerte tiene una protección suave: después de seis resultados D consecutivos, el siguiente resultado D se convierte en C. El contador se guarda en el perfil.
+- nivel 1–10 → etapa 1;
+- nivel 11–20 → etapa 2;
+- nivel 21–30 → etapa 3.
 
-Los resultados D/C intentan priorizar personajes todavía no poseídos cuando existen candidatos equivalentes disponibles. Así, un duplicado sigue siendo posible, pero el sistema evita convertir las primeras tiradas en una repetición sin utilidad.
+No existe columna, variable persistente ni requisito de entrada independiente para `evolution_stage`.
 
-B, A, S, SS y SSS siguen una ruta de aprobación excepcional antes de entregar el personaje.
+Al subir de nivel solo cambia la etapa al cruzar 10→11 o 20→21.
 
-## 3. Colección y progreso
+## 3. Gacha
 
-Cada waifu de una colección tiene:
+Una tirada cuesta 10 puntos y se registra con un `roll_id` estable.
 
-- nivel 1..30;
-- experiencia;
-- copias;
-- rareza;
-- etapa de evolución.
+La protección de mala suerte se mantiene: después de seis resultados D consecutivos, la siguiente tirada D se convierte en C.
 
-Las copias adicionales no desaparecen: aumentan la colección y la progresión.
+Los resultados D/C priorizan candidatos todavía no poseídos cuando existe una alternativa equivalente disponible.
 
-La evolución de clase WaifuMon R→S→SR ocurre por nivel: R en niveles 1–10, S en niveles 11–20 y SR en niveles 21–30. Esta evolución cambia la presentación visual y las estadísticas de combate.
+B, A, S, SS y SSS siguen la ruta de aprobación excepcional antes de entregar el personaje.
 
-La fusión D→C→B→A→S sigue siendo una progresión separada de rareza de combate y conserva su requisito propio de nivel 25 y copias. No debe confundirse con la clase visual R/S/SR.
+## 4. Fusión y arte
 
-Reglas actuales de copias:
+La fusión de rareza es:
 
-- D → C: 10 copias.
-- C → B: 40 copias.
-- B → A: 60 copias.
-- A → S: 80 copias.
+- D → C con 10 copias;
+- C → B con 40 copias;
+- B → A con 60 copias;
+- A → S con 80 copias.
 
-La fusión es una transición SQL condicional. Dos clicks simultáneos no pueden evolucionar la misma fila dos veces.
+La fusión depende de las copias requeridas y no de un nivel mínimo adicional. Consume las copias necesarias, incrementa una rareza, reinicia nivel a 1 y EXP a 0. La etapa no se escribe; nivel 1 implica etapa 1.
 
-## 4. Arte y presentación
+El arte evolutivo usa las mismas tres etapas:
 
-La progresión visual implementada es deliberadamente no explícita:
-
-| Nivel | Presentación |
+| Nivel | Etapa |
 |---|---|
-| 1–5 | chibi, ropa cotidiana, cabeza y hombros |
-| 6–10 | anime, ropa cotidiana, medio cuerpo |
-| 11–15 | anime, atuendo temático, cuerpo completo |
-| 16–20 | anime premium, vestuario especial de evento |
-| 21–25 | anime premium, vestuario de forma final |
+| 1–10 | Etapa 1 |
+| 11–20 | Etapa 2 |
+| 21–30 | Etapa 3 |
 
-Las clases de combate y las clases de evolución visual son independientes. La clase WaifuMon R/S/SR depende del nivel; la rareza de combate D/C/B/A/S/SS/SSS depende del balance/obtención; el tier de carta R/S/SR/UR pertenece al sistema de cartas.
+El tier de carta R/S/SR/UR continúa siendo independiente.
 
-Para el detalle completo de arte y estadísticas, ver `docs/game-design/WAIFUMON_EVOLUTION_ART_AND_STATS.md`.
-
-No se implementan desnudos, desnudez parcial ni sexualización explícita. La etapa superior sigue siendo una versión premium del personaje con vestuario definido.
+No se implementan desnudos, desnudez parcial ni sexualización explícita.
 
 ## 5. Waifu Detector
 
