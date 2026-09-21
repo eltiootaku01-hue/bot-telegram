@@ -571,7 +571,6 @@ class FanRequest(Base):
         UniqueConstraint("user_id", "chat_id", "source_message_id", name="uq_fan_request_source"),
         CheckConstraint("points_cost >= 0", name="ck_fan_request_points_cost_nonnegative"),
     )
-    __table_args__ = (UniqueConstraint("user_id", "chat_id", "source_message_id", name="uq_fan_request_source"),)
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(BigInteger)
