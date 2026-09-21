@@ -14,13 +14,48 @@ from app.modules.game.module import GameModule
 
 
 class FixedEngine(GameEngine):
-    def roll_gacha(self, seed: str | None = None) -> Rarity:
-        return Rarity.B
+    def __init__(self) -> None:
+        pass
+
+    def resolve_gacha(
+        self,
+        *,
+        seed: str,
+        d_streak: int,
+        candidates: list[dict[str, str]],
+        owned_character_ids: set[str] | frozenset[str],
+        player_id: int,
+        community_id: int,
+    ) -> dict[str, object]:
+        del seed, d_streak, owned_character_ids, player_id, community_id
+        character = next(item for item in candidates if item["rarity"] == Rarity.B.value)
+        return {
+            "rolled_rarity": Rarity.B.value,
+            "character_id": character["id"],
+            "pity_triggered": False,
+            "d_streak": 0,
+        }
 
 
-class CommonEngine(GameEngine):
-    def roll_gacha(self, seed: str | None = None) -> Rarity:
-        return Rarity.D
+class CommonEngine(FixedEngine):
+    def resolve_gacha(
+        self,
+        *,
+        seed: str,
+        d_streak: int,
+        candidates: list[dict[str, str]],
+        owned_character_ids: set[str] | frozenset[str],
+        player_id: int,
+        community_id: int,
+    ) -> dict[str, object]:
+        del seed, d_streak, owned_character_ids, player_id, community_id
+        character = next(item for item in candidates if item["rarity"] == Rarity.D.value)
+        return {
+            "rolled_rarity": Rarity.D.value,
+            "character_id": character["id"],
+            "pity_triggered": False,
+            "d_streak": 1,
+        }
 
 
 @pytest.mark.asyncio
