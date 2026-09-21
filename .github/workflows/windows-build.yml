@@ -51,6 +51,13 @@ jobs:
       - name: Build executables
         shell: cmd
         run: tools\build_launcher.bat
+      - name: Verify visual assets
+        shell: pwsh
+        run: |
+          $asset = "dist\assets\waifus\generated\waifu-card-concept.jpg"
+          if (-not (Test-Path $asset)) { throw "Missing visual asset: $asset" }
+          if ((Get-Item $asset).Length -lt 10KB) { throw "Visual asset looks unexpectedly small: $asset" }
+
       - name: Verify executables
         shell: pwsh
         run: |
