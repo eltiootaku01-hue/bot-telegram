@@ -18,7 +18,7 @@ def test_two_axes_and_card_tier_are_independent() -> None:
     assert yor.popularity_rank == 2
     assert yor.power_score == 86
     assert yor.rarity is Rarity.SS
-    assert yor.card_tier is CardTier.UR
+    assert yor.card_tier is CardTier.SR
     assert yor.element is Element.DARK
 
     assert maomao.popularity_rank == 1
@@ -58,6 +58,6 @@ def test_card_tier_boundaries_are_stable() -> None:
     assert card_tier_from_scores(40, 40) is CardTier.S
     assert card_tier_from_scores(51, 51) is CardTier.S
     assert card_tier_from_scores(52, 52) is CardTier.SR
-    assert card_tier_from_scores(77, 77) is CardTier.SR
-    assert card_tier_from_scores(78, 78) is CardTier.UR
-    assert card_tier_from_scores(80, 80) is CardTier.UR
+    assert card_tier_from_scores(69, 100) is CardTier.S
+    assert card_tier_from_scores(70, 0) is CardTier.SR
+    assert card_tier_from_scores(100, 100) is CardTier.SR
