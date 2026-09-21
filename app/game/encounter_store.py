@@ -1,3 +1,5 @@
+from enum import StrEnum
+
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +9,14 @@ from app.db.models import GameAttempt, GameEncounter
 
 
 MAX_ENCOUNTER_PARTICIPANTS = 3
+
+
+class EncounterAttemptResult(StrEnum):
+    CORRECT = "correct"
+    WRONG = "wrong"
+    ALREADY_ATTEMPTED = "already_attempted"
+    FULL = "full"
+    EXPIRED = "expired"
 
 
 class EncounterStore:
@@ -23,7 +33,7 @@ class EncounterStore:
         encounter_id: str,
         user_id: int,
         answer: str,
-    ) -> bool | None:
+    ) -> EncounterAttemptResult:
         """Record exactly one attempt per player and at most three players per encounter.
 
         The caller should use Database.session(write=True), whose SQLite transaction
@@ -31,7 +41,7 @@ class EncounterStore:
         """
         encounter = await session.get(GameEncounter, encounter_id)
         if encounter is None or encounter.status != "active" or encounter.expires_at <= utc_now():
-            return None
+            return EncounterAttemptResult.EXPIRED
 
         existing = await session.scalar(
             select(GameAttempt.id).where(
@@ -40,7 +50,7 @@ class EncounterStore:
             )
         )
         if existing is not None:
-            return None
+            return EncounterAttemptResult.ALREADY_ATTEMPTED
 
         participants = await session.scalar(
             select(func.count(GameAttempt.id)).where(
@@ -48,7 +58,7 @@ class EncounterStore:
             )
         )
         if (participants or 0) >= MAX_ENCOUNTER_PARTICIPANTS:
-            return None
+            return EncounterAttemptResult.FULL
 
         attempt = GameAttempt(
             encounter_id=encounter_id,
@@ -61,8 +71,12 @@ class EncounterStore:
                 session.add(attempt)
                 await session.flush()
         except IntegrityError:
-            return None
-        return attempt.correct
+            return EncounterAttemptResult.ALREADY_ATTEMPTED
+        return (
+            EncounterAttemptResult.CORRECT
+            if attempt.correct
+            else EncounterAttemptResult.WRONG
+        )
 
     async def finish(self, session: AsyncSession, encounter_id: str, status: str = "expired") -> bool:
         """Move an active encounter to one terminal state exactly once."""
