@@ -116,11 +116,22 @@ class TriviaModule(BotModule):
         if not is_authorized_community(self.settings, chat_id):
             return False
 
-        async with self.database.session() as session:
+        async with self.database.session(write=True) as session:
             created = await self.service.start_round(session, chat_id)
-        if created is None:
-            return False
-        round_row, question = created
+            if created is None:
+                return False
+            round_row, question = created
+            claimed = await session.execute(
+                update(TriviaRound)
+                .where(
+                    TriviaRound.id == round_row.id,
+                    TriviaRound.status == "active",
+                    TriviaRound.message_id.is_(None),
+                )
+                .values(status="publishing")
+            )
+            if claimed.rowcount != 1:
+                return False
         text = f"🧠 <b>TRIVIA ANIME</b>\n\n{question.question}\n\n⏱️ 90 segundos · 🏆 +{question.points} puntos"
         if not is_authorized_community(self.settings, chat_id):
             async with self.database.session() as session:
@@ -132,9 +143,12 @@ class TriviaModule(BotModule):
             return False
         try:
             if source is not None:
-                await source.answer(text, reply_markup=trivia_keyboard(round_row.id, question.options))
+                sent = await source.answer(
+                    text,
+                    reply_markup=trivia_keyboard(round_row.id, question.options),
+                )
             elif self._bot is not None:
-                await with_retry_after(
+                sent = await with_retry_after(
                     lambda: self._bot.send_message(
                         chat_id,
                         text,
@@ -142,15 +156,36 @@ class TriviaModule(BotModule):
                     )
                 )
             else:
-                return False
-        except Exception:
-            logger.exception("Failed to publish trivia round chat=%s round=%s", chat_id, round_row.id)
-            async with self.database.session() as session:
-                await session.execute(
-                    update(TriviaRound).where(TriviaRound.id == round_row.id).values(status="failed")
-                )
-                await session.commit()
+                raise RuntimeError("Cari trivia bot is not initialized")
+        except Exception as exc:
+            logger.exception("Trivia publication failed chat=%s round=%s", chat_id, round_row.id)
+            async with self.database.session(write=True) as session:
+                if isinstance(exc, RuntimeError):
+                    await session.execute(
+                        update(TriviaRound)
+                        .where(TriviaRound.id == round_row.id, TriviaRound.status == "publishing")
+                        .values(status="failed")
+                    )
+                else:
+                    await session.execute(
+                        update(TriviaRound)
+                        .where(TriviaRound.id == round_row.id, TriviaRound.status == "publishing")
+                        .values(status="delivery_unknown")
+                    )
             return False
+
+        async with self.database.session(write=True) as session:
+            updated = await session.execute(
+                update(TriviaRound)
+                .where(
+                    TriviaRound.id == round_row.id,
+                    TriviaRound.status == "publishing",
+                    TriviaRound.message_id.is_(None),
+                )
+                .values(status="active", message_id=sent.message_id)
+            )
+            if updated.rowcount != 1:
+                return False
         try:
             if source is not None and source.from_user is not None:
                 async with self.database.session() as session:
