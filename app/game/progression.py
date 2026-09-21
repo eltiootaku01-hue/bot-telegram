@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import hashlib
 import secrets
-from functools import lru_cache
 from dataclasses import dataclass
 from enum import IntEnum, StrEnum
+from functools import lru_cache
 from typing import Protocol
 
 from sqlalchemy import Integer, case, cast, select, update
@@ -47,6 +46,7 @@ class CombatStyle(StrEnum):
 
 
 class CollectionLike(Protocol):
+    character_id: str
     level: int
     experience: int
     evolution_stage: int
@@ -111,36 +111,9 @@ EVOLUTION_BANDS: tuple[EvolutionBand, ...] = (
 )
 
 
-ELEMENT_STYLES: dict[Element, CombatStyle] = {
-    Element.WIND: CombatStyle.SPEED,
-    Element.EARTH: CombatStyle.DURABILITY,
-    Element.FIRE: CombatStyle.FIRE_SPECIAL,
-    Element.WATER: CombatStyle.HEALING,
-    Element.NEUTRAL: CombatStyle.BRUTE_FORCE,
-    Element.ICE: CombatStyle.CONTROL,
-    Element.LIGHT: CombatStyle.SUPPORT,
-    Element.DARK: CombatStyle.CRITICAL,
-    Element.LIGHTNING: CombatStyle.BURST,
-    Element.MIND: CombatStyle.PRECISION,
-    Element.ARCANE: CombatStyle.ARCANE,
-}
-
-
-# Combat class is the WaifuMon rarity D..SSS. It is independent from level.
-RARITY_STAT_SCALE: dict[Rarity, float] = {
-    Rarity.D: 0.78,
-    Rarity.C: 0.92,
-    Rarity.B: 1.10,
-    Rarity.A: 1.35,
-    Rarity.S: 1.68,
-    Rarity.SS: 2.08,
-    Rarity.SSS: 2.55,
-}
-
-
 @dataclass(frozen=True, slots=True)
 class WaifuMonStats:
-    """True combat stats resolved from class, level and hidden individual potential."""
+    """True combat stats resolved by the Java gameplay authority."""
 
     level: int
     rarity: Rarity
@@ -155,6 +128,11 @@ class WaifuMonStats:
     special_power: int
     fire_skill: int
     critical_rate: int
+
+
+@lru_cache(maxsize=1)
+def _java_rules() -> WaifuMonJavaEngine:
+    return default_java_engine()
 
 
 def evolution_band_for_level(level: int) -> EvolutionBand:
@@ -186,7 +164,7 @@ def level_floor_for_evolution_stage(stage: EvolutionStage) -> int:
 
 
 def combat_style_for_element(element: Element) -> CombatStyle:
-    return ELEMENT_STYLES[element]
+    return CombatStyle(_java_rules().style(element=element.value))
 
 
 def promotion_message(from_stage: EvolutionStage, to_stage: EvolutionStage) -> str:
@@ -197,78 +175,10 @@ def promotion_message(from_stage: EvolutionStage, to_stage: EvolutionStage) -> s
     )
 
 
-def _digest(seed: str) -> bytes:
-    return hashlib.sha256(seed.encode("utf-8")).digest()
-
-
-def _variation(seed: str, stat_name: str) -> float:
-    digest = _digest(f"{seed}:{stat_name}")
-    return -0.08 + (digest[0] / 255.0) * 0.16
-
-
 def potential_score_for_seed(seed: str) -> int:
-    digest = _digest(f"{seed}:potential")
-    return 1 + (digest[0] * 100 // 256)
-
-
-def _base_stats(
-    character: Character,
-    rarity: Rarity,
-) -> tuple[int, int, int, int, int, int, int, int]:
-    foundation = 45 + round(character.power_score * 0.55)
-    rarity_scale = RARITY_STAT_SCALE[rarity]
-    return (
-        round(foundation * 2.20 * rarity_scale),
-        round(foundation * 0.55 * rarity_scale),
-        round(foundation * 0.50 * rarity_scale),
-        round(foundation * 0.50 * rarity_scale),
-        round((10 + foundation * 0.16) * rarity_scale),
-        round(foundation * 0.60 * rarity_scale),
-        round(foundation * 0.55 * rarity_scale),
-        max(1, round((4 + foundation * 0.04) * (0.8 + 0.2 * rarity_scale))),
-    )
-
-
-def _apply_style(
-    style: CombatStyle,
-    values: tuple[int, int, int, int, int, int, int, int],
-) -> tuple[int, int, int, int, int, int, int, int]:
-    max_hp, strength, defense, speed, healing, special, fire, critical = values
-    if style is CombatStyle.SPEED:
-        speed += 12
-        strength = max(1, strength - 2)
-    elif style is CombatStyle.DURABILITY:
-        max_hp += 35
-        defense += 12
-    elif style is CombatStyle.FIRE_SPECIAL:
-        special += 5
-        fire += 20
-    elif style is CombatStyle.HEALING:
-        healing += 30
-        strength = max(1, strength - 2)
-    elif style is CombatStyle.BRUTE_FORCE:
-        strength += 16
-        defense += 4
-    elif style is CombatStyle.CONTROL:
-        speed += 4
-        special += 12
-    elif style is CombatStyle.SUPPORT:
-        healing += 8
-        special += 14
-    elif style is CombatStyle.CRITICAL:
-        critical += 12
-        speed += 3
-    elif style is CombatStyle.BURST:
-        speed += 6
-        special += 10
-    elif style is CombatStyle.PRECISION:
-        speed += 5
-        critical += 7
-        special += 5
-    elif style is CombatStyle.ARCANE:
-        special += 22
-        fire += 8
-    return max_hp, strength, defense, speed, healing, special, fire, critical
+    if not seed.strip():
+        raise ValueError("potential seed must not be empty")
+    return _java_rules().potential_score(seed=seed)
 
 
 def stats_for_character(
@@ -278,49 +188,40 @@ def stats_for_character(
     rarity: Rarity | str | None = None,
     potential_seed: str | None = None,
 ) -> WaifuMonStats:
-    """Resolve stats for preview or gameplay without persisting anything."""
-    if not 1 <= level <= MAX_WAIFUMON_LEVEL:
-        raise ValueError("WaifuMon level must be between 1 and 30")
-
+    """Resolve stats through Java without persisting state."""
     resolved_rarity = (
-        rarity
-        if isinstance(rarity, Rarity)
-        else Rarity(rarity or character.rarity.value)
+        rarity if isinstance(rarity, Rarity) else Rarity(rarity or character.rarity.value)
     )
-    seed = potential_seed or "preview-neutral"
-    stage = evolution_stage_for_level(level)
-    style = combat_style_for_element(character.element)
-
-    values = _base_stats(character, resolved_rarity)
-    level_factor = 1.0 + (level - 1) * 0.038
-    values = tuple(round(value * level_factor) for value in values)
-
-    names = ("max_hp", "strength", "defense", "speed", "healing", "special", "fire", "critical")
-    values = tuple(
-        max(1, round(value * (1.0 + _variation(seed, name))))
-        for value, name in zip(values, names, strict=True)
-    )
-    values = _apply_style(style, values)
-
-    return WaifuMonStats(
+    result = _java_rules().stats(
+        character={
+            "id": character.id,
+            "name": character.name,
+            "element": character.element.value,
+            "power_score": character.power_score,
+        },
         level=level,
-        rarity=resolved_rarity,
-        evolution_stage=stage,
-        style=style,
-        potential_score=potential_score_for_seed(seed),
-        max_hp=values[0],
-        strength=values[1],
-        defense=values[2],
-        speed=values[3],
-        healing=values[4],
-        special_power=values[5],
-        fire_skill=values[6],
-        critical_rate=min(95, values[7]),
+        rarity=resolved_rarity.value,
+        potential_seed=potential_seed or "preview-neutral",
+    )
+    return WaifuMonStats(
+        level=int(result["level"]),
+        rarity=Rarity(result["rarity"]),
+        evolution_stage=EvolutionStage(int(result["evolution_stage"])),
+        style=CombatStyle(result["style"]),
+        potential_score=int(result["potential_score"]),
+        max_hp=int(result["max_hp"]),
+        strength=int(result["strength"]),
+        defense=int(result["defense"]),
+        speed=int(result["speed"]),
+        healing=int(result["healing"]),
+        special_power=int(result["special_power"]),
+        fire_skill=int(result["fire_skill"]),
+        critical_rate=int(result["critical_rate"]),
     )
 
 
 def stats_for_collection(character: Character, collection: CollectionLike) -> WaifuMonStats:
-    """Resolve the real owned stats using the persisted individual seed."""
+    """Resolve owned stats from the persisted individual potential seed."""
     return stats_for_character(
         character,
         collection.level,
@@ -344,11 +245,6 @@ def add_collection_experience(
         gained=gained,
         copies=copies,
     )
-
-
-@lru_cache(maxsize=1)
-def _java_rules() -> WaifuMonJavaEngine:
-    return default_java_engine()
 
 
 def add_character_experience(
@@ -383,8 +279,12 @@ async def apply_capture_progression(
     character_id: str,
     rarity: str,
     potential_seed: str | None = None,
+    user_id: int | None = None,
+    chat_id: int | None = None,
 ) -> tuple[GameCollection, ProgressionResult]:
     """Apply one capture while keeping rarity and level as independent axes."""
+    del user_id, chat_id
+
     collection = await session.scalar(
         select(GameCollection).where(
             GameCollection.profile_id == profile_id,
@@ -488,7 +388,7 @@ async def apply_capture_progression(
 
 
 def capture_reward(profile: object, collection: CollectionLike) -> ProgressionResult:
-    """Legacy pure helper using the same level-only progression contract."""
+    """Legacy helper that delegates level progression to Java."""
     gained = 25 if collection.copies == 1 else 40
     points = CAPTURE_POINTS_FIRST if collection.copies == 1 else CAPTURE_POINTS_DUPLICATE
     before_stage = collection.evolution_stage
