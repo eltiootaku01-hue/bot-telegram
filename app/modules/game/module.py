@@ -829,7 +829,7 @@ class GameModule(BotModule):
             await callback.answer("Todavía no hay una comunidad configurada.", show_alert=True)
             return
 
-        async with self.database.session() as session:
+        async with self.database.session(write=True) as session:
             result = await self.gacha_service.roll(
                 session,
                 user_id=callback.from_user.id,
