@@ -46,6 +46,9 @@ def _ensure_compatibility(connection) -> None:
     _add_column_if_missing(connection, "chats", "last_bot_message_at", "DATETIME", chat_columns)
     _add_column_if_missing(connection, "chats", "last_social_event_at", "DATETIME", chat_columns)
 
+    trivia_columns = {column["name"] for column in inspect(connection).get_columns("trivia_rounds")}
+    _add_column_if_missing(connection, "trivia_rounds", "message_id", "BIGINT", trivia_columns)
+
     event_columns = {column["name"] for column in inspect(connection).get_columns("domain_events")}
     _add_column_if_missing(connection, "domain_events", "heartbeat_at", "DATETIME", event_columns)
     job_columns = {column["name"] for column in inspect(connection).get_columns("durable_jobs")}
