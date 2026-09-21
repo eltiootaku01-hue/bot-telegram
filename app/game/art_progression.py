@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from app.game.art_directions import direction_for
 from app.game.models import CardTier
 
 
@@ -131,7 +132,12 @@ def art_prompt_spec(
         f"Visual tier: {frame.tier.value}. Visible composition: {frame.visible_percent}. "
         f"Framing: {frame.framing}. Pose: {frame.pose_direction}. "
         f"Style: {stage.style}. Costume: {stage.outfit}; {special}. "
-        f"Unique direction: {direction}. "
+        f"Unique direction: {direction}. " 
+        f"Palette: {direction_for(character_name.casefold().replace(" ", "-")).palette}; "
+        f"Expression: {direction_for(character_name.casefold().replace(" ", "-")).expression}; "
+        f"Pose: {direction_for(character_name.casefold().replace(" ", "-")).pose}; "
+        f"Environment: {direction_for(character_name.casefold().replace(" ", "-")).environment}; "
+        f"Motif: {direction_for(character_name.casefold().replace(" ", "-")).motif}. "
         "Original polished anime fantasy illustration, expressive hand-drawn linework, "
         "controlled cel shading, rich but coherent lighting, distinct silhouette, "
         "detailed eyes/hair/clothing, non-photorealistic, safe-for-work, "
