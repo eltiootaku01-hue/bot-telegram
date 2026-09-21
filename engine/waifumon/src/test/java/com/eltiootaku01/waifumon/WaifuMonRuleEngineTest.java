@@ -93,7 +93,7 @@ final class WaifuMonRuleEngineTest {
         payload.put("action", "invalid");
         EngineResponse invalid = engine.execute(request("combat.resolve", payload, "turn-2"));
         assertFalse(invalid.success());
-        assertEquals("IllegalArgumentException", invalid.errorCode());
+        assertEquals("INVALID_REQUEST", invalid.errorCode());
     }
 
     @Test
