@@ -68,10 +68,9 @@ class ArtStage:
 
 SAFE_ART_STAGES: tuple[ArtStage, ...] = (
     ArtStage(1, 5, "chibi", "ropa cotidiana del personaje", "según la carta"),
-    ArtStage(6, 15, "anime", "ropa cotidiana reforzada", "según la carta"),
-    
-    ArtStage(16, 25, "anime premium", "vestuario especial del personaje", "según la carta"),
-    
+    ArtStage(6, 10, "anime", "ropa cotidiana reforzada", "según la carta"),
+    ArtStage(11, 20, "anime premium", "vestuario especial de evolución", "según la carta"),
+    ArtStage(21, 30, "anime premium", "vestuario final de evolución", "según la carta"),
 )
 
 
@@ -101,8 +100,8 @@ def art_frame_for(*, card_tier: CardTier) -> ArtFrameRule:
 
 
 def art_stage_for_level(level: int) -> ArtStage:
-    if not 1 <= level <= 25:
-        raise ValueError("art level must be between 1 and 25")
+    if not 1 <= level <= 30:
+        raise ValueError("art level must be between 1 and 30")
     return next(
         stage for stage in SAFE_ART_STAGES
         if stage.min_level <= level <= stage.max_level
