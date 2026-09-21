@@ -1145,21 +1145,6 @@ class GameModule(BotModule):
             if owned is not None:
                 captured_stats = stats_for_collection(result.character, owned)
 
-        captured_stats = None
-        if result.granted:
-            async with self.database.session() as session:
-                owned = await session.scalar(
-                    select(GameCollection)
-                    .join(GameProfile, GameProfile.id == GameCollection.profile_id)
-                    .where(
-                        GameProfile.user_id == callback.from_user.id,
-                        GameProfile.chat_id == chat_id,
-                        GameCollection.character_id == result.character.id,
-                    )
-                )
-            if owned is not None:
-                captured_stats = stats_for_collection(result.character, owned)
-
         await self._observe_action("gacha_roll", callback.from_user.id, chat_id)
 
         if result.approval is not None:
