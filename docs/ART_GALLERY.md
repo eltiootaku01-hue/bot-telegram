@@ -43,10 +43,10 @@ El objetivo de estilo es una ilustración anime de fantasía/aventura original, 
 
 ## Estado
 
-Cartas con arte unitario aprobado: **4 / 78 (5.13%)**.
+Cartas con arte unitario registrado: **17 / 78 (21.79%)**.
 
-Dirección artística individual declarada: **23 / 78 (29.49%)**.
+Dirección artística individual declarada: **78 / 78 (100%)**.
 
-Pendientes: **74 / 78** piezas de arte final.
+Pendientes de pieza final raster para runtime: **61 / 78**.
 
 [Volver al repositorio](https://github.com/eltiootaku01-hue/bot-telegram)
