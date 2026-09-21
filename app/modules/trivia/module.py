@@ -6,6 +6,7 @@ import random
 from html import escape
 
 from aiogram import Bot, F
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select, update
