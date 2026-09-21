@@ -48,6 +48,7 @@ from app.ui.game_keyboards import (
     detector_keyboard,
     item_consume_keyboard,
     item_inventory_keyboard,
+    encounter_keyboard,
 )
 
 logger = logging.getLogger(__name__)
@@ -1039,7 +1040,10 @@ class GameModule(BotModule):
         )
         if reaction:
             result_text += f'\n\n🐍 <b>Sunna:</b> {reaction}'
-        await callback.message.edit_text(result_text)
+        await callback.message.edit_text(
+            result_text,
+            reply_markup=encounter_keyboard(encounter.id, options) if participant_count < 3 else None,
+        )
         await self._observe_action(
             'encounter_capture', callback.from_user.id, encounter.chat_id
         )
