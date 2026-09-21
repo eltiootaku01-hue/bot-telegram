@@ -183,3 +183,25 @@ def chie_human_verification_keyboard(user_id: int):
         ),
     )
     return builder.as_markup()
+
+
+def world_event_recovery_keyboard(event_id: int) -> InlineKeyboardMarkup:
+    """Operator controls for an ambiguous world-event delivery."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="📋 Ver evento",
+            callback_data=f"world:recovery:view:{event_id}",
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🔁 Reencolar",
+            callback_data=f"world:recovery:retry:{event_id}",
+        ),
+        InlineKeyboardButton(
+            text="❌ Cancelar",
+            callback_data=f"world:recovery:cancel:{event_id}",
+        ),
+    )
+    return builder.as_markup()
