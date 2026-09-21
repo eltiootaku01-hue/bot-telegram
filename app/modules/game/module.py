@@ -220,6 +220,7 @@ class GameModule(BotModule):
         if len(parts) != 4 or not parts[3].isdigit():
             await callback.answer('Regalo inválido.', show_alert=True)
             return
+        wrong_response: str | None = None
         async with self.database.session(write=True) as session:
             profile = await MemberRepository().get_or_create_game_profile(
                 session, callback.from_user.id, chat.id, commit=False
@@ -905,6 +906,13 @@ class GameModule(BotModule):
             )
             return
 
+        if wrong_response is not None:
+            await self._observe_action(
+                'encounter_attempt_wrong', callback.from_user.id, encounter.chat_id
+            )
+            await callback.answer(wrong_response, show_alert=True)
+            return
+
         reaction = self._game_reaction(
             CharacterIntent.GAME_SUCCESS,
             callback.from_user.id + chat_id,
@@ -990,14 +998,12 @@ class GameModule(BotModule):
                     CharacterIntent.GAME_MISS,
                     callback.from_user.id + callback.message.chat.id,
                 )
-                response_text = '❌ Fallaste. Esta oportunidad era solo tuya.'
+                wrong_response = '❌ Fallaste. Esta oportunidad era solo tuya.'
+                if participant_count >= 3:
+                    wrong_response += '\n\n🚪 Ya se ocuparon las 3 oportunidades de este encuentro.'
                 if reaction:
-                    response_text += f'\n\n🐍 <b>Sunna:</b> {reaction}'
-                await self._observe_action(
-                    'encounter_attempt_wrong', callback.from_user.id, encounter.chat_id
-                )
-                await callback.answer(response_text, show_alert=True)
-                return
+                    wrong_response += f'\n\n🐍 <b>Sunna:</b> {reaction}'
+                await session.flush()
 
             profile = await MemberRepository().get_or_create_game_profile(
                 session, callback.from_user.id, encounter.chat_id, commit=False
