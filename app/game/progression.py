@@ -205,6 +205,14 @@ def potential_score_for_seed(seed: str) -> int:
     return _java_rules().potential_score(seed=seed)
 
 
+def combat_style_for_element(element: object) -> CombatStyle:
+    """Resolve the element specialty through the authoritative Java engine."""
+    value = getattr(element, "value", element)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("element must be a non-empty string")
+    return CombatStyle(_java_rules().style(element=value))
+
+
 def stats_for_character(
     character: Character,
     level: int,
