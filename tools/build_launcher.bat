@@ -2,6 +2,9 @@
 setlocal
 cd /d "%~dp0.."
 
+call tools\build_waifumon.bat
+if errorlevel 1 exit /b %errorlevel%
+
 python -m pip install -e ".[dev]"
 if errorlevel 1 exit /b %errorlevel%
 python -m pip install pyinstaller==6.22.2 pyinstaller-hooks-contrib==2026.7
@@ -30,6 +33,8 @@ echo ============================================
 echo Build completo.
 echo.
 echo Iniciador: dist\BotManager.exe
+echo Java:      dist\engine\waifumon-engine.jar
+echo Runtime:   dist\engine\jre
 echo Bots:      dist\bots\Cari.exe
 echo           dist\bots\Sunna.exe
 echo           dist\bots\Cami.exe
