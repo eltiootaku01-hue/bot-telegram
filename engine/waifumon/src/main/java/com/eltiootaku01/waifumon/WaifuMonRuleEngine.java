@@ -47,6 +47,10 @@ public final class WaifuMonRuleEngine {
                 case "gacha.roll" -> gachaRoll(request);
                 case "combat.resolve" -> combatResolve(request);
                 case "progression.resolve" -> progressionResolve(request);
+                case "evolution.resolve" -> evolutionResolve(request);
+                case "stats.resolve" -> statsResolve(request);
+                case "style.resolve" -> styleResolve(request);
+                case "potential.resolve" -> potentialResolve(request);
                 default -> EngineResponse.failure(
                     request.requestId(),
                     "UNKNOWN_COMMAND",
