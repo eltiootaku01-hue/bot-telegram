@@ -114,7 +114,7 @@ class WaifuGiftService:
                 WaifuGiftDrop.status.in_(("pending", "failed")),
                 WaifuGiftDrop.message_id.is_(None),
             )
-            .values(status="publishing")
+            .values(status="publishing", updated_at=utc_now())
         )
         return result.rowcount == 1
 
@@ -132,7 +132,7 @@ class WaifuGiftService:
                 WaifuGiftDrop.status == "publishing",
                 WaifuGiftDrop.message_id.is_(None),
             )
-            .values(status="active", message_id=message_id)
+            .values(status="active", message_id=message_id, updated_at=utc_now())
         )
         return result.rowcount == 1
 
@@ -149,7 +149,7 @@ class WaifuGiftService:
                 WaifuGiftDrop.status == "publishing",
                 WaifuGiftDrop.message_id.is_(None),
             )
-            .values(status="pending")
+            .values(status="pending", updated_at=utc_now())
         )
 
     async def claim(
