@@ -14,10 +14,23 @@ final class WaifuMonRuleEngineTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private final WaifuMonRuleEngine engine = new WaifuMonRuleEngine(mapper);
 
-    private EngineRequest request(String command, ObjectNode payload, String idempotencyKey) {
+    private EngineRequest request(
+        String command,
+        ObjectNode payload,
+        String idempotencyKey
+    ) {
+        return request(command, payload, idempotencyKey, "req-" + command);
+    }
+
+    private EngineRequest request(
+        String command,
+        ObjectNode payload,
+        String idempotencyKey,
+        String requestId
+    ) {
         return new EngineRequest(
             EngineRequest.CURRENT_VERSION,
-            "req-" + command,
+            requestId,
             "corr-" + command,
             7L,
             -100L,
@@ -88,7 +101,9 @@ final class WaifuMonRuleEngineTest {
         ObjectNode payload = mapper.createObjectNode().put("seed", "idem-seed");
 
         EngineResponse first = engine.execute(request("gacha.roll", payload, "idem-key"));
-        EngineResponse replay = engine.execute(request("gacha.roll", payload, "idem-key"));
+        EngineResponse replay = engine.execute(
+            request("gacha.roll", payload, "idem-key", "req-gacha-replay")
+        );
 
         assertTrue(first.success());
         assertTrue(replay.success());
