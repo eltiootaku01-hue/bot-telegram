@@ -31,15 +31,15 @@ def test_four_visual_card_tiers_are_deterministic(tier, visible):
 @pytest.mark.parametrize(
     ("level", "style"),
     [
-        (1, "chibi"),
-        (5, "chibi"),
+        (1, "anime"),
+        (5, "anime"),
         (6, "anime"),
         (10, "anime"),
         (11, "anime premium"),
         (20, "anime premium"),
-        (21, "anime premium"),
-        (25, "anime premium"),
-        (30, "anime premium"),
+        (21, "anime premium final"),
+        (25, "anime premium final"),
+        (30, "anime premium final"),
     ],
 )
 def test_art_progression_is_deterministic_and_safe(level, style):
