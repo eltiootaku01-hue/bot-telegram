@@ -423,6 +423,19 @@ async def apply_capture_progression(
     gained = 25 if first_capture else 40
     points = CAPTURE_POINTS_FIRST if first_capture else CAPTURE_POINTS_DUPLICATE
 
+    if first_capture:
+        result = add_character_experience(
+            level=collection.level,
+            experience=collection.experience,
+            evolution_stage=collection.evolution_stage,
+            gained=gained,
+            copies=collection.copies,
+        )
+        collection.level = result.level
+        collection.experience = result.experience
+        collection.evolution_stage = result.evolution_stage
+        await session.flush()
+
     if not first_capture:
         result = add_character_experience(
             level=collection.level,
