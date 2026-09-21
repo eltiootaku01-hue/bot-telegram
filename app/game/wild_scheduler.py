@@ -155,7 +155,10 @@ class WildWaifuScheduler:
             answer=encounter.answer,
             expires_at=expires,
         )
-        async with self.database.session() as session:
+        if not is_authorized_community(self.settings, chat_id):
+            return
+
+        async with self.database.session(write=True) as session:
             session.add(record)
             try:
                 await session.commit()
