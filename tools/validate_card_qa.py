@@ -40,15 +40,21 @@ def _validate_variant(
             failures.append(f"{character_id}: UR_ALT_HOLO approved without adult_eligible=true")
 
     if variant.get("approved"):
-        checks = variant.get("checks") or (
-            item.get("checks", {}) if variant_id == "normal" else {}
+        canonical = variant_id == "normal"
+        checks = variant.get("checks") or (item.get("checks", {}) if canonical else {})
+        reviewer = variant.get("reviewer") or (item.get("reviewer") if canonical else "")
+        reviewed_at = variant.get("reviewed_at") or (item.get("reviewed_at") if canonical else None)
+        second_reviewer = variant.get("second_reviewer") or (
+            item.get("second_reviewer") if canonical else ""
         )
         for key in _required_variant_checks(qa, variant):
             if checks.get(key) is not True:
                 failures.append(f"{character_id}/{variant_id}: approved without {key}")
-        if not variant.get("reviewer"):
+        if not reviewer:
             failures.append(f"{character_id}/{variant_id}: approved without primary reviewer")
-        if tier == "UR" and not variant.get("second_reviewer"):
+        if not reviewed_at:
+            failures.append(f"{character_id}/{variant_id}: approved without reviewed_at")
+        if tier == "UR" and not second_reviewer:
             failures.append(f"{character_id}/{variant_id}: UR requires second_reviewer")
         production_file = Path(variant["production_file"])
         if not production_file.is_file():
