@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import select
 
 from app.db.database import Database
-from app.db.models import GameCollection, GameProfile
+from app.db.models import Chat, GameCollection, GameProfile, User
 from app.game.art_progression import art_prompt_spec, art_stage_for_level
 from app.game.fusion import fuse_collection
 
@@ -47,6 +47,9 @@ async def test_fusion_requires_level_25(tmp_path):
     await database.create_schema()
 
     async with database.session() as session:
+        session.add(User(id=7, first_name="Test"))
+        session.add(Chat(id=-100, type="supergroup", title="Test"))
+        await session.flush()
         profile = GameProfile(user_id=7, chat_id=-100)
         session.add(profile)
         await session.flush()
@@ -76,6 +79,9 @@ async def test_fusion_at_level_25_consumes_same_character_copies(tmp_path):
     await database.create_schema()
 
     async with database.session() as session:
+        session.add(User(id=8, first_name="Test"))
+        session.add(Chat(id=-101, type="supergroup", title="Test"))
+        await session.flush()
         profile = GameProfile(user_id=8, chat_id=-101)
         session.add(profile)
         await session.flush()
