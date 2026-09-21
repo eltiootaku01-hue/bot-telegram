@@ -1001,7 +1001,7 @@ class GameModule(BotModule):
                 if next_level is not None and item.level in {10, 20}:
                     promotion = f" · próxima evolución en Nv.{next_level}"
                 lines.append(
-                    f"• {character.name} · clase {stats.rarity.value} · etapa {stats.evolution_stage.value}/4 · "
+                    f"• {character.name} · clase {stats.rarity.value} · etapa {stats.evolution_stage.value}/3 · "
                     f"{character.element.value} · Nv.{item.level}/30 · EXP {item.experience} · "
                     f"×{item.copies} · estilo {stats.style.value}{promotion}"
                 )

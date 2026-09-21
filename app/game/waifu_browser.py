@@ -201,7 +201,7 @@ def render_detail(
         lines.extend(
             (
                 "",
-                f"🧬 Etapa de evolución: <b>{stats.evolution_stage.value}/4</b>"
+                f"🧬 Etapa de evolución: <b>{stats.evolution_stage.value}/3</b>"
                 + (f" · próxima en Nv.{next_level}" if next_level else " · etapa final"),
                 f"📈 Nivel: <b>{stats.level}/30</b> · EXP determina el nivel, no la clase",
                 f"🎯 Potencial individual: <b>{stats.potential_score}/100</b>",
@@ -212,7 +212,7 @@ def render_detail(
                 f"💨 Velocidad: <b>{stats.speed}</b>",
                 f"✨ Especial: <b>{stats.special_power}</b>",
                 f"🎯 Crítico: <b>{stats.critical_rate}%</b>",
-                f"🎨 Arte evolutivo: <b>{band.stage.value}/4</b> · {band.art_visibility}",
+                f"🎨 Arte evolutivo: <b>{band.stage.value}/3</b> · {band.art_visibility}",
             )
         )
 

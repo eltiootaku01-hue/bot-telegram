@@ -13,7 +13,7 @@ from app.db.models import GameCollection, GameProfile, WaifuDetectorDailyUsage, 
 from app.game.models import Rarity
 from app.game.catalog import get_character
 from app.game.waifumon_progression import stats_for_collection
-from app.game.progression import add_collection_experience
+from app.game.progression import add_collection_experience, evolution_stage_for_level
 
 
 MAX_DAILY_DETECTOR_USES = 3
@@ -78,7 +78,7 @@ class WaifuDetectorService:
             )
             // 8
             + rarity_bonus
-            + collection.evolution_stage * 2
+            + evolution_stage_for_level(collection.level).value * 2
         )
 
     async def start(
@@ -228,7 +228,6 @@ class WaifuDetectorService:
         progress = add_collection_experience(
             level=collection.level,
             experience=collection.experience,
-            evolution_stage=collection.evolution_stage,
             gained=mob.reward_experience,
             copies=collection.copies,
         )

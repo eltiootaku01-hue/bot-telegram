@@ -52,7 +52,6 @@ async def fuse_collection(session: AsyncSession, *, profile_id: int, character_i
             rarity=rule.to_rarity,
             level=1,
             experience=0,
-            evolution_stage=GameCollection.evolution_stage + 1,
         )
     )
     if result.rowcount != 1:

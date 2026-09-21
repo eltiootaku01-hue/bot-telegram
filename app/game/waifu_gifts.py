@@ -320,7 +320,6 @@ class WaifuGiftService:
         progress = add_character_experience(
             level=collection.level,
             experience=collection.experience,
-            evolution_stage=collection.evolution_stage,
             gained=gift.experience,
             copies=collection.copies,
         )

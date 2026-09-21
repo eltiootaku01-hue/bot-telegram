@@ -277,7 +277,6 @@ class WaifuMonJavaEngine:
         *,
         level: int,
         experience: int,
-        evolution_stage: int,
         gained: int,
         copies: int,
     ) -> dict[str, Any]:
@@ -288,11 +287,10 @@ class WaifuMonJavaEngine:
             payload={
                 "level": level,
                 "experience": experience,
-                "evolution_stage": evolution_stage,
                 "gained": gained,
                 "copies": copies,
             },
-            idempotency_key=f"progression:{level}:{experience}:{evolution_stage}:{gained}:{copies}",
+            idempotency_key=f"progression:{level}:{experience}:{gained}:{copies}",
         )
         return dict(response["payload"])
 

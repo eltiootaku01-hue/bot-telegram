@@ -276,9 +276,13 @@ public final class WaifuMonRuleEngine {
         JsonNode payload = request.payload();
         int level = boundedInt(payload, "level", 1, MAX_LEVEL);
         int experience = Math.max(0, payload.path("experience").asInt());
-        int stage = Math.max(1, payload.path("evolution_stage").asInt());
         int gained = nonNegativeInt(payload, "gained");
         int copies = positiveInt(payload, "copies");
+        if (payload.has("evolution_stage")) {
+            throw new IllegalArgumentException(
+                "evolution_stage is derived from level and must not be supplied"
+            );
+        }
 
         int currentLevel = level;
         int remainingExperience = experience + gained;
@@ -315,29 +319,27 @@ public final class WaifuMonRuleEngine {
         result.put("evolution_stage", stage);
         result.put("min_level", switch (stage) {
             case 1 -> 1;
-            case 2 -> 6;
-            case 3 -> 11;
-            case 4 -> 21;
+            case 2 -> 11;
+            case 3 -> 21;
             default -> throw new IllegalStateException("Unknown evolution stage: " + stage);
         });
         result.put("max_level", switch (stage) {
-            case 1 -> 5;
-            case 2 -> 10;
-            case 3 -> 20;
-            case 4 -> 30;
+            case 1 -> 10;
+            case 2 -> 20;
+            case 3 -> 30;
             default -> throw new IllegalStateException("Unknown evolution stage: " + stage);
         });
         result.put("next_level", switch (stage) {
-            case 1 -> 6;
-            case 2 -> 11;
-            case 3 -> 21;
-            case 4 -> 0;
+            case 1 -> 11;
+            case 2 -> 21;
+            case 3 -> 0;
             default -> throw new IllegalStateException("Unknown evolution stage: " + stage);
         });
         return EngineResponse.success(
             request.requestId(), "evolution_result", result, 0L, List.of(), List.of()
         );
     }
+
 
     private EngineResponse statsResolve(EngineRequest request) {
         JsonNode payload = request.payload();
@@ -508,10 +510,9 @@ public final class WaifuMonRuleEngine {
     }
 
     private static int stageForLevel(int level) {
-        if (level <= 5) return 1;
-        if (level <= 10) return 2;
-        if (level <= 20) return 3;
-        return 4;
+        if (level <= 10) return 1;
+        if (level <= 20) return 2;
+        return 3;
     }
 
     private static String requiredText(JsonNode object, String field) {

@@ -23,12 +23,11 @@ MAX_WAIFUMON_LEVEL = 30
 
 
 class EvolutionStage(IntEnum):
-    """Base form plus three level-based evolutions."""
+    """Three visual stages derived only from the collection level."""
 
     BASE = 1
     EVOLUTION_1 = 2
     EVOLUTION_2 = 3
-    EVOLUTION_3 = 4
 
 
 class CombatStyle(StrEnum):
@@ -49,7 +48,6 @@ class CollectionLike(Protocol):
     character_id: str
     level: int
     experience: int
-    evolution_stage: int
     copies: int
     rarity: str
     potential_seed: str | None
@@ -83,30 +81,29 @@ class EvolutionBand:
 
 
 EVOLUTION_BANDS: tuple[EvolutionBand, ...] = (
-    EvolutionBand(EvolutionStage.BASE, 1, 5, "15%", "rostro y hombros", "forma base"),
     EvolutionBand(
-        EvolutionStage.EVOLUTION_1,
-        6,
+        EvolutionStage.BASE,
+        1,
         10,
         "30%",
-        "cabeza, hombros y torso",
-        "primera evolución; silueta y pose renovadas",
+        "rostro, hombros y torso",
+        "etapa 1; forma inicial completamente definida",
     ),
     EvolutionBand(
-        EvolutionStage.EVOLUTION_2,
+        EvolutionStage.EVOLUTION_1,
         11,
         20,
         "60%",
         "medio cuerpo hasta cintura",
-        "segunda evolución; vestuario y presencia de combate ampliados",
+        "etapa 2; vestuario y presencia de combate ampliados",
     ),
     EvolutionBand(
-        EvolutionStage.EVOLUTION_3,
+        EvolutionStage.EVOLUTION_2,
         21,
         30,
         "100%",
         "cuerpo completo",
-        "tercera evolución; arte final y composición completa",
+        "etapa 3; forma final y composición completa",
     ),
 )
 
@@ -135,46 +132,30 @@ def _java_rules() -> WaifuMonJavaEngine:
     return default_java_engine()
 
 
-def evolution_band_for_level(level: int) -> EvolutionBand:
-    result = _java_rules().evolution(level=level)
-    stage = EvolutionStage(int(result["evolution_stage"]))
-    metadata = {
-        EvolutionStage.BASE: ("15%", "rostro y hombros", "forma base"),
-        EvolutionStage.EVOLUTION_1: (
-            "30%",
-            "cabeza, hombros y torso",
-            "primera evolución; silueta y pose renovadas",
-        ),
-        EvolutionStage.EVOLUTION_2: (
-            "60%",
-            "medio cuerpo hasta cintura",
-            "segunda evolución; vestuario y presencia de combate ampliados",
-        ),
-        EvolutionStage.EVOLUTION_3: (
-            "100%",
-            "cuerpo completo",
-            "tercera evolución; arte final y composición completa",
-        ),
-    }
-    art_visibility, framing, design_language = metadata[stage]
-    return EvolutionBand(
-        stage=stage,
-        min_level=int(result["min_level"]),
-        max_level=int(result["max_level"]),
-        art_visibility=art_visibility,
-        framing=framing,
-        design_language=design_language,
-    )
-
-
 def evolution_stage_for_level(level: int) -> EvolutionStage:
-    return evolution_band_for_level(level).stage
+    """Return the visual stage as a pure function of level."""
+    if not 1 <= level <= MAX_WAIFUMON_LEVEL:
+        raise ValueError("WaifuMon level must be between 1 and 30")
+    if level <= 10:
+        return EvolutionStage.BASE
+    if level <= 20:
+        return EvolutionStage.EVOLUTION_1
+    return EvolutionStage.EVOLUTION_2
+
+
+def evolution_band_for_level(level: int) -> EvolutionBand:
+    stage = evolution_stage_for_level(level)
+    return next(band for band in EVOLUTION_BANDS if band.stage is stage)
 
 
 def evolution_next_level(stage: EvolutionStage) -> int | None:
-    result = _java_rules().evolution(level=level_floor_for_evolution_stage(stage))
-    next_level = int(result["next_level"])
-    return next_level or None
+    if not isinstance(stage, EvolutionStage):
+        stage = EvolutionStage(stage)
+    return {
+        EvolutionStage.BASE: 11,
+        EvolutionStage.EVOLUTION_1: 21,
+        EvolutionStage.EVOLUTION_2: None,
+    }[stage]
 
 
 def level_cap_for_evolution_stage(stage: EvolutionStage) -> int:
@@ -186,10 +167,10 @@ def level_floor_for_evolution_stage(stage: EvolutionStage) -> int:
         stage = EvolutionStage(stage)
     return {
         EvolutionStage.BASE: 1,
-        EvolutionStage.EVOLUTION_1: 6,
-        EvolutionStage.EVOLUTION_2: 11,
-        EvolutionStage.EVOLUTION_3: 21,
+        EvolutionStage.EVOLUTION_1: 11,
+        EvolutionStage.EVOLUTION_2: 21,
     }[stage]
+
 
 def promotion_message(from_stage: EvolutionStage, to_stage: EvolutionStage) -> str:
     return (
@@ -238,7 +219,7 @@ def stats_for_character(
     return WaifuMonStats(
         level=int(result["level"]),
         rarity=Rarity(result["rarity"]),
-        evolution_stage=EvolutionStage(int(result["evolution_stage"])),
+        evolution_stage=evolution_stage_for_level(int(result["level"])),
         style=CombatStyle(result["style"]),
         potential_score=int(result["potential_score"]),
         max_hp=int(result["max_hp"]),
@@ -266,14 +247,12 @@ def add_collection_experience(
     *,
     level: int,
     experience: int,
-    evolution_stage: int,
     gained: int,
     copies: int,
 ) -> ProgressionResult:
     return add_character_experience(
         level=level,
         experience=experience,
-        evolution_stage=evolution_stage,
         gained=gained,
         copies=copies,
     )
@@ -283,23 +262,26 @@ def add_character_experience(
     *,
     level: int,
     experience: int,
-    evolution_stage: int,
     gained: int,
     copies: int,
 ) -> ProgressionResult:
-    """Resolve level/XP progression in Java; Python only maps the DTO."""
+    """Resolve XP/level through Java; stage remains a pure function of level."""
+    if not 1 <= level <= MAX_WAIFUMON_LEVEL:
+        raise ValueError("WaifuMon level must be between 1 and 30")
+    before_stage = evolution_stage_for_level(level)
     result = _java_rules().progression(
         level=level,
         experience=experience,
-        evolution_stage=evolution_stage,
         gained=gained,
         copies=copies,
     )
+    new_level = int(result["level"])
+    new_stage = evolution_stage_for_level(new_level)
     return ProgressionResult(
-        level=int(result["level"]),
+        level=new_level,
         experience=int(result["experience"]),
-        evolution_stage=int(result["evolution_stage"]),
-        evolved=bool(result["evolved"]),
+        evolution_stage=new_stage,
+        evolved=new_stage is not before_stage,
         points_gained=0,
     )
 
@@ -333,7 +315,6 @@ async def apply_capture_progression(
             level=1,
             copies=1,
             experience=0,
-            evolution_stage=EvolutionStage.BASE.value,
             potential_seed=potential_seed or secrets.token_hex(16),
         )
         try:
@@ -358,13 +339,11 @@ async def apply_capture_progression(
         result = add_character_experience(
             level=collection.level,
             experience=collection.experience,
-            evolution_stage=collection.evolution_stage,
             gained=gained,
             copies=collection.copies,
         )
         collection.level = result.level
         collection.experience = result.experience
-        collection.evolution_stage = result.evolution_stage
         await session.flush()
 
     if not first_capture:
@@ -385,7 +364,6 @@ async def apply_capture_progression(
                 copies=GameCollection.copies + 1,
                 level=result.level,
                 experience=result.experience,
-                evolution_stage=result.evolution_stage,
             )
         )
         if claimed.rowcount != 1:
@@ -413,8 +391,8 @@ async def apply_capture_progression(
     return collection, ProgressionResult(
         level=collection.level,
         experience=collection.experience,
-        evolution_stage=collection.evolution_stage,
-        evolved=not first_capture and collection.evolution_stage != 1,
+        evolution_stage=evolution_stage_for_level(collection.level),
+        evolved=not first_capture and result.evolved,
         points_gained=points,
     )
 
@@ -423,25 +401,23 @@ def capture_reward(profile: object, collection: CollectionLike) -> ProgressionRe
     """Legacy helper that delegates level progression to Java."""
     gained = 25 if collection.copies == 1 else 40
     points = CAPTURE_POINTS_FIRST if collection.copies == 1 else CAPTURE_POINTS_DUPLICATE
-    before_stage = collection.evolution_stage
+    before_stage = evolution_stage_for_level(collection.level)
     result = add_character_experience(
         level=collection.level,
         experience=collection.experience,
-        evolution_stage=collection.evolution_stage,
         gained=gained,
         copies=collection.copies,
     )
     collection.level = result.level
     collection.experience = result.experience
-    collection.evolution_stage = result.evolution_stage
     if hasattr(profile, "experience"):
         profile.experience += gained
         profile.level = max(1, 1 + profile.experience // 500)
     return ProgressionResult(
         result.level,
         result.experience,
-        result.evolution_stage,
-        result.evolution_stage != before_stage,
+        evolution_stage_for_level(collection.level),
+        evolution_stage_for_level(collection.level) is not before_stage,
         points,
     )
 
