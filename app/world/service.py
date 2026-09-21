@@ -322,6 +322,100 @@ class WorldEventService:
         await session.commit()
         return result.rowcount == 1
 
+    async def confirm_delivery_unknown(
+        self,
+        session: AsyncSession,
+        *,
+        event_id: int,
+        message_id: int,
+    ) -> bool:
+        """Finalize an ambiguous Telegram delivery after human confirmation."""
+        if message_id <= 0:
+            raise ValueError("message_id must be positive")
+        now = utc_now()
+        result = await session.execute(
+            update(GameWorldEvent)
+            .where(
+                GameWorldEvent.id == event_id,
+                GameWorldEvent.status == WorldEventStatus.DELIVERY_UNKNOWN.value,
+                GameWorldEvent.message_id.is_(None),
+            )
+            .values(
+                status=WorldEventStatus.PUBLISHED.value,
+                message_id=message_id,
+                locked_at=None,
+                heartbeat_at=None,
+                updated_at=now,
+            )
+        )
+        await session.commit()
+        return result.rowcount == 1
+
+    async def retry_delivery_unknown(
+        self,
+        session: AsyncSession,
+        *,
+        event_id: int,
+        presenter: WorldPresenterRef | None = None,
+        run_at: datetime | None = None,
+        reason: str = "manual retry approved",
+    ) -> bool:
+        """Requeue an ambiguous delivery only when no Telegram message id is known."""
+        presenter_key = (
+            f"{presenter.kind.value}:{presenter.key.strip()}"
+            if presenter is not None
+            else None
+        )
+        if presenter is not None and not presenter.key.strip():
+            raise ValueError("presenter key must not be empty")
+        values: dict[str, object] = {
+            "status": WorldEventStatus.PENDING.value,
+            "run_at": run_at or utc_now(),
+            "locked_at": None,
+            "heartbeat_at": None,
+            "last_error": reason[:4000],
+            "updated_at": utc_now(),
+        }
+        if presenter_key is not None:
+            values["presenter_key"] = presenter_key
+        result = await session.execute(
+            update(GameWorldEvent)
+            .where(
+                GameWorldEvent.id == event_id,
+                GameWorldEvent.status == WorldEventStatus.DELIVERY_UNKNOWN.value,
+                GameWorldEvent.message_id.is_(None),
+            )
+            .values(**values)
+        )
+        await session.commit()
+        return result.rowcount == 1
+
+    async def cancel_delivery_unknown(
+        self,
+        session: AsyncSession,
+        *,
+        event_id: int,
+        reason: str,
+    ) -> bool:
+        """Permanently stop an ambiguous delivery after human review."""
+        now = utc_now()
+        result = await session.execute(
+            update(GameWorldEvent)
+            .where(
+                GameWorldEvent.id == event_id,
+                GameWorldEvent.status == WorldEventStatus.DELIVERY_UNKNOWN.value,
+            )
+            .values(
+                status=WorldEventStatus.CANCELLED.value,
+                locked_at=None,
+                heartbeat_at=None,
+                last_error=reason[:4000],
+                updated_at=now,
+            )
+        )
+        await session.commit()
+        return result.rowcount == 1
+
     async def cancel_event(
         self,
         session: AsyncSession,
