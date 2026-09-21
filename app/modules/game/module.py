@@ -924,7 +924,10 @@ class GameModule(BotModule):
                 owned_level=owned_level,
                 potential_seed=owned_seed,
             )
-            evolution_paths = evolution_art_candidates_for(character_id, owned_level)
+            evolution_paths = evolution_art_candidates_for(
+                character_id,
+                owned_level or 1,
+            )
             art_file = next(
                 (
                     candidate
@@ -1006,8 +1009,8 @@ class GameModule(BotModule):
                 if next_level is not None and item.level in {10, 20}:
                     promotion = f" · próxima evolución en Nv.{next_level}"
                 lines.append(
-                    f"• {character.name} · {stats.waifumon_class.value} · {character.element.value} · "
-                    f"rareza {item.rarity} · Nv.{item.level}/30 · EXP {item.experience} · "
+                    f"• {character.name} · clase {stats.rarity.value} · etapa {stats.evolution_stage.value}/4 · "
+                    f"{character.element.value} · Nv.{item.level}/30 · EXP {item.experience} · "
                     f"×{item.copies} · estilo {stats.style.value}{promotion}"
                 )
                 lines.append(
