@@ -1956,3 +1956,27 @@ Riesgo encontrado: `delivery_unknown` existía como estado persistente y el runt
 
 ## Estado
 Pendiente de certificación final: CI Ubuntu y Windows sobre el último SHA de `main` después de todos los cambios del bloque.
+
+
+# 35. CIERRE CERTIFICADO — WORLD DELIVERY RECOVERY — 2026-09-21
+
+## SHA funcional certificado
+`81a37b445b127f8a60046e25315883dec2ba500b`
+
+## Validación
+- CI #1993: SUCCESS.
+- Ruff: SUCCESS.
+- Pytest: **646 passed, 58 warnings**.
+- Windows Build #1596: SUCCESS.
+- Windows compiló y verificó los ejecutables, assets visuales, tarjetas, smoke test de BotManager, instalador, manifest, ZIP portable y checksums.
+- Artefacto instalador: `bot-telegram-windows-installer`, 99,732,192 bytes, SHA-256 `7123aeb9edb5cf9826587914bfc2810249053fdc5edbe53faaa39c51a53e42ee`.
+- Artefacto portable: `bot-telegram-windows-portable`, 97,906,977 bytes, SHA-256 `6a7aee4f97059ecb0d18c8177ca6fa7c8b9c574eb4dee3ecffdbe1047526de82`.
+
+## Aprendizaje del ciclo
+El primer CI del recuperador falló por una cadena f-string mal escapada en el adaptador privado; se corrigió sin relajar Ruff. Otro CI mostró un `SAWarning` real de una conexión SQLite mantenida fuera de su bloque de sesión en `tests/test_gacha.py`; se corrigió el scope del test y la advertencia desapareció.
+
+## Estado
+Bloque World Delivery Recovery cerrado como código funcional y empaquetado. El estado persistente del mundo ya dispone de recuperación humana para `delivery_unknown`, rechazo definitivo separado de entrega ambigua, reintento con reasignación de presentador, cancelación terminal y protección de IDs Telegram de 64 bits.
+
+## Próximo foco
+No repetir infraestructura cerrada. La siguiente auditoría debe centrarse en profundidad de producto: eventos cotidianos authored, escenas contextuales de Cari/Sunna/Cami/Chie y uso real del estado del mundo para producir interacción sin IA en la ruta crítica.
