@@ -7,8 +7,9 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import GameCollection, GameGachaRoll, GameProfile, RareDropApproval
+from app.db.models import GameCardCollection, GameCollection, GameGachaRoll, GameProfile, RareDropApproval
 from app.db.repositories import MemberRepository
+from app.game.card_service import CardCollectionService, card_for_gacha_character
 from app.game.catalog import CHARACTERS, get_character
 from app.game.engine import GameEngine
 from app.game.models import Character, Rarity
@@ -26,6 +27,7 @@ _RARITY_ORDER = {rarity: index for index, rarity in enumerate(Rarity)}
 class GachaResult:
     rolled_rarity: Rarity
     character: Character
+    card: object
     remaining_points: int
     approval: RareDropApproval | None = None
     granted: bool = False
@@ -37,6 +39,7 @@ class GachaService:
 
     def __init__(self, engine: GameEngine | None = None) -> None:
         self.engine = engine or GameEngine()
+        self.cards = CardCollectionService()
 
     @staticmethod
     def _candidate_for_roll(
@@ -75,6 +78,7 @@ class GachaService:
         return GachaResult(
             rolled_rarity=Rarity(roll.rolled_rarity),
             character=get_character(roll.character_id),
+            card=card_for_gacha_character(get_character(roll.character_id), seed=roll.roll_id),
             remaining_points=balance,
             approval=approval,
             granted=roll.granted,
@@ -203,6 +207,9 @@ class GachaService:
         roll.rolled_rarity = rolled.value
         roll.pity_triggered = pity_triggered
         roll.character_id = character.id
+        card = card_for_gacha_character(character, seed=seed)
+        roll.card_id = card.card_id
+        roll.card_variant = card.variant.value
 
         if _RARITY_ORDER[character.rarity] > _RARITY_ORDER[Rarity.C]:
             approval = await propose(
@@ -218,6 +225,7 @@ class GachaService:
             return GachaResult(
                 rolled_rarity=rolled,
                 character=character,
+                card=card,
                 remaining_points=balance,
                 approval=approval,
                 granted=False,
@@ -233,11 +241,13 @@ class GachaService:
             character_id=character.id,
             rarity=character.rarity.value,
         )
+        await self.cards.grant(session, profile_id=profile.id, card=card)
         roll.granted = True
         await session.flush()
         return GachaResult(
             rolled_rarity=rolled,
             character=character,
+            card=card,
             remaining_points=balance,
             granted=True,
             pity_triggered=pity_triggered,
@@ -312,6 +322,11 @@ class GachaService:
             character_id=approval.character_id,
             rarity=approval.rarity,
         )
+        card = card_for_gacha_character(
+            get_character(approval.character_id),
+            seed=roll.roll_id,
+        )
+        await self.cards.grant(session, profile_id=profile.id, card=card)
         await session.flush()
         await session.refresh(profile)
         return True, profile.points
