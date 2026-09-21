@@ -104,8 +104,8 @@ ELEMENT_STYLES: dict[Element, CombatStyle] = {
 CLASS_BASE: dict[WaifuMonClass, tuple[int, int, int, int, int, int, int, int]] = {
     # hp, strength, defense, speed, healing, special, fire, crit
     WaifuMonClass.R: (100, 18, 18, 18, 8, 18, 18, 5),
-    WaifuMonClass.S: (160, 45, 45, 45, 16, 45, 45, 8),
-    WaifuMonClass.SR: (230, 65, 65, 65, 24, 65, 65, 12),
+    WaifuMonClass.S: (160, 45, 45, 45, 20, 45, 45, 8),
+    WaifuMonClass.SR: (230, 65, 65, 65, 30, 65, 65, 12),
 }
 
 CLASS_GROWTH: dict[WaifuMonClass, tuple[int, int, int, int, int, int, int, int]] = {
