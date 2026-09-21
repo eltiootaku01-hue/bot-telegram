@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1b1430"/><stop offset=".5" stop-color="#162044"/><stop offset="1" stop-color="#08111d"/></linearGradient>
+  <radialGradient id="light" cx=".5" cy=".22" r=".62"><stop stop-color="#8ac7ff" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+  <linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#735bd4"/><stop offset=".55" stop-color="#b0a2ff"/><stop offset="1" stop-color="#433d8a"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#bg)" stroke="#aab4ff" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#light)"/>
+<text x="52" y="78" fill="#edf2ff" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#b7c0ff" font-family="Arial,sans-serif" font-size="32" font-weight="800">R</text>
+<text x="52" y="112" fill="#b5c0dc" font-family="Arial,sans-serif" font-size="13" letter-spacing="3">AKO • RETRATO 20%</text>
+
+<g fill="none" stroke="#93c7ff" opacity=".35">
+  <circle cx="116" cy="248" r="42"/><circle cx="606" cy="256" r="54"/>
+  <path d="M70 300 Q150 190 230 300 M490 300 Q570 190 650 300"/>
+</g>
+
+<g stroke="#10141f" stroke-width="9" stroke-linejoin="round">
+  <path d="M216 394 Q195 246 263 177 Q350 92 451 154 Q533 211 514 392 Q506 482 447 551 L272 551 Q207 485 216 394Z" fill="url(#hair)"/>
+  <path d="M262 248 Q359 166 454 238 L458 366 Q447 448 359 474 Q272 450 257 367Z" fill="#f4d4c1"/>
+  <path d="M252 251 Q282 153 367 153 Q445 154 468 250 Q431 214 405 239 Q372 195 342 239 Q301 207 252 251Z" fill="url(#hair)"/>
+  <path d="M270 224 Q252 326 275 418" fill="none" stroke="#c8c0ff" stroke-width="11"/>
+  <path d="M445 220 Q462 319 440 417" fill="none" stroke="#c8c0ff" stroke-width="11"/>
+  <ellipse cx="320" cy="341" rx="14" ry="19" fill="#536dff"/>
+  <ellipse cx="398" cy="341" rx="14" ry="19" fill="#536dff"/>
+  <circle cx="323" cy="335" r="5" fill="#fff" stroke="none"/>
+  <circle cx="401" cy="335" r="5" fill="#fff" stroke="none"/>
+  <path d="M334 402 Q359 419 384 402" fill="none" stroke="#a45b73" stroke-width="5"/>
+  <path d="M299 468 Q359 495 420 468 L443 548 L277 548 Z" fill="#292a4f"/>
+  <path d="M316 476 Q359 501 401 476" fill="none" stroke="#aab4ff" stroke-width="5"/>
+</g>
+
+<g fill="#d8ebff">
+  <circle cx="106" cy="436" r="4"/><circle cx="623" cy="402" r="5"/><circle cx="150" cy="522" r="3"/>
+  <circle cx="568" cy="520" r="4"/><circle cx="184" cy="316" r="3"/><circle cx="548" cy="300" r="3"/>
+</g>
+
+<rect x="42" y="870" width="636" height="96" rx="22" fill="#08101a" opacity=".92" stroke="#aab4ff" stroke-width="2"/>
+<text x="64" y="906" fill="#f1f3ff" font-family="Arial,sans-serif" font-size="22" font-weight="700">Ako Tamaki</text>
+<text x="64" y="934" fill="#b9c3df" font-family="Arial,sans-serif" font-size="13">And You Thought There Is Never a Girl Online? • R • 20%</text>
+<text x="64" y="957" fill="#b9c3df" font-family="Arial,sans-serif" font-size="11">Rostro + hombros • expresión curiosa • fondo limpio y profundidad suave</text>
+<text x="656" y="906" text-anchor="end" fill="#aab4ff" font-family="Arial,sans-serif" font-size="14" font-weight="700">RETRATO</text>
+<text x="656" y="930" text-anchor="end" fill="#b9c3df" font-family="Arial,sans-serif" font-size="11">dirección unitaria</text>
+<text x="360" y="995" text-anchor="middle" fill="#8190b0" font-family="Arial,sans-serif" font-size="10" letter-spacing="2">ARTE ORIGINAL LOCAL • NO ES CANON VISUAL</text>
+</svg>
