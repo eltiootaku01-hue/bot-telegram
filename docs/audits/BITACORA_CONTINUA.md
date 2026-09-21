@@ -1980,3 +1980,29 @@ Bloque World Delivery Recovery cerrado como código funcional y empaquetado. El 
 
 ## Próximo foco
 No repetir infraestructura cerrada. La siguiente auditoría debe centrarse en profundidad de producto: eventos cotidianos authored, escenas contextuales de Cari/Sunna/Cami/Chie y uso real del estado del mundo para producir interacción sin IA en la ruta crítica.
+
+
+# 36. LIMPIEZA DE RECURSOS EN TESTS DE GACHA — 2026-09-21
+
+## Auditoría
+CI #1992 certificó el bloque World Recovery con 646 pruebas, pero emitió un `SAWarning` de SQLAlchemy indicando que `tests/test_gacha.py::test_gacha_high_rarity_creates_approval_without_granting_character` mantenía una conexión fuera del contexto de sesión.
+
+## Causa
+El test reutilizaba la variable `session` después de salir del bloque `async with database.session()` para consultar `GameCardCollection`.
+
+## Corrección
+La consulta de tarjeta quedó dentro del mismo contexto de sesión. No se cambió producción.
+
+## Validación
+- Commit funcional: `81a37b445b127f8a60046e25315883dec2ba500b`.
+- CI #1993: SUCCESS.
+- Ruff: SUCCESS.
+- Pytest: **646 passed, 58 warnings**; desapareció el `SAWarning` de conexión no devuelta.
+- Windows Build #1596: SUCCESS.
+- Windows artifacts certificados para este SHA: installer y portable, ambos con checksums SHA-256.
+
+## Estado
+Cerrado. La advertencia restante pertenece a `datetime.utcnow()` dentro de SQLAlchemy, no al código del proyecto según el stack trace observado.
+
+## Próximo objetivo
+Ampliar comportamiento de producto sobre el World Core ya estabilizado: más eventos authored, escenas contextuales y presentadores, manteniendo la lógica de juego independiente de personalidad e IA.
