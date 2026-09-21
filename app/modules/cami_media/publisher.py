@@ -7,7 +7,7 @@ from datetime import timedelta
 from html import escape
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramRetryAfter
 from sqlalchemy import select, update
 
 from app.core.access import is_authorized_community
@@ -21,6 +21,7 @@ from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import DurableJob, FanRequest, MediaAsset, RequestStatus, User
 from app.services.forum_topics import ForumTopicService
+from app.services.telegram_delivery import with_retry_after
 from app.ui.media_keyboards import cami_publication_recovery
 
 logger = logging.getLogger(__name__)
@@ -193,11 +194,13 @@ class CamiMediaPublisher(BotModule):
 
         try:
             if group_message_id is None:
-                sent = await bot.send_photo(
-                    group_id,
-                    file_id,
-                    message_thread_id=thread_id,
-                    caption=caption,
+                sent = await with_retry_after(
+                    lambda: bot.send_photo(
+                        group_id,
+                        file_id,
+                        message_thread_id=thread_id,
+                        caption=caption,
+                    )
                 )
                 async with self.database.session() as session:
                     current = await session.get(MediaAsset, asset_id)
@@ -209,10 +212,12 @@ class CamiMediaPublisher(BotModule):
                         await session.commit()
 
             if destination == "both" and page_message_id is None:
-                sent = await bot.send_photo(
-                    self.settings.publish_page_chat_id,
-                    file_id,
-                    caption=caption,
+                sent = await with_retry_after(
+                    lambda: bot.send_photo(
+                        self.settings.publish_page_chat_id,
+                        file_id,
+                        caption=caption,
+                    )
                 )
                 async with self.database.session() as session:
                     current = await session.get(MediaAsset, asset_id)
@@ -222,6 +227,22 @@ class CamiMediaPublisher(BotModule):
                         current.published_page_message_id = sent.message_id
                         current.updated_at = utc_now()
                         await session.commit()
+        except TelegramRetryAfter:
+            async with self.database.session() as session:
+                current = await session.get(MediaAsset, asset_id)
+                if current is not None and current.status == "publishing":
+                    current.status = "scheduled"
+                    current.updated_at = utc_now()
+                    await session.commit()
+            raise
+        except TelegramRetryAfter:
+            async with self.database.session() as session:
+                current = await session.get(MediaAsset, asset_id)
+                if current is not None and current.status == "publishing_request":
+                    current.status = "request_ready"
+                    current.updated_at = utc_now()
+                    await session.commit()
+            raise
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
             async with self.database.session() as session:
                 current = await session.get(MediaAsset, asset_id)
