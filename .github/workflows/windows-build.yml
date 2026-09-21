@@ -37,6 +37,14 @@ jobs:
           pip install pyinstaller==6.22.2 pyinstaller-hooks-contrib==2026.7
       - name: Test native media and encoder core
         run: python -m pytest tests/test_native_media.py tests/test_media_manager.py tests/test_media_encoder.py
+      - name: Validate card assets
+        run: python tools/validate_card_assets.py
+      - name: Validate card art prompt exporter
+        shell: pwsh
+        run: |
+          python tools/export_card_art_prompts.py --output card-art-prompts.md
+          if (-not (Test-Path "card-art-prompts.md")) { throw "Card art prompts were not exported" }
+          if ((Get-Item "card-art-prompts.md").Length -le 0) { throw "Card art prompt export is empty" }
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
