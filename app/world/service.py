@@ -65,7 +65,9 @@ class WorldEventService:
                 await session.flush()
         except IntegrityError:
             existing = await session.scalar(
-                select(GameWorldEvent).where(GameWorldEvent.dedupe_key == dedupe_key.strip())
+                select(GameWorldEvent).where(
+                    GameWorldEvent.dedupe_key == dedupe_key.strip()
+                )
             )
             if existing is None:
                 raise
@@ -192,35 +194,52 @@ class WorldEventService:
         *,
         now: datetime | None = None,
     ) -> WorldEventEnvelope | None:
+        """Claim exactly one due event and return its fenced immutable envelope."""
         current = now or utc_now()
-        await session.execute(
-            update(GameWorldEvent)
-            .where(
-                GameWorldEvent.status == WorldEventStatus.PENDING.value,
-                GameWorldEvent.run_at <= current,
-                (GameWorldEvent.expires_at.is_(None) | (GameWorldEvent.expires_at > current)),
+        while True:
+            candidate = await session.scalar(
+                select(GameWorldEvent)
+                .where(
+                    GameWorldEvent.status == WorldEventStatus.PENDING.value,
+                    GameWorldEvent.run_at <= current,
+                    (
+                        GameWorldEvent.expires_at.is_(None)
+                        | (GameWorldEvent.expires_at > current)
+                    ),
+                )
+                .order_by(GameWorldEvent.id.asc())
+                .limit(1)
             )
-            .values(
-                status=WorldEventStatus.PUBLISHING.value,
-                locked_at=current,
-                heartbeat_at=current,
-                attempts=GameWorldEvent.attempts + 1,
-                updated_at=current,
+            if candidate is None:
+                return None
+
+            result = await session.execute(
+                update(GameWorldEvent)
+                .where(
+                    GameWorldEvent.id == candidate.id,
+                    GameWorldEvent.status == WorldEventStatus.PENDING.value,
+                    GameWorldEvent.run_at <= current,
+                    (
+                        GameWorldEvent.expires_at.is_(None)
+                        | (GameWorldEvent.expires_at > current)
+                    ),
+                )
+                .values(
+                    status=WorldEventStatus.PUBLISHING.value,
+                    locked_at=current,
+                    heartbeat_at=current,
+                    attempts=GameWorldEvent.attempts + 1,
+                    updated_at=current,
+                )
             )
-        )
-        row = await session.scalar(
-            select(GameWorldEvent)
-            .where(
-                GameWorldEvent.status == WorldEventStatus.PUBLISHING.value,
-                GameWorldEvent.locked_at == current,
-            )
-            .order_by(GameWorldEvent.id.asc())
-            .limit(1)
-        )
-        if row is None:
-            return None
-        await session.commit()
-        return self._envelope(row)
+            if result.rowcount != 1:
+                return None
+
+            candidate.status = WorldEventStatus.PUBLISHING.value
+            candidate.locked_at = current
+            candidate.heartbeat_at = current
+            await session.commit()
+            return self._envelope(candidate)
 
     async def renew(
         self,
@@ -294,7 +313,38 @@ class WorldEventService:
         await session.commit()
         return result.rowcount == 1
 
-    async def cancel_expired(self, session: AsyncSession, *, now: datetime | None = None) -> int:
+    async def cancel_event(
+        self,
+        session: AsyncSession,
+        *,
+        event_id: int,
+        lock_time: datetime,
+        reason: str,
+    ) -> bool:
+        now = utc_now()
+        result = await session.execute(
+            update(GameWorldEvent)
+            .where(
+                GameWorldEvent.id == event_id,
+                GameWorldEvent.status == WorldEventStatus.PUBLISHING.value,
+                GameWorldEvent.locked_at == lock_time,
+            )
+            .values(
+                status=WorldEventStatus.CANCELLED.value,
+                heartbeat_at=None,
+                last_error=reason[:4000],
+                updated_at=now,
+            )
+        )
+        await session.commit()
+        return result.rowcount == 1
+
+    async def cancel_expired(
+        self,
+        session: AsyncSession,
+        *,
+        now: datetime | None = None,
+    ) -> int:
         current = now or utc_now()
         result = await session.execute(
             update(GameWorldEvent)
@@ -319,27 +369,42 @@ class WorldEventService:
         timeout_seconds: int = 300,
         now: datetime | None = None,
     ) -> int:
+        """Fence stale recovery against a concurrent heartbeat renewal."""
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
         current = now or utc_now()
         cutoff = current - timedelta(seconds=timeout_seconds)
-        result = await session.execute(
-            update(GameWorldEvent)
-            .where(
-                GameWorldEvent.status == WorldEventStatus.PUBLISHING.value,
-                GameWorldEvent.heartbeat_at.is_not(None),
-                GameWorldEvent.heartbeat_at < cutoff,
-            )
-            .values(
-                status=WorldEventStatus.DELIVERY_UNKNOWN.value,
-                heartbeat_at=None,
-                last_error="World presentation lease expired; manual recovery required",
-                updated_at=current,
+        stale = list(
+            await session.scalars(
+                select(GameWorldEvent)
+                .where(
+                    GameWorldEvent.status == WorldEventStatus.PUBLISHING.value,
+                    GameWorldEvent.heartbeat_at.is_not(None),
+                    GameWorldEvent.heartbeat_at < cutoff,
+                )
             )
         )
-        if result.rowcount:
+        recovered = 0
+        for event in stale:
+            result = await session.execute(
+                update(GameWorldEvent)
+                .where(
+                    GameWorldEvent.id == event.id,
+                    GameWorldEvent.status == WorldEventStatus.PUBLISHING.value,
+                    GameWorldEvent.locked_at == event.locked_at,
+                    GameWorldEvent.heartbeat_at == event.heartbeat_at,
+                )
+                .values(
+                    status=WorldEventStatus.DELIVERY_UNKNOWN.value,
+                    heartbeat_at=None,
+                    last_error="World presentation lease expired; manual recovery required",
+                    updated_at=current,
+                )
+            )
+            recovered += int(result.rowcount == 1)
+        if recovered:
             await session.commit()
-        return int(result.rowcount or 0)
+        return recovered
 
     @staticmethod
     def _validate_schedule(
@@ -370,6 +435,8 @@ class WorldEventService:
         presenter_raw = row.presenter_key.split(":", 1)
         if len(presenter_raw) != 2:
             raise RuntimeError(f"Invalid world presenter reference #{row.id}")
+        if row.locked_at is None:
+            raise RuntimeError(f"Claimed world event has no lock time #{row.id}")
         try:
             kind = PresenterKind(presenter_raw[0])
             event_type = WorldEventType(row.event_type)
@@ -386,4 +453,5 @@ class WorldEventService:
             title=row.title,
             payload=payload,
             status=status,
+            lock_time=row.locked_at,
         )
