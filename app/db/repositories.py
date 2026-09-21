@@ -146,6 +146,8 @@ class MemberRepository:
                 PointTransaction.reference_id == reference_id,
             ))
             if existing is not None:
+                if existing.amount != amount:
+                    raise ValueError("Point reference was reused with a different amount")
                 await session.refresh(profile)
                 return profile.points
         if amount:
@@ -195,6 +197,8 @@ class MemberRepository:
                 PointTransaction.reference_id == reference_id,
             ))
             if existing is not None:
+                if existing.amount != -amount:
+                    raise ValueError("Point reference was reused with a different amount")
                 await session.refresh(profile)
                 return profile.points
         try:
