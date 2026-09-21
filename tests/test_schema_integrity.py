@@ -1,12 +1,19 @@
+from app.core.time import utc_now
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.db.database import Database
+from app.db.trivia_models import TriviaRound
+
 from app.db.models import (
     GameCollection,
     GameDailyMissionProgress,
+    FanRequest,
+    GameEncounter,
     GameProfile,
     PointTransaction,
+    RareDropApproval,
     User,
     Chat,
     WaifuDetectorDailyUsage,
@@ -133,3 +140,79 @@ async def test_existing_sqlite_schema_gets_invariant_triggers_on_restart(tmp_pat
             )
 
     await second.close()
+
+
+@pytest.mark.asyncio
+async def test_database_rejects_incomplete_point_reference(database):
+    with pytest.raises(IntegrityError):
+        async with database.session() as session:
+            session.add(
+                PointTransaction(
+                    user_id=7,
+                    chat_id=-100,
+                    amount=10,
+                    reason="invalid",
+                    reference_type="encounter",
+                    reference_id=None,
+                )
+            )
+
+
+@pytest.mark.asyncio
+async def test_database_rejects_unknown_terminal_states(database):
+    with pytest.raises(IntegrityError):
+        async with database.session() as session:
+            session.add(
+                GameEncounter(
+                    id="invalid-state",
+                    chat_id=-100,
+                    character_id="taiga",
+                    rarity="D",
+                    expires_at=utc_now(),
+                    status="mystery",
+                )
+            )
+
+    with pytest.raises(IntegrityError):
+        async with database.session() as session:
+            session.add(
+                RareDropApproval(
+                    character_id="taiga",
+                    rarity="B",
+                    target_user_id=7,
+                    target_chat_id=-100,
+                    status="mystery",
+                )
+            )
+
+
+@pytest.mark.asyncio
+async def test_database_rejects_invalid_trivia_round_state(database):
+    with pytest.raises(IntegrityError):
+        async with database.session() as session:
+            session.add(
+                TriviaRound(
+                    chat_id=-100,
+                    question="Q",
+                    options='["a", "b"]',
+                    answer_index=-1,
+                    explanation="",
+                    points=10,
+                    status="active",
+                    expires_at=__import__("app.core.time", fromlist=["utc_now"]).utc_now(),
+                )
+            )
+
+
+@pytest.mark.asyncio
+async def test_database_rejects_negative_fan_request_cost(database):
+    with pytest.raises(IntegrityError):
+        async with database.session() as session:
+            session.add(
+                FanRequest(
+                    user_id=7,
+                    chat_id=-100,
+                    description="invalid",
+                    points_cost=-1,
+                )
+            )
