@@ -216,9 +216,9 @@ async def test_encounter_supports_three_distinct_captures_and_one_attempt_each(t
         collections = list(await session.scalars(select(GameCollection)))
         transactions = list(await session.scalars(select(PointTransaction)))
 
-    assert "¡CAPTURADA! 🎉" in first[-1]
-    assert "¡CAPTURADA! 🎉" in second[-1]
-    assert "¡CAPTURADA! 🎉" in third[-1]
+    assert "¡CAPTURADA! 🎉" in first[0]
+    assert "¡CAPTURADA! 🎉" in second[0]
+    assert "¡CAPTURADA! 🎉" in third[0]
     assert fourth_answers == ["Este encuentro ya tiene sus 3 oportunidades ocupadas."]
     assert encounter is not None and encounter.status == "closed"
     assert len(attempts) == 3
