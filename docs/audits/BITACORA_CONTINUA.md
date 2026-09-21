@@ -1913,3 +1913,46 @@ Prioridad de producto siguiente:
 - añadir regresión;
 - registrar cualquier fallo de CI antes de avanzar;
 - mantener el 85% hasta que el nuevo trabajo cubra una deuda funcional mayor.
+
+
+# 34. EVENT WORLD DELIVERY RECOVERY — 2026-09-21
+
+## Objetivo
+Cerrar la ruta operativa de eventos del mundo con entrega ambigua sin depender de reenvíos ciegos ni convertir Telegram en fuente de verdad.
+
+## Auditoría
+Se revisó `app/world/service.py`, `app/world/runtime.py`, `app/world/presenter.py`, `app/modules/world/presenter.py`, `app/db/world_models.py` y la composición de bots.
+
+Riesgo encontrado: `delivery_unknown` existía como estado persistente y el runtime tenía fencing/heartbeat, pero faltaba una vía formal de recuperación humana y los IDs de Telegram del evento estaban tipados como `Integer` en vez de `BigInteger`.
+
+## Implementación
+- `GameWorldEvent.chat_id` y `message_id` usan `BigInteger`.
+- `WorldEventService` añade `confirm_delivery_unknown`, `retry_delivery_unknown` y `cancel_delivery_unknown`.
+- Las tres transiciones son condicionales por estado; no pueden reutilizarse sobre eventos ya resueltos.
+- El reintento puede reasignar el presentador sin cambiar la lógica del evento.
+- `WorldPresenter` clasifica IDs inválidos como entrega ambigua.
+- `WorldRuntime` distingue rechazo definitivo de transporte ambiguo.
+- El adaptador Telegram convierte `TelegramBadRequest`/`TelegramForbiddenError` en rechazo definitivo.
+- Chie incorpora `WorldEventRecoveryModule` privado para revisar, confirmar, reencolar o cancelar eventos ambiguos.
+
+## Regresiones
+- `tests/test_world_recovery.py`: transiciones terminales, reintento con reasignación, anchura de IDs y rechazo definitivo.
+- `tests/test_world_recovery_module.py`: comandos privados del operador y fail-closed para no maestros.
+- `tests/test_bot_composition.py`: presencia y settings del módulo `world-recovery`.
+
+## Commits del bloque
+- `40f34cb9fe77b65afef1f93cafe3f1be1b8c9a10` — IDs World Event en BigInteger.
+- `2581c5f66776ed3f076554526a33c4e7e5f30510` — recuperación segura.
+- `4952dd352941a84dedebc9e50a023ed8f507c484` — clasificación de resultados del presenter.
+- `5894810defccc8ec9f12e08fc04b13fed43d2ec4` — transición failed.
+- `d106bc4c03d3f9d08cdf9c49b844c8938eaed77f` — runtime distingue rechazo.
+- `ea6a0b154bcf00ee3965997f799c1725dc763de0` — adaptador Telegram clasifica rechazo.
+- `855426bf4652efced9351f16c2dacf2425e69817` / `9f30f3ae9132b4fc75a1c6a8a3b786fa8bf42ff1` — regresiones World Recovery.
+- `96d5d1107d3fd05f6b825e1fe308b1d95d304edf` — teclado operativo.
+- `3799ae02fbadb394ac60d2a127e98d3cc8121ec0` — módulo de recuperación.
+- `e9bf1bd3b870bf1fe211df025c45dd6571a27264` — montaje en Chie.
+- `5dcb50dd449106c44e0f4d0eb9cd1b7f076ca67c` / `a7a4d06c11ff51dc060f2a79f9a74fbf4065627f` — pruebas de composición y operador.
+- `2bfc37599c9504ff70312d167d8e02c4673b2a0d` — documentación de recuperación.
+
+## Estado
+Pendiente de certificación final: CI Ubuntu y Windows sobre el último SHA de `main` después de todos los cambios del bloque.
