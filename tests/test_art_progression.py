@@ -13,20 +13,19 @@ from app.game.models import CardTier
 
 
 @pytest.mark.parametrize(
-    ("score", "tier", "visible"),
+    ("tier", "visible"),
     [
-        (30, CardArtTier.R, "20%"),
-        (40, CardArtTier.S, "40%"),
-        (51, CardArtTier.S, "40%"),
-        (52, CardArtTier.SR, "60-80%"),
-        (77, CardArtTier.SR, "60-80%"),
-        (78, CardArtTier.UR, "100%+"),
-        (100, CardArtTier.UR, "100%+"),
+        (CardArtTier.R, "20%"),
+        (CardArtTier.S, "40%"),
+        (CardArtTier.SR, "60-80%"),
+        (CardArtTier.UR, "100%+"),
     ],
 )
-def test_four_visual_card_tiers_are_deterministic(score, tier, visible):
-    assert card_art_tier(score, score) is tier
-    assert art_frame_for(popularity_score=score, power_score=score).visible_percent == visible
+def test_four_visual_card_tiers_are_deterministic(tier, visible):
+    assert card_art_tier(CardTier(tier.value)) is tier
+    assert art_frame_for(card_tier=CardTier(tier.value)).visible_percent == visible
+
+
 
 
 @pytest.mark.parametrize(
@@ -73,7 +72,8 @@ def test_art_prompt_spec_keeps_identity_and_unique_direction():
         character_name="Anya Forger",
         anime="Spy x Family",
         level=25,
-        card_tier=CardTier.UR,
+        card_tier=CardTier.SR,
+        variant="shiny",
         popularity_score=90,
         power_score=90,
         unique_direction="luz cálida, sonrisa traviesa, composición vertical con profundidad",
@@ -81,8 +81,8 @@ def test_art_prompt_spec_keeps_identity_and_unique_direction():
 
     assert "Anya Forger" in prompt
     assert "Spy x Family" in prompt
-    assert "Visual tier: UR" in prompt
-    assert "100%+" in prompt
+    assert "Visual tier: SR" in prompt
+    assert "60-80%" in prompt
     assert "Unique direction:" in prompt
     assert "luz cálida" in prompt
     assert "desn" not in prompt.casefold()
