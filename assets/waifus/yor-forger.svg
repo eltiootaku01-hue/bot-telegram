@@ -1,7 +1,136 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="680" viewBox="0 0 480 680">
-<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b2948"/><stop offset="1" stop-color="#090c14"/></linearGradient><radialGradient id="glow" cx="50%" cy="35%" r="65%"><stop stop-color="#d5f3ff" stop-opacity=".24"/><stop offset="1" stop-color="#2e9ed6" stop-opacity="0"/></radialGradient></defs>
-<rect x="8" y="8" width="464" height="664" rx="28" fill="url(#bg)" stroke="#2e9ed6" stroke-width="8"/><rect x="20" y="20" width="440" height="640" rx="20" fill="url(#glow)"/>
-<text x="34" y="52" fill="#d5f3ff" font-size="20" font-family="Arial" font-weight="700">WAIFUMON • CARTA 02</text><text x="446" y="52" text-anchor="end" fill="#2e9ed6" font-size="26" font-family="Arial" font-weight="700">R</text>
-<ellipse cx="240" cy="355" rx="122" ry="176" fill="#11151f" opacity=".65"/><path d="M145 330 Q150 215 240 190 Q330 215 335 330 L325 410 Q240 465 155 410 Z" fill="#d9ad45"/><ellipse cx="240" cy="335" rx="88" ry="110" fill="#f2d1bd"/><path d="M152 310 Q158 208 240 184 Q322 208 328 310 Q300 270 282 252 Q252 270 214 254 Q185 276 152 310Z" fill="#d9ad45"/>
-<path d="M170 425 Q240 382 310 425 L345 540 L135 540Z" fill="#2e9ed6"/><path d="M184 430 Q240 470 296 430" fill="none" stroke="#d5f3ff" stroke-width="10" opacity=".55"/><ellipse cx="205" cy="334" rx="12" ry="16" fill="#68c9ff"/><ellipse cx="275" cy="334" rx="12" ry="16" fill="#68c9ff"/><circle cx="208" cy="337" r="5" fill="#10131b"/><circle cx="278" cy="337" r="5" fill="#10131b"/><path d="M216 384 Q240 400 264 384" fill="none" stroke="#9e5c66" stroke-width="5" stroke-linecap="round"/><circle cx="335" cy="248" r="24" fill="#2e9ed6" opacity=".8"/><text x="335" y="257" text-anchor="middle" fill="#d5f3ff" font-size="22" font-family="Arial" font-weight="700">✦</text>
-<rect x="32" y="560" width="416" height="74" rx="18" fill="#0a0d14" stroke="#2e9ed6" stroke-width="2"/><text x="48" y="591" fill="#ffffff" font-size="23" font-family="Arial" font-weight="700">Yor Forger</text><text x="48" y="616" fill="#d5f3ff" font-size="14" font-family="Arial">SPY x FAMILY</text><text x="350" y="589" fill="#2e9ed6" font-size="20" font-family="Arial" font-weight="700">CLASE B</text><text x="350" y="614" fill="#d5f3ff" font-size="12" font-family="Arial">ELEMENTO: AGUA</text><text x="240" y="654" text-anchor="middle" fill="#aab3c7" font-size="11" font-family="Arial">ARTE ORIGINAL LOCAL • NO CANON VISUAL</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#180d22"/><stop offset=".48" stop-color="#36152b"/><stop offset="1" stop-color="#071019"/>
+  </linearGradient>
+  <radialGradient id="halo" cx=".5" cy=".34" r=".58">
+    <stop offset="0" stop-color="#f6c56d" stop-opacity=".34"/><stop offset=".45" stop-color="#c34e63" stop-opacity=".13"/><stop offset="1" stop-color="#000" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="hair" x1="0" y1="0" x2="1" y2="1">
+    <stop stop-color="#1d172a"/><stop offset=".55" stop-color="#47304d"/><stop offset="1" stop-color="#100d18"/>
+  </linearGradient>
+  <linearGradient id="dress" x1="0" y1="0" x2="1" y2="1">
+    <stop stop-color="#15151e"/><stop offset=".55" stop-color="#2c2836"/><stop offset="1" stop-color="#0a0b11"/>
+  </linearGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+    <stop stop-color="#fff0b0"/><stop offset=".5" stop-color="#d6a34d"/><stop offset="1" stop-color="#75501b"/>
+  </linearGradient>
+  <filter id="soft"><feGaussianBlur stdDeviation="18"/></filter>
+  <filter id="glow"><feGaussianBlur stdDeviation="5"/></filter>
+</defs>
+
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#bg)" stroke="#d6a34d" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#halo)"/>
+
+<g opacity=".35" filter="url(#soft)">
+  <circle cx="130" cy="240" r="90" fill="#a92f5b"/>
+  <circle cx="595" cy="410" r="110" fill="#3f7da6"/>
+</g>
+
+<g fill="none" stroke="#e7b45c" stroke-linecap="round" opacity=".45">
+  <path d="M92 176 Q145 126 198 176"/>
+  <path d="M522 118 Q579 82 632 134"/>
+  <path d="M78 854 Q132 798 188 852"/>
+  <path d="M540 884 Q592 836 650 890"/>
+</g>
+
+<text x="52" y="78" fill="#fff4cf" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#f0c76b" font-family="Arial,sans-serif" font-size="32" font-weight="800">UR</text>
+<text x="52" y="112" fill="#d8cbd7" font-family="Arial,sans-serif" font-size="13" letter-spacing="3">CARD ART • 100%+ • ORIGINAL LOCAL ART DIRECTION</text>
+
+<!-- distant city lights -->
+<g opacity=".68">
+  <path d="M55 760 L55 655 L94 655 L94 718 L124 718 L124 612 L163 612 L163 748 L201 748 L201 675 L248 675 L248 770 Z" fill="#101723"/>
+  <path d="M475 772 L475 646 L514 646 L514 715 L548 715 L548 592 L590 592 L590 691 L626 691 L626 630 L666 630 L666 780 Z" fill="#0c1520"/>
+  <g fill="#e7c878">
+    <circle cx="75" cy="682" r="3"/><circle cx="75" cy="708" r="3"/><circle cx="145" cy="647" r="3"/><circle cx="528" cy="674" r="3"/><circle cx="567" cy="625" r="3"/><circle cx="645" cy="664" r="3"/>
+  </g>
+</g>
+
+<!-- rose motif -->
+<g transform="translate(575 186)">
+  <circle r="33" fill="#7d2346" opacity=".75"/>
+  <path d="M0 0 C-28-18-23-39 2-31 C25-47 39-22 20-2 C39 19 17 39-5 22 C-23 39-42 17-23 0 Z" fill="#c74f71"/>
+  <circle r="7" fill="#f8d58d"/>
+  <path d="M0 34 L0 58" stroke="#56805b" stroke-width="5"/>
+</g>
+
+<!-- full body character -->
+<g stroke="#0a0b12" stroke-width="8" stroke-linejoin="round">
+  <!-- long hair -->
+  <path d="M251 304 Q196 255 214 179 Q244 91 352 99 Q459 84 506 176 Q531 257 474 335
+           Q506 400 469 457 Q433 493 406 433 L311 430 Q260 470 235 419 Q211 376 251 304 Z" fill="url(#hair)"/>
+  <!-- face -->
+  <path d="M282 198 Q359 157 431 205 L444 281 Q432 344 359 365 Q286 344 275 282 Z" fill="#f4d4c0"/>
+  <!-- hair fringe -->
+  <path d="M267 210 Q293 127 373 130 Q446 136 456 215
+           Q426 194 405 218 Q374 180 345 217 Q319 185 294 220 Z" fill="url(#hair)"/>
+  <path d="M291 189 Q279 279 299 342" fill="none" stroke="#70506f" stroke-width="12"/>
+  <path d="M430 189 Q452 276 429 342" fill="none" stroke="#70506f" stroke-width="12"/>
+  <!-- eyes -->
+  <ellipse cx="324" cy="270" rx="14" ry="20" fill="#4f1a32"/>
+  <ellipse cx="395" cy="270" rx="14" ry="20" fill="#4f1a32"/>
+  <circle cx="328" cy="265" r="5" fill="#fff1cf" stroke="none"/>
+  <circle cx="399" cy="265" r="5" fill="#fff1cf" stroke="none"/>
+  <path d="M341 316 Q359 326 377 316" fill="none" stroke="#a45a67" stroke-width="5"/>
+
+  <!-- neck -->
+  <path d="M329 349 L329 384 Q359 408 390 384 L390 349" fill="#f4d4c0"/>
+
+  <!-- dress and bodice -->
+  <path d="M286 377 Q359 351 431 377 L475 566 Q447 625 396 645 L322 645 Q271 625 244 566 Z" fill="url(#dress)"/>
+  <path d="M315 382 L359 428 L402 382" fill="none" stroke="#f0c76b" stroke-width="6"/>
+  <path d="M344 418 L359 469 L375 418" fill="#8e203f"/>
+  <path d="M276 490 Q359 519 443 490" fill="none" stroke="#5e475f" stroke-width="7"/>
+  <!-- arms -->
+  <path d="M271 402 Q224 451 205 536 Q197 568 218 581 Q240 590 254 558 L312 445" fill="#15151e"/>
+  <path d="M428 403 Q481 456 516 518 Q530 544 509 561 Q487 573 466 541 L403 445" fill="#15151e"/>
+  <!-- gloves -->
+  <path d="M210 528 Q190 555 200 586 Q214 614 240 603 L253 570" fill="#0a0b11"/>
+  <path d="M507 514 Q528 540 523 571 Q514 602 487 603 L468 563" fill="#0a0b11"/>
+
+  <!-- skirt -->
+  <path d="M252 553 Q359 594 467 553 L527 760 Q450 826 359 837 Q268 825 193 760 Z" fill="#171622"/>
+  <path d="M215 686 Q358 735 504 686" fill="none" stroke="#8f294c" stroke-width="7"/>
+  <path d="M236 760 Q359 811 482 760" fill="none" stroke="#d6a34d" stroke-width="4"/>
+
+  <!-- left leg -->
+  <path d="M291 802 L347 807 L332 952 Q319 982 291 968 L268 946 Z" fill="#f1d0bc"/>
+  <!-- right leg -->
+  <path d="M371 807 L425 800 L452 947 Q446 975 418 975 L395 949 Z" fill="#f1d0bc"/>
+
+  <!-- heels -->
+  <path d="M264 944 Q303 954 332 941 L338 979 L293 987 L255 972 Z" fill="#101018"/>
+  <path d="M396 947 Q431 958 456 944 L472 973 L430 991 L393 975 Z" fill="#101018"/>
+
+  <!-- golden accessories -->
+  <path d="M301 391 L358 445 L417 392" fill="none" stroke="url(#gold)" stroke-width="9"/>
+  <circle cx="358" cy="451" r="12" fill="url(#gold)"/>
+
+  <!-- twin hair ornaments -->
+  <g fill="url(#gold)">
+    <path d="M228 191 l-28 -18 8 37 25 10z"/>
+    <path d="M488 190 l28 -18 -8 37 -25 10z"/>
+  </g>
+
+  <!-- assassin stilettos -->
+  <g fill="url(#gold)">
+    <path d="M183 548 L116 690 L128 697 L204 562 Z"/>
+    <path d="M535 529 L601 666 L589 674 L516 544 Z"/>
+  </g>
+</g>
+
+<!-- petals / particles -->
+<g fill="#f3c56e" opacity=".9">
+  <circle cx="114" cy="370" r="5"/><circle cx="600" cy="510" r="4"/><circle cx="154" cy="468" r="3"/>
+  <circle cx="568" cy="276" r="5"/><circle cx="122" cy="596" r="4"/><circle cx="620" cy="742" r="3"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#080b12" opacity=".88" stroke="#d6a34d" stroke-width="2"/>
+<text x="64" y="930" fill="#fff5dc" font-family="Georgia,serif" font-size="20" font-weight="700">Yor Forger</text>
+<text x="64" y="953" fill="#cbbfd0" font-family="Arial,sans-serif" font-size="13">SPY x FAMILY • UR • clase SS • oscuridad</text>
+<text x="656" y="931" text-anchor="end" fill="#f0c76b" font-family="Arial,sans-serif" font-size="15" font-weight="700">CUERPO COMPLETO</text>
+<text x="656" y="953" text-anchor="end" fill="#cbbfd0" font-family="Arial,sans-serif" font-size="11">POSE / ESCENARIO / MOTIVO ÚNICOS</text>
+
+<text x="360" y="996" text-anchor="middle" fill="#9d91a5" font-family="Arial,sans-serif" font-size="10" letter-spacing="2">ARTE ORIGINAL LOCAL • NO ES CANON VISUAL • DIRECCIÓN UNITARIA</text>
+</svg>
