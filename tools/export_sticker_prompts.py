@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from app.art.prompt_policy import STYLE_POLICY, STICKER_VISUAL_POLICY
 from app.stickers.catalog import STICKER_CATALOG, sticker_prompt
 
 
@@ -11,6 +12,8 @@ def build_markdown() -> str:
         "# Sticker prompt export",
         "",
         "Generated from app.stickers.catalog.STICKER_CATALOG.",
+        f"Shared visual policy: {STICKER_VISUAL_POLICY}",
+        f"Style policy: {STYLE_POLICY}",
         "",
     ]
     for spec in STICKER_CATALOG:
