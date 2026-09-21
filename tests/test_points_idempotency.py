@@ -160,3 +160,57 @@ async def test_reference_keyed_charge_is_idempotent_under_concurrency(tmp_path):
     finally:
         await database_b.close()
         await database_a.close()
+
+
+@pytest.mark.asyncio
+async def test_reward_reference_conflict_is_rejected(session):
+    repo = MemberRepository()
+    first = await repo.add_points(
+        session,
+        user_id=9,
+        chat_id=-101,
+        amount=25,
+        reason="reward",
+        reference_type="mission",
+        reference_id="day-1",
+    )
+    assert first == 25
+
+    with pytest.raises(ValueError, match="different amount"):
+        await repo.add_points(
+            session,
+            user_id=9,
+            chat_id=-101,
+            amount=50,
+            reason="conflict",
+            reference_type="mission",
+            reference_id="day-1",
+        )
+
+
+@pytest.mark.asyncio
+async def test_charge_reference_conflict_is_rejected(session):
+    repo = MemberRepository()
+    await repo.add_points(session, user_id=10, chat_id=-102, amount=100, reason="seed")
+
+    first = await repo.spend_points(
+        session,
+        user_id=10,
+        chat_id=-102,
+        amount=30,
+        reason="purchase",
+        reference_type="purchase",
+        reference_id="one",
+    )
+    assert first == 70
+
+    with pytest.raises(ValueError, match="different amount"):
+        await repo.spend_points(
+            session,
+            user_id=10,
+            chat_id=-102,
+            amount=40,
+            reason="conflict",
+            reference_type="purchase",
+            reference_id="one",
+        )
