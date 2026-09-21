@@ -239,6 +239,9 @@ class WorldEventRecoveryModule(BotModule):
 
     @staticmethod
     def _event_text(event: GameWorldEvent) -> str:
+        payload = event.payload_json
+        if len(payload) > 1800:
+            payload = payload[:1800] + "…"
         lines = [
             f"🌎 <b>Evento #{event.id}</b>",
             f"Tipo: <code>{escape(event.event_type)}</code>",
@@ -252,6 +255,6 @@ class WorldEventRecoveryModule(BotModule):
             f"Actualizado: <code>{event.updated_at.isoformat()}</code>",
             f"Último error: <code>{escape(event.last_error or '-')}</code>",
             f"Título: <b>{escape(event.title)}</b>",
-            f"<b>Payload:</b><code>{escape(event.payload_json)}</code>",
+            f"<b>Payload:</b><code>{escape(payload)}</code>",
         ]
         return "\n".join(lines)
