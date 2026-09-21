@@ -108,14 +108,14 @@ class WaifuMonJavaEngine:
     ) -> dict[str, Any]:
         request_id = uuid.uuid4().hex
         request = {
-            "contractVersion": self.CONTRACT_VERSION,
-            "requestId": request_id,
-            "correlationId": request_id,
-            "playerId": player_id,
-            "communityId": community_id,
+            "contract_version": self.CONTRACT_VERSION,
+            "request_id": request_id,
+            "correlation_id": request_id,
+            "player_id": player_id,
+            "community_id": community_id,
             "command": command,
             "payload": payload,
-            "idempotencyKey": idempotency_key,
+            "idempotency_key": idempotency_key,
         }
 
         with self._lock:
@@ -140,7 +140,7 @@ class WaifuMonJavaEngine:
                 )
 
             response = json.loads(line)
-            if response.get("requestId") not in {request_id, "unknown"}:
+            if response.get("request_id") not in {request_id, "unknown"}:
                 raise RuntimeError("WaifuMon engine returned an unrelated request id")
             if not response.get("success", False):
                 code = response.get("errorCode") or "ENGINE_ERROR"
