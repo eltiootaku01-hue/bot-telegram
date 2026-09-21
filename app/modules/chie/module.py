@@ -15,6 +15,7 @@ from app.core.config import Settings, get_settings
 from app.core.events import EventBus
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.core.processing_feedback import ProcessingFeedback, ProcessingResultDTO
 from app.core.time import world_now
 from app.core.workers import DurableWorker
 from app.db.community_models import SetupSession
@@ -514,13 +515,18 @@ class ChieModule(BotModule):
             return
         if not await is_chat_staff(message, bot):
             return
+        async with ProcessingFeedback(message) as feedback:
         member = await bot.get_chat_member(message.chat.id, bot.id)
         if not isinstance(member, (ChatMemberAdministrator, ChatMemberOwner)):
-            await message.answer("😰 Necesito ser administradora del grupo antes de reformarlo.")
+            await feedback.finish(
+                ProcessingResultDTO("😰 Necesito ser administradora del grupo antes de reformarlo.")
+            )
             return
         missing = [label for attr, label in REQUIRED_ADMIN_PERMISSIONS.items() if not getattr(member, attr, False)]
         if missing:
-            await message.answer("Me faltan estos permisos: " + ", ".join(missing) + ".")
+            await feedback.finish(
+                ProcessingResultDTO("Me faltan estos permisos: " + ", ".join(missing) + ".")
+            )
             return
         async with self.database.session() as session:
             existing = await session.scalar(select(SetupSession).where(
