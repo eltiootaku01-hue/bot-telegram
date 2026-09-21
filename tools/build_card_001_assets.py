@@ -66,7 +66,7 @@ def update_manifests() -> None:
         "production_file": "assets/production/cards/alisa-kujo--normal.jpg",
         "art_tier": "SR",
         "framing_profile": "SR",
-        "checks": {k: True for k in ("anatomy","hands_and_fingers","limbs_and_joints","face_and_identity","perspective","crop_and_framing","wardrobe_and_style","no_explicit_content")},
+        "checks": {k: True for k in ("anatomy","hands_and_fingers","limbs_and_joints","face_and_identity","perspective","crop_and_framing","wardrobe_and_style","no_explicit_content","adult_gate_consistent")},
         "notes": "SR canonical asset approved after individual visual inspection. R kept as approved auxiliary stage. UR generated and primary-reviewed but held in quarantine pending required independent second review.",
         "stage_assets": [
             {"tier":"R","file":"assets/production/cards/alisa-kujo--r.jpg","status":"approved_auxiliary"},
