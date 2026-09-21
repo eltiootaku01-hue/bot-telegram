@@ -10,6 +10,7 @@ if errorlevel 1 exit /b %errorlevel%
 if exist dist rmdir /s /q dist
 if exist build rmdir /s /q build
 mkdir dist\bots
+if exist assets xcopy assets dist\assets /E /I /Y >nul
 
 pyinstaller --noconfirm --clean --console --onefile --name Cari --distpath dist\bots --workpath build\Cari app\bots\cari.py
 if errorlevel 1 exit /b %errorlevel%
