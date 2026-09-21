@@ -86,6 +86,7 @@ class WaifuGiftScheduler:
         slot = world.hour // GIFT_SLOT_HOURS
 
         async with self.database.session(write=True) as session:
+            stale_cutoff = utc_now() - timedelta(minutes=10)
             existing = await session.scalar(
                 select(WaifuGiftDrop).where(
                     WaifuGiftDrop.chat_id == chat_id,
@@ -93,6 +94,11 @@ class WaifuGiftScheduler:
                     WaifuGiftDrop.slot == slot,
                 )
             )
+            if existing is not None and existing.status == "publishing" and existing.updated_at < stale_cutoff:
+                existing.status = "pending"
+                existing.updated_at = utc_now()
+                await session.flush()
+
             if existing is None:
                 drop = await self.service.create_drop(
                     session,
@@ -139,4 +145,5 @@ class WaifuGiftScheduler:
             if saved.message_id is None and saved.status == "publishing":
                 saved.message_id = sent.message_id
                 saved.status = "active"
+                saved.updated_at = utc_now()
                 await session.flush()
