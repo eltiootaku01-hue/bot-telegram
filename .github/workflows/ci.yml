@@ -38,6 +38,8 @@ jobs:
         run: pytest -q
       - name: Validate card assets
         run: python tools/validate_card_assets.py
+      - name: Validate card visual QA
+        run: python tools/validate_card_qa.py
       - name: Export card art prompts
         run: python tools/export_card_art_prompts.py --output /tmp/WAIFUMON_CARD_ART_PROMPTS.md
       - name: Export sticker prompts
