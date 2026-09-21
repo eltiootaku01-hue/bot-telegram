@@ -200,6 +200,6 @@ def render_detail(character: Character, *, owned_level: int | None = None) -> st
             f"📊 Ranking de referencia: <b>{ranking}</b>",
             f"📚 Procedencia: {source_label(character)}",
             "",
-            "La clase WaifuMon evoluciona por nivel; la rareza D–SSS y el tier de carta son sistemas independientes.",
+            "La clase WaifuMon evoluciona por nivel; la rareza D–SSS y el tier de carta son sistemas independientes. La popularidad no es un porcentaje universal.",
         )
     )
