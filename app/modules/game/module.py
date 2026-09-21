@@ -1137,7 +1137,10 @@ class GameModule(BotModule):
         result_text = (
             f"🎉 ¡Salió {result.character.name} ({result.character.card_tier.value})! "
             f"Clase {result.character.rarity.value} · elemento {result.character.element.value} · "
-            f"Saldo: {mission_balance if mission_claimed else result.remaining_points}"
+            f"Saldo: {mission_balance if mission_claimed else result.remaining_points}\n"
+            f"🎴 Carta: {result.card.tier.value} · "
+            f"{'✨ SHINY' if result.card.variant.value == 'shiny' else 'Normal'} · "
+            f"{result.card.outfit}"
         )
         if mission_claimed:
             result_text += "\n🎯 Misión diaria completada: +10 puntos."
