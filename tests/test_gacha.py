@@ -8,6 +8,7 @@ from app.db.models import Chat, GameCollection, GameGachaRoll, GameProfile, Poin
 from app.game.engine import GameEngine
 from app.game.gacha import GACHA_COST_POINTS, GachaService
 from app.game.models import Rarity
+from app.game.catalog import CHARACTERS
 
 
 class FixedEngine(GameEngine):
@@ -351,5 +352,134 @@ async def test_concurrent_same_gacha_reference_charges_and_grants_once(tmp_path)
     assert profile is not None
     assert profile.points == 0
 
+    await database_a.close()
+    await database_b.close()
+
+
+
+@pytest.mark.asyncio
+async def test_gacha_luck_protection_turns_the_seventh_consecutive_d_into_c(database):
+    async with database.session() as session:
+        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS, gacha_d_streak=6))
+
+    service = GachaService(FixedEngine(Rarity.D))
+
+    async with database.session(write=True) as session:
+        result = await service.roll(session, user_id=7, chat_id=-100, seed="pity-1")
+
+    assert result is not None
+    assert result.rolled_rarity is Rarity.C
+    assert result.pity_triggered is True
+
+    async with database.session() as session:
+        profile = await session.scalar(
+            select(GameProfile).where(GameProfile.user_id == 7, GameProfile.chat_id == -100)
+        )
+        roll = await session.scalar(
+            select(GameGachaRoll).where(GameGachaRoll.roll_id == "pity-1")
+        )
+
+    assert profile is not None and profile.gacha_d_streak == 0
+    assert roll is not None
+    assert roll.pity_triggered is True
+    assert roll.rolled_rarity == Rarity.C.value
+
+
+@pytest.mark.asyncio
+async def test_gacha_d_streak_resets_when_roll_is_not_d(database):
+    async with database.session() as session:
+        session.add(GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS, gacha_d_streak=4))
+
+    service = GachaService(FixedEngine(Rarity.C))
+
+    async with database.session(write=True) as session:
+        result = await service.roll(session, user_id=7, chat_id=-100, seed="reset-1")
+
+    assert result is not None
+    assert result.rolled_rarity is Rarity.C
+    assert result.pity_triggered is False
+
+    async with database.session() as session:
+        profile = await session.scalar(
+            select(GameProfile).where(GameProfile.user_id == 7, GameProfile.chat_id == -100)
+        )
+
+    assert profile is not None and profile.gacha_d_streak == 0
+
+
+@pytest.mark.asyncio
+async def test_gacha_prefers_unowned_common_character_before_duplicate(database):
+    async with database.session() as session:
+        profile = GameProfile(user_id=7, chat_id=-100, points=GACHA_COST_POINTS)
+        session.add(profile)
+        await session.flush()
+        owned = next(character for character in CHARACTERS.values() if character.rarity is Rarity.C)
+        session.add(
+            GameCollection(
+                profile_id=profile.id,
+                character_id=owned.id,
+                rarity=owned.rarity.value,
+                copies=1,
+            )
+        )
+
+    service = GachaService(FixedEngine(Rarity.C))
+
+    async with database.session(write=True) as session:
+        result = await service.roll(session, user_id=7, chat_id=-100, seed="anti-dupe-1")
+
+    assert result is not None
+    assert result.character.rarity is Rarity.C
+    assert result.character.id != owned.id
+
+
+@pytest.mark.asyncio
+async def test_concurrent_d_rolls_serialize_luck_protection_without_losing_a_roll(tmp_path):
+    database_a = Database(f"sqlite+aiosqlite:///{tmp_path / 'gacha-pity-race.db'}")
+    database_b = Database(f"sqlite+aiosqlite:///{tmp_path / 'gacha-pity-race.db'}")
+    await database_a.create_schema()
+
+    async with database_a.session() as session:
+        session.add(User(id=12, first_name="Race"))
+        session.add(Chat(id=-102, type="supergroup", title="Race"))
+        await session.flush()
+        session.add(
+            GameProfile(
+                user_id=12,
+                chat_id=-102,
+                points=GACHA_COST_POINTS * 2,
+                gacha_d_streak=5,
+            )
+        )
+
+    service = GachaService(FixedEngine(Rarity.D))
+
+    async def roll(database, seed):
+        async with database.session(write=True) as session:
+            return await service.roll(
+                session,
+                user_id=12,
+                chat_id=-102,
+                seed=seed,
+            )
+
+    first, second = await asyncio.gather(
+        roll(database_a, "pity-race-a"),
+        roll(database_b, "pity-race-b"),
+    )
+
+    assert first is not None
+    assert second is not None
+    assert {first.rolled_rarity, second.rolled_rarity} == {Rarity.C, Rarity.D}
+    assert sorted((first.pity_triggered, second.pity_triggered)) == [False, True]
+
+    async with database_a.session() as session:
+        profile = await session.scalar(
+            select(GameProfile).where(GameProfile.user_id == 12, GameProfile.chat_id == -102)
+        )
+
+    assert profile is not None
+    assert profile.points == 0
+    assert profile.gacha_d_streak == 0
     await database_a.close()
     await database_b.close()
