@@ -132,10 +132,25 @@ class MysteryModule(BotModule):
             async with self.database.session(write=True) as session:
                 await session.execute(
                     update(MysteryRound)
-                    .where(MysteryRound.id == row.id, MysteryRound.status == "publishing")
+                    .where(
+                        MysteryRound.id == row.id,
+                        MysteryRound.status == "publishing",
+                    )
                     .values(status="failed", updated_at=utc_now())
                 )
-            logger.exception("Mystery publication failed: chat=%s round=%s", chat_id, row.id)
+            logger.exception("Mystery publication rejected: chat=%s round=%s", chat_id, row.id)
+            return False
+        except Exception:
+            async with self.database.session(write=True) as session:
+                await self.service.mark_publication_unknown(
+                    session,
+                    round_id=row.id,
+                )
+            logger.exception(
+                "Ambiguous Cami mystery delivery round=%s chat=%s; manual recovery required",
+                row.id,
+                chat_id,
+            )
             return False
 
         async with self.database.session(write=True) as session:
