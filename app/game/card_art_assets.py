@@ -8,6 +8,7 @@ CARD_ART_WIDTH = 1024
 CARD_ART_HEIGHT = 1536
 CARD_ART_MAX_BYTES = 8 * 1024 * 1024
 CARD_ART_EXTENSION = ".jpg"
+CARD_ART_EXTENSIONS = frozenset({".jpg", ".jpeg"})
 CARD_ART_MIN_BYTES = 50 * 1024
 
 
@@ -76,8 +77,8 @@ def validate_card_asset(path: Path) -> CardAssetValidation:
         return CardAssetValidation(False, None, None, 0, "file does not exist")
 
     size = path.stat().st_size
-    if path.suffix.casefold() != CARD_ART_EXTENSION:
-        return CardAssetValidation(False, None, None, size, "asset must be JPEG")
+    if path.suffix.casefold() not in CARD_ART_EXTENSIONS:
+        return CardAssetValidation(False, None, None, size, "asset must be JPG/JPEG")
     if size > CARD_ART_MAX_BYTES:
         return CardAssetValidation(False, None, None, size, "asset exceeds 8 MiB")
     if size < CARD_ART_MIN_BYTES:
