@@ -234,7 +234,9 @@ user      → repeated habits of a particular participant
 
 The implementation is designed for a future **AI curator** that runs periodically (for example, a small daily review or a deeper weekly review). That AI would analyze the aggregate report and suggest new scenes, dialogue, topics or world changes. It does **not** replace the four characters' deterministic runtime and does **not** automatically rewrite their personalities in this first stage.
 
-See `docs/CIUDAD_ANIMALS_WORLD.md` for the design and current status. The complete 77-card catalog is documented in `docs/WAIFUMON_CARTAS.md`, with versioned visual assets under `assets/waifus/`.
+See `docs/CIUDAD_ANIMALS_WORLD.md` for the design and current status.
+
+See `docs/ART_GALLERY.md` for the current unitary WaifuMon art library and visual production progress. The complete 77-card catalog is documented in `docs/WAIFUMON_CARTAS.md`, with versioned visual assets under `assets/waifus/`.
 
 
 ## Chie: bienvenida, despedida y verificación humana
