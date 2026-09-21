@@ -11,7 +11,9 @@ class WorldCatalogEntry(Base):
     """Definition of a topic/action/scene that exists in Ciudad Animals."""
 
     __tablename__ = "world_catalog"
-    __table_args__ = (UniqueConstraint("bot_identity", "entry_type", "entry_key", name="uq_world_catalog_entry"),)
+    __table_args__ = (
+        UniqueConstraint("bot_identity", "entry_type", "entry_key", name="uq_world_catalog_entry"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     bot_identity: Mapped[str] = mapped_column(String(32))
@@ -87,3 +89,31 @@ class WorldProposal(Base):
     status: Mapped[str] = mapped_column(String(16), default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     payload_json: Mapped[str] = mapped_column(String(30000))
+
+
+class GameWorldEvent(Base):
+    """Durable presentation event owned by the game world, not by a character."""
+
+    __tablename__ = "game_world_events"
+    __table_args__ = (
+        UniqueConstraint("dedupe_key", name="uq_game_world_event_dedupe"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    event_key: Mapped[str] = mapped_column(String(100))
+    event_type: Mapped[str] = mapped_column(String(64))
+    dedupe_key: Mapped[str] = mapped_column(String(255))
+    chat_id: Mapped[int] = mapped_column(Integer)
+    presenter_key: Mapped[str] = mapped_column(String(64))
+    title: Mapped[str] = mapped_column(String(255))
+    payload_json: Mapped[str] = mapped_column(String(12000), default="{}")
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    run_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime)
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime)
+    message_id: Mapped[int | None] = mapped_column(Integer)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(String(4000))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
