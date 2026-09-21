@@ -1,6 +1,4 @@
 from datetime import timedelta
-from unittest.mock import AsyncMock
-
 import pytest
 from sqlalchemy import BigInteger, update
 
