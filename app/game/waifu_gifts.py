@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time import utc_now
 from app.db.models import (
+    GameCollection,
     GameItemInventory,
     WaifuGiftClaim,
     WaifuGiftDrop,
