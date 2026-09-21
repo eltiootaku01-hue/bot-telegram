@@ -356,9 +356,10 @@ def _ensure_sqlite_invariant_triggers(connection) -> None:
         ),
     )
     for name, table, operation, body in triggers:
+        connection.execute(text(f"DROP TRIGGER IF EXISTS {name}"))
         connection.execute(
             text(
-                f"CREATE TRIGGER IF NOT EXISTS {name} "
+                f"CREATE TRIGGER {name} "
                 f"BEFORE {operation} ON {table} "
                 f"{body}"
             )
