@@ -5,6 +5,8 @@ import logging
 import threading
 import uuid
 from urllib.parse import urljoin
+from collections.abc import Callable
+
 
 from aiohttp import web
 from aiogram import Bot
@@ -335,6 +337,7 @@ def create_tma_app(
     app["settings"] = settings
     app["database"] = database
     app["combat_service"] = combat_service
+    app["invoice_bot_factory"] = invoice_bot_factory
     app.router.add_get("/api/combat/init", _combat_init)
     app.router.add_post("/api/combat/action", _combat_action)
     app.router.add_post("/api/store/invoice", _create_invoice)
@@ -428,7 +431,8 @@ async def _create_invoice(request: web.Request) -> web.Response:
 
     context: TmaAuthContext = request["tma_context"]
     payload = f"tma:{context.user.id}:{dto.product}:{uuid.uuid4().hex}"
-    bot = Bot(token=token)
+    bot_factory = request.app.get("invoice_bot_factory")
+    bot = bot_factory(token) if bot_factory is not None else Bot(token=token)
     try:
         invoice_link = await bot.create_invoice_link(
             title=title,
