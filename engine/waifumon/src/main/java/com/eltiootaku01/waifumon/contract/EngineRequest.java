@@ -1,16 +1,17 @@
 package com.eltiootaku01.waifumon.contract;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 public record EngineRequest(
-    String contractVersion,
-    String requestId,
-    String correlationId,
-    long playerId,
-    long communityId,
-    String command,
-    JsonNode payload,
-    String idempotencyKey
+    @JsonProperty("contract_version") String contractVersion,
+    @JsonProperty("request_id") String requestId,
+    @JsonProperty("correlation_id") String correlationId,
+    @JsonProperty("player_id") long playerId,
+    @JsonProperty("community_id") long communityId,
+    @JsonProperty("command") String command,
+    @JsonProperty("payload") JsonNode payload,
+    @JsonProperty("idempotency_key") String idempotencyKey
 ) {
     public static final String CURRENT_VERSION = "1.0";
 
