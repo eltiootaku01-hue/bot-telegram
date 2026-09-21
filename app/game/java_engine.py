@@ -174,8 +174,8 @@ class WaifuMonJavaEngine:
 
     def roll_gacha(self, *, seed: str) -> Rarity:
         response = self._call(
-            player_id=0,
-            community_id=0,
+            player_id=player_id,
+            community_id=community_id,
             command="gacha.roll",
             payload={"seed": seed},
             idempotency_key=seed,
@@ -189,6 +189,9 @@ class WaifuMonJavaEngine:
         defender: dict[str, Any],
         action: str,
         turn_id: str,
+        player_id: int = 0,
+        community_id: int = 0,
+        idempotency_key: str | None = None,
     ) -> CombatResult:
         response = self._call(
             player_id=0,
@@ -200,7 +203,10 @@ class WaifuMonJavaEngine:
                 "action": action,
                 "turn_id": turn_id,
             },
-            idempotency_key=f"combat:{turn_id}:{attacker['id']}:{defender['id']}:{action}",
+            idempotency_key=(
+                idempotency_key
+                or f"combat:{turn_id}:{attacker['id']}:{defender['id']}:{action}"
+            ),
         )
         result = response["payload"]
         action_key = result["action"]
