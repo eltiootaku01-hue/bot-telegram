@@ -1,19 +1,20 @@
 package com.eltiootaku01.waifumon.contract;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.List;
 
 public record EngineResponse(
-    String requestId,
-    boolean success,
-    String resultType,
-    JsonNode payload,
-    long stateVersion,
-    List<String> eventIds,
-    List<String> rewardIds,
-    String errorCode,
-    String errorMessage
+    @JsonProperty("request_id") String requestId,
+    @JsonProperty("success") boolean success,
+    @JsonProperty("result_type") String resultType,
+    @JsonProperty("payload") JsonNode payload,
+    @JsonProperty("state_version") long stateVersion,
+    @JsonProperty("event_ids") List<String> eventIds,
+    @JsonProperty("reward_ids") List<String> rewardIds,
+    @JsonProperty("error_code") String errorCode,
+    @JsonProperty("error_message") String errorMessage
 ) {
     public static EngineResponse success(
         String requestId,
