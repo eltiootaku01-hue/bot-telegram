@@ -49,7 +49,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Oshi no Ko"
+      "anime": "Oshi no Ko",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "akame",
@@ -61,7 +64,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Akame ga Kill!"
+      "anime": "Akame ga Kill!",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "akane-kurokawa",
@@ -73,7 +80,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Oshi no Ko"
+      "anime": "Oshi no Ko",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "akeno-himejima",
@@ -85,7 +95,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "High School DxD"
+      "anime": "High School DxD",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "aki-nijou",
@@ -97,7 +111,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Maken-Ki!"
+      "anime": "Maken-Ki!",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "ako-tamaki",
@@ -109,7 +126,10 @@
       "framing_profile": "D_C_B_R",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "And You Thought There Is Never a Girl Online?"
+      "anime": "And You Thought There Is Never a Girl Online?",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "albedo",
@@ -121,7 +141,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Overlord"
+      "anime": "Overlord",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "alisa-kujo",
@@ -133,7 +157,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "approved",
-      "anime": "Alya Sometimes Hides Her Feelings in Russian"
+      "anime": "Alya Sometimes Hides Her Feelings in Russian",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "anya-forger",
@@ -145,7 +172,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "SPY x FAMILY"
+      "anime": "SPY x FAMILY",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "asuna-yuuki",
@@ -157,7 +187,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Sword Art Online"
+      "anime": "Sword Art Online",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "banri-shiunji",
@@ -169,7 +203,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "The Shiunji Family Children"
+      "anime": "The Shiunji Family Children",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "boa-hancock",
@@ -181,7 +218,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "One Piece"
+      "anime": "One Piece",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "cana-alberona",
@@ -193,7 +233,10 @@
       "framing_profile": "S",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Fairy Tail"
+      "anime": "Fairy Tail",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "celistia-ralgris",
@@ -205,7 +248,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Undefeated Bahamut Chronicle"
+      "anime": "Undefeated Bahamut Chronicle",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "cha-hae-in",
@@ -217,7 +263,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Solo Leveling"
+      "anime": "Solo Leveling",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "chelsea",
@@ -229,7 +278,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Akame Ga Kill"
+      "anime": "Akame Ga Kill",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "chinatsu-kano",
@@ -241,7 +293,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Blue Box"
+      "anime": "Blue Box",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "chisato-hasegawa",
@@ -253,7 +308,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "The Testament of Sister New Devil"
+      "anime": "The Testament of Sister New Devil",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "chizuru-mizuhara",
@@ -265,7 +323,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Rent-a-Girlfriend"
+      "anime": "Rent-a-Girlfriend",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "darkness",
@@ -277,7 +338,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "KonoSuba: God's Blessing on This Wonderful World!"
+      "anime": "KonoSuba: God's Blessing on This Wonderful World!",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "elizabeth-liones",
@@ -289,7 +353,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "The Seven Deadly Sins"
+      "anime": "The Seven Deadly Sins",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "emilia",
@@ -301,7 +368,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Re:ZERO -Starting Life in Another World-"
+      "anime": "Re:ZERO -Starting Life in Another World-",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "erina-nakiri",
@@ -313,7 +383,10 @@
       "framing_profile": "S",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Food Wars!: Shokugeki no Soma"
+      "anime": "Food Wars!: Shokugeki no Soma",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "erza-scarlet",
@@ -325,7 +398,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Fairy Tail"
+      "anime": "Fairy Tail",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "esdeath",
@@ -337,7 +414,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Akame ga Kill!"
+      "anime": "Akame ga Kill!",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "hina-chono",
@@ -349,7 +430,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Blue Box"
+      "anime": "Blue Box",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "hinako-yaotose",
@@ -361,7 +445,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "The Shiunji Family Children"
+      "anime": "The Shiunji Family Children",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "hinata-hyuga",
@@ -373,7 +460,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Naruto"
+      "anime": "Naruto",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "ino-yamanaka",
@@ -385,7 +475,10 @@
       "framing_profile": "S",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Naruto"
+      "anime": "Naruto",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "irina-shidou",
@@ -397,7 +490,10 @@
       "framing_profile": "S",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "High School DxD"
+      "anime": "High School DxD",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "jibril",
@@ -409,7 +505,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "No Game No Life"
+      "anime": "No Game No Life",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "kaoruko-waguri",
@@ -421,7 +520,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "The Fragrant Flower Blooms with Dignity"
+      "anime": "The Fragrant Flower Blooms with Dignity",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "kuroka",
@@ -433,7 +535,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "High School DxD"
+      "anime": "High School DxD",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "kurumi-tokisaki",
@@ -445,7 +551,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Date A Live"
+      "anime": "Date A Live",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "leone",
@@ -457,7 +566,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Akame Ga Kill"
+      "anime": "Akame Ga Kill",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "lilith-asami",
@@ -469,7 +581,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Trinity Seven"
+      "anime": "Trinity Seven",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "lucy-heartfilia",
@@ -481,7 +596,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Fairy Tail"
+      "anime": "Fairy Tail",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "makima",
@@ -493,7 +611,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Chainsaw Man"
+      "anime": "Chainsaw Man",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "maomao",
@@ -505,7 +627,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "The Apothecary Diaries Season 2"
+      "anime": "The Apothecary Diaries Season 2",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "marin-kitagawa",
@@ -517,7 +642,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "My Dress-Up Darling Season 2"
+      "anime": "My Dress-Up Darling Season 2",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "mary-kikakujou",
@@ -529,7 +657,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Busou Shoujo Machiavellianism"
+      "anime": "Busou Shoujo Machiavellianism",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "midnight",
@@ -541,7 +672,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "My Hero Academia"
+      "anime": "My Hero Academia",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "mikasa-ackerman",
@@ -553,7 +687,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Attack on Titan"
+      "anime": "Attack on Titan",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "mirajane-strauss",
@@ -565,7 +702,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Fairy Tail"
+      "anime": "Fairy Tail",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "momo-ayase",
@@ -577,7 +717,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "DAN DA DAN Season 2"
+      "anime": "DAN DA DAN Season 2",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "momo-yaoyorozu",
@@ -589,7 +733,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "My Hero Academia"
+      "anime": "My Hero Academia",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "mutsumi-wakaba",
@@ -601,7 +748,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "BanG Dream! Ave Mujica"
+      "anime": "BanG Dream! Ave Mujica",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "nami",
@@ -613,7 +763,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "One Piece"
+      "anime": "One Piece",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "nejire-hadou",
@@ -625,7 +779,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "My Hero Academia"
+      "anime": "My Hero Academia",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "nene-yashiro",
@@ -637,7 +794,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Toilet-Bound Hanako-kun Season 2"
+      "anime": "Toilet-Bound Hanako-kun Season 2",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "nezuko-kamado",
@@ -649,7 +809,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Demon Slayer"
+      "anime": "Demon Slayer",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "nico-robin",
@@ -661,7 +824,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "One Piece"
+      "anime": "One Piece",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "nico-wakatsuki",
@@ -673,7 +840,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "WITCH WATCH"
+      "anime": "WITCH WATCH",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "ochako-uraraka",
@@ -685,7 +855,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "My Hero Academia FINAL SEASON"
+      "anime": "My Hero Academia FINAL SEASON",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "oguri-cap",
@@ -697,7 +871,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Umamusume: Cinderella Gray"
+      "anime": "Umamusume: Cinderella Gray",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "orihime-inoue",
@@ -709,7 +887,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Bleach"
+      "anime": "Bleach",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "ouka-shiunji",
@@ -721,7 +902,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "The Shiunji Family Children"
+      "anime": "The Shiunji Family Children",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "power",
@@ -733,7 +917,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Chainsaw Man"
+      "anime": "Chainsaw Man",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "rangiku-matsumoto",
@@ -745,7 +933,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Bleach"
+      "anime": "Bleach",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "raphtalia",
@@ -757,7 +948,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "The Rising of the Shield Hero"
+      "anime": "The Rising of the Shield Hero",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "reiko-kujirai",
@@ -769,7 +963,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Rurouni Kenshin"
+      "anime": "Rurouni Kenshin",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "reze",
@@ -781,7 +978,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Chainsaw Man"
+      "anime": "Chainsaw Man",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "rias-gremory",
@@ -793,7 +993,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "High School DxD"
+      "anime": "High School DxD",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "rin-tohsaka",
@@ -805,7 +1009,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Fate/stay night"
+      "anime": "Fate/stay night",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "saeko-busujima",
@@ -817,7 +1024,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Highschool of the Dead"
+      "anime": "Highschool of the Dead",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "sakiko-togawa",
@@ -829,7 +1039,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "BanG Dream! Ave Mujica"
+      "anime": "BanG Dream! Ave Mujica",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "sayaka-kirasaka",
@@ -841,7 +1055,10 @@
       "framing_profile": "S",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Strike the Blood"
+      "anime": "Strike the Blood",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "sinon",
@@ -853,7 +1070,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Sword Art Online II"
+      "anime": "Sword Art Online II",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "taiga",
@@ -865,7 +1085,10 @@
       "framing_profile": "S",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Toradora!"
+      "anime": "Toradora!",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "takane-takamine",
@@ -877,7 +1100,10 @@
       "framing_profile": "D_C_B_R",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Please Put Them On, Takamine-san"
+      "anime": "Please Put Them On, Takamine-san",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "tohka-yatogami",
@@ -889,7 +1115,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Date A Live"
+      "anime": "Date A Live",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "tsunade",
@@ -901,7 +1130,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Naruto"
+      "anime": "Naruto",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "venelana-gremory",
@@ -913,7 +1146,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "High School DxD"
+      "anime": "High School DxD",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "violet-evergarden",
@@ -925,7 +1161,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "Violet Evergarden"
+      "anime": "Violet Evergarden",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "xenovia",
@@ -937,7 +1176,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "High School DxD"
+      "anime": "High School DxD",
+      "variant_support": [
+        "normal"
+      ]
     },
     {
       "character_id": "yor-forger",
@@ -949,7 +1191,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "failed",
-      "anime": "SPY x FAMILY"
+      "anime": "SPY x FAMILY",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "yoruichi-shihoin",
@@ -961,7 +1207,11 @@
       "framing_profile": "UR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Bleach"
+      "anime": "Bleach",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ]
     },
     {
       "character_id": "yumeko-jabami",
@@ -973,7 +1223,10 @@
       "framing_profile": "SR",
       "adult_eligible": false,
       "visual_audit_status": "not_inspected",
-      "anime": "Kakegurui"
+      "anime": "Kakegurui",
+      "variant_support": [
+        "normal"
+      ]
     }
   ],
   "progress_percent": 1.28,
@@ -997,9 +1250,14 @@
     "height": 1536,
     "max_bytes": 8388608,
     "min_bytes": 51200,
-    "quarantine_directory": "assets/quarantine/"
+    "quarantine_directory": "assets/quarantine/",
+    "variant_suffixes": {
+      "normal": "--normal.jpg",
+      "shiny": "--shiny.jpg",
+      "ur-alt-holo": "--ur-alt-holo.jpg"
+    }
   },
-  "matrix_version": "2026-09-card-art-matrix-v1",
+  "matrix_version": "2026-09-card-art-matrix-v2",
   "execution_rules": {
     "one_card_at_a_time": true,
     "visual_audit_required": true,
@@ -1014,6 +1272,20 @@
     ],
     "ur_double_review": true,
     "failed_assets_directory": "assets/quarantine/",
-    "production_output": "JPG/JPEG 1024x1536"
+    "production_output": "JPG/JPEG 1024x1536",
+    "visual_progression": {
+      "R": "Fase 1 / close-up: rostro y hombros, atuendo base",
+      "S": "Fase 2 / plano medio: combate o atuendo dinámico mejorado",
+      "SR": "Fase 2 / plano tres cuartos: pose dinámica y vestuario mejorado",
+      "UR": "Final Ascension / plano general: cuerpo completo, fondo elaborado, efectos de alta gama"
+    },
+    "ur_alt_holo": {
+      "supported": true,
+      "requires_tier": "UR",
+      "requires_adult_eligible": true,
+      "non_explicit": true,
+      "production_suffix": "--ur-alt-holo.jpg",
+      "second_review": true
+    }
   }
 }
