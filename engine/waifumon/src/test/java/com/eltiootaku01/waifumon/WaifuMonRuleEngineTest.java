@@ -143,6 +143,27 @@ final class WaifuMonRuleEngineTest {
         assertEquals("beta", response.payload().get("character_id").asText());
     }
 
+
+    @Test
+    void seventhConsecutiveDForcesCRegardlessOfRandomRoll() {
+        ObjectNode payload = mapper.createObjectNode()
+            .put("seed", "pity-force")
+            .put("d_streak", 6);
+        var candidatesArray = mapper.createArrayNode()
+            .add(mapper.createObjectNode().put("id", "alpha").put("rarity", "D"))
+            .add(mapper.createObjectNode().put("id", "beta").put("rarity", "C"));
+        payload.set("candidates", candidatesArray);
+
+        EngineResponse response = engine.execute(
+            request("gacha.resolve", payload, "pity-force")
+        );
+
+        assertTrue(response.success());
+        assertEquals("C", response.payload().get("rolled_rarity").asText());
+        assertTrue(response.payload().get("pity_triggered").asBoolean());
+        assertEquals(0, response.payload().get("d_streak").asInt());
+    }
+
     @Test
     void evolutionResolutionReturnsAuthoritativeStageBounds() {
         ObjectNode payload = mapper.createObjectNode().put("level", 21);
