@@ -11,11 +11,12 @@ from aiogram.types import CallbackQuery, Message
 from app.core.config import Settings, get_settings
 from app.core.module import BotModule
 from app.db.database import Database
-from app.db.models import RareDropApproval
+from app.db.models import RareDropApproval, WaifuGiftDrop
 from app.game.catalog import get_character
 from app.game.gacha import GachaService
 from app.game.rare_approval import decide
-from app.ui.control_keyboards import rare_approval_keyboard
+from app.game.waifu_gifts import WaifuGiftService
+from app.ui.control_keyboards import gift_delivery_recovery_keyboard, rare_approval_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ class AdminModule(BotModule):
         self.database = database
         self.settings = settings or get_settings()
         self.gacha = GachaService()
+        self.gifts = WaifuGiftService()
 
     def setup(self) -> None:
         self.router.message.register(
@@ -39,6 +41,14 @@ class AdminModule(BotModule):
         self.router.callback_query.register(
             self.rare_decision,
             F.data.startswith("admin:rare:"),
+        )
+        self.router.message.register(
+            self.unknown_gifts_command,
+            Command("regalos_pendientes"),
+        )
+        self.router.callback_query.register(
+            self.gift_delivery_recovery,
+            F.data.startswith("admin:gift:"),
         )
 
     def _is_owner(self, callback: CallbackQuery) -> bool:
@@ -88,6 +98,87 @@ class AdminModule(BotModule):
                 f"Rareza: <b>{approval.rarity}</b>",
                 reply_markup=rare_approval_keyboard(approval.id),
             )
+
+
+    async def unknown_gifts_command(self, message: Message) -> None:
+        """List Sunna gift sends whose Telegram outcome was ambiguous."""
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or not self.settings.is_master(message.from_user.id)
+        ):
+            return
+
+        async with self.database.session() as session:
+            drops = list(
+                await session.scalars(
+                    select(WaifuGiftDrop)
+                    .where(WaifuGiftDrop.status == "delivery_unknown")
+                    .order_by(WaifuGiftDrop.id.asc())
+                    .limit(20)
+                )
+            )
+
+        if not drops:
+            await message.answer("✅ No hay regalos de Sunna en estado de entrega desconocida.")
+            return
+
+        await message.answer(
+            f"⚠️ <b>Entregas ambiguas de Sunna: {len(drops)}</b>\n"
+            "Confirmá un envío solo después de comprobar manualmente el mensaje en Telegram. "
+            "Reencolá solo cuando hayas comprobado que el mensaje no fue publicado."
+        )
+        for drop in drops:
+            await message.answer(
+                f"🎁 <b>Drop #{drop.id}</b>\n"
+                f"Comunidad: <code>{drop.chat_id}</code>\n"
+                f"Fecha: <b>{drop.day_key}</b> · slot: <b>{drop.slot}</b>\n"
+                f"Objeto: <b>{self.gifts.gift_for_key(drop.gift_key).name}</b>",
+                reply_markup=gift_delivery_recovery_keyboard(drop.id),
+            )
+
+    async def gift_delivery_recovery(self, callback: CallbackQuery) -> None:
+        if not self._is_owner(callback):
+            await callback.answer("No autorizado.", show_alert=True)
+            return
+
+        parts = (callback.data or "").split(":")
+        if len(parts) != 4 or not parts[3].isdigit():
+            await callback.answer("Recuperación inválida.", show_alert=True)
+            return
+
+        drop_id = int(parts[3])
+        action = parts[2]
+        async with self.database.session(write=True) as session:
+            if action == "confirm":
+                changed = await self.gifts.confirm_unknown_delivery(
+                    session,
+                    drop_id=drop_id,
+                )
+            elif action == "requeue":
+                changed = await self.gifts.requeue_unknown_delivery(
+                    session,
+                    drop_id=drop_id,
+                )
+            else:
+                await callback.answer("Acción inválida.", show_alert=True)
+                return
+
+        if not changed:
+            await callback.answer(
+                "El drop ya fue resuelto o no está disponible para esta acción.",
+                show_alert=True,
+            )
+            return
+
+        text = (
+            f"Drop #{drop_id}: publicación confirmada ✅"
+            if action == "confirm"
+            else f"Drop #{drop_id}: reencolado 🔁"
+        )
+        if callback.message is not None:
+            await callback.message.edit_text(text)
+        await callback.answer("Estado guardado.")
 
     async def rare_decision(self, callback: CallbackQuery, bot: Bot) -> None:
         if not self._is_owner(callback):
