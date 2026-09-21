@@ -108,6 +108,145 @@ def _ensure_compatibility(connection) -> None:
         "ON point_transactions(user_id, chat_id, reference_type, reference_id) "
         "WHERE reference_type IS NOT NULL AND reference_id IS NOT NULL"
     ))
+    _ensure_sqlite_invariant_triggers(connection)
+
+
+def _ensure_sqlite_invariant_triggers(connection) -> None:
+    """Backfill critical invariants for SQLite tables created by older versions."""
+    triggers = (
+        (
+            "trg_game_profiles_validate_insert",
+            "game_profiles",
+            "INSERT",
+            """
+            WHEN NEW.level < 1
+              OR NEW.experience < 0
+              OR NEW.points < 0
+              OR NEW.coins < 0
+              OR NEW.gacha_d_streak < 0
+            BEGIN
+                SELECT RAISE(ABORT, 'invalid game profile invariant');
+            END
+            """,
+        ),
+        (
+            "trg_game_profiles_validate_update",
+            "game_profiles",
+            "UPDATE OF level, experience, points, coins, gacha_d_streak",
+            """
+            WHEN NEW.level < 1
+              OR NEW.experience < 0
+              OR NEW.points < 0
+              OR NEW.coins < 0
+              OR NEW.gacha_d_streak < 0
+            BEGIN
+                SELECT RAISE(ABORT, 'invalid game profile invariant');
+            END
+            """,
+        ),
+        (
+            "trg_game_collection_validate_insert",
+            "game_collection",
+            "INSERT",
+            """
+            WHEN NEW.level < 1
+              OR NEW.copies < 1
+              OR NEW.experience < 0
+              OR NEW.evolution_stage < 1
+            BEGIN
+                SELECT RAISE(ABORT, 'invalid game collection invariant');
+            END
+            """,
+        ),
+        (
+            "trg_game_collection_validate_update",
+            "game_collection",
+            "UPDATE OF level, copies, experience, evolution_stage",
+            """
+            WHEN NEW.level < 1
+              OR NEW.copies < 1
+              OR NEW.experience < 0
+              OR NEW.evolution_stage < 1
+            BEGIN
+                SELECT RAISE(ABORT, 'invalid game collection invariant');
+            END
+            """,
+        ),
+        (
+            "trg_point_transaction_validate_insert",
+            "point_transactions",
+            "INSERT",
+            """
+            WHEN NEW.amount = 0
+            BEGIN
+                SELECT RAISE(ABORT, 'point transaction amount cannot be zero');
+            END
+            """,
+        ),
+        (
+            "trg_point_transaction_validate_update",
+            "point_transactions",
+            "UPDATE OF amount",
+            """
+            WHEN NEW.amount = 0
+            BEGIN
+                SELECT RAISE(ABORT, 'point transaction amount cannot be zero');
+            END
+            """,
+        ),
+        (
+            "trg_detector_usage_validate_insert",
+            "waifu_detector_daily_usage",
+            "INSERT",
+            """
+            WHEN NEW.uses < 0 OR NEW.uses > 3
+            BEGIN
+                SELECT RAISE(ABORT, 'detector daily usage out of bounds');
+            END
+            """,
+        ),
+        (
+            "trg_detector_usage_validate_update",
+            "waifu_detector_daily_usage",
+            "UPDATE OF uses",
+            """
+            WHEN NEW.uses < 0 OR NEW.uses > 3
+            BEGIN
+                SELECT RAISE(ABORT, 'detector daily usage out of bounds');
+            END
+            """,
+        ),
+        (
+            "trg_daily_mission_validate_insert",
+            "game_daily_mission_progress",
+            "INSERT",
+            """
+            WHEN NEW.progress < 0 OR NEW.target <= 0
+            BEGIN
+                SELECT RAISE(ABORT, 'daily mission invariant violated');
+            END
+            """,
+        ),
+        (
+            "trg_daily_mission_validate_update",
+            "game_daily_mission_progress",
+            "UPDATE OF progress, target",
+            """
+            WHEN NEW.progress < 0 OR NEW.target <= 0
+            BEGIN
+                SELECT RAISE(ABORT, 'daily mission invariant violated');
+            END
+            """,
+        ),
+    )
+    for name, table, operation, body in triggers:
+        connection.execute(
+            text(
+                f"CREATE TRIGGER IF NOT EXISTS {name} "
+                f"BEFORE {operation} ON {table} "
+                f"{body}"
+            )
+        )
 
 
 def _configure_sqlite_connection(dbapi_connection, _connection_record) -> None:
