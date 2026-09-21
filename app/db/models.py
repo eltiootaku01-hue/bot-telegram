@@ -86,6 +86,26 @@ class ModerationAction(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+
+
+
+class StoryProgress(Base):
+    """Durable position in the authored runtime story for one community."""
+
+    __tablename__ = "story_progress"
+    __table_args__ = (
+        UniqueConstraint("chat_id", "arc_key", name="uq_story_progress_chat_arc"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    arc_key: Mapped[str] = mapped_column(String(64))
+    chapter: Mapped[int] = mapped_column(Integer, default=1)
+    completed: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class GameProfile(Base):
     __tablename__ = "game_profiles"
     __table_args__ = (UniqueConstraint("user_id", "chat_id", name="uq_game_profile"),)
