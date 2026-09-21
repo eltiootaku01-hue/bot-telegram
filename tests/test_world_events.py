@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta
 
 import pytest
@@ -219,3 +220,48 @@ async def test_claim_due_can_be_scoped_to_one_presenter(database):
         )
 
     assert [row.status for row in rows] == ["publishing", "pending"]
+
+
+@pytest.mark.asyncio
+async def test_concurrent_claims_do_not_claim_one_event_twice(tmp_path):
+    database_a = Database(f"sqlite+aiosqlite:///{tmp_path / 'world-race.db'}")
+    database_b = Database(f"sqlite+aiosqlite:///{tmp_path / 'world-race.db'}")
+    await database_a.create_schema()
+    service = WorldEventService()
+
+    async with database_a.session() as session:
+        await service.schedule_game_news(
+            session,
+            chat_id=-100,
+            presenter=WorldPresenterRef("sunna", PresenterKind.EXISTING_BOT),
+            title="Race",
+            text="Only once",
+            dedupe_key="world-claim-race",
+        )
+        await session.commit()
+
+    async def claim(database):
+        async with database.session(write=True) as session:
+            return await service.claim_due(
+                session,
+                presenter_key="existing_bot:sunna",
+            )
+
+    first, second = await asyncio.gather(
+        claim(database_a),
+        claim(database_b),
+    )
+
+    assert (first is None) != (second is None)
+    winner = first or second
+    assert winner is not None
+    assert winner.presenter.key == "sunna"
+
+    async with database_a.session() as session:
+        rows = list(await session.scalars(select(GameWorldEvent)))
+
+    assert len(rows) == 1
+    assert rows[0].status == "publishing"
+
+    await database_a.close()
+    await database_b.close()
