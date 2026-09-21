@@ -46,6 +46,8 @@ def test_suggestive_tiers_are_gated_by_explicit_adult_eligibility() -> None:
     assert "NON-SUGGESTIVE PRODUCTION MODE" in guarded
     assert "no nudity" in guarded.lower()
     assert "sexualized minors" in guarded.lower()
+    assert "lencería" not in guarded.lower()
+    assert "vestuario tematico completamente cubierto" in guarded.lower()
 
     adult = build_card_art_prompt(
         character_name="Adult Character",
