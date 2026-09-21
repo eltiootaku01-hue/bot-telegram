@@ -13,7 +13,6 @@ from app.db.database import Database
 from app.db.models import GameEncounter
 from app.game.catalog import wild_characters
 from app.game.encounters import encounter_options, new_encounter
-from app.services.telegram_delivery import with_retry_after
 from app.world.models import PresenterKind, WorldPresenterRef
 from app.world.service import WorldEventService
 
