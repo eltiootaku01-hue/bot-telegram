@@ -66,6 +66,21 @@ def world_proposal_keyboard(proposal_id: int) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+
+def gift_delivery_recovery_keyboard(drop_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✅ Confirmar publicación",
+            callback_data=f"admin:gift:confirm:{drop_id}",
+        ),
+        InlineKeyboardButton(
+            text="🔁 Reencolar",
+            callback_data=f"admin:gift:requeue:{drop_id}",
+        ),
+    )
+    return builder.as_markup()
+
 def tio_operator_request_keyboard(request_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
