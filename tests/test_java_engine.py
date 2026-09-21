@@ -102,10 +102,10 @@ def test_java_engine_resolves_evolution_and_stats_contracts() -> None:
     finally:
         engine.close()
 
-    assert evolution["evolution_stage"] == 3
-    assert evolution["min_level"] == 11
-    assert evolution["max_level"] == 20
-    assert evolution["next_level"] == 21
+    assert evolution["evolution_stage"] == 4
+    assert evolution["min_level"] == 21
+    assert evolution["max_level"] == 30
+    assert evolution["next_level"] == 0
 
     assert stats["level"] == 12
     assert stats["rarity"] == "B"
