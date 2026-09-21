@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from app.game.art_progression import art_frame_for, waifumon_rarity_art_visibility
+from app.game.art_progression import waifumon_rarity_art_visibility
 from app.game.catalog import CHARACTERS
 from app.game.models import Character
 from app.game.waifumon_progression import evolution_band_for_level, stats_for_character
