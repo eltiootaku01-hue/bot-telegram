@@ -40,7 +40,9 @@ def _validate_variant(
             failures.append(f"{character_id}: UR_ALT_HOLO approved without adult_eligible=true")
 
     if variant.get("approved"):
-        checks = variant.get("checks") or {}
+        checks = variant.get("checks") or (
+            item.get("checks", {}) if variant_id == "normal" else {}
+        )
         for key in _required_variant_checks(qa, variant):
             if checks.get(key) is not True:
                 failures.append(f"{character_id}/{variant_id}: approved without {key}")
