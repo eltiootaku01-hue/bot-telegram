@@ -4,7 +4,7 @@ import logging
 from aiogram import Bot, F
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, FSInputFile, Message
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.characters.director import CharacterDirector
 from app.characters.models import CharacterIntent
@@ -13,8 +13,9 @@ from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.database import Database
-from app.db.models import GameCollection, GameItemInventory, GameProfile
+from app.db.models import GameCardCollection, GameCollection, GameItemInventory, GameProfile
 from app.db.repositories import MemberRepository
+from app.game.card_service import CardCollectionService
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterAttemptResult, EncounterStore
 from app.game.encounters import Encounter, encounter_options
@@ -51,6 +52,7 @@ from app.ui.game_keyboards import (
     item_consume_keyboard,
     item_inventory_keyboard,
     encounter_keyboard,
+    cards_keyboard,
 )
 
 logger = logging.getLogger(__name__)
@@ -74,6 +76,8 @@ class GameModule(BotModule):
         self.world = WorldService()
         self.community = CommunityResolver(self.settings)
         self.characters = CharacterDirector()
+        self.card_service = CardCollectionService()
+        self._card_selection: dict[int, int] = {}
 
     def setup(self) -> None:
         self.router.message.register(self.game, Command("juego"))
@@ -84,6 +88,7 @@ class GameModule(BotModule):
         self.router.message.register(self.waifus, Command("waifus"))
         self.router.message.register(self.detector, Command("detector"))
         self.router.message.register(self.items, Command("objetos"))
+        self.router.message.register(self.cards, Command("cartas"))
         self.router.callback_query.register(self.gacha_open, F.data == "game:gacha:open")
         self.router.callback_query.register(self.inventory_callback, F.data == "game:inventory:open")
         self.router.callback_query.register(self.combat_open, F.data == "game:combat:open")
@@ -93,6 +98,8 @@ class GameModule(BotModule):
         self.router.callback_query.register(self.gift_claim, F.data.startswith("game:gift:claim:"))
         self.router.callback_query.register(self.item_choose, F.data.startswith("game:item:choose:"))
         self.router.callback_query.register(self.item_absorb, F.data.startswith("game:item:absorb:"))
+        self.router.callback_query.register(self.cards_page, F.data.startswith("game:cards:page:"))
+        self.router.callback_query.register(self.card_pick, F.data.startswith("game:card:pick:"))
         self.router.callback_query.register(self.gacha_roll, F.data == "game:gacha:roll")
         self.router.callback_query.register(self.fusion, F.data.startswith("game:fusion:"))
         self.router.callback_query.register(self.combat_action, F.data.startswith("game:combat:"))
@@ -177,6 +184,200 @@ class GameModule(BotModule):
             mission_key=mission_key,
         )
         return claimed, balance, progress.progress, progress.target
+
+    async def cards(self, message: Message) -> None:
+        if message.chat.type != "private" || message.from_user is None:
+            return
+        chat_id = await self._community_chat_id(message.from_user.id)
+        if chat_id is None:
+            await message.answer("😰 Todavía no hay una comunidad asociada.")
+            return
+        await self._show_cards(message, message.from_user.id, chat_id, 1)
+
+    async def cards_page(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer(
+                "Este panel solo funciona en tu chat privado con Sunna. 😰",
+                show_alert=True,
+            )
+            return
+        parts = (callback.data or "").split(":")
+        if len(parts) != 4 or not parts[3].isdigit() or callback.message is None:
+            await callback.answer("Página de cartas inválida.", show_alert=True)
+            return
+        chat_id = await self._community_chat_id(callback.from_user.id)
+        if chat_id is None:
+            await callback.answer("No hay una comunidad configurada.", show_alert=True)
+            return
+        await self._show_cards(callback.message, callback.from_user.id, chat_id, int(parts[3]))
+        await callback.answer()
+
+    async def _show_cards(
+        self,
+        source: Message,
+        user_id: int,
+        chat_id: int,
+        page: int,
+    ) -> None:
+        page_size = 8
+        async with self.database.session() as session:
+            profile = await session.scalar(
+                select(GameProfile).where(
+                    GameProfile.user_id == user_id,
+                    GameProfile.chat_id == chat_id,
+                )
+            )
+            if profile is None:
+                rows = []
+                total = 0
+            else:
+                total = await session.scalar(
+                    select(func.count(GameCardCollection.id)).where(
+                        GameCardCollection.profile_id == profile.id,
+                        GameCardCollection.copies > 0,
+                    )
+                )
+                rows = list(
+                    await session.scalars(
+                        select(GameCardCollection)
+                        .where(
+                            GameCardCollection.profile_id == profile.id,
+                            GameCardCollection.copies > 0,
+                        )
+                        .order_by(GameCardCollection.id.asc())
+                        .offset(max(0, page - 1) * page_size)
+                        .limit(page_size)
+                    )
+                )
+        total = int(total or 0)
+        total_pages = max(1, (total + page_size - 1) // page_size)
+        safe_page = min(max(page, 1), total_pages)
+
+        if safe_page != page:
+            await self._show_cards(source, user_id, chat_id, safe_page)
+            return
+
+        if not rows:
+            text = (
+                "🎴 <b>Mis cartas</b>\n\n"
+                "Todavía no tenés cartas. Las obtendrás con el gacha y otros eventos."
+            )
+            await source.edit_text(text, reply_markup=cards_keyboard([], safe_page, total_pages))
+            return
+
+        lines = [
+            f"🎴 <b>Mis cartas</b> · página {safe_page}/{total_pages}",
+            "",
+        ]
+        for row in rows:
+            character_name = (
+                row.character_id
+                if row.character_id.startswith("fusion:")
+                else get_character(row.character_id).name
+            )
+            lines.append(
+                f"• <b>{character_name}</b> · {row.card_tier} · "
+                f"{'✨ SHINY' if row.variant == 'shiny' else 'Normal'} · ×{row.copies}"
+            )
+            lines.append(f"  👗 {row.outfit}")
+        lines.extend(("", "Elegí una carta para iniciar o completar una fusión UR."))
+        await source.edit_text(
+            "\n".join(lines),
+            reply_markup=cards_keyboard(rows, safe_page, total_pages),
+        )
+
+    async def card_pick(self, callback: CallbackQuery) -> None:
+        if not self._private_callback(callback):
+            await callback.answer(
+                "Este panel solo funciona en tu chat privado con Sunna. 😰",
+                show_alert=True,
+            )
+            return
+        parts = (callback.data or "").split(":")
+        if len(parts) != 4 or not parts[3].isdigit() or callback.message is None:
+            await callback.answer("Carta inválida.", show_alert=True)
+            return
+        row_id = int(parts[3])
+        chat_id = await self._community_chat_id(callback.from_user.id)
+        if chat_id is None:
+            await callback.answer("No hay una comunidad configurada.", show_alert=True)
+            return
+
+        async with self.database.session() as session:
+            profile = await session.scalar(
+                select(GameProfile).where(
+                    GameProfile.user_id == callback.from_user.id,
+                    GameProfile.chat_id == chat_id,
+                )
+            )
+            row = None
+            if profile is not None:
+                row = await session.scalar(
+                    select(GameCardCollection).where(
+                        GameCardCollection.id == row_id,
+                        GameCardCollection.profile_id == profile.id,
+                        GameCardCollection.copies > 0,
+                    )
+                )
+        if row is None:
+            await callback.answer(
+                "Esta carta ya no está disponible o no pertenece a tu colección.",
+                show_alert=True,
+            )
+            return
+
+        selected = self._card_selection.get(callback.from_user.id)
+        if selected is None:
+            self._card_selection[callback.from_user.id] = row_id
+            await callback.message.edit_text(
+                f"🎴 <b>Primera carta seleccionada</b>\n\n"
+                f"Has elegido <b>{get_character(row.character_id).name if not row.character_id.startswith('fusion:') else row.character_id}</b> "
+                f"· {row.card_tier} · {row.variant}.\n\n"
+                "Elegí otra carta distinta para crear una UR.",
+                reply_markup=cards_keyboard([row], 1, 1),
+            )
+            await callback.answer("Carta seleccionada.")
+            return
+
+        if selected == row_id:
+            self._card_selection.pop(callback.from_user.id, None)
+            await callback.answer("Selección cancelada.")
+            await self._show_cards(callback.message, callback.from_user.id, chat_id, 1)
+            return
+
+        try:
+            async with self.database.session(write=True) as session:
+                profile = await session.scalar(
+                    select(GameProfile).where(
+                        GameProfile.user_id == callback.from_user.id,
+                        GameProfile.chat_id == chat_id,
+                    )
+                )
+                if profile is None:
+                    raise ValueError("No tenés perfil de juego.")
+                result = await self.card_service.fuse(
+                    session,
+                    profile_id=profile.id,
+                    first_card_id=str(selected),
+                    second_card_id=str(row_id),
+                    seed=f"card-fusion:{callback.id}",
+                )
+        except ValueError as exc:
+            self._card_selection.pop(callback.from_user.id, None)
+            await callback.answer(str(exc), show_alert=True)
+            await self._show_cards(callback.message, callback.from_user.id, chat_id, 1)
+            return
+
+        self._card_selection.pop(callback.from_user.id, None)
+        await callback.message.edit_text(
+            f"💠 <b>UR creada</b>\n\n"
+            f"🎴 {result.card.name}\n"
+            f"🏷️ UR · {'✨ SHINY' if result.card.variant.value == 'shiny' else 'Normal'}\n"
+            f"👗 {result.card.outfit}\n"
+            "La fusión consumió una copia de cada carta base.",
+            reply_markup=cards_keyboard([result.card], 1, 1),
+        )
+        await callback.answer("¡Fusión UR completada! 💠", show_alert=True)
 
     async def items(self, message: Message) -> None:
         if message.chat.type != 'private' or message.from_user is None:
