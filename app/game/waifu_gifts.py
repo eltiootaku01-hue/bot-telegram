@@ -170,6 +170,41 @@ class WaifuGiftService:
         )
         return result.rowcount == 1
 
+
+    async def confirm_unknown_delivery(
+        self,
+        session: AsyncSession,
+        *,
+        drop_id: int,
+    ) -> bool:
+        result = await session.execute(
+            update(WaifuGiftDrop)
+            .where(
+                WaifuGiftDrop.id == drop_id,
+                WaifuGiftDrop.status == "delivery_unknown",
+                WaifuGiftDrop.message_id.is_(None),
+            )
+            .values(status="active", updated_at=utc_now())
+        )
+        return result.rowcount == 1
+
+    async def requeue_unknown_delivery(
+        self,
+        session: AsyncSession,
+        *,
+        drop_id: int,
+    ) -> bool:
+        result = await session.execute(
+            update(WaifuGiftDrop)
+            .where(
+                WaifuGiftDrop.id == drop_id,
+                WaifuGiftDrop.status == "delivery_unknown",
+                WaifuGiftDrop.message_id.is_(None),
+            )
+            .values(status="pending", updated_at=utc_now())
+        )
+        return result.rowcount == 1
+
     async def claim(
         self,
         session: AsyncSession,
