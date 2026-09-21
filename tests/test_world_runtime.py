@@ -24,8 +24,8 @@ async def database(tmp_path):
 async def test_runtime_presents_and_completes_authorized_event(database):
     sent: list[tuple[str, int, str]] = []
 
-    async def send(presenter_key: str, chat_id: int, text: str) -> int:
-        sent.append((presenter_key, chat_id, text))
+    async def send(event) -> int:
+        sent.append((event.presenter.key, event.chat_id, event.render_text()))
         return 501
 
     runtime = WorldRuntime(
@@ -61,7 +61,7 @@ async def test_runtime_presents_and_completes_authorized_event(database):
 
 @pytest.mark.asyncio
 async def test_runtime_cancels_event_when_chat_is_not_authorized(database):
-    async def send(_presenter_key: str, _chat_id: int, _text: str) -> int:
+    async def send(_event) -> int:
         raise AssertionError("unauthorized world event must never reach presenter")
 
     runtime = WorldRuntime(
@@ -98,7 +98,7 @@ async def test_runtime_heartbeat_keeps_long_presentation_alive(database):
     release = asyncio.Event()
     renewals = 0
 
-    async def send(_presenter_key: str, _chat_id: int, _text: str) -> int:
+    async def send(_event) -> int:
         send_started.set()
         await release.wait()
         return 777
@@ -156,7 +156,7 @@ async def test_runtime_heartbeat_keeps_long_presentation_alive(database):
 
 @pytest.mark.asyncio
 async def test_runtime_marks_failed_presentation_as_delivery_unknown(database):
-    async def send(_presenter_key: str, _chat_id: int, _text: str) -> int:
+    async def send(_event) -> int:
         raise RuntimeError("telegram unavailable")
 
     runtime = WorldRuntime(
