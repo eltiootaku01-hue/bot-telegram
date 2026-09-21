@@ -223,7 +223,7 @@ def _ensure_sqlite_invariant_triggers(connection) -> None:
             "game_encounters",
             "INSERT",
             """
-            WHEN NEW.status NOT IN ('active', 'captured', 'expired', 'cancelled')
+            WHEN NEW.status NOT IN ('active', 'captured', 'closed', 'expired', 'cancelled')
             BEGIN
                 SELECT RAISE(ABORT, 'invalid game encounter status');
             END
@@ -289,7 +289,7 @@ def _ensure_sqlite_invariant_triggers(connection) -> None:
             "trivia_rounds",
             "INSERT",
             """
-            WHEN NEW.status NOT IN ('active', 'won', 'expired', 'failed', 'cancelled')
+            WHEN NEW.status NOT IN ('active', 'publishing', 'won', 'expired', 'failed', 'delivery_unknown', 'cancelled')
               OR NEW.answer_index < 0
               OR NEW.points <= 0
             BEGIN
