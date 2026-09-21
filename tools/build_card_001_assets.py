@@ -74,11 +74,10 @@ def update_manifests() -> None:
             {"tier":"UR","file":"assets/quarantine/card_stages/alisa-kujo--ur.jpg","status":"primary_review_passed_second_review_required"},
         ],
     })
-    qa["completed_items"] = sum(1 for x in qa["items"] if x["approved"])
-    qa["progress_percent"] = round(qa["completed_items"] / qa["total_items"] * 100, 2)
     a = next(x for x in art["items"] if x["character_id"] == CHARACTER_ID)
     a["asset_status"] = "production_approved"; a["visual_audit_status"] = "approved"
-    art["completed_items"] = qa["completed_items"]; art["progress_percent"] = qa["progress_percent"]
+    art["completed_items"] = sum(1 for x in art["items"] if x["asset_status"] == "production_approved")
+    art["progress_percent"] = round(art["completed_items"] / art["total_items"] * 100, 2)
     p = next(x for x in prompts["items"] if x["character_id"] == CHARACTER_ID)
     p["asset_status"] = "production_approved"; p["visual_audit_status"] = "approved"
     for path, data in ((QA,qa),(ART,art),(PROMPTS,prompts)):
