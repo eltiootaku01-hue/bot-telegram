@@ -54,7 +54,7 @@ def save_image(tier: str, target: Path) -> None:
     render(tier).save(target, format="JPEG", quality=92, subsampling=2, optimize=True)
 
 def update_manifests() -> None:
-    qa = json.loads(QA_MANIFEST.read_text(encoding="utf-8"))
+    qa = json.loads(QA.read_text(encoding="utf-8"))
     art = json.loads(ART.read_text(encoding="utf-8"))
     prompts = json.loads(PROMPT_MANIFEST.read_text(encoding="utf-8"))
     item = next(x for x in qa["items"] if x["character_id"] == CHARACTER_ID)
