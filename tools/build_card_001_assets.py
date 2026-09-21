@@ -74,6 +74,17 @@ def update_manifests() -> None:
             {"tier":"UR","file":"assets/quarantine/card_stages/alisa-kujo--ur.jpg","status":"primary_review_passed_second_review_required"},
         ],
     })
+    normal_variant = next(
+        variant for variant in item.get("variants", [])
+        if variant.get("variant_id") == "normal"
+    )
+    normal_variant.update({
+        "approved": True,
+        "production_file": "assets/production/cards/alisa-kujo--normal.jpg",
+        "reviewer": "OpenAI visual QA",
+        "reviewed_at": "2026-09-21T17:49:00-03:00",
+        "checks": item["checks"],
+    })
     a = next(x for x in art["items"] if x["character_id"] == CHARACTER_ID)
     a["asset_status"] = "production_approved"
     a["visual_audit_status"] = "approved"
