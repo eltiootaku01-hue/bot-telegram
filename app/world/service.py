@@ -296,6 +296,34 @@ class WorldEventService:
         await session.commit()
         return result.rowcount == 1
 
+    async def fail(
+        self,
+        session: AsyncSession,
+        *,
+        event_id: int,
+        lock_time: datetime,
+        error: str,
+    ) -> bool:
+        """Mark a presentation as definitively rejected without implying delivery."""
+        now = utc_now()
+        result = await session.execute(
+            update(GameWorldEvent)
+            .where(
+                GameWorldEvent.id == event_id,
+                GameWorldEvent.status == WorldEventStatus.PUBLISHING.value,
+                GameWorldEvent.locked_at == lock_time,
+            )
+            .values(
+                status=WorldEventStatus.FAILED.value,
+                locked_at=None,
+                heartbeat_at=None,
+                last_error=error[:4000],
+                updated_at=now,
+            )
+        )
+        await session.commit()
+        return result.rowcount == 1
+
     async def mark_delivery_unknown(
         self,
         session: AsyncSession,
