@@ -5,6 +5,7 @@ import logging
 from datetime import timedelta
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from sqlalchemy import select
 
 from app.core.access import is_authorized_community
@@ -95,8 +96,16 @@ class WaifuGiftScheduler:
                     WaifuGiftDrop.slot == slot,
                 )
             )
-            if existing is not None and existing.status == "publishing" and existing.updated_at < stale_cutoff:
-                existing.status = "pending"
+            if (
+                existing is not None
+                and existing.status == "publishing"
+                and existing.updated_at < stale_cutoff
+            ):
+                await self.service.mark_publication_unknown(
+                    session,
+                    drop_id=existing.id,
+                )
+                existing.status = "delivery_unknown"
                 existing.updated_at = utc_now()
                 await session.flush()
 
@@ -133,10 +142,26 @@ class WaifuGiftScheduler:
                     reply_markup=gift_keyboard(drop.id),
                 )
             )
-        except Exception:
+        except (TelegramBadRequest, TelegramForbiddenError):
             async with self.database.session(write=True) as session:
                 await self.service.mark_publication_failed(session, drop_id=drop.id)
-            logger.exception("Failed to publish Sunna gift drop=%s chat=%s", drop.id, chat_id)
+            logger.exception(
+                "Telegram rejected Sunna gift drop=%s chat=%s",
+                drop.id,
+                chat_id,
+            )
+            return
+        except Exception:
+            async with self.database.session(write=True) as session:
+                await self.service.mark_publication_unknown(
+                    session,
+                    drop_id=drop.id,
+                )
+            logger.exception(
+                "Ambiguous Sunna gift delivery drop=%s chat=%s; manual recovery required",
+                drop.id,
+                chat_id,
+            )
             return
 
         async with self.database.session(write=True) as session:
