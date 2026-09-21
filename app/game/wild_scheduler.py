@@ -12,6 +12,7 @@ from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import GameEncounter
 from app.game.catalog import wild_characters
+from app.services.telegram_delivery import with_retry_after
 from app.game.encounters import encounter_options, new_encounter
 from app.ui.game_keyboards import encounter_keyboard
 
@@ -176,8 +177,12 @@ class WildWaifuScheduler:
             return
 
         try:
-            sent = await self.bot.send_message(
-                chat_id, text, reply_markup=encounter_keyboard(encounter.id, options)
+            sent = await with_retry_after(
+                lambda: self.bot.send_message(
+                    chat_id,
+                    text,
+                    reply_markup=encounter_keyboard(encounter.id, options),
+                )
             )
         except Exception:
             logger.exception("Failed to publish encounter %s in chat %s", encounter.id, chat_id)
