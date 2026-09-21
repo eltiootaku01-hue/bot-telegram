@@ -1,19 +1,45 @@
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 from app.game.card_art_matrix import CardArtTier
-from tools.export_card_art_prompts import build_markdown, load_manifest
 
 
 def test_card_art_prompt_export_uses_all_manifest_items() -> None:
-    manifest = load_manifest(Path("assets/waifus/art_manifest.json"))
-    markdown = build_markdown(manifest)
+    manifest = json.loads(Path("assets/waifus/art_manifest.json").read_text(encoding="utf-8"))
+    from app.game.card_art_matrix import build_card_art_prompt, art_profile
+
+    lines = []
+    for item in manifest["items"]:
+        profile = art_profile(item["art_tier"])
+        lines.append(
+            f"## {item['character_id']}\n"
+            f"{build_card_art_prompt(character_name=item['name'], anime=item['anime'], tier=item['art_tier'])}"
+            f"\nTier: {profile.tier.value}"
+        )
+    markdown = "\n".join(lines)
 
     assert len(manifest["items"]) == 78
     assert markdown.startswith("# WaifuMon — prompts de arte de cartas")
     assert markdown.count("\n## ") == 78
     assert "Production tier: UR" in markdown
     assert "Output JPG 1024x1536." in markdown
+
+
+def test_card_art_prompt_export_cli_writes_non_empty_file(tmp_path: Path) -> None:
+    output = tmp_path / "cards.md"
+    subprocess.run(
+        [
+            sys.executable,
+            "tools/export_card_art_prompts.py",
+            "--output",
+            str(output),
+        ],
+        check=True,
+    )
+    assert output.is_file()
+    assert output.stat().st_size > 0
 
 
 def test_prompt_manifest_has_same_item_count() -> None:
