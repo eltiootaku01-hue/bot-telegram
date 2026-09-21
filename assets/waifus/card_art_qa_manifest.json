@@ -3566,6 +3566,18 @@
         "adult_gate_consistent"
       ],
       "production_pattern": "assets/production/cards/<character-id>--ur-alt-holo.jpg"
-    }
+    },
+    "required_checks": [
+      "anatomy",
+      "hands_and_fingers",
+      "limbs_and_joints",
+      "face_and_identity",
+      "perspective",
+      "crop_and_framing",
+      "wardrobe_and_style",
+      "no_explicit_content",
+      "adult_gate_consistent",
+      "second_review"
+    ]
   }
 }
