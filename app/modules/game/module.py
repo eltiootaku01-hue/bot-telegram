@@ -998,12 +998,13 @@ class GameModule(BotModule):
                     CharacterIntent.GAME_MISS,
                     callback.from_user.id + callback.message.chat.id,
                 )
-                wrong_response = '❌ Fallaste. Esta oportunidad era solo tuya.'
+                response_text = '❌ Fallaste. Esta oportunidad era solo tuya.'
                 if participant_count >= 3:
-                    wrong_response += '\n\n🚪 Ya se ocuparon las 3 oportunidades de este encuentro.'
+                    response_text += '\n\n🚪 Ya se ocuparon las 3 oportunidades de este encuentro.'
                 if reaction:
-                    wrong_response += f'\n\n🐍 <b>Sunna:</b> {reaction}'
-                await session.flush()
+                    response_text += f'\n\n🐍 <b>Sunna:</b> {reaction}'
+                await callback.answer(response_text, show_alert=True)
+                return
 
             profile = await MemberRepository().get_or_create_game_profile(
                 session, callback.from_user.id, encounter.chat_id, commit=False
