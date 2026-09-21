@@ -55,5 +55,5 @@ def test_art_prompt_spec_keeps_same_character_identity_across_tiers():
 
     assert "Anya Forger" in base and "Anya Forger" in ultra
     assert "Spy x Family" in base and "Spy x Family" in ultra
-    assert "version ultra" in ultra.casefold()
+    assert "versión ultra" in ultra.casefold()
     assert "desn" not in ultra.casefold()
