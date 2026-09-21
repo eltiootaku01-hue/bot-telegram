@@ -18,6 +18,7 @@ from app.modules.media.module import MediaModule
 from app.modules.moderation.module import ModerationModule
 from app.modules.mystery.module import MysteryModule
 from app.modules.requests.module import RequestModule
+from app.modules.story.module import StoryModule
 from app.modules.system.module import SystemModule
 from app.modules.trivia.module import TriviaModule
 from app.modules.world.module import WorldCatalogModule
@@ -43,6 +44,7 @@ def build_bot_modules(
     identity_specific = (
         _spec("chat", lambda: ChatModule(database, identity=identity), *BotIdentity),
         _spec("cafe", lambda: CafeModule(database, settings=settings), BotIdentity.CARI),
+        _spec("story", lambda: StoryModule(database, settings=settings), BotIdentity.CARI),
         _spec("moderation", lambda: ModerationModule(database), BotIdentity.CARI),
         _spec("game", lambda: GameModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("trivia", lambda: TriviaModule(database, settings=settings), BotIdentity.CARI),
