@@ -1,13 +1,53 @@
 # Visual assets — WaifuMon
 
-Artwork is kept separate from gameplay metadata. A character-specific image is linked only when the exact image is versioned under `assets/waifus/<character_id>.*`.
+El arte final se produce **una carta/avatar por vez**. Una pieza no se marca como completa hasta que su archivo específico queda versionado en `assets/waifus/` y su estado se registra en `art_manifest.json`.
 
-## Current generated visual reference
+## Regla visual permanente
 
-![WaifuMon card concept](generated/waifu-card-concept.jpg)
+La biblioteca usa cuatro bandas de presentación visual independientes del balance de combate:
 
-This generated board is a **visual style reference** for the card system. It is not used as canonical artwork for a named catalog character.
+| Tier visual | Encuadre | Dirección |
+|---|---|---|
+| **R** | ~20% | rostro + una pequeña parte de hombros; expresión y diseño facial son la prioridad |
+| **S** | ~40% | cabeza, hombros y torso superior hasta el pecho; pose acorde a personalidad/elemento |
+| **SR** | ~60-80% | medio cuerpo amplio hasta cintura/muslos; pose dinámica, accesorios y fondo trabajado |
+| **UR** | **100%+** | cuerpo completo; pose icónica, escenario completo, iluminación y acabado premium |
 
-## Card rule
+Estas bandas no cambian la rareza D/C/B/A/S/SS/SSS ni el balance R/SR/UR existente del motor. Son una especificación de presentación artística.
 
-The runtime never guesses an image-to-character association. Missing character art remains an explicit missing asset instead of showing the wrong waifu.
+## Dirección de estilo
+
+La referencia buscada es una ilustración anime de fantasía/aventura pulida, expresiva y dibujada a mano, con linework orgánico, cel shading controlado, buena profundidad, iluminación narrativa y siluetas claras.
+
+No se copia literalmente el estilo de un autor o una obra concreta. Las referencias externas sirven únicamente para definir el nivel de energía, acabado y lenguaje visual.
+
+## Diferencia entre avatares
+
+Cada personaje debe conservar:
+
+- paleta propia;
+- expresión coherente con su identidad;
+- pose distinta;
+- vestuario/accesorios adecuados;
+- composición y escenario diferentes cuando la rareza lo permita;
+- un motivo visual reconocible.
+
+La dirección se mantiene en `app/game/art_directions.py`. Cuando un personaje no tenga todavía una dirección individual, se usa explícitamente un fallback y no se declara como dirección terminada.
+
+## Estado actual
+
+La biblioteca de producción contiene **78 cartas jugables** en cola.
+
+La primera pieza completada en esta etapa es:
+
+- `yor-forger.svg` — **UR**, cuerpo completo, dirección de asesina elegante, escenario nocturno y composición propia.
+
+El resto permanece en `pending` hasta producirse de forma individual.
+
+## Referencia visual
+
+La imagen generada en `assets/waifus/generated/` es solamente una referencia de layout/progreso de la biblioteca. No se utiliza como arte de una personaje concreta.
+
+## Runtime
+
+El runtime nunca debe asociar una imagen genérica a una personaje. Una carta sin arte aprobado sigue siendo una carta válida con asset explícitamente ausente.
