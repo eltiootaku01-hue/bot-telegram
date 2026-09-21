@@ -1,0 +1,163 @@
+const SPRITE_SIZE = 128;
+const CUT_IN_DURATION_MS = 1500;
+const POSES = ["idle", "attack", "hit"];
+
+function spriteUrl(characterId, pose = "idle") {
+  return new URL(`../../assets/production/sprites/${characterId}_${pose}.png`, import.meta.url).href;
+}
+
+function cardUrl(characterId) {
+  return new URL(`../../assets/production/cards/${characterId}--normal.jpg`, import.meta.url).href;
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`No se pudo cargar: ${src}`));
+    image.src = src;
+  });
+}
+
+function drawFallback(ctx, x, y, size, label, hostile = false) {
+  ctx.fillStyle = hostile ? "#231f4f" : "#102030";
+  ctx.fillRect(x, y, size, size);
+  ctx.strokeStyle = hostile ? "#7c6cff" : "#2aabee";
+  ctx.lineWidth = Math.max(2, size * 0.025);
+  ctx.strokeRect(x + 1, y + 1, size - 2, size - 2);
+  ctx.fillStyle = hostile ? "#b5a9ff" : "#62c0ff";
+  ctx.font = `700 ${Math.max(14, size * 0.12)}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label.slice(0, 12), x + size / 2, y + size / 2);
+}
+
+export class WaifuMonCombatCanvas {
+  constructor(canvas, { width = 768, height = 432 } = {}) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d", { alpha: false });
+    this.width = width;
+    this.height = height;
+    this.entities = [];
+    this.images = new Map();
+    this.reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+  }
+
+  setEntities(entities) {
+    this.entities = entities.map((entity) => ({
+      id: entity.id,
+      name: entity.name ?? entity.id,
+      team: entity.team ?? "player",
+      pose: entity.pose ?? "idle",
+      x: Number(entity.x ?? (entity.team === "enemy" ? 0.72 : 0.28)),
+      y: Number(entity.y ?? 0.64),
+      size: Number(entity.size ?? 128),
+    }));
+    this.render();
+  }
+
+  async preload(characterIds) {
+    const ids = [...new Set(characterIds)];
+    await Promise.all(ids.map(async (id) => {
+      await Promise.all(POSES.map(async (pose) => {
+        const key = `${id}:${pose}`;
+        if (this.images.has(key)) return;
+        try {
+          this.images.set(key, await loadImage(spriteUrl(id, pose)));
+        } catch {
+          this.images.set(key, null);
+        }
+      }));
+    }));
+    this.render();
+  }
+
+  setPose(characterId, pose) {
+    for (const entity of this.entities) {
+      if (entity.id === characterId) entity.pose = pose;
+    }
+    this.render();
+  }
+
+  render() {
+    const ctx = this.ctx;
+    const scaleX = this.canvas.width / this.width;
+    const scaleY = this.canvas.height / this.height;
+
+    ctx.save();
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.scale(scaleX, scaleY);
+
+    ctx.fillStyle = "rgba(255,255,255,0.035)";
+    ctx.fillRect(0, this.height * 0.7, this.width, this.height * 0.3);
+
+    for (const entity of this.entities) {
+      const px = this.width * entity.x;
+      const py = this.height * entity.y;
+      const size = entity.size;
+      const image = this.images.get(`${entity.id}:${entity.pose}`) ?? this.images.get(`${entity.id}:idle`);
+
+      if (image) {
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(image, px - size / 2, py - size, size, size);
+      } else {
+        drawFallback(ctx, px - size / 2, py - size, size, entity.name, entity.team === "enemy");
+      }
+
+      ctx.fillStyle = "rgba(0,0,0,0.56)";
+      ctx.fillRect(px - size / 2, py + 8, size, 20);
+      ctx.fillStyle = "#fff";
+      ctx.font = "700 12px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(entity.name, px, py + 18);
+    }
+
+    ctx.restore();
+  }
+}
+
+export async function playCutIn(characterId, {
+  duration = CUT_IN_DURATION_MS,
+  name = characterId,
+  subtitle = "Habilidad especial",
+} = {}) {
+  const overlay = document.getElementById("cut-in");
+  const image = document.getElementById("cut-in-image");
+  const nameNode = document.getElementById("cut-in-name");
+  const subtitleNode = document.getElementById("cut-in-subtitle");
+
+  if (!overlay || !image || !nameNode || !subtitleNode) return;
+
+  const src = cardUrl(characterId);
+  try {
+    await loadImage(src);
+    image.src = src;
+  } catch {
+    image.removeAttribute("src");
+  }
+
+  image.alt = name;
+  nameNode.textContent = name;
+  subtitleNode.textContent = subtitle;
+
+  overlay.classList.remove("is-active");
+  void overlay.offsetWidth;
+  overlay.classList.add("is-active");
+  overlay.setAttribute("aria-hidden", "false");
+
+  await new Promise((resolve) => window.setTimeout(resolve, duration));
+
+  overlay.classList.remove("is-active");
+  overlay.setAttribute("aria-hidden", "true");
+}
+
+export function getSpriteAssetContract() {
+  return {
+    directory: "assets/production/sprites/",
+    size: SPRITE_SIZE,
+    poses: [...POSES],
+    cutInDurationMs: CUT_IN_DURATION_MS,
+  };
+}
