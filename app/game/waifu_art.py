@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
-RUNTIME_ART_SUFFIXES = (".png", ".webp", ".jpg", ".jpeg")
-
 from app.game.catalog import CHARACTERS
+
+RUNTIME_ART_SUFFIXES = (".png", ".webp", ".jpg", ".jpeg")
 
 
 @dataclass(frozen=True, slots=True)
