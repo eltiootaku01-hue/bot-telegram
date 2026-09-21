@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.art.prompt_policy import STICKER_VISUAL_POLICY
 from app.characters.models import CharacterIntent
 from app.core.identity import BotIdentity
 
@@ -132,8 +133,7 @@ def sticker_prompt(spec: StickerSpec) -> str:
         f"Telegram sticker of {spec.identity.value.title()}, "
         f"cute clean anime/chibi style, expressive but non-explicit, "
         f"{spec.pose}, {spec.face}, holding or using {spec.prop}. "
-        "Simple readable silhouette, fondo transparente, contorno limpio marcado, "
-        "no nudity, no sexualized pose, no gore, no watermark."
+        f"Simple readable silhouette, fondo transparente, contorno limpio marcado, {STICKER_VISUAL_POLICY}"
         + (f' Include the short Spanish text "{spec.text}".' if spec.text else "")
     )
 
