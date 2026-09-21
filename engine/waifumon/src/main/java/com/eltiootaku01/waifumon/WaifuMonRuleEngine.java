@@ -45,6 +45,7 @@ public final class WaifuMonRuleEngine {
         try {
             response = switch (request.command()) {
                 case "gacha.roll" -> gachaRoll(request);
+                case "gacha.resolve" -> gachaResolve(request);
                 case "combat.resolve" -> combatResolve(request);
                 case "progression.resolve" -> progressionResolve(request);
                 case "evolution.resolve" -> evolutionResolve(request);
@@ -89,6 +90,112 @@ public final class WaifuMonRuleEngine {
                 response.errorMessage()
             );
         }
+    }
+
+    private EngineResponse gachaResolve(EngineRequest request) {
+        JsonNode payload = request.payload();
+        String seed = requiredText(payload, "seed");
+        int dStreak = boundedInt(payload, "d_streak", 0, 1_000_000);
+        JsonNode candidatesNode = payload.get("candidates");
+        if (candidatesNode == null || !candidatesNode.isArray() || candidatesNode.isEmpty()) {
+            throw new IllegalArgumentException("candidates must be a non-empty array");
+        }
+
+        double roll = deterministicUnit("gacha:" + seed);
+        String rarity = "D";
+        for (int i = 0; i < GACHA_THRESHOLDS.length; i++) {
+            if (roll < GACHA_THRESHOLDS[i]) {
+                rarity = GACHA_RARITIES[i];
+                break;
+            }
+        }
+
+        boolean pityTriggered = false;
+        int nextDStreak;
+        if ("D".equals(rarity)) {
+            if (dStreak >= 6) {
+                rarity = "C";
+                pityTriggered = true;
+                nextDStreak = 0;
+            } else {
+                nextDStreak = dStreak + 1;
+            }
+        } else {
+            nextDStreak = 0;
+        }
+
+        java.util.List<JsonNode> eligible = new java.util.ArrayList<>();
+        int rolledIndex = rarityIndex(rarity);
+        for (JsonNode candidate : candidatesNode) {
+            String candidateRarity = requiredText(candidate, "rarity");
+            if (rarityIndex(candidateRarity) <= rolledIndex) {
+                eligible.add(candidate);
+            }
+        }
+        if (eligible.isEmpty()) {
+            throw new IllegalArgumentException("No gacha candidates are eligible for rarity " + rarity);
+        }
+
+        int highestIndex = eligible.stream()
+            .mapToInt(candidate -> rarityIndex(candidate.get("rarity").asText()))
+            .max()
+            .orElseThrow();
+        java.util.List<JsonNode> top = eligible.stream()
+            .filter(candidate -> rarityIndex(candidate.get("rarity").asText()) == highestIndex)
+            .sorted(java.util.Comparator.comparing(candidate -> candidate.get("id").asText()))
+            .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+
+        java.util.Set<String> owned = new java.util.HashSet<>();
+        JsonNode ownedNode = payload.get("owned_character_ids");
+        if (ownedNode != null) {
+            if (!ownedNode.isArray()) {
+                throw new IllegalArgumentException("owned_character_ids must be an array");
+            }
+            for (JsonNode item : ownedNode) {
+                if (!item.isTextual() || item.asText().isBlank()) {
+                    throw new IllegalArgumentException("owned_character_ids contains an invalid entry");
+                }
+                owned.add(item.asText());
+            }
+        }
+
+        if (("D".equals(rarity) || "C".equals(rarity))) {
+            java.util.List<JsonNode> unowned = top.stream()
+                .filter(candidate -> !owned.contains(candidate.get("id").asText()))
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+            if (!unowned.isEmpty()) {
+                top = unowned;
+            }
+        }
+
+        byte[] digest = sha256(seed);
+        long indexValue = 0L;
+        for (int i = 0; i < 8; i++) {
+            indexValue = (indexValue << 8) | Byte.toUnsignedLong(digest[i]);
+        }
+        JsonNode selected = top.get((int) Math.floorMod(indexValue, top.size()));
+
+        ObjectNode result = mapper.createObjectNode();
+        result.put("rolled_rarity", rarity);
+        result.put("character_id", requiredText(selected, "id"));
+        result.put("pity_triggered", pityTriggered);
+        result.put("d_streak", nextDStreak);
+        return EngineResponse.success(
+            request.requestId(), "gacha_result", result, 0L, List.of(), List.of()
+        );
+    }
+
+    private static int rarityIndex(String rarity) {
+        return switch (rarity) {
+            case "D" -> 0;
+            case "C" -> 1;
+            case "B" -> 2;
+            case "A" -> 3;
+            case "S" -> 4;
+            case "SS" -> 5;
+            case "SSS" -> 6;
+            default -> throw new IllegalArgumentException("Unknown rarity: " + rarity);
+        };
     }
 
     private EngineResponse gachaRoll(EngineRequest request) {
