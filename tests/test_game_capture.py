@@ -31,10 +31,12 @@ async def test_capture_callback_persists_progression(tmp_path) -> None:
         ))
 
     edits = []
+    edit_markups = []
     answers = []
 
     async def edit_text(text, **kwargs):
         edits.append(text)
+        edit_markups.append(kwargs.get("reply_markup"))
 
     async def answer(text, **kwargs):
         answers.append(text)
@@ -63,6 +65,7 @@ async def test_capture_callback_persists_progression(tmp_path) -> None:
     assert collection.experience == 25
     assert transaction.reference_id == "encounter-1:7"
     assert edits
+    assert edit_markups[-1] is not None
     assert any("<b>Sunna:</b>" in text for text in edits)
     assert any(text in edits[-1] for text in ("Bien. Lo hiciste.", "Ganaste.", "Fue buena jugada.", "Me alegra."))
     assert answers == ["¡CAPTURADA! 🎉"]
