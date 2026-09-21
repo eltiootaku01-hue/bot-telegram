@@ -32,12 +32,15 @@ class WorldRuntime:
     ) -> None:
         if poll_seconds <= 0:
             raise ValueError("poll_seconds must be positive")
+        if stale_timeout_seconds <= 0:
+            raise ValueError("stale_timeout_seconds must be positive")
         self.database = database
         self.presenter = presenter
         self.settings = settings or get_settings()
         self.tools = tools or WorldToolPolicy()
         self.poll_seconds = poll_seconds
         self.stale_timeout_seconds = stale_timeout_seconds
+        self.heartbeat_seconds = max(1.0, min(60.0, stale_timeout_seconds / 3))
         self.events = WorldEventService()
         self._stopping = asyncio.Event()
 
@@ -68,7 +71,7 @@ class WorldRuntime:
         if not self.tools.allowed("telegram.publish"):
             return False
 
-        async with self.database.session() as session:
+        async with self.database.session(write=True) as session:
             await self.events.cancel_expired(session)
             await self.events.recover_stale(
                 session,
@@ -83,11 +86,15 @@ class WorldRuntime:
                 await self.events.cancel_event(
                     session,
                     event_id=event.event_id,
-                    lock_time=self._lock_time(event),
+                    lock_time=event.lock_time,
                     reason="target community is not authorized",
                 )
             return True
 
+        heartbeat = asyncio.create_task(
+            self._heartbeat(event.event_id, event.lock_time),
+            name=f"world-event-heartbeat-{event.event_id}",
+        )
         try:
             result = await self.presenter.present(event)
         except Exception as exc:
@@ -95,17 +102,23 @@ class WorldRuntime:
                 await self.events.mark_delivery_unknown(
                     session,
                     event_id=event.event_id,
-                    lock_time=self._lock_time(event),
+                    lock_time=event.lock_time,
                     error=str(exc),
                 )
             logger.exception("World presentation failed event=%s", event.event_id)
             return True
+        finally:
+            heartbeat.cancel()
+            try:
+                await heartbeat
+            except asyncio.CancelledError:
+                pass
 
         async with self.database.session() as session:
             completed = await self.events.complete(
                 session,
                 event_id=event.event_id,
-                lock_time=self._lock_time(event),
+                lock_time=event.lock_time,
                 message_id=result.message_id,
             )
         if not completed:
@@ -115,8 +128,22 @@ class WorldRuntime:
             )
         return True
 
-    @staticmethod
-    def _lock_time(event) -> object:
-        return event._lock_time
+    async def _heartbeat(self, event_id: int, lock_time) -> None:
+        while True:
+            await asyncio.sleep(self.heartbeat_seconds)
+            try:
+                async with self.database.session() as session:
+                    renewed = await self.events.renew(
+                        session,
+                        event_id=event_id,
+                        lock_time=lock_time,
+                    )
+            except Exception:
+                logger.exception("World event heartbeat failed event=%s", event_id)
+                continue
+            if not renewed:
+                logger.warning("World event lease lost during heartbeat event=%s", event_id)
+                return
+
     def stop(self) -> None:
         self._stopping.set()
