@@ -85,11 +85,14 @@ class WorldEventRecoveryModule(BotModule):
         if event is None:
             await message.answer("Evento inexistente.")
             return
-        await message.answer(self._event_text(event), reply_markup=(
-            world_event_recovery_keyboard(event.id)
-            if event.status == WorldEventStatus.DELIVERY_UNKNOWN.value
-            else None
-        ))
+        await message.answer(
+            self._event_text(event),
+            reply_markup=(
+                world_event_recovery_keyboard(event.id)
+                if event.status == WorldEventStatus.DELIVERY_UNKNOWN.value
+                else None
+            ),
+        )
 
     async def confirm_command(self, message: Message) -> None:
         if not self._is_owner_private(message) or not message.text:
@@ -98,13 +101,11 @@ class WorldEventRecoveryModule(BotModule):
         if len(parts) != 3 or not parts[1].isdigit() or not parts[2].isdigit():
             await message.answer("Uso: <code>/world_confirmar ID MESSAGE_ID</code>")
             return
-        event_id = int(parts[1])
-        message_id = int(parts[2])
         async with self.database.session() as session:
             changed = await self.events.confirm_delivery_unknown(
                 session,
-                event_id=event_id,
-                message_id=message_id,
+                event_id=int(parts[1]),
+                message_id=int(parts[2]),
             )
         await message.answer(
             "✅ Evento confirmado como publicado."
@@ -121,6 +122,7 @@ class WorldEventRecoveryModule(BotModule):
                 "Uso: <code>/world_reintentar ID [existing_bot:sunna]</code>"
             )
             return
+
         presenter = None
         if len(parts) == 3:
             try:
@@ -134,6 +136,7 @@ class WorldEventRecoveryModule(BotModule):
                     "Presentador inválido. Ejemplo: <code>existing_bot:sunna</code>."
                 )
                 return
+
         async with self.database.session() as session:
             changed = await self.events.retry_delivery_unknown(
                 session,
@@ -154,6 +157,7 @@ class WorldEventRecoveryModule(BotModule):
         if event_id is None:
             await message.answer("Uso: <code>/world_cancelar ID</code>")
             return
+
         async with self.database.session() as session:
             changed = await self.events.cancel_delivery_unknown(
                 session,
@@ -177,9 +181,10 @@ class WorldEventRecoveryModule(BotModule):
             return
 
         parts = (callback.data or "").split(":")
-        if len(parts) != 4 or parts[3] == "" or not parts[3].isdigit():
+        if len(parts) != 4 or not parts[3].isdigit():
             await callback.answer("Evento inválido.", show_alert=True)
             return
+
         event_id = int(parts[3])
         action = parts[2]
 
@@ -224,37 +229,29 @@ class WorldEventRecoveryModule(BotModule):
     @staticmethod
     def _parse_single_id(text: str, command: str) -> int | None:
         parts = text.split()
-        if len(parts) != 2 or parts[0].split("@", 1)[0] != command or not parts[1].isdigit():
+        if (
+            len(parts) != 2
+            or parts[0].split("@", 1)[0] != command
+            or not parts[1].isdigit()
+        ):
             return None
         return int(parts[1])
 
     @staticmethod
     def _event_text(event: GameWorldEvent) -> str:
-        return (
-            f"🌎 <b>Evento #{event.id}</b>
-"
-            f"Tipo: <code>{escape(event.event_type)}</code>
-"
-            f"Clave: <code>{escape(event.event_key)}</code>
-"
-            f"Comunidad: <code>{event.chat_id}</code>
-"
-            f"Presentador: <code>{escape(event.presenter_key)}</code>
-"
-            f"Estado: <code>{escape(event.status)}</code>
-"
-            f"Intentos: <code>{event.attempts}</code>
-"
-            f"Programado: <code>{event.run_at.isoformat()}</code>
-"
-            f"Creado: <code>{event.created_at.isoformat()}</code>
-"
-            f"Actualizado: <code>{event.updated_at.isoformat()}</code>
-"
-            f"Último error: <code>{escape(event.last_error or '-')}</code>
-"
-            f"Título: <b>{escape(event.title)}</b>
-"
-            f"<b>Payload:</b>
-<code>{escape(event.payload_json)}</code>"
-        )
+        lines = [
+            f"🌎 <b>Evento #{event.id}</b>",
+            f"Tipo: <code>{escape(event.event_type)}</code>",
+            f"Clave: <code>{escape(event.event_key)}</code>",
+            f"Comunidad: <code>{event.chat_id}</code>",
+            f"Presentador: <code>{escape(event.presenter_key)}</code>",
+            f"Estado: <code>{escape(event.status)}</code>",
+            f"Intentos: <code>{event.attempts}</code>",
+            f"Programado: <code>{event.run_at.isoformat()}</code>",
+            f"Creado: <code>{event.created_at.isoformat()}</code>",
+            f"Actualizado: <code>{event.updated_at.isoformat()}</code>",
+            f"Último error: <code>{escape(event.last_error or '-')}</code>",
+            f"Título: <b>{escape(event.title)}</b>",
+            f"<b>Payload:</b><code>{escape(event.payload_json)}</code>",
+        ]
+        return "\n".join(lines)
