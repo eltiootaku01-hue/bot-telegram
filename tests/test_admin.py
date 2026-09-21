@@ -1,3 +1,4 @@
+from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -5,6 +6,7 @@ import pytest
 from sqlalchemy import select
 
 from app.core.config import Settings
+from app.core.time import utc_now
 from app.db.database import Database
 from app.db.models import Chat, GameCollection, GameGachaRoll, GameProfile, RareDropApproval, User
 from app.game.models import Rarity
@@ -166,6 +168,7 @@ async def test_unknown_gift_delivery_recovery_is_owner_only(database) -> None:
                 gift_key="dessert",
                 status="delivery_unknown",
                 message_id=None,
+                expires_at=utc_now() + timedelta(hours=1),
             )
         )
 
