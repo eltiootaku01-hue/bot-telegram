@@ -184,6 +184,55 @@ class RareDropApproval(Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
+class WaifuDetectorDailyUsage(Base):
+    """Daily counter limiting each player to three Waifu Detector fights."""
+
+    __tablename__ = "waifu_detector_daily_usage"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "chat_id",
+            "day_key",
+            name="uq_detector_daily_usage_user_chat_day",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    day_key: Mapped[str] = mapped_column(String(16))
+    uses: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class WaifuDetectorRound(Base):
+    """One irreversible mob fight allocated to one player."""
+
+    __tablename__ = "waifu_detector_rounds"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "chat_id",
+            "day_key",
+            "use_number",
+            name="uq_detector_round_user_chat_day_use",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    day_key: Mapped[str] = mapped_column(String(16))
+    use_number: Mapped[int] = mapped_column(Integer)
+    character_id: Mapped[str] = mapped_column(String(100))
+    mob_key: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    result: Mapped[str] = mapped_column(String(32), default="")
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class GameGachaRoll(Base):
     """Durable ledger for one gacha roll, preventing duplicate rewards."""
 
