@@ -136,15 +136,10 @@ final class WaifuMonRuleEngineTest {
         );
 
         assertTrue(response.success());
-        assertTrue(
-            response.payload().get("rolled_rarity").asText().equals("C")
-                || response.payload().get("rolled_rarity").asText().equals("D")
-        );
-        if (response.payload().get("pity_triggered").asBoolean()) {
-            assertEquals("C", response.payload().get("rolled_rarity").asText());
-            assertEquals(0, response.payload().get("d_streak").asInt());
-            assertEquals("beta", response.payload().get("character_id").asText());
-        }
+        assertTrue(response.payload().get("pity_triggered").asBoolean());
+        assertEquals("C", response.payload().get("rolled_rarity").asText());
+        assertEquals(0, response.payload().get("d_streak").asInt());
+        assertEquals("beta", response.payload().get("character_id").asText());
     }
 
     @Test
