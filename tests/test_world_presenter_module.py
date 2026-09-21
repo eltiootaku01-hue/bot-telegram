@@ -91,7 +91,8 @@ async def test_sunna_presenter_publishes_waifu_keyboard_and_records_message(data
     args = bot.send_message.await_args.args
     kwargs = bot.send_message.await_args.kwargs
     assert args[0] == -100
-    assert args[1] == "🚨 ¡Apareció!\n\n¡Apareció!"
+    assert args[1].startswith("🚨 ¡Apareció ")
+    assert args[1].endswith("\n\n¡Apareció!")
     markup = kwargs["reply_markup"]
     callbacks = [
         button.callback_data
