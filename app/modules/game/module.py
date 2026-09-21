@@ -904,13 +904,6 @@ class GameModule(BotModule):
             )
             return
 
-        if wrong_response is not None:
-            await self._observe_action(
-                'encounter_attempt_wrong', callback.from_user.id, encounter.chat_id
-            )
-            await callback.answer(wrong_response, show_alert=True)
-            return
-
         reaction = self._game_reaction(
             CharacterIntent.GAME_SUCCESS,
             callback.from_user.id + chat_id,
