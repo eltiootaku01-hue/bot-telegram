@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from app.db.database import Database
-from app.db.models import Chat, GameCollection, GameGachaRoll, GameProfile, PointTransaction, RareDropApproval, User
+from app.db.models import Chat, GameCardCollection, GameCollection, GameGachaRoll, GameProfile, PointTransaction, RareDropApproval, User
 from app.game.engine import GameEngine
 from app.game.gacha import GACHA_COST_POINTS, GachaService
 from app.game.models import Rarity
@@ -65,6 +65,15 @@ async def test_gacha_drops_public_character_and_charges_points(database):
     assert profile is not None and profile.points == 0
     assert collection is not None and collection.copies == 1
     assert transaction is not None and transaction.amount == -GACHA_COST_POINTS
+    card = await session.scalar(
+        select(GameCardCollection).where(
+            GameCardCollection.profile_id == profile.id,
+            GameCardCollection.character_id == result.character.id,
+        )
+    )
+    assert card is not None
+    assert card.card_tier == result.card.tier.value
+    assert card.variant == result.card.variant.value
 
 
 @pytest.mark.asyncio
