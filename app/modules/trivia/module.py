@@ -23,6 +23,7 @@ from app.db.trivia_models import TriviaRound
 from app.game.missions import DailyMissionService
 from app.game.trivia import TriviaService
 from app.ui.game_keyboards import trivia_keyboard
+from app.services.telegram_delivery import with_retry_after
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +134,13 @@ class TriviaModule(BotModule):
             if source is not None:
                 await source.answer(text, reply_markup=trivia_keyboard(round_row.id, question.options))
             elif self._bot is not None:
-                await self._bot.send_message(chat_id, text, reply_markup=trivia_keyboard(round_row.id, question.options))
+                await with_retry_after(
+                    lambda: self._bot.send_message(
+                        chat_id,
+                        text,
+                        reply_markup=trivia_keyboard(round_row.id, question.options),
+                    )
+                )
             else:
                 return False
         except Exception:
