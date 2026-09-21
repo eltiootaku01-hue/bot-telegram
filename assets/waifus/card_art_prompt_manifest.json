@@ -144,8 +144,8 @@
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
-      "asset_status": "pending",
-      "visual_audit_status": "not_inspected",
+      "asset_status": "production_approved",
+      "visual_audit_status": "approved",
       "production_file": "assets/production/cards/alisa-kujo--normal.jpg"
     },
     {

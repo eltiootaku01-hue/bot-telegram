@@ -176,21 +176,37 @@
       "art_tier": "SR",
       "framing_profile": "SR",
       "checks": {
-        "anatomy": false,
-        "hands_and_fingers": false,
-        "limbs_and_joints": false,
-        "face_and_identity": false,
-        "perspective": false,
-        "crop_and_framing": false,
-        "wardrobe_and_style": false,
-        "no_explicit_content": false,
-        "second_review": false
+        "anatomy": true,
+        "hands_and_fingers": true,
+        "limbs_and_joints": true,
+        "face_and_identity": true,
+        "perspective": true,
+        "crop_and_framing": true,
+        "wardrobe_and_style": true,
+        "no_explicit_content": true
       },
-      "reviewer": "",
+      "reviewer": "OpenAI visual QA",
       "second_reviewer": "",
-      "reviewed_at": null,
-      "notes": "",
-      "approved": false
+      "reviewed_at": "2026-09-21T17:49:00-03:00",
+      "notes": "SR canonical asset approved after individual visual inspection. R kept as approved auxiliary stage. UR generated and primary-reviewed but held in quarantine pending required independent second review.",
+      "approved": true,
+      "stage_assets": [
+        {
+          "tier": "R",
+          "file": "assets/production/cards/alisa-kujo--r.jpg",
+          "status": "approved_auxiliary"
+        },
+        {
+          "tier": "SR",
+          "file": "assets/production/cards/alisa-kujo--normal.jpg",
+          "status": "approved_canonical"
+        },
+        {
+          "tier": "UR",
+          "file": "assets/quarantine/card_stages/alisa-kujo--ur.jpg",
+          "status": "primary_review_passed_second_review_required"
+        }
+      ]
     },
     {
       "character_id": "anya-forger",

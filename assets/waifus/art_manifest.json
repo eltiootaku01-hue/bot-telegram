@@ -37,7 +37,7 @@
   },
   "style_policy": "Original polished anime-fantasy illustration; external references are mood-level only, never direct style copying.",
   "total_items": 78,
-  "completed_items": 0,
+  "completed_items": 1,
   "items": [
     {
       "character_id": "ai-hoshino",
@@ -129,10 +129,10 @@
       "popularity_rank": 1,
       "power_score": 42,
       "art_tier": "SR",
-      "asset_status": "pending",
+      "asset_status": "production_approved",
       "framing_profile": "SR",
       "adult_eligible": false,
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "approved",
       "anime": "Alya Sometimes Hides Her Feelings in Russian"
     },
     {
@@ -976,7 +976,7 @@
       "anime": "Kakegurui"
     }
   ],
-  "progress_percent": 0,
+  "progress_percent": 1.28,
   "generated_extras": [
     {
       "asset_id": "kuro-shiny-card-v1",
