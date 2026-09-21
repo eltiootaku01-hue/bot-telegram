@@ -87,12 +87,12 @@ class CardCollectionService:
         session: AsyncSession,
         *,
         profile_id: int,
-        first_card_id: str,
-        second_card_id: str,
+        first_collection_id: int,
+        second_collection_id: int,
         seed: str,
         mature_art_allowed: bool = False,
     ) -> CardGrantResult:
-        if first_card_id == second_card_id:
+        if first_collection_id == second_collection_id:
             raise ValueError("Una UR necesita dos cartas diferentes")
 
         rows = list(
@@ -100,7 +100,7 @@ class CardCollectionService:
                 select(GameCardCollection)
                 .where(
                     GameCardCollection.profile_id == profile_id,
-                    GameCardCollection.card_id.in_((first_card_id, second_card_id)),
+                    GameCardCollection.id.in_((first_collection_id, second_collection_id)),
                     GameCardCollection.copies > 0,
                 )
             )
@@ -108,9 +108,9 @@ class CardCollectionService:
         if len(rows) != 2:
             raise ValueError("Las dos cartas deben existir y tener copias disponibles")
 
-        rows_by_id = {row.card_id: row for row in rows}
-        first = rows_by_id[first_card_id]
-        second = rows_by_id[second_card_id]
+        rows_by_id = {row.id: row for row in rows}
+        first = rows_by_id[first_collection_id]
+        second = rows_by_id[second_collection_id]
         if first.character_id.startswith("fusion:") or second.character_id.startswith("fusion:"):
             raise ValueError("Las UR no se pueden usar como base de otra UR")
 
