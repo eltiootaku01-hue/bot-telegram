@@ -84,6 +84,25 @@ final class WaifuMonRuleEngineTest {
     }
 
     @Test
+    void idempotencyKeyReplaysTheSameResultAndRejectsConflicts() {
+        ObjectNode payload = mapper.createObjectNode().put("seed", "idem-seed");
+
+        EngineResponse first = engine.execute(request("gacha.roll", payload, "idem-key"));
+        EngineResponse replay = engine.execute(request("gacha.roll", payload, "idem-key"));
+
+        assertTrue(first.success());
+        assertTrue(replay.success());
+        assertEquals(first.payload().get("rarity").asText(), replay.payload().get("rarity").asText());
+        assertNotEquals(first.requestId(), replay.requestId());
+
+        ObjectNode conflictingPayload = mapper.createObjectNode().put("seed", "other-seed");
+        EngineResponse conflict = engine.execute(request("gacha.roll", conflictingPayload, "idem-key"));
+
+        assertFalse(conflict.success());
+        assertEquals("IDEMPOTENCY_CONFLICT", conflict.errorCode());
+    }
+
+    @Test
     void progressionResolvesLevelAndEvolutionStageWithoutChangingCopies() {
         ObjectNode payload = mapper.createObjectNode()
             .put("level", 5)
