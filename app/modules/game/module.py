@@ -14,7 +14,7 @@ from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.core.time import utc_now
 from app.db.database import Database
-from app.db.models import GameCollection, GameEncounter, GameProfile
+from app.db.models import GameCollection, GameEncounter, GameItemInventory, GameProfile
 from app.db.repositories import MemberRepository
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterAttemptResult, EncounterStore
@@ -76,12 +76,16 @@ class GameModule(BotModule):
         self.router.message.register(self.missions_command, Command("misiones"))
         self.router.message.register(self.waifus, Command("waifus"))
         self.router.message.register(self.detector, Command("detector"))
+        self.router.message.register(self.items, Command("objetos"))
         self.router.callback_query.register(self.gacha_open, F.data == "game:gacha:open")
         self.router.callback_query.register(self.inventory_callback, F.data == "game:inventory:open")
         self.router.callback_query.register(self.combat_open, F.data == "game:combat:open")
         self.router.callback_query.register(self.missions_open, F.data == "game:missions:open")
         self.router.callback_query.register(self.detector_open, F.data == "game:detector:open")
         self.router.callback_query.register(self.detector_fight, F.data.startswith("game:detector:fight:"))
+        self.router.callback_query.register(self.gift_claim, F.data.startswith("game:gift:claim:"))
+        self.router.callback_query.register(self.item_choose, F.data.startswith("game:item:choose:"))
+        self.router.callback_query.register(self.item_absorb, F.data.startswith("game:item:absorb:"))
         self.router.callback_query.register(self.gacha_roll, F.data == "game:gacha:roll")
         self.router.callback_query.register(self.fusion, F.data.startswith("game:fusion:"))
         self.router.callback_query.register(self.combat_action, F.data.startswith("game:combat:"))
