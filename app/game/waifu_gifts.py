@@ -103,6 +103,57 @@ class WaifuGiftService:
                 raise
         return row
 
+    async def claim_publication(
+        self,
+        session: AsyncSession,
+        *,
+        drop_id: int,
+    ) -> bool:
+        result = await session.execute(
+            update(WaifuGiftDrop)
+            .where(
+                WaifuGiftDrop.id == drop_id,
+                WaifuGiftDrop.status.in_(("pending", "failed")),
+                WaifuGiftDrop.message_id.is_(None),
+            )
+            .values(status="publishing")
+        )
+        return result.rowcount == 1
+
+    async def mark_published(
+        self,
+        session: AsyncSession,
+        *,
+        drop_id: int,
+        message_id: int,
+    ) -> bool:
+        result = await session.execute(
+            update(WaifuGiftDrop)
+            .where(
+                WaifuGiftDrop.id == drop_id,
+                WaifuGiftDrop.status == "publishing",
+                WaifuGiftDrop.message_id.is_(None),
+            )
+            .values(status="active", message_id=message_id)
+        )
+        return result.rowcount == 1
+
+    async def mark_publication_failed(
+        self,
+        session: AsyncSession,
+        *,
+        drop_id: int,
+    ) -> None:
+        await session.execute(
+            update(WaifuGiftDrop)
+            .where(
+                WaifuGiftDrop.id == drop_id,
+                WaifuGiftDrop.status == "publishing",
+                WaifuGiftDrop.message_id.is_(None),
+            )
+            .values(status="pending")
+        )
+
     async def claim(
         self,
         session: AsyncSession,
