@@ -7,16 +7,18 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import GameGachaRoll, RareDropApproval
+from app.db.models import GameCollection, GameGachaRoll, GameProfile, RareDropApproval
 from app.db.repositories import MemberRepository
 from app.game.catalog import CHARACTERS, get_character
 from app.game.engine import GameEngine
 from app.game.models import Character, Rarity
 from app.game.progression import apply_capture_progression
+from app.core.time import utc_now
 from app.game.rare_approval import propose
 
 
 GACHA_COST_POINTS = 10
+GACHA_D_PITY_AFTER = 6
 _RARITY_ORDER = {rarity: index for index, rarity in enumerate(Rarity)}
 
 
@@ -27,6 +29,7 @@ class GachaResult:
     remaining_points: int
     approval: RareDropApproval | None = None
     granted: bool = False
+    pity_triggered: bool = False
 
 
 class GachaService:
@@ -36,7 +39,12 @@ class GachaService:
         self.engine = engine or GameEngine()
 
     @staticmethod
-    def _candidate_for_roll(rolled: Rarity, seed: str) -> Character:
+    def _candidate_for_roll(
+        rolled: Rarity,
+        seed: str,
+        *,
+        owned_character_ids: frozenset[str] = frozenset(),
+    ) -> Character:
         candidates = [
             character
             for character in CHARACTERS.values()
@@ -53,6 +61,11 @@ class GachaService:
             ],
             key=lambda character: character.id,
         )
+        if rolled in {Rarity.D, Rarity.C}:
+            unowned = [candidate for candidate in top if candidate.id not in owned_character_ids]
+            if unowned:
+                top = unowned
+
         digest = hashlib.sha256(seed.encode("utf-8")).digest()
         index = int.from_bytes(digest[:8], "big") % len(top)
         return top[index]
@@ -65,6 +78,7 @@ class GachaService:
             remaining_points=balance,
             approval=approval,
             granted=roll.granted,
+            pity_triggered=roll.pity_triggered,
         )
 
     async def roll(
@@ -92,13 +106,14 @@ class GachaService:
             await session.refresh(profile)
             return self._restore_result(existing, approval, profile.points)
 
+        base_roll = self.engine.roll_gacha(seed=seed)
         try:
             async with session.begin_nested():
                 roll = GameGachaRoll(
                     roll_id=seed,
                     user_id=user_id,
                     chat_id=chat_id,
-                    rolled_rarity=self.engine.roll_gacha(seed=seed).value,
+                    rolled_rarity=base_roll.value,
                     character_id="",
                     granted=False,
                 )
@@ -123,10 +138,7 @@ class GachaService:
             await session.refresh(profile)
             return self._restore_result(existing, approval, profile.points)
 
-        rolled = Rarity(roll.rolled_rarity)
-        character = self._candidate_for_roll(rolled, seed)
-        roll.character_id = character.id
-
+        rolled = base_roll
         balance = await MemberRepository().spend_points(
             session,
             user_id=user_id,
@@ -141,6 +153,56 @@ class GachaService:
             await session.delete(roll)
             await session.flush()
             return None
+
+        profile = await MemberRepository().get_or_create_game_profile(
+            session,
+            user_id,
+            chat_id,
+            commit=False,
+        )
+        pity_triggered = False
+        if rolled is Rarity.D:
+            protected = await session.execute(
+                update(GameProfile)
+                .where(
+                    GameProfile.id == profile.id,
+                    GameProfile.gacha_d_streak >= GACHA_D_PITY_AFTER,
+                )
+                .values(gacha_d_streak=0, updated_at=utc_now())
+            )
+            if protected.rowcount == 1:
+                rolled = Rarity.C
+                pity_triggered = True
+            else:
+                await session.execute(
+                    update(GameProfile)
+                    .where(GameProfile.id == profile.id)
+                    .values(
+                        gacha_d_streak=GameProfile.gacha_d_streak + 1,
+                        updated_at=utc_now(),
+                    )
+                )
+        else:
+            await session.execute(
+                update(GameProfile)
+                .where(GameProfile.id == profile.id)
+                .values(gacha_d_streak=0, updated_at=utc_now())
+            )
+
+        owned_rows = await session.scalars(
+            select(GameCollection.character_id).where(
+                GameCollection.profile_id == profile.id,
+            )
+        )
+        owned_character_ids = frozenset(owned_rows)
+        character = self._candidate_for_roll(
+            rolled,
+            seed,
+            owned_character_ids=owned_character_ids,
+        )
+        roll.rolled_rarity = rolled.value
+        roll.pity_triggered = pity_triggered
+        roll.character_id = character.id
 
         if _RARITY_ORDER[character.rarity] > _RARITY_ORDER[Rarity.C]:
             approval = await propose(
@@ -159,6 +221,7 @@ class GachaService:
                 remaining_points=balance,
                 approval=approval,
                 granted=False,
+                pity_triggered=pity_triggered,
             )
 
         profile = await MemberRepository().get_or_create_game_profile(
@@ -177,6 +240,7 @@ class GachaService:
             character=character,
             remaining_points=balance,
             granted=True,
+            pity_triggered=pity_triggered,
         )
 
     @staticmethod
