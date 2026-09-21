@@ -110,16 +110,13 @@ public final class WaifuMonRuleEngine {
             }
         }
 
-        boolean pityTriggered = false;
+        boolean pityTriggered = dStreak >= 6;
         int nextDStreak;
-        if ("D".equals(rarity)) {
-            if (dStreak >= 6) {
-                rarity = "C";
-                pityTriggered = true;
-                nextDStreak = 0;
-            } else {
-                nextDStreak = dStreak + 1;
-            }
+        if (pityTriggered) {
+            rarity = "C";
+            nextDStreak = 0;
+        } else if ("D".equals(rarity)) {
+            nextDStreak = dStreak + 1;
         } else {
             nextDStreak = 0;
         }
