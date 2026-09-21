@@ -25,7 +25,7 @@ from app.db.database import Database
         ),
         (
             BotIdentity.CHIE,
-            {"system", "world-catalog", "world-runtime", "social_runtime", "chat", "chie", "requests", "brain_chat"},
+            {"system", "world-catalog", "world-runtime", "social_runtime", "chat", "chie", "requests", "world-recovery", "brain_chat"},
         ),
     ),
 )
@@ -109,3 +109,19 @@ def test_cari_cafe_module_receives_cross_bot_links() -> None:
 
     assert isinstance(cafe, CafeModule)
     assert cafe.settings is settings
+
+
+def test_chie_world_recovery_module_receives_configured_settings() -> None:
+    from app.modules.world.recovery import WorldEventRecoveryModule
+
+    settings = Settings(
+        master_telegram_id=77,
+        allow_user_private_chat=True,
+    )
+    database = Database("sqlite+aiosqlite:///:memory:")
+
+    modules = build_bot_modules(database, BotIdentity.CHIE, settings)
+    recovery = next(module for module in modules if module.name == "world-recovery")
+
+    assert isinstance(recovery, WorldEventRecoveryModule)
+    assert recovery.settings is settings
