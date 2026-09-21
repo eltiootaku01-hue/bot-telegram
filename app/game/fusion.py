@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import GameCollection
 from app.game.evolution import next_fusion
 
+MIN_FUSION_LEVEL = 25
+
 
 @dataclass(frozen=True, slots=True)
 class FusionResult:
@@ -26,6 +28,11 @@ async def fuse_collection(session: AsyncSession, *, profile_id: int, character_i
     )
     if collection is None:
         raise ValueError("Character is not in the collection")
+
+    if collection.level < MIN_FUSION_LEVEL:
+        raise ValueError(
+            f"La fusión requiere nivel {MIN_FUSION_LEVEL}; esta waifu está en nivel {collection.level}"
+        )
 
     rule = next_fusion(collection.rarity)
     if rule is None:
