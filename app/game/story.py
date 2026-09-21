@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity import BotIdentity
+from app.core.time import utc_now
 from app.db.models import StoryProgress
 
 
@@ -173,7 +174,7 @@ class StoryService:
             view.progress.completed = True
         else:
             view.progress.chapter += 1
-        view.progress.updated_at = __import__("app.core.time", fromlist=["utc_now"]).utc_now()
+        view.progress.updated_at = utc_now()
         await session.flush()
         return StoryView(
             progress=view.progress,
