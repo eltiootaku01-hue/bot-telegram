@@ -18,7 +18,14 @@ def load_manifest(path: Path) -> dict:
     return data
 
 
-def build_markdown(manifest: dict) -> str:
+def build_markdown(manifest: dict, character_id: str | None = None) -> str:
+    items = manifest["items"]
+    if character_id is not None:
+        matches = [item for item in items if item.get("character_id") == character_id]
+        if not matches:
+            raise ValueError(f"Unknown character_id: {character_id}")
+        items = matches
+
     lines = [
         "# WaifuMon — prompts de arte de cartas",
         "",
@@ -27,7 +34,7 @@ def build_markdown(manifest: dict) -> str:
         "Producción individual: una carta por prompt, sin reutilizar el encuadre de otro tier.",
         "",
     ]
-    for item in manifest["items"]:
+    for item in items:
         tier = str(item.get("art_tier", "")).strip()
         profile = art_profile(tier)
         prompt = build_card_art_prompt(
@@ -61,6 +68,10 @@ def main() -> int:
     )
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--character-id",
+        help="Prepare exactly one card prompt instead of exporting the full catalog.",
+    )
     args = parser.parse_args()
 
     manifest = load_manifest(args.manifest)
