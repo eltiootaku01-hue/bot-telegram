@@ -41,16 +41,25 @@ public final class WaifuMonRuleEngine {
             return cached.responseFor(request.requestId());
         }
 
-        EngineResponse response = switch (request.command()) {
-            case "gacha.roll" -> gachaRoll(request);
-            case "combat.resolve" -> combatResolve(request);
-            case "progression.resolve" -> progressionResolve(request);
-            default -> EngineResponse.failure(
+        EngineResponse response;
+        try {
+            response = switch (request.command()) {
+                case "gacha.roll" -> gachaRoll(request);
+                case "combat.resolve" -> combatResolve(request);
+                case "progression.resolve" -> progressionResolve(request);
+                default -> EngineResponse.failure(
+                    request.requestId(),
+                    "UNKNOWN_COMMAND",
+                    "Unsupported command: " + request.command()
+                );
+            };
+        } catch (IllegalArgumentException ex) {
+            response = EngineResponse.failure(
                 request.requestId(),
-                "UNKNOWN_COMMAND",
-                "Unsupported command: " + request.command()
+                "INVALID_REQUEST",
+                ex.getMessage() == null ? "Invalid WaifuMon request" : ex.getMessage()
             );
-        };
+        }
         putCached(request.idempotencyKey(), fingerprint, response);
         return response;
     }
