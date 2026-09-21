@@ -60,6 +60,51 @@ async def test_runtime_presents_and_completes_authorized_event(database):
 
 
 @pytest.mark.asyncio
+async def test_runtime_presents_worldbot_event_without_character_identity(database):
+    sent: list[tuple[str, int, str]] = []
+
+    async def send(event) -> int:
+        sent.append(
+            (
+                f"{event.presenter.kind.value}:{event.presenter.key}",
+                event.chat_id,
+                event.render_text(),
+            )
+        )
+        return 902
+
+    runtime = WorldRuntime(
+        database,
+        WorldPresenter(send),
+        settings=Settings(authorized_chat_ids="-100"),
+        presenter_key="world_bot:world",
+    )
+    service = WorldEventService()
+
+    async with database.session() as session:
+        event = await service.schedule_game_news(
+            session,
+            chat_id=-100,
+            presenter=WorldPresenterRef("world", PresenterKind.WORLD_BOT),
+            title="Aviso mundial",
+            text="Mensaje neutral",
+            dedupe_key="runtime-worldbot",
+        )
+        await session.commit()
+        event_id = event.id
+
+    assert await runtime.tick() is True
+    assert sent == [("world_bot:world", -100, "Aviso mundial\n\nMensaje neutral")]
+
+    async with database.session() as session:
+        event = await session.get(GameWorldEvent, event_id)
+
+    assert event is not None
+    assert event.status == "published"
+    assert event.message_id == 902
+
+
+@pytest.mark.asyncio
 async def test_runtime_cancels_event_when_chat_is_not_authorized(database):
     async def send(_event) -> int:
         raise AssertionError("unauthorized world event must never reach presenter")
