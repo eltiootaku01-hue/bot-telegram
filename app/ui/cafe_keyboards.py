@@ -26,9 +26,15 @@ def cafe_menu_keyboard(settings: Settings) -> InlineKeyboardMarkup:
             callback_data="cafe:event:open",
         ),
         InlineKeyboardButton(
+            text="📖 Historia",
+            callback_data="cafe:story:open",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
             text="🌤️ Momento",
             callback_data="cafe:context:open",
-        ),
+        )
     )
 
     links = (
