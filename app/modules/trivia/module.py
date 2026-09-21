@@ -15,6 +15,7 @@ from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.core.processing_feedback import ProcessingFeedback, ProcessingResultDTO
 from app.core.time import utc_now
 from app.services.community import CommunityResolver
 from app.services.world import WorldService
@@ -96,12 +97,19 @@ class TriviaModule(BotModule):
         """Backward-compatible alias for the Cari trivia status panel."""
         await self.start_panel(callback)
     async def start_command(self, message: Message) -> None:
-        if message.chat.type in {"group", "supergroup"}:
-            if await self._publish(message.chat.id, source=message):
+        async with ProcessingFeedback(message) as feedback:
+            if message.chat.type in {"group", "supergroup"}:
+                published = await self._publish(message.chat.id, source=message, feedback=feedback)
+                if not published:
+                    await feedback.finish(
+                        ProcessingResultDTO("🧠 Ya hay una trivia activa en esta comunidad.")
+                    )
                 return
-            await message.answer("🧠 Ya hay una trivia activa en esta comunidad.")
-            return
-        await message.answer("🧠 La Trivia de Cari se juega en la comunidad. Desde acá podés consultar el estado.")
+            await feedback.finish(
+                ProcessingResultDTO(
+                    "🧠 La Trivia de Cari se juega en la comunidad. Desde acá podés consultar el estado."
+                )
+            )
 
     async def open_callback(self, callback: CallbackQuery) -> None:
         if callback.message is None:
@@ -113,7 +121,12 @@ class TriviaModule(BotModule):
         published = await self._publish(callback.message.chat.id, source=callback.message)
         await callback.answer("Trivia lista." if published else "Ya hay una trivia activa.")
 
-    async def _publish(self, chat_id: int, source: Message | None = None) -> bool:
+    async def _publish(
+        self,
+        chat_id: int,
+        source: Message | None = None,
+        feedback: ProcessingFeedback | None = None,
+    ) -> bool:
         if not is_authorized_community(self.settings, chat_id):
             return False
 
@@ -143,7 +156,19 @@ class TriviaModule(BotModule):
                 )
             return False
         try:
-            if source is not None:
+            if feedback is not None:
+                await feedback.finish(
+                    ProcessingResultDTO(
+                        text,
+                        reply_markup=trivia_keyboard(round_row.id, question.options),
+                    )
+                )
+                sent = feedback._transient
+                if sent is None:
+                    # The final response was sent directly by the controller; fetch
+                    # the persisted round message ID from the source chat below.
+                    sent = source
+            elif source is not None:
                 sent = await source.answer(
                     text,
                     reply_markup=trivia_keyboard(round_row.id, question.options),
