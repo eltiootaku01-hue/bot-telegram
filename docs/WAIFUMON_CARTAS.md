@@ -87,18 +87,103 @@ La carta del juego se identifica por `character_id`. El único arte de producci�
   
 ## Matriz visual definitiva por rareza de carta
 
-**Versión:** 2026-09 / matriz v1.
+**Versión:** 2026-09 / matriz v2.
 
-La matriz visual controla el encuadre y la escala narrativa del arte. Se mantiene separada de la rareza de combate interna (`D/C/B/A/S/SS/SSS`) para evitar que una futura modificación de balance altere el formato visual de una carta.
+La rareza de combate y la progresión visual son capas independientes. La matriz visual adopta una progresión de tres etapas: base, ascensión intermedia y **Final Ascension / Magnificent Art** para UR. La terminología de "Final Ascension" describe una función visual de producto; no implica copiar una ilustración, composición exacta o estilo de un juego concreto.
 
-| Tier visual | Encuadre | Escala / corte | Dirección de vestuario | Función | Nivel |
+| Tier visual | Fase | Encuadre | Dirección de vestuario | Función | Nivel de contenido |
 |---|---|---|---|---|---|
-| **D / C / B / R** | Primer plano / Close-Up | Rostro y hombros | Atuendo base, cotidiano o uniforme | Legibilidad limpia para avatares y mensajes rápidos | Sin contenido sugerente |
-| **S** | Plano medio | Tórax; foco en busto, espalda o cadera | Vestimenta ajustada, traje de baño o lencería temática **solo con elegibilidad adulta explícita** | Glamour moderado | Ecchi moderado, nunca explícito |
-| **SR** | Plano tres cuartos | Casi cuerpo completo | Gothic Lolita, kemonomimi, bunny suit elegante, yukata/kimono festivo o combate estilizado | Alta fidelidad y pose dinámica | Ecchi avanzado, nunca explícito |
-| **UR** | Plano general | Cuerpo completo, de pies a cabeza | Cosplay/crossover conceptual premium; fanservice **solo con elegibilidad adulta explícita** | Edición premium y fondo elaborado | Ecchi premium, estrictamente no explícito |
+| **R** | Fase 1 / base | Close-up | Atuendo cotidiano, uniforme escolar o base completamente cubierto | Identidad y legibilidad inmediata | No sugerente |
+| **S** | Fase 2 / intermedia | Plano medio | Pose de combate o atuendo dinámico mejorado, totalmente cubierto | Más energía y lectura de acción | Glamour no explícito |
+| **SR** | Fase 2 / intermedia avanzada | Plano tres cuartos | Combate estilizado o vestuario temático premium | Mayor movimiento, detalle y presencia | Glamour no explícito |
+| **UR** | **Final Ascension / Magnificent Art** | **Plano general** | Atuendo definitivo de combate, gala, fantasía o concepto premium | **Ilustración definitiva, cuerpo completo, fondo elaborado y efectos de alta gama** | Glamour premium; no explícito |
 
-**Regla de compatibilidad:** el manifest continúa usando `art_tier = R/S/SR/UR`. El perfil `D_C_B_R` representa el mismo encuadre Close-Up para los niveles D, C, B y R cuando un documento externo utilice esos nombres.
+El perfil histórico **D/C/B/R** continúa aceptado como alias técnico de la Fase 1 Close-up, pero **R** es el nombre visual canónico de esa fase.
+
+### Variante UR ALT — Holo / Shiny
+
+Las cartas UR admiten una edición alternativa separada de la ilustración canónica:
+
+| Variante | Identidad | Estado | Requisito |
+|---|---|---|---|
+| **UR Canónica / Normal** | Pose majestuosa o de combate | variante base | sin compuerta adulta |
+| **UR Alternate Holo / Shiny** | Pose alternativa premium + brillo/holograma | variante opcional | **UR + `adult_eligible=true` + revisión visual completa + segunda revisión independiente** |
+
+La variante **UR Alternate Holo / Shiny** utiliza una composición de glamour no explícito. Puede emplear oclusión contextual para resolver zonas sensibles de forma artística: haces de luz, contraluz, vapor/niebla, sombras de primer plano, movimiento de cabello, cintas, capas de tela y vestuario desgastado por batalla. Las telas decorativas semitranslúcidas no pueden revelar anatomía íntima.
+
+La variante no debe introducir desnudez, genitales expuestos, pezones expuestos, actos sexuales, encuadres voyeuristas, fetish framing ni sexualización de menores. GitHub prohíbe contenido sexualmente obsceno y sexualización de menores, y evalúa también proyectos de material sintético según su finalidad y contexto; por ello este repositorio mantiene la variante como **no explícita, adulta y con aprobación humana**, sin afirmar que una etiqueta de “censura” garantice la aceptación de una plataforma. citeturn251367search0turn251367search4turn251367search7 Telegram también mantiene mecanismos de retirada para contenido público ilegal y menciona expresamente los bots pornográficos en su FAQ. citeturn553946search0
+
+## Contrato de producción visual
+
+- Directorio único: `assets/production/cards/`.
+- Formato aceptado: **JPG/JPEG**.
+- Formato canónico de salida: **JPG**.
+- Resolución exacta: **1024 × 1536**.
+- Variante normal: `<character-id>--normal.jpg`.
+- Variante legacy shiny: `<character-id>--shiny.jpg`.
+- Variante UR ALT Holo/Shiny: `<character-id>--ur-alt-holo.jpg`.
+- Arte auxiliar de fases históricas puede conservar nombres `--r.jpg`, `--stage1.jpg`, `--stage2.jpg`, `--stage3.jpg` dentro del contrato de transición, pero el runtime de variantes canónicas usa los sufijos anteriores.
+- SVG, WebP, conceptos, borradores o assets rechazados no son producción y deben permanecer en `assets/quarantine/`.
+- Un asset invalidado por el validador puede moverse automáticamente con `tools/validate_card_assets.py --quarantine-invalid`.
+- La existencia de un archivo técnicamente correcto **no equivale a aprobación visual**.
+
+## Producción one-card-at-a-time
+
+Cada carta se trata como una unidad aislada:
+
+1. Cargar el brief de un único `character_id`.
+2. Resolver el tier visual y la variante solicitada.
+3. Para R/S/SR generar la fase correspondiente.
+4. Para UR generar primero la **UR Canónica / Normal**.
+5. Para `UR_ALT_HOLO`, comprobar la compuerta adulta antes de generar y aplicar la política no explícita.
+6. Revisar anatomía, manos/dedos, extremidades, articulaciones, rasgos faciales, perspectiva, recorte, vestuario, oclusiones y fondo.
+7. UR y UR ALT requieren segunda revisión independiente antes de marcarse como aprobadas.
+8. Si falla cualquier criterio, retirar el archivo de producción y enviarlo a `assets/quarantine/`.
+9. Solo después de la aprobación visual y técnica se puede cambiar el estado del manifest a `approved`.
+
+## Plantilla de generación
+
+La fuente canónica vive en `app/game/card_art_matrix.py`. La exportación reproducible continúa con:
+
+`python tools/export_card_art_prompts.py`
+
+Cada prompt incluye obligatoriamente identidad del personaje y obra, tier visual, fase, variante, encuadre, composición, vestuario, política de contenido, control anatómico y salida JPG 1024×1536.
+
+Para `UR_ALT_HOLO`, el constructor exige explícitamente `adult_eligible=true` y un tier UR. La rareza alta nunca concede elegibilidad adulta automáticamente.
+
+## Auditoría técnica
+
+Ejecutar:
+
+`python tools/validate_card_assets.py`
+
+`python tools/validate_card_qa.py`
+
+Para mover archivos inválidos:
+
+`python tools/validate_card_assets.py --quarantine-invalid`
+
+El validador técnico comprueba extensión JPG/JPEG, lectura real del JPEG, dimensiones exactas, tamaño máximo de 8 MiB y tamaño mínimo de 50 KiB. La revisión anatómica, de perspectiva y de contexto continúa siendo visual/humana.
+
+## Manifestos de arte
+
+- `assets/waifus/art_manifest.json`: catálogo, tier visual, estado y soporte de variantes por carta.
+- `assets/waifus/card_art_prompt_manifest.json`: contrato de prompts, progresión visual y variantes.
+- `assets/waifus/card_art_qa_manifest.json`: checklist individual y QA por variante.
+- `docs/generated/WAIFUMON_CARD_ART_PROMPTS.md`: exportación textual reproducible de los prompts.
+
+## Seguridad de estilo y contenido
+
+- Las referencias de productos existentes se usan como referencias de **alto nivel** de progresión, no para copiar arte, composición exacta o estilo propietario.
+- No se genera desnudez explícita.
+- No se generan genitales expuestos, pezones expuestos ni actividad sexual explícita.
+- No se generan personajes menores de edad en poses sexualizadas.
+- La variante UR ALT Holo/Shiny exige elegibilidad adulta explícita, revisión humana y contenido no explícito.
+- El sistema debe fallar cerrado cuando falte la elegibilidad adulta o cuando una variante se declare fuera del tier UR.
+
+## Estado de producción actual
+
+El sistema conserva el estado de aprobación existente; la introducción de v2 **no aprueba automáticamente ninguna nueva variante**. Los assets UR ALT Holo permanecen no aprobados hasta que exista elegibilidad adulta documentada y la revisión visual independiente correspondiente.
 
 ## Contrato de producción visual
 
