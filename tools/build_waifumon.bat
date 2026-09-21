@@ -18,7 +18,7 @@ if not exist "%JAVA_HOME%\bin\jlink.exe" (
   exit /b 1
 )
 
-set "ENGINE_STAGE=build\waifumon-runtime"
+set "ENGINE_STAGE=.waifumon-runtime"
 
 if exist "%ENGINE_STAGE%" rmdir /s /q "%ENGINE_STAGE%"
 mkdir "%ENGINE_STAGE%"
