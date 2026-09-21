@@ -2,43 +2,58 @@ from __future__ import annotations
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+
 from app.core.config import Settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.database import Database
 from app.db.models import GameEncounter
 from app.ui.game_keyboards import encounter_keyboard
-from app.world.models import WorldEventType
+from app.world.models import WorldEventType, WorldPresenterRef
 from app.world.presenter import WorldPresentationRejected, WorldPresenter
 from app.world.runtime import WorldRuntime
 
 
 class WorldPresentationModule(BotModule):
-    """Bridge one Telegram bot identity to the independent world presenter loop."""
+    """Bridge one Telegram presenter identity to the independent world runtime."""
 
     name = "world-runtime"
 
     def __init__(
         self,
         database: Database,
-        identity: BotIdentity,
+        identity: BotIdentity | None = None,
         settings: Settings | None = None,
+        presenter: WorldPresenterRef | None = None,
     ) -> None:
         super().__init__()
+        if presenter is None:
+            if identity is None:
+                raise ValueError("identity or presenter must be provided")
+            presenter = WorldPresenterRef(identity.value, kind="existing_bot")
         self.database = database
         self.identity = identity
         self.settings = settings
+        self.presenter_ref = presenter
         self.runtime: WorldRuntime | None = None
+
+    @property
+    def presenter_key(self) -> str:
+        return f"{self.presenter_ref.kind.value}:{self.presenter_ref.key}"
 
     def setup(self) -> None:
         return None
 
     async def on_startup(self, bot: Bot) -> None:
         async def send(event) -> int:
-            if event.presenter.key != self.identity.value:
+            if (
+                event.presenter.key != self.presenter_ref.key
+                or event.presenter.kind != self.presenter_ref.kind
+            ):
                 raise WorldPresentationRejected(
-                    f"World event addressed to presenter {event.presenter.key!r}, "
-                    f"but this process owns {self.identity.value!r}"
+                    f"World event addressed to presenter "
+                    f"{event.presenter.kind.value}:{event.presenter.key!s}, "
+                    f"but this process owns {self.presenter_key}"
                 )
 
             reply_markup = None
@@ -78,9 +93,10 @@ class WorldPresentationModule(BotModule):
             self.database,
             presenter,
             settings=self.settings,
-            presenter_key=f"existing_bot:{self.identity.value}",
+            presenter_key=self.presenter_key,
         )
-        self.tasks.start(f"world-runtime-{self.identity.value}", self.runtime.run())
+        task_name = f"world-runtime-{self.presenter_ref.kind.value}-{self.presenter_ref.key}"
+        self.tasks.start(task_name, self.runtime.run())
 
     async def on_shutdown(self) -> None:
         if self.runtime is not None:
