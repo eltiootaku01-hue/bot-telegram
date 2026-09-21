@@ -296,6 +296,27 @@ class WaifuDetectorRound(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+class GameCardCollection(Base):
+    """Collectible card inventory; separate from character progression."""
+    __tablename__ = "game_card_collections"
+    __table_args__ = (
+        UniqueConstraint("profile_id", "card_id", name="uq_game_card_profile_card"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    profile_id: Mapped[int] = mapped_column(ForeignKey("game_profiles.id", ondelete="CASCADE"))
+    card_id: Mapped[str] = mapped_column(String(255))
+    character_id: Mapped[str] = mapped_column(String(100))
+    card_tier: Mapped[str] = mapped_column(String(8))
+    variant: Mapped[str] = mapped_column(String(16))
+    outfit: Mapped[str] = mapped_column(String(64))
+    fusion_of_a: Mapped[str | None] = mapped_column(String(100))
+    fusion_of_b: Mapped[str | None] = mapped_column(String(100))
+    copies: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class GameGachaRoll(Base):
     """Durable ledger for one gacha roll, preventing duplicate rewards."""
 
@@ -313,6 +334,8 @@ class GameGachaRoll(Base):
     approval_id: Mapped[int | None] = mapped_column(ForeignKey("rare_drop_approvals.id", ondelete="SET NULL"))
     granted: Mapped[bool] = mapped_column(default=False)
     pity_triggered: Mapped[bool] = mapped_column(default=False)
+    card_id: Mapped[str | None] = mapped_column(String(255))
+    card_variant: Mapped[str | None] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
