@@ -204,6 +204,17 @@ A private Telegram group or channel can be configured as the media vault/inbox w
 
 Cami also keeps the stable `file_unique_id` when Telegram provides it. Reposting the same stable media identity updates/reuses the local asset instead of silently creating a duplicate. `/cola_media` exposes the pipeline state: inbox, tagging, scheduling, publishing, ambiguous delivery and completed assets.
 
+## Game design safeguards
+
+Sunna's gacha keeps the collection loop deterministic and auditable. Repeated D results are tracked per player/community; after six consecutive D results, the next D is protected into C. For D/C pulls, the catalog selector prefers an unowned character of the highest eligible rarity when one exists, so duplicates continue to be useful for evolution without becoming the default outcome.
+
+Cami's mystery rounds remain daily, local and nonviolent. The answer path is persistent, the winner is claimed atomically, and stale buttons cannot award a second reward.
+
+Cari's trivia, Chie's verification flows and the four background runtimes use the same persistence-first rules: an expired/closed round cannot be answered again, and Telegram flood-control responses are retried only when Telegram explicitly supplies retry_after.
+
+The first runtime story arc is available with /historia inside the configured community. It is intentionally labeled non-canonical and does not award points.
+
+See docs/research/2026-09-21-game-and-telegram-risk-research.md for the public Reddit/GitHub/Telegram research that informed these safeguards, and docs/story/CIUDAD_ANIMALS_ARCO_01.md for the story design.
 ## Wild waifu loop
 
 Public wild encounters are capped at class C. Higher-rarity candidates are routed through the private approval path instead of appearing as normal public encounters.
