@@ -5,6 +5,7 @@ from enum import StrEnum
 
 from app.game.art_directions import direction_for
 from app.game.models import CardTier
+from app.game.waifumon_progression import class_band_for_level, combat_style_for_element
 
 
 class CardArtTier(StrEnum):
@@ -133,6 +134,7 @@ def art_prompt_spec(
         sensuality = "vestuario especial atractivo pero totalmente no explícito y apropiado"
     else:
         sensuality = "vestuario normal completamente vestido, atractivo y aventurero"
+    evolution_band = class_band_for_level(level)
     direction = unique_direction.strip() or "diseño visual propio del personaje"
     direction_key = character_id.strip().casefold() or character_name.casefold().replace(" ", "-")
     visual = direction_for(direction_key)
@@ -140,8 +142,12 @@ def art_prompt_spec(
         f"Character: {character_name}. Source work: {anime}. "
         f"Visual tier: {frame.tier.value}. Visible composition: {frame.visible_percent}. "
         f"Framing: {frame.framing}. Pose: {frame.pose_direction}. "
+        f"WaifuMon evolution class: {evolution_band.waifumon_class.value}. "
+        f"Evolution design language: {evolution_band.design_language}. "
+        f"Evolution framing: {evolution_band.framing}. "
         f"Style: {stage.style}. Costume: {stage.outfit}; {special}. "
         f"Variant: {variant.casefold()}. Visual safety: {sensuality}. "
+        f"Design change requirement: class {evolution_band.waifumon_class.value} must be visually distinct from the previous class through costume, pose, silhouette, accessories and lighting; do not merely crop or recolor the previous art. " 
         f"Unique direction: {direction}. " 
         f"Palette: {visual.palette}; "
         f"Expression: {visual.expression}; "
