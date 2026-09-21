@@ -180,7 +180,7 @@ class GameEncounter(Base):
     __tablename__ = "game_encounters"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('active', 'captured', 'expired', 'cancelled')",
+            "status IN ('active', 'captured', 'closed', 'expired', 'cancelled')",
             name="ck_game_encounter_status",
         ),
     )
