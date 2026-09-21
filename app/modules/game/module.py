@@ -102,6 +102,8 @@ class GameModule(BotModule):
         self.wild.start()
 
     async def on_shutdown(self) -> None:
+        if self.gift_scheduler is not None:
+            await self.gift_scheduler.stop()
         if self.wild is not None:
             await self.wild.stop()
         await super().on_shutdown()
