@@ -67,11 +67,11 @@ class ArtStage:
 
 
 SAFE_ART_STAGES: tuple[ArtStage, ...] = (
-    ArtStage(1, 5, "anime base", "ropa cotidiana del personaje", "según la carta"),
-    ArtStage(6, 10, "anime", "ropa cotidiana reforzada", "según la carta"),
-    ArtStage(11, 15, "anime premium", "vestuario temático de evento", "según la carta"),
-    ArtStage(16, 20, "anime premium", "vestuario especial del personaje", "según la carta"),
-    ArtStage(21, 25, "anime premium", "vestuario de forma avanzada", "según la carta"),
+    ArtStage(1, 5, "chibi", "ropa cotidiana del personaje", "según la carta"),
+    ArtStage(6, 15, "anime", "ropa cotidiana reforzada", "según la carta"),
+    
+    ArtStage(16, 25, "anime premium", "vestuario especial del personaje", "según la carta"),
+    
 )
 
 
