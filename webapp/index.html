@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111318">
+  <meta name="description" content="WaifuMon — interfaz ligera de combate para Telegram Mini Apps">
+  <title>WaifuMon</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <main class="app-shell" aria-label="WaifuMon">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">CIUDAD ANIMALS</p>
+        <h1>WaifuMon</h1>
+      </div>
+      <div class="player-badge" id="player-badge" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="player-name">Jugador</span>
+      </div>
+    </header>
+
+    <section class="hero-card" aria-labelledby="hero-title">
+      <div>
+        <p class="eyebrow">CAFÉ OTAKU · COMBATE</p>
+        <h2 id="hero-title">Elegí tu equipo</h2>
+        <p class="muted">Tres WaifuMons. La autoridad real del combate continúa en el backend.</p>
+      </div>
+      <div class="resource-row" aria-label="Recursos">
+        <span class="resource-pill">⭐ <strong id="stars-balance">—</strong></span>
+        <span class="resource-pill">🎟️ <strong id="premium-tickets">0</strong></span>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="team-title">
+      <div class="section-heading">
+        <h2 id="team-title">Tu equipo</h2>
+        <span class="section-meta" id="team-count">0/3</span>
+      </div>
+      <div class="team-grid" id="team-grid"></div>
+    </section>
+
+    <section class="section" aria-labelledby="combat-title">
+      <div class="section-heading">
+        <h2 id="combat-title">Arena</h2>
+        <span class="section-meta" id="combat-status">Listo</span>
+      </div>
+      <div class="combat-panel">
+        <canvas id="combat-canvas" width="768" height="432" role="img" aria-label="Canvas de combate WaifuMon"></canvas>
+        <div class="combat-actions" id="combat-actions">
+          <button class="action-btn" type="button" data-action="attack">⚔️ Atacar</button>
+          <button class="action-btn" type="button" data-action="special">✨ Especial</button>
+          <button class="action-btn" type="button" data-action="defend">🛡️ Defender</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section compact-section" aria-labelledby="monetization-title">
+      <div class="section-heading">
+        <h2 id="monetization-title">Tienda</h2>
+        <span class="section-meta">Telegram Stars</span>
+      </div>
+      <div class="store-grid">
+        <button class="store-card" type="button" data-purchase="premium_ticket">
+          <span class="store-icon" aria-hidden="true">🎟️</span>
+          <span>
+            <strong>Ticket Premium</strong>
+            <small>Compra digital dentro de Telegram</small>
+          </span>
+        </button>
+        <button class="store-card" type="button" data-purchase="starter_pack">
+          <span class="store-icon" aria-hidden="true">✨</span>
+          <span>
+            <strong>Starter Pack</strong>
+            <small>Pago gestionado por el bot</small>
+          </span>
+        </button>
+      </div>
+      <p class="legal-note">La Mini App no procesa ni valida pagos localmente. El bot crea la factura y valida el pago recibido desde Telegram.</p>
+    </section>
+
+    <section class="section compact-section" aria-labelledby="referral-title">
+      <div class="section-heading">
+        <h2 id="referral-title">Referidos</h2>
+        <span class="section-meta" id="referral-count">0/3</span>
+      </div>
+      <div class="referral-card">
+        <div>
+          <strong>Invitá a 3 usuarios</strong>
+          <p class="muted">Recompensa prevista: 1 Ticket Premium.</p>
+        </div>
+        <button class="secondary-btn" id="share-referral" type="button">Compartir</button>
+      </div>
+      <p class="legal-note">El contador y la recompensa se deben confirmar en servidor; la Mini App solo presenta el estado autorizado.</p>
+    </section>
+
+    <footer class="footer">
+      <span>WaifuMon · frontend estático</span>
+      <span id="telegram-version">Telegram —</span>
+    </footer>
+  </main>
+
+  <div class="cut-in" id="cut-in" aria-hidden="true">
+    <div class="cut-in-backdrop"></div>
+    <div class="cut-in-card">
+      <img id="cut-in-image" alt="" decoding="async">
+      <div class="cut-in-copy">
+        <span class="eyebrow">SPECIAL</span>
+        <strong id="cut-in-name">WaifuMon</strong>
+        <span id="cut-in-subtitle">Entrada especial</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
