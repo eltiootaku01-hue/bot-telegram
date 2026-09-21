@@ -75,11 +75,13 @@ def update_manifests() -> None:
         ],
     })
     a = next(x for x in art["items"] if x["character_id"] == CHARACTER_ID)
-    a["asset_status"] = "production_approved"; a["visual_audit_status"] = "approved"
+    a["asset_status"] = "production_approved"
+    a["visual_audit_status"] = "approved"
     art["completed_items"] = sum(1 for x in art["items"] if x["asset_status"] == "production_approved")
     art["progress_percent"] = round(art["completed_items"] / art["total_items"] * 100, 2)
     p = next(x for x in prompts["items"] if x["character_id"] == CHARACTER_ID)
-    p["asset_status"] = "production_approved"; p["visual_audit_status"] = "approved"
+    p["asset_status"] = "production_approved"
+    p["visual_audit_status"] = "approved"
     for path, data in ((QA,qa),(ART,art),(PROMPTS,prompts)):
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
