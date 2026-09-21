@@ -1,4 +1,4 @@
- :root {
+:root {
   color-scheme: light dark;
   --tg-bg: var(--tg-theme-bg-color, #111318);
   --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #191c24);
