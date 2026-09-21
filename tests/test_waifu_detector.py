@@ -31,7 +31,6 @@ async def database(tmp_path):
                 level=10,
                 experience=0,
                 copies=1,
-                evolution_stage=1,
             )
         )
     yield database
