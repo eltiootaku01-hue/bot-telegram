@@ -10,8 +10,8 @@ from pathlib import Path
 
 from app.core.assets import resolve_asset
 from app.game.art_progression import art_prompt_spec
-from app.game.card_art_assets import CARD_ART_EXTENSION, card_asset_path, validate_card_asset
-from app.game.cards import CardVariant, card_for_character
+from app.game.card_art_assets import card_asset_path, validate_card_asset
+from app.game.cards import CardVariant
 from app.game.catalog import get_character
 
 
@@ -45,7 +45,6 @@ def render_card_asset(
         raise ValueError("max_attempts must be between 1 and 100")
 
     character = get_character(character_id)
-    card = card_for_character(character, seed=seed, variant=variant)
     prompt = art_prompt_spec(
         character_name=character.name,
         anime=character.anime,
