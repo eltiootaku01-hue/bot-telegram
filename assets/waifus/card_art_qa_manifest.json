@@ -51,7 +51,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "akame",
@@ -124,7 +125,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "akane-kurokawa",
@@ -160,7 +162,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "akeno-himejima",
@@ -233,7 +236,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "aki-nijou",
@@ -269,7 +273,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "ako-tamaki",
@@ -305,7 +310,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "albedo",
@@ -378,7 +384,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "alisa-kujo",
@@ -443,7 +450,8 @@
             "adult_gate_consistent": true
           }
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "anya-forger",
@@ -479,7 +487,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "asuna-yuuki",
@@ -552,7 +561,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "banri-shiunji",
@@ -588,7 +598,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "boa-hancock",
@@ -624,7 +635,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "cana-alberona",
@@ -660,7 +672,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "celistia-ralgris",
@@ -696,7 +709,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "cha-hae-in",
@@ -732,7 +746,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "chelsea",
@@ -768,7 +783,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "chinatsu-kano",
@@ -804,7 +820,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "chisato-hasegawa",
@@ -840,7 +857,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "chizuru-mizuhara",
@@ -876,7 +894,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "darkness",
@@ -912,7 +931,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "elizabeth-liones",
@@ -948,7 +968,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "emilia",
@@ -984,7 +1005,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "erina-nakiri",
@@ -1020,7 +1042,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "erza-scarlet",
@@ -1095,7 +1118,8 @@
           "adult_eligibility_basis": "canon_age: 19 (X784); adult"
         }
       ],
-      "adult_eligibility_basis": "canon_age: 19 (X784); adult"
+      "adult_eligibility_basis": "canon_age: 19 (X784); adult",
+      "adult_eligible": true
     },
     {
       "character_id": "esdeath",
@@ -1170,7 +1194,8 @@
           "adult_eligibility_basis": "canon_age: 20; adult"
         }
       ],
-      "adult_eligibility_basis": "canon_age: 20; adult"
+      "adult_eligibility_basis": "canon_age: 20; adult",
+      "adult_eligible": true
     },
     {
       "character_id": "hina-chono",
@@ -1206,7 +1231,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "hinako-yaotose",
@@ -1242,7 +1268,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "hinata-hyuga",
@@ -1278,7 +1305,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "ino-yamanaka",
@@ -1314,7 +1342,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "irina-shidou",
@@ -1350,7 +1379,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "jibril",
@@ -1386,7 +1416,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "kaoruko-waguri",
@@ -1422,7 +1453,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "kuroka",
@@ -1495,7 +1527,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "kurumi-tokisaki",
@@ -1531,7 +1564,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "leone",
@@ -1567,7 +1601,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "lilith-asami",
@@ -1603,7 +1638,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "lucy-heartfilia",
@@ -1639,7 +1675,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "makima",
@@ -1712,7 +1749,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "maomao",
@@ -1748,7 +1786,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "marin-kitagawa",
@@ -1784,7 +1823,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "mary-kikakujou",
@@ -1820,7 +1860,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "midnight",
@@ -1856,7 +1897,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "mikasa-ackerman",
@@ -1892,7 +1934,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "mirajane-strauss",
@@ -1928,7 +1971,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "momo-ayase",
@@ -2001,7 +2045,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "momo-yaoyorozu",
@@ -2037,7 +2082,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "mutsumi-wakaba",
@@ -2073,7 +2119,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "nami",
@@ -2148,7 +2195,8 @@
           "adult_eligibility_basis": "post_timeskip_age: 20; adult"
         }
       ],
-      "adult_eligibility_basis": "post_timeskip_age: 20; adult"
+      "adult_eligibility_basis": "post_timeskip_age: 20; adult",
+      "adult_eligible": true
     },
     {
       "character_id": "nejire-hadou",
@@ -2184,7 +2232,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "nene-yashiro",
@@ -2220,7 +2269,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "nezuko-kamado",
@@ -2256,7 +2306,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "nico-robin",
@@ -2331,7 +2382,8 @@
           "adult_eligibility_basis": "post_timeskip_age: 30; adult"
         }
       ],
-      "adult_eligibility_basis": "post_timeskip_age: 30; adult"
+      "adult_eligibility_basis": "post_timeskip_age: 30; adult",
+      "adult_eligible": true
     },
     {
       "character_id": "nico-wakatsuki",
@@ -2367,7 +2419,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "ochako-uraraka",
@@ -2440,7 +2493,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "oguri-cap",
@@ -2513,7 +2567,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "orihime-inoue",
@@ -2549,7 +2604,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "ouka-shiunji",
@@ -2585,7 +2641,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "power",
@@ -2658,7 +2715,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "rangiku-matsumoto",
@@ -2694,7 +2752,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "raphtalia",
@@ -2730,7 +2789,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "reiko-kujirai",
@@ -2766,7 +2826,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "reze",
@@ -2802,7 +2863,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "rias-gremory",
@@ -2875,7 +2937,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "rin-tohsaka",
@@ -2911,7 +2974,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "saeko-busujima",
@@ -2947,7 +3011,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "sakiko-togawa",
@@ -3020,7 +3085,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "sayaka-kirasaka",
@@ -3056,7 +3122,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "sinon",
@@ -3092,7 +3159,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "taiga",
@@ -3128,7 +3196,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "takane-takamine",
@@ -3164,7 +3233,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "tohka-yatogami",
@@ -3200,7 +3270,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "tsunade",
@@ -3275,7 +3346,8 @@
           "adult_eligibility_basis": "canon_age: 50-51 in Part I; adult"
         }
       ],
-      "adult_eligibility_basis": "canon_age: 50-51 in Part I; adult"
+      "adult_eligibility_basis": "canon_age: 50-51 in Part I; adult",
+      "adult_eligible": true
     },
     {
       "character_id": "venelana-gremory",
@@ -3311,7 +3383,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "violet-evergarden",
@@ -3347,7 +3420,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "xenovia",
@@ -3383,7 +3457,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "yor-forger",
@@ -3458,7 +3533,8 @@
           "adult_eligibility_basis": "canon_age: 27; adult"
         }
       ],
-      "adult_eligibility_basis": "canon_age: 27; adult"
+      "adult_eligibility_basis": "canon_age: 27; adult",
+      "adult_eligible": true
     },
     {
       "character_id": "yoruichi-shihoin",
@@ -3531,7 +3607,8 @@
             "battle_worn_clothing"
           ]
         }
-      ]
+      ],
+      "adult_eligible": false
     },
     {
       "character_id": "yumeko-jabami",
@@ -3567,7 +3644,8 @@
           "adult_gate_required": false,
           "variant_policy": "canonical non-explicit"
         }
-      ]
+      ],
+      "adult_eligible": false
     }
   ],
   "ur_variants": {
