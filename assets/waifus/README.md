@@ -1,5 +1,13 @@
 # Visual assets — WaifuMon
 
-Character-specific artwork is stored under `assets/waifus/<character_id>.png` only when the exact character image has been approved and versioned.
+Artwork is kept separate from gameplay metadata. A character-specific image is linked only when the exact image is versioned under `assets/waifus/<character_id>.*`.
 
-The runtime never guesses which image belongs to which character.
+## Current generated visual reference
+
+![WaifuMon card concept](generated/waifu-card-concept.jpg)
+
+This generated board is a **visual style reference** for the card system. It is not used as canonical artwork for a named catalog character.
+
+## Card rule
+
+The runtime never guesses an image-to-character association. Missing character art remains an explicit missing asset instead of showing the wrong waifu.
