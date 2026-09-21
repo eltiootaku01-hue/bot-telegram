@@ -50,8 +50,8 @@ async def run() -> None:
     configure_logging(settings.log_level)
     bot, database, catalog, presenter = build_world_bot(settings)
 
-    await database.create_schema()
     try:
+        await database.create_schema()
         bot_info = await bot.get_me()
         logger.info(
             "WorldBot authenticated: id=%s username=@%s",
