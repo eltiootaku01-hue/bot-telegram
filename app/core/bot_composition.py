@@ -22,6 +22,7 @@ from app.modules.story.module import StoryModule
 from app.modules.system.module import SystemModule
 from app.modules.trivia.module import TriviaModule
 from app.modules.world.module import WorldCatalogModule
+from app.modules.world.presenter import WorldPresentationModule
 from app.modules.tio_operator.module import TioOperatorModule
 
 
@@ -39,6 +40,11 @@ def build_bot_modules(
     shared = (
         _spec("system", lambda: SystemModule(identity, database, settings=settings)),
         _spec("world-catalog", lambda: WorldCatalogModule(database), *BotIdentity),
+        _spec(
+            "world-runtime",
+            lambda: WorldPresentationModule(database, identity, settings=settings),
+            *BotIdentity,
+        ),
         _spec("social-runtime", lambda: SocialRuntimeModule(database, identity, settings=settings)),
     )
     identity_specific = (
