@@ -396,13 +396,14 @@
       "art_tier": "UR",
       "asset_status": "quarantined_noncompliant",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "visual_audit_status": "failed",
       "anime": "Fairy Tail",
       "variant_support": [
         "normal",
         "ur-alt-holo"
-      ]
+      ],
+      "adult_eligibility_basis": "canon_age: 19 (X784); adult"
     },
     {
       "character_id": "esdeath",
@@ -412,13 +413,14 @@
       "art_tier": "UR",
       "asset_status": "pending",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "visual_audit_status": "not_inspected",
       "anime": "Akame ga Kill!",
       "variant_support": [
         "normal",
         "ur-alt-holo"
-      ]
+      ],
+      "adult_eligibility_basis": "canon_age: 20; adult"
     },
     {
       "character_id": "hina-chono",
@@ -761,13 +763,14 @@
       "art_tier": "UR",
       "asset_status": "pending",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "visual_audit_status": "not_inspected",
       "anime": "One Piece",
       "variant_support": [
         "normal",
         "ur-alt-holo"
-      ]
+      ],
+      "adult_eligibility_basis": "post_timeskip_age: 20; adult"
     },
     {
       "character_id": "nejire-hadou",
@@ -822,13 +825,14 @@
       "art_tier": "UR",
       "asset_status": "pending",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "visual_audit_status": "not_inspected",
       "anime": "One Piece",
       "variant_support": [
         "normal",
         "ur-alt-holo"
-      ]
+      ],
+      "adult_eligibility_basis": "post_timeskip_age: 30; adult"
     },
     {
       "character_id": "nico-wakatsuki",
@@ -1128,13 +1132,14 @@
       "art_tier": "UR",
       "asset_status": "pending",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "visual_audit_status": "not_inspected",
       "anime": "Naruto",
       "variant_support": [
         "normal",
         "ur-alt-holo"
-      ]
+      ],
+      "adult_eligibility_basis": "canon_age: 50-51 in Part I; adult"
     },
     {
       "character_id": "venelana-gremory",
@@ -1189,13 +1194,14 @@
       "art_tier": "UR",
       "asset_status": "quarantined_noncompliant",
       "framing_profile": "UR",
-      "adult_eligible": false,
+      "adult_eligible": true,
       "visual_audit_status": "failed",
       "anime": "SPY x FAMILY",
       "variant_support": [
         "normal",
         "ur-alt-holo"
-      ]
+      ],
+      "adult_eligibility_basis": "canon_age: 27; adult"
     },
     {
       "character_id": "yoruichi-shihoin",
