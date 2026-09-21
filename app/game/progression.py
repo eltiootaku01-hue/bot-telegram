@@ -14,7 +14,7 @@ from app.core.time import utc_now
 from app.db.models import GameCollection, GameProfile
 from app.game.evolution import next_fusion
 from app.game.java_engine import WaifuMonJavaEngine, default_java_engine
-from app.game.models import Character, Element, Rarity
+from app.game.models import Character, Rarity
 
 
 CAPTURE_POINTS_FIRST = 10
