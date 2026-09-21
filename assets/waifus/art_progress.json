@@ -1,7 +1,7 @@
 {
   "total_cards": 78,
-  "completed_cards": 14,
-  "progress_percent": 17.95,
+  "completed_cards": 17,
+  "progress_percent": 21.79,
   "completed_character_ids": [
     "yor-forger",
     "ako-tamaki",
@@ -16,12 +16,15 @@
     "nene-yashiro",
     "hinata-hyuga",
     "ino-yamanaka",
-    "akame"
+    "akame",
+    "erina-nakiri",
+    "chelsea",
+    "oguri-cap"
   ],
   "visual_tiers_completed": {
     "R": 1,
-    "S": 2,
-    "SR": 7,
+    "S": 4,
+    "SR": 8,
     "UR": 4
   },
   "next_rule": "Continue one avatar at a time. Never reuse a generic image as final card art."
