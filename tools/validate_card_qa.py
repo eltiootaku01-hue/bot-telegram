@@ -31,8 +31,13 @@ def main() -> int:
                 failures.append(f"{character_id}: approved without all required checks")
             if not item.get("reviewer"):
                 failures.append(f"{character_id}: approved without primary reviewer")
-            if item["art_tier"] == "UR" and checks.get("second_review") is not True:
-                failures.append(f"{character_id}: UR approved without second_review")
+            if not item.get("reviewed_at"):
+                failures.append(f"{character_id}: approved without reviewed_at")
+            if item["art_tier"] == "UR":
+                if checks.get("second_review") is not True:
+                    failures.append(f"{character_id}: UR approved without second_review")
+                if not item.get("second_reviewer"):
+                    failures.append(f"{character_id}: UR approved without second_reviewer")
             production_file = Path(item["production_file"])
             if not production_file.is_file():
                 failures.append(f"{character_id}: approved asset does not exist: {production_file}")
