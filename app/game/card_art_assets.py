@@ -10,6 +10,7 @@ CARD_ART_MAX_BYTES = 8 * 1024 * 1024
 CARD_ART_EXTENSION = ".jpg"
 CARD_ART_EXTENSIONS = frozenset({".jpg", ".jpeg"})
 CARD_ART_MIN_BYTES = 50 * 1024
+CARD_ART_VARIANTS = frozenset({"normal", "shiny", "ur-alt-holo"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,8 +27,8 @@ def card_asset_path(character_id: str, variant: str = "normal") -> str:
     safe_variant = variant.strip().casefold()
     if not safe_id or "/" in safe_id or "\\" in safe_id:
         raise ValueError("character_id must be a safe asset identifier")
-    if safe_variant not in {"normal", "shiny"}:
-        raise ValueError("variant must be normal or shiny")
+    if safe_variant not in CARD_ART_VARIANTS:
+        raise ValueError("variant must be normal, shiny, or ur-alt-holo")
     return f"assets/production/cards/{safe_id}--{safe_variant}{CARD_ART_EXTENSION}"
 
 
