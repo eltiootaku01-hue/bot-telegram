@@ -1,7 +1,7 @@
 {
   "total_cards": 78,
-  "completed_cards": 10,
-  "progress_percent": 12.82,
+  "completed_cards": 11,
+  "progress_percent": 14.1,
   "completed_character_ids": [
     "yor-forger",
     "ako-tamaki",
@@ -12,12 +12,13 @@
     "ai-hoshino",
     "reiko-kujirai",
     "akane-kurokawa",
-    "rin-tohsaka"
+    "rin-tohsaka",
+    "nene-yashiro"
   ],
   "visual_tiers_completed": {
     "R": 1,
     "S": 1,
-    "SR": 5,
+    "SR": 6,
     "UR": 3
   },
   "next_rule": "Continue one avatar at a time. Never reuse a generic image as final card art."
