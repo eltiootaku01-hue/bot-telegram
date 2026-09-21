@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
 
 from app.core.access import is_authorized_community
+from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.database import Database
@@ -21,9 +22,10 @@ class StoryModule(BotModule):
 
     name = "story"
 
-    def __init__(self, database: Database) -> None:
+    def __init__(self, database: Database, settings: Settings | None = None) -> None:
         super().__init__()
         self.database = database
+        self.settings = settings or get_settings()
         self.story = StoryService()
         self.world = WorldService()
 
@@ -60,7 +62,7 @@ class StoryModule(BotModule):
         if message.chat.type not in {"group", "supergroup"}:
             await message.answer("📖 La historia del Café se recorre dentro de la comunidad.")
             return
-        if not is_authorized_community(self._settings(), message.chat.id):
+        if not is_authorized_community(self.settings, message.chat.id):
             return
         view = await self._view(message.chat.id)
         await message.answer(
@@ -78,7 +80,7 @@ class StoryModule(BotModule):
         if callback.message.chat.type not in {"group", "supergroup"}:
             await callback.answer("La historia se recorre en la comunidad.", show_alert=True)
             return
-        if not is_authorized_community(self._settings(), chat_id):
+        if not is_authorized_community(self.settings, chat_id):
             await callback.answer("Esta comunidad no está autorizada.", show_alert=True)
             return
 
@@ -110,11 +112,6 @@ class StoryModule(BotModule):
             callback.from_user.id,
             "story_advance" if advanced else "story_stale_button",
         )
-
-    def _settings(self):
-        from app.core.config import get_settings
-
-        return get_settings()
 
     async def _observe(self, chat_id: int, user_id: int, action_key: str) -> None:
         try:
