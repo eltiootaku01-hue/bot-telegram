@@ -114,6 +114,7 @@ def art_prompt_spec(
     *,
     character_name: str,
     anime: str,
+    character_id: str = "",
     level: int,
     card_tier: CardTier,
     popularity_score: int = 50,
@@ -128,17 +129,19 @@ def art_prompt_spec(
     )
     special = CARD_OUTFITS[card_tier]
     direction = unique_direction.strip() or "diseño visual propio del personaje"
+    direction_key = character_id.strip().casefold() or character_name.casefold().replace(" ", "-")
+    visual = direction_for(direction_key)
     return (
         f"Character: {character_name}. Source work: {anime}. "
         f"Visual tier: {frame.tier.value}. Visible composition: {frame.visible_percent}. "
         f"Framing: {frame.framing}. Pose: {frame.pose_direction}. "
         f"Style: {stage.style}. Costume: {stage.outfit}; {special}. "
         f"Unique direction: {direction}. " 
-        f"Palette: {direction_for(character_name.casefold().replace(" ", "-")).palette}; "
-        f"Expression: {direction_for(character_name.casefold().replace(" ", "-")).expression}; "
-        f"Pose: {direction_for(character_name.casefold().replace(" ", "-")).pose}; "
-        f"Environment: {direction_for(character_name.casefold().replace(" ", "-")).environment}; "
-        f"Motif: {direction_for(character_name.casefold().replace(" ", "-")).motif}. "
+        f"Palette: {visual.palette}; "
+        f"Expression: {visual.expression}; "
+        f"Pose: {visual.pose}; "
+        f"Environment: {visual.environment}; "
+        f"Motif: {visual.motif}. "
         "Original polished anime fantasy illustration, expressive hand-drawn linework, "
         "controlled cel shading, rich but coherent lighting, distinct silhouette, "
         "detailed eyes/hair/clothing, non-photorealistic, safe-for-work, "
