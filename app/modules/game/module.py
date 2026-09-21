@@ -34,6 +34,7 @@ from app.game.waifu_browser import (
 )
 from app.game.wild_scheduler import WildWaifuScheduler
 from app.game.waifu_detector import WaifuDetectorService
+from app.game.waifumon_progression import stats_for_character
 from app.game.waifu_gift_scheduler import WaifuGiftScheduler
 from app.game.waifu_gifts import WaifuGiftService
 from app.services.community import CommunityResolver
@@ -515,7 +516,7 @@ class GameModule(BotModule):
         character = get_character(character_id)
         await callback.message.edit_text(
             f'✨ <b>{character.name}</b> absorbió el objeto.\n'
-            f'📈 Nivel actual: <b>{new_level}/25</b>.',
+            f'📈 Nivel actual: <b>{new_level}/30</b>.',
         )
         await self._observe_action('item_absorb', callback.from_user.id, chat_id)
         await callback.answer('EXP aplicada. ✨', show_alert=True)
@@ -992,10 +993,19 @@ class GameModule(BotModule):
             for item in rows:
                 character = get_character(item.character_id)
                 progress = collection_status(item)
+                stats = stats_for_character(character, item.level)
+                next_level = item.level + 1 if item.level < 30 else None
+                promotion = ""
+                if next_level is not None and item.level in {10, 20}:
+                    promotion = f" · próxima evolución en Nv.{next_level}"
                 lines.append(
-                    f"• {character.name} · {character.card_tier.value} · {character.element.value} · "
-                    f"clase {item.rarity} · Nv.{item.level} · EXP {item.experience} · "
-                    f"×{item.copies} · Evo.{item.evolution_stage}"
+                    f"• {character.name} · {stats.waifumon_class.value} · {character.element.value} · "
+                    f"rareza {item.rarity} · Nv.{item.level}/30 · EXP {item.experience} · "
+                    f"×{item.copies} · estilo {stats.style.value}{promotion}"
+                )
+                lines.append(
+                    f"  ❤️ {stats.max_hp} · 💪 {stats.strength} · 🛡️ {stats.defense} · "
+                    f"💨 {stats.speed} · 💚 {stats.healing} · ✨ {stats.special_power}"
                 )
                 if progress.can_evolve:
                     evolvable.append(item.character_id)
