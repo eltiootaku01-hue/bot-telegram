@@ -46,7 +46,7 @@ def test_variant_art_registry_rejects_unknown_variant() -> None:
         raise AssertionError("expected ValueError")
 
 
-def test_evolution_art_registry_uses_four_level_stages() -> None:
+def test_evolution_art_registry_uses_three_level_stages() -> None:
     from app.game.waifu_art import evolution_art_candidates_for
 
     base = evolution_art_candidates_for("yor-forger", 1)
@@ -55,6 +55,6 @@ def test_evolution_art_registry_uses_four_level_stages() -> None:
     third = evolution_art_candidates_for("yor-forger", 21)
 
     assert base[0] == "assets/production/cards/yor-forger--stage1.jpg"
-    assert first[0] == "assets/production/cards/yor-forger--stage2.jpg"
-    assert second[0] == "assets/production/cards/yor-forger--stage3.jpg"
+    assert first[0] == "assets/production/cards/yor-forger--stage1.jpg"
+    assert second[0] == "assets/production/cards/yor-forger--stage2.jpg"
     assert third[0] == "assets/production/cards/yor-forger--stage3.jpg"
