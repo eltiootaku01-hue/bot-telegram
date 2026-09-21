@@ -15,6 +15,7 @@ from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
+from app.core.processing_feedback import ProcessingFeedback, ProcessingResultDTO
 from app.core.time import utc_now, world_now
 from app.db.database import Database
 from app.db.models import MysteryRound
@@ -51,10 +52,21 @@ class MysteryModule(BotModule):
         self.tasks.start("mystery-daily", self._daily_loop())
 
     async def start_command(self, message: Message) -> None:
-        if message.chat.type not in {"group", "supergroup"}:
-            await message.answer("🕵️ El misterio de Cami se juega en la comunidad.")
-            return
-        await self.publish(message.chat.id, source=message)
+        async with ProcessingFeedback(message) as feedback:
+            if message.chat.type not in {"group", "supergroup"}:
+                await feedback.finish(
+                    ProcessingResultDTO("🕵️ El misterio de Cami se juega en la comunidad.")
+                )
+                return
+            published = await self.publish(
+                message.chat.id,
+                source=message,
+                feedback=feedback,
+            )
+            if not published:
+                await feedback.finish(
+                    ProcessingResultDTO("🕵️ Ya hay un misterio activo en esta comunidad.")
+                )
 
     async def open_callback(self, callback: CallbackQuery) -> None:
         if callback.message is None:
@@ -66,7 +78,12 @@ class MysteryModule(BotModule):
         await self.publish(callback.message.chat.id, source=callback.message)
         await callback.answer()
 
-    async def publish(self, chat_id: int, source: Message | None = None) -> bool:
+    async def publish(
+        self,
+        chat_id: int,
+        source: Message | None = None,
+        feedback: ProcessingFeedback | None = None,
+    ) -> bool:
         if not is_authorized_community(self.settings, chat_id):
             return False
 
@@ -111,7 +128,17 @@ class MysteryModule(BotModule):
 
         try:
             thread_id = await self.topics.get_thread_id(chat_id, "misterios")
-            if source is not None and source.chat.id == chat_id:
+            if feedback is not None:
+                await feedback.finish(
+                    ProcessingResultDTO(
+                        text,
+                        reply_markup=mystery_keyboard(row.id, started.case.options),
+                    )
+                )
+                sent = feedback._transient
+                if sent is None:
+                    sent = source
+            elif source is not None and source.chat.id == chat_id:
                 sent = await source.answer(
                     text,
                     reply_markup=mystery_keyboard(row.id, started.case.options),
