@@ -67,6 +67,71 @@ El tier de carta R/S/SR/UR continúa siendo independiente.
 
 No se implementan desnudos, desnudez parcial ni sexualización explícita.
 
+## 4A. Arquitectura visual dual de combate
+
+El sistema de presentación de WaifuMon separa deliberadamente el arte HD de colección y los sprites ligeros de batalla.
+
+### Asset HD — Perfil / Colección
+
+Ruta canónica:
+
+`assets/production/cards/<id>--normal.jpg`
+
+Contrato: JPEG/JPG vertical de **1024 × 1536**.
+
+Se utiliza para:
+
+- visor de colección;
+- perfil de WaifuMon;
+- gacha;
+- inspección;
+- selección de equipo.
+
+El arte HD adicional continúa sujeto a la matriz visual y a sus compuertas de elegibilidad/QA.
+
+### Asset de combate — Pixel Art / Chibi
+
+Ruta canónica:
+
+`assets/production/sprites/`
+
+Cada personaje de combate puede aportar:
+
+- `<id>_idle.png` — pose estática;
+- `<id>_attack.png` — frame/pose de ataque;
+- `<id>_hit.png` — reacción de daño.
+
+Contrato técnico: PNG transparente de **128 × 128 px**.
+
+Los sprites son exclusivamente presentación. No contienen estadísticas ni reglas y no sustituyen a las cartas HD.
+
+### Mini App
+
+La pantalla de selección utiliza cartas HD para formar un equipo de **3 WaifuMons**.
+
+La pantalla de batalla utiliza exclusivamente los sprites Pixel Art/Chibi sobre un canvas HTML5 2D.
+
+Una habilidad especial (`special`) activa un *cut-in* de **1.5 segundos** con la carta HD del personaje y, al terminar, devuelve la interfaz al canvas de sprites.
+
+El *cut-in* es temporal y visual: nunca calcula, modifica ni sustituye el resultado del combate.
+
+### Autoridad del engine
+
+`WaifuMonRuleEngine.java` continúa siendo la única autoridad de cálculo para combate.
+
+El DTO de `combat.resolve` entrega los resultados al frontend, incluyendo:
+
+- acción;
+- daño;
+- crítico;
+- vida restante del defensor.
+
+El frontend solo traduce esos resultados a animaciones y estados visuales. No puede recalcular ni aceptar como autoridad local daño, multiplicadores, precisión o vida restante.
+
+La especificación detallada se conserva en:
+
+`docs/game-design/WAIFUMON_COMBAT_VISUAL_PIPELINE.md`
+
 ## 5. Waifu Detector
 
 Cada jugador tiene tres usos diarios por comunidad.
