@@ -1,4 +1,795 @@
 {
-  "policy": "A card points to character-specific art only after the exact image is versioned in the repository.",
-  "reference_asset": "assets/waifus/generated/waifu-card-concept.jpg"
+  "version": 2,
+  "policy": "Character-specific art is versioned one avatar at a time. Legacy generic SVGs are not approved as final art.",
+  "visual_rules": {
+    "R": "20% rostro+hombros",
+    "S": "40% hasta pecho",
+    "SR": "60-80% medio cuerpo amplio",
+    "UR": "100%+ cuerpo completo y composición abierta"
+  },
+  "style_policy": "Original polished anime-fantasy illustration; references are mood-level only, not direct style copying.",
+  "total_items": 78,
+  "completed_items": 0,
+  "items": [
+    {
+      "character_id": "ai-hoshino",
+      "name": "Ai Hoshino",
+      "popularity_rank": 25,
+      "power_score": 45,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "akame",
+      "name": "Akame",
+      "popularity_rank": 24,
+      "power_score": 91,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "akane-kurokawa",
+      "name": "Akane Kurokawa",
+      "popularity_rank": 27,
+      "power_score": 48,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "akeno-himejima",
+      "name": "Akeno Himejima",
+      "popularity_rank": 5,
+      "power_score": 91,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "aki-nijou",
+      "name": "Aki Nijou",
+      "popularity_rank": 8,
+      "power_score": 58,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "ako-tamaki",
+      "name": "Ako Tamaki",
+      "popularity_rank": 59,
+      "power_score": 40,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "albedo",
+      "name": "Albedo",
+      "popularity_rank": 9,
+      "power_score": 93,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "alisa-kujo",
+      "name": "Alisa Mikhailovna Kujo",
+      "popularity_rank": 1,
+      "power_score": 42,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "anya-forger",
+      "name": "Anya Forger",
+      "popularity_rank": 7,
+      "power_score": 28,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "asuna-yuuki",
+      "name": "Asuna",
+      "popularity_rank": 10,
+      "power_score": 86,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "banri-shiunji",
+      "name": "Banri Shiunji",
+      "popularity_rank": 19,
+      "power_score": 42,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "boa-hancock",
+      "name": "Boa Hancock",
+      "popularity_rank": 35,
+      "power_score": 86,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "cana-alberona",
+      "name": "Cana Alberona",
+      "popularity_rank": 53,
+      "power_score": 67,
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "celistia-ralgris",
+      "name": "Celistia Ralgris",
+      "popularity_rank": 23,
+      "power_score": 67,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "cha-hae-in",
+      "name": "Cha Hae-In",
+      "popularity_rank": 38,
+      "power_score": 91,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "chelsea",
+      "name": "Chelsea",
+      "popularity_rank": 42,
+      "power_score": 65,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "chinatsu-kano",
+      "name": "Chinatsu Kano",
+      "popularity_rank": 15,
+      "power_score": 48,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "chisato-hasegawa",
+      "name": "Chisato Hasegawa",
+      "popularity_rank": 41,
+      "power_score": 70,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "chizuru-mizuhara",
+      "name": "Chizuru Mizuhara",
+      "popularity_rank": 11,
+      "power_score": 40,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "darkness",
+      "name": "Darkness",
+      "popularity_rank": 29,
+      "power_score": 79,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "elizabeth-liones",
+      "name": "Elizabeth Liones",
+      "popularity_rank": 17,
+      "power_score": 78,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "emilia",
+      "name": "Emilia",
+      "popularity_rank": 26,
+      "power_score": 86,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "erina-nakiri",
+      "name": "Erina Nakiri",
+      "popularity_rank": 40,
+      "power_score": 43,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "erza-scarlet",
+      "name": "Erza Scarlet",
+      "popularity_rank": 16,
+      "power_score": 89,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "esdeath",
+      "name": "Esdeath",
+      "popularity_rank": 4,
+      "power_score": 98,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "hina-chono",
+      "name": "Hina Chono",
+      "popularity_rank": 14,
+      "power_score": 43,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "hinako-yaotose",
+      "name": "Hinako Yaotose",
+      "popularity_rank": 13,
+      "power_score": 39,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "hinata-hyuga",
+      "name": "Hinata Hyuga",
+      "popularity_rank": 19,
+      "power_score": 76,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "ino-yamanaka",
+      "name": "Ino Yamanaka",
+      "popularity_rank": 46,
+      "power_score": 60,
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "irina-shidou",
+      "name": "Irina Shidou",
+      "popularity_rank": 51,
+      "power_score": 72,
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "jibril",
+      "name": "Jibril",
+      "popularity_rank": 44,
+      "power_score": 97,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "kaoruko-waguri",
+      "name": "Kaoruko Waguri",
+      "popularity_rank": 2,
+      "power_score": 38,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "kuroka",
+      "name": "Kuroka",
+      "popularity_rank": 7,
+      "power_score": 90,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "kurumi-tokisaki",
+      "name": "Kurumi Tokisaki",
+      "popularity_rank": 49,
+      "power_score": 97,
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "leone",
+      "name": "Leone",
+      "popularity_rank": 47,
+      "power_score": 83,
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "lilith-asami",
+      "name": "Lilith Asami",
+      "popularity_rank": 39,
+      "power_score": 72,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "lucy-heartfilia",
+      "name": "Lucy Heartfilia",
+      "popularity_rank": 33,
+      "power_score": 84,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "makima",
+      "name": "Makima",
+      "popularity_rank": 12,
+      "power_score": 96,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "maomao",
+      "name": "Maomao",
+      "popularity_rank": 1,
+      "power_score": 45,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "marin-kitagawa",
+      "name": "Marin Kitagawa",
+      "popularity_rank": 5,
+      "power_score": 37,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "mary-kikakujou",
+      "name": "Mary Kikakujou",
+      "popularity_rank": 30,
+      "power_score": 52,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "midnight",
+      "name": "Midnight",
+      "popularity_rank": 34,
+      "power_score": 68,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "mikasa-ackerman",
+      "name": "Mikasa Ackerman",
+      "popularity_rank": 36,
+      "power_score": 84,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "mirajane-strauss",
+      "name": "Mirajane Strauss",
+      "popularity_rank": 32,
+      "power_score": 92,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "momo-ayase",
+      "name": "Momo Ayase",
+      "popularity_rank": 4,
+      "power_score": 80,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "momo-yaoyorozu",
+      "name": "Momo Yaoyorozu",
+      "popularity_rank": 28,
+      "power_score": 70,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "mutsumi-wakaba",
+      "name": "Mutsumi “Mortis” Wakaba",
+      "popularity_rank": 12,
+      "power_score": 69,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "nami",
+      "name": "Nami",
+      "popularity_rank": 6,
+      "power_score": 76,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "nejire-hadou",
+      "name": "Nejire Hado",
+      "popularity_rank": 31,
+      "power_score": 74,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "nene-yashiro",
+      "name": "Nene Yashiro",
+      "popularity_rank": 16,
+      "power_score": 61,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "nezuko-kamado",
+      "name": "Nezuko Kamado",
+      "popularity_rank": 48,
+      "power_score": 86,
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "nico-robin",
+      "name": "Nico Robin",
+      "popularity_rank": 13,
+      "power_score": 79,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "nico-wakatsuki",
+      "name": "Nico Wakatsuki",
+      "popularity_rank": 17,
+      "power_score": 66,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "ochako-uraraka",
+      "name": "Ochako Uraraka",
+      "popularity_rank": 6,
+      "power_score": 72,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "oguri-cap",
+      "name": "Oguri Cap",
+      "popularity_rank": 9,
+      "power_score": 76,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "orihime-inoue",
+      "name": "Orihime Inoue",
+      "popularity_rank": 58,
+      "power_score": 79,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "ouka-shiunji",
+      "name": "Ouka Shiunji",
+      "popularity_rank": 20,
+      "power_score": 43,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "power",
+      "name": "Power",
+      "popularity_rank": 22,
+      "power_score": 88,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "rangiku-matsumoto",
+      "name": "Rangiku Matsumoto",
+      "popularity_rank": 43,
+      "power_score": 78,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "raphtalia",
+      "name": "Raphtalia",
+      "popularity_rank": 20,
+      "power_score": 73,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "reiko-kujirai",
+      "name": "Reiko Kujirai",
+      "popularity_rank": 18,
+      "power_score": 47,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "reze",
+      "name": "Reze",
+      "popularity_rank": 57,
+      "power_score": 89,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "rias-gremory",
+      "name": "Rias Gremory",
+      "popularity_rank": 3,
+      "power_score": 92,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "rin-tohsaka",
+      "name": "Rin Tohsaka",
+      "popularity_rank": 37,
+      "power_score": 77,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "saeko-busujima",
+      "name": "Saeko Busujima",
+      "popularity_rank": 50,
+      "power_score": 84,
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "sakiko-togawa",
+      "name": "Sakiko “Oblivionis” Togawa",
+      "popularity_rank": 10,
+      "power_score": 71,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "sayaka-kirasaka",
+      "name": "Sayaka Kirasaka",
+      "popularity_rank": 56,
+      "power_score": 68,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "sinon",
+      "name": "Sinon",
+      "popularity_rank": 52,
+      "power_score": 81,
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "taiga",
+      "name": "Taiga Aisaka",
+      "popularity_rank": null,
+      "power_score": 50,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "takane-takamine",
+      "name": "Takane Takamine",
+      "popularity_rank": 55,
+      "power_score": 40,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "tohka-yatogami",
+      "name": "Tohka Yatogami",
+      "popularity_rank": 60,
+      "power_score": 90,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "tsunade",
+      "name": "Tsunade",
+      "popularity_rank": 21,
+      "power_score": 93,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "venelana-gremory",
+      "name": "Venelana Gremory",
+      "popularity_rank": 45,
+      "power_score": 84,
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "violet-evergarden",
+      "name": "Violet Evergarden",
+      "popularity_rank": 15,
+      "power_score": 48,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "xenovia",
+      "name": "Xenovia",
+      "popularity_rank": 54,
+      "power_score": 80,
+      "art_tier": "R",
+      "visible": "20%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "yor-forger",
+      "name": "Yor Forger",
+      "popularity_rank": 2,
+      "power_score": 86,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "custom",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "yoruichi-shihoin",
+      "name": "Yoruichi Shihoin",
+      "popularity_rank": 14,
+      "power_score": 91,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    },
+    {
+      "character_id": "yumeko-jabami",
+      "name": "Yumeko Jabami",
+      "popularity_rank": 18,
+      "power_score": 38,
+      "art_tier": "S",
+      "visible": "40%",
+      "direction_status": "fallback",
+      "asset_status": "pending"
+    }
+  ]
 }
