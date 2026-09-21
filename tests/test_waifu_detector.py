@@ -1,10 +1,13 @@
 import asyncio
 
+from datetime import timedelta
+
 import pytest
 from sqlalchemy import select
 
 from app.db.database import Database
 from app.db.models import Chat, GameCollection, GameProfile, User, WaifuDetectorDailyUsage, WaifuDetectorRound
+from app.core.time import utc_now
 from app.game.models import Rarity
 from app.game.waifu_detector import MAX_DAILY_DETECTOR_USES, DETECTOR_MOBS, WaifuDetectorService
 
@@ -171,3 +174,53 @@ async def test_detector_concurrent_daily_starts_never_allocate_a_fourth_use(tmp_
 
     await database_a.close()
     await database_b.close()
+
+
+@pytest.mark.asyncio
+async def test_detector_round_insert_failure_does_not_consume_daily_use(database):
+    service = WaifuDetectorService()
+
+    async with database.session(write=True) as session:
+        usage = WaifuDetectorDailyUsage(
+            user_id=7,
+            chat_id=-100,
+            day_key="2026-09-22",
+            uses=1,
+        )
+        session.add(usage)
+        await session.flush()
+        session.add(
+            WaifuDetectorRound(
+                user_id=7,
+                chat_id=-100,
+                day_key="2026-09-22",
+                use_number=2,
+                character_id="anya",
+                mob_key=DETECTOR_MOBS[0].key,
+                status="active",
+                expires_at=utc_now() + timedelta(seconds=120),
+            )
+        )
+
+    async with database.session(write=True) as session:
+        result = await service.start(
+            session,
+            user_id=7,
+            chat_id=-100,
+            day_key="2026-09-22",
+            character_id="anya",
+        )
+
+    assert result is None
+
+    async with database.session() as session:
+        usage = await session.scalar(
+            select(WaifuDetectorDailyUsage).where(
+                WaifuDetectorDailyUsage.user_id == 7,
+                WaifuDetectorDailyUsage.chat_id == -100,
+                WaifuDetectorDailyUsage.day_key == "2026-09-22",
+            )
+        )
+
+    assert usage is not None
+    assert usage.uses == 1
