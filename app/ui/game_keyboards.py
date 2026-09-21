@@ -260,3 +260,47 @@ def detector_keyboard(round_id: int) -> InlineKeyboardMarkup:
         )
     )
     return builder.as_markup()
+
+
+
+def gift_keyboard(drop_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="🎁 Reclamar regalo",
+            callback_data=f"game:gift:claim:{drop_id}",
+        )
+    )
+    return builder.as_markup()
+
+
+def item_inventory_keyboard(items, character_ids) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for item in items:
+        builder.row(
+            InlineKeyboardButton(
+                text=f"🍰 {item.item_key} ×{item.quantity}",
+                callback_data=f"game:item:choose:{item.item_key}",
+            )
+        )
+    for character_id in character_ids:
+        builder.row(
+            InlineKeyboardButton(
+                text=f"🎀 {character_id}",
+                callback_data=f"game:item:waifu:{character_id}",
+            )
+        )
+    return builder.as_markup()
+
+
+def item_consume_keyboard(item_key: str, characters) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for character in characters:
+        builder.add(
+            InlineKeyboardButton(
+                text=character.name[:28],
+                callback_data=f"game:item:absorb:{item_key}:{character.id}",
+            )
+        )
+    builder.adjust(2)
+    return builder.as_markup()
