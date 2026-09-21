@@ -175,6 +175,58 @@ class WaifuGiftService:
             recipients_used=used,
         )
 
+    async def absorb(
+        self,
+        session: AsyncSession,
+        *,
+        profile_id: int,
+        character_id: str,
+        item_key: str,
+    ) -> int | None:
+        inventory = await session.scalar(
+            select(GameItemInventory).where(
+                GameItemInventory.profile_id == profile_id,
+                GameItemInventory.item_key == item_key,
+            )
+        )
+        if inventory is None or inventory.quantity <= 0:
+            return None
+
+        gift = self.gift_for_key(item_key)
+        collection = await session.scalar(
+            select(GameCollection).where(
+                GameCollection.profile_id == profile_id,
+                GameCollection.character_id == character_id,
+            )
+        )
+        if collection is None:
+            return None
+
+        consumed = await session.execute(
+            update(GameItemInventory)
+            .where(
+                GameItemInventory.id == inventory.id,
+                GameItemInventory.quantity > 0,
+            )
+            .values(quantity=GameItemInventory.quantity - 1)
+        )
+        if consumed.rowcount != 1:
+            return None
+
+        from app.game.progression import add_character_experience
+
+        progress = add_character_experience(
+            level=collection.level,
+            experience=collection.experience,
+            evolution_stage=collection.evolution_stage,
+            gained=gift.experience,
+            copies=collection.copies,
+        )
+        collection.level = progress.level
+        collection.experience = progress.experience
+        await session.flush()
+        return progress.level
+
     async def claim_count(
         self,
         session: AsyncSession,
