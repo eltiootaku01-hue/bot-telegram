@@ -516,41 +516,59 @@ class ChieModule(BotModule):
         if not await is_chat_staff(message, bot):
             return
         async with ProcessingFeedback(message) as feedback:
-        member = await bot.get_chat_member(message.chat.id, bot.id)
-        if not isinstance(member, (ChatMemberAdministrator, ChatMemberOwner)):
+            member = await bot.get_chat_member(message.chat.id, bot.id)
+            if not isinstance(member, (ChatMemberAdministrator, ChatMemberOwner)):
+                await feedback.finish(
+                    ProcessingResultDTO(
+                        "😰 Necesito ser administradora del grupo antes de reformarlo."
+                    )
+                )
+                return
+            missing = [
+                label
+                for attr, label in REQUIRED_ADMIN_PERMISSIONS.items()
+                if not getattr(member, attr, False)
+            ]
+            if missing:
+                await feedback.finish(
+                    ProcessingResultDTO(
+                        "Me faltan estos permisos: " + ", ".join(missing) + "."
+                    )
+                )
+                return
+            async with self.database.session() as session:
+                existing = await session.scalar(
+                    select(SetupSession).where(
+                        SetupSession.user_id == message.from_user.id,
+                        SetupSession.bot_identity == BotIdentity.CHIE.value,
+                    )
+                )
+                if existing:
+                    existing.chat_id = message.chat.id
+                    existing.status = "awaiting_confirmation"
+                else:
+                    session.add(
+                        SetupSession(
+                            user_id=message.from_user.id,
+                            chat_id=message.chat.id,
+                            bot_identity=BotIdentity.CHIE.value,
+                            status="awaiting_confirmation",
+                        )
+                    )
+                await session.commit()
             await feedback.finish(
-                ProcessingResultDTO("😰 Necesito ser administradora del grupo antes de reformarlo.")
+                ProcessingResultDTO(
+                    f"✅ Permisos comprobados.\n\n"
+                    f"🆔 ID de esta comunidad: <code>{message.chat.id}</code>\n\n"
+                    "Copiá ese ID en Bot Manager como Grupo general / bienvenida y agregalo a AUTHORIZED_CHAT_IDS.\n"
+                    "Después volvé al chat privado conmigo y tocá <b>Ya me agregaste de admin</b>."
+                )
             )
-            return
-        missing = [label for attr, label in REQUIRED_ADMIN_PERMISSIONS.items() if not getattr(member, attr, False)]
-        if missing:
-            await feedback.finish(
-                ProcessingResultDTO("Me faltan estos permisos: " + ", ".join(missing) + ".")
-            )
-            return
-        async with self.database.session() as session:
-            existing = await session.scalar(select(SetupSession).where(
-                SetupSession.user_id == message.from_user.id,
-                SetupSession.bot_identity == BotIdentity.CHIE.value,
-            ))
-            if existing:
-                existing.chat_id = message.chat.id
-                existing.status = "awaiting_confirmation"
-            else:
-                session.add(SetupSession(
-                    user_id=message.from_user.id,
-                    chat_id=message.chat.id,
-                    bot_identity=BotIdentity.CHIE.value,
-                    status="awaiting_confirmation",
-                ))
-            await session.commit()
-        await message.answer(
-            f"✅ Permisos comprobados.\n\n"
-            f"🆔 ID de esta comunidad: <code>{message.chat.id}</code>\n\n"
-            "Copiá ese ID en Bot Manager como Grupo general / bienvenida y agregalo a AUTHORIZED_CHAT_IDS.\n"
-            "Después volvé al chat privado conmigo y tocá <b>Ya me agregaste de admin</b>."
+        await self._observe_action(
+            "onboarding_group_configured",
+            message.from_user.id,
+            message.chat.id,
         )
-        await self._observe_action("onboarding_group_configured", message.from_user.id, message.chat.id)
 
     async def check_setup(self, callback: CallbackQuery, bot: Bot) -> None:
         if not callback.from_user or not callback.message:
