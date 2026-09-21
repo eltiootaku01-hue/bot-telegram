@@ -6,9 +6,6 @@ if exist dist rmdir /s /q dist
 if exist build rmdir /s /q build
 mkdir dist\bots
 
-call tools\build_waifumon.bat
-if errorlevel 1 exit /b %errorlevel%
-
 python -m pip install -e ".[dev]"
 if errorlevel 1 exit /b %errorlevel%
 python -m pip install pyinstaller==6.22.2 pyinstaller-hooks-contrib==2026.7
@@ -29,27 +26,8 @@ if errorlevel 1 exit /b %errorlevel%
 pyinstaller --noconfirm --clean --windowed --onefile --name BotManager --distpath dist --workpath build\BotManager app\launcher.py
 if errorlevel 1 exit /b %errorlevel%
 
-if not exist .waifumon-runtime\waifumon-engine.jar (
-  echo Missing staged WaifuMon engine JAR after executable build.
-  exit /b 1
-)
-if not exist .waifumon-runtime\jre\bin\java.exe (
-  echo Missing staged Java runtime after executable build.
-  exit /b 1
-)
-
-if exist dist\engine rmdir /s /q dist\engine
-xcopy .waifumon-runtime dist\engine /E /I /Y >nul
+call tools\build_waifumon.bat
 if errorlevel 1 exit /b %errorlevel%
-
-if not exist dist\engine\waifumon-engine.jar (
-  echo Final WaifuMon engine JAR was not restored.
-  exit /b 1
-)
-if not exist dist\engine\jre\bin\java.exe (
-  echo Final Java runtime executable was not restored.
-  exit /b 1
-)
 
 echo.
 echo ============================================
