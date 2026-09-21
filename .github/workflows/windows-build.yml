@@ -99,7 +99,6 @@ jobs:
         run: |
           $files = @(
             "dist\engine\waifumon-engine.jar",
-            "dist\engine\jre\bin\java.exe",
             "dist\BotManager.exe",
             "dist\bots\Cari.exe",
             "dist\bots\Sunna.exe",
@@ -110,6 +109,13 @@ jobs:
           foreach ($file in $files) {
             if (-not (Test-Path $file)) { throw "Missing executable: $file" }
             if ((Get-Item $file).Length -lt 100KB) { throw "Executable looks unexpectedly small: $file" }
+          }
+
+          if (-not (Test-Path "dist\engine\jre\bin\java.exe")) {
+            throw "Bundled Java runtime executable is missing"
+          }
+          if (-not (Test-Path "dist\engine\jre\lib\modules")) {
+            throw "Bundled Java runtime image is incomplete: lib\modules is missing"
           }
       - name: Smoke test BotManager
         shell: pwsh
