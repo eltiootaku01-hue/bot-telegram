@@ -83,6 +83,38 @@ def test_java_engine_resolves_combat_without_python_formula() -> None:
     assert 0 <= first.defender_hp <= 100
 
 
+def test_java_engine_resolves_evolution_and_stats_contracts() -> None:
+    engine = _engine()
+    try:
+        evolution = engine.evolution(level=21)
+        stats = engine.stats(
+            character={
+                "id": "test-waifu",
+                "name": "Test Waifu",
+                "element": "aire",
+                "power_score": 50,
+            },
+            level=12,
+            rarity="B",
+            potential_seed="stats-seed",
+        )
+        potential = engine.potential_score(seed="stats-seed")
+    finally:
+        engine.close()
+
+    assert evolution["evolution_stage"] == 3
+    assert evolution["min_level"] == 11
+    assert evolution["max_level"] == 20
+    assert evolution["next_level"] == 21
+
+    assert stats["level"] == 12
+    assert stats["rarity"] == "B"
+    assert stats["evolution_stage"] == 3
+    assert stats["style"] == "velocidad"
+    assert stats["max_hp"] > 0
+    assert stats["potential_score"] == potential
+
+
 def test_java_engine_resolves_progression_contract() -> None:
     engine = _engine()
     try:
