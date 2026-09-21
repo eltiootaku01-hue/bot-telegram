@@ -27,7 +27,7 @@ def test_card_variant_is_deterministic_and_includes_shiny_path() -> None:
 def test_card_variants_produce_a_rich_preview_set() -> None:
     variants = card_variants_for(get_character("yor-forger"))
     assert len(variants) == 32
-    assert len({card.card_id for card in variants}) == 16
+    assert len({card.card_id for card in variants}) >= 24
     assert len({card.outfit for card in variants}) > 1
 
 
