@@ -1,5 +1,5 @@
 from app.game.catalog import CHARACTERS
-from app.game.waifu_art import art_path_for, declared_art_for_catalog
+from app.game.waifu_art import art_path_for, declared_art_for_catalog, rarity_art_candidates_for
 
 
 def test_art_registry_declares_every_playable_character() -> None:
@@ -26,7 +26,7 @@ def test_art_registry_rejects_unknown_character() -> None:
 
 
 def test_variant_art_registry_supports_normal_and_shiny_assets() -> None:
-    from app.game.waifu_art import rarity_art_candidates_for, variant_art_candidates_for
+    from app.game.waifu_art import variant_art_candidates_for
 
     normal = variant_art_candidates_for("yor-forger", "normal")
     shiny = variant_art_candidates_for("yor-forger", "shiny")
