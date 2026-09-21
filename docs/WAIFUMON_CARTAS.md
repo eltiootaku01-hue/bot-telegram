@@ -140,6 +140,8 @@ Ejecutar:
 
 `python tools/validate_card_assets.py`
 
+`python tools/validate_card_qa.py`
+
 Para mover automáticamente archivos rechazados:
 
 `python tools/validate_card_assets.py --quarantine-invalid`
@@ -150,6 +152,7 @@ El validador comprueba extensión JPG/JPEG, lectura real del JPEG, dimensiones e
 
 - `assets/waifus/art_manifest.json`: catálogo y estado de producción por carta.
 - `assets/waifus/card_art_prompt_manifest.json`: contrato de prompts, matriz y revisión.
+- `assets/waifus/card_art_qa_manifest.json`: checklist individual de aprobación visual por carta.
 - `docs/generated/WAIFUMON_CARD_ART_PROMPTS.md`: exportación textual reproducible de los prompts.
 
 ## Seguridad de estilo y contenido
