@@ -6,28 +6,7 @@ from pathlib import Path
 from app.game.card_art_matrix import CardArtTier
 
 
-def test_card_art_prompt_export_uses_all_manifest_items() -> None:
-    manifest = json.loads(Path("assets/waifus/art_manifest.json").read_text(encoding="utf-8"))
-    from app.game.card_art_matrix import build_card_art_prompt, art_profile
-
-    lines = []
-    for item in manifest["items"]:
-        profile = art_profile(item["art_tier"])
-        lines.append(
-            f"## {item['character_id']}\n"
-            f"{build_card_art_prompt(character_name=item['name'], anime=item['anime'], tier=item['art_tier'])}"
-            f"\nTier: {profile.tier.value}"
-        )
-    markdown = "\n".join(lines)
-
-    assert len(manifest["items"]) == 78
-    assert markdown.startswith("# WaifuMon — prompts de arte de cartas")
-    assert markdown.count("\n## ") == 78
-    assert "Production tier: UR" in markdown
-    assert "Output JPG 1024x1536." in markdown
-
-
-def test_card_art_prompt_export_cli_writes_non_empty_file(tmp_path: Path) -> None:
+def test_card_art_prompt_export_cli_contains_all_manifest_items(tmp_path: Path) -> None:
     output = tmp_path / "cards.md"
     subprocess.run(
         [
@@ -38,8 +17,33 @@ def test_card_art_prompt_export_cli_writes_non_empty_file(tmp_path: Path) -> Non
         ],
         check=True,
     )
-    assert output.is_file()
-    assert output.stat().st_size > 0
+    markdown = output.read_text(encoding="utf-8")
+
+    assert markdown.startswith("# WaifuMon — prompts de arte de cartas")
+    assert markdown.count("\n## ") == 78
+    assert "Production tier: UR" in markdown
+    assert "Output target: portrait JPG 1024x1536." in markdown
+
+
+def test_card_art_prompt_export_cli_supports_one_card_at_a_time(tmp_path: Path) -> None:
+    output = tmp_path / "one-card.md"
+    subprocess.run(
+        [
+            sys.executable,
+            "tools/export_card_art_prompts.py",
+            "--character-id",
+            "taiga",
+            "--output",
+            str(output),
+        ],
+        check=True,
+    )
+    markdown = output.read_text(encoding="utf-8")
+
+    assert markdown.count("\n## ") == 1
+    assert "## taiga" in markdown
+    assert "Toradora!" in markdown
+    assert "Production tier: S" in markdown
 
 
 def test_prompt_manifest_has_same_item_count() -> None:
