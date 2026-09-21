@@ -13,19 +13,19 @@ from app.db.database import Database
     (
         (
             BotIdentity.CARI,
-            {"system", "world-catalog", "social_runtime", "chat", "cafe", "moderation", "trivia", "story", "brain_chat", "tio-operator"},
+            {"system", "world-catalog", "world-runtime", "social_runtime", "chat", "cafe", "moderation", "trivia", "story", "brain_chat", "tio-operator"},
         ),
         (
             BotIdentity.SUNNA,
-            {"system", "world-catalog", "social_runtime", "chat", "game", "media", "admin", "brain_chat"},
+            {"system", "world-catalog", "world-runtime", "social_runtime", "chat", "game", "media", "admin", "brain_chat"},
         ),
         (
             BotIdentity.CAMI,
-            {"system", "world-catalog", "social_runtime", "chat", "cami-media", "cami-media-publisher", "mystery", "brain_chat"},
+            {"system", "world-catalog", "world-runtime", "social_runtime", "chat", "cami-media", "cami-media-publisher", "mystery", "brain_chat"},
         ),
         (
             BotIdentity.CHIE,
-            {"system", "world-catalog", "social_runtime", "chat", "chie", "requests", "brain_chat"},
+            {"system", "world-catalog", "world-runtime", "social_runtime", "chat", "chie", "requests", "brain_chat"},
         ),
     ),
 )
