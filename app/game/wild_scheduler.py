@@ -12,9 +12,10 @@ from app.db.community_models import SetupSession
 from app.db.database import Database
 from app.db.models import GameEncounter
 from app.game.catalog import wild_characters
-from app.services.telegram_delivery import with_retry_after
 from app.game.encounters import encounter_options, new_encounter
-from app.ui.game_keyboards import encounter_keyboard
+from app.services.telegram_delivery import with_retry_after
+from app.world.models import PresenterKind, WorldPresenterRef
+from app.world.service import WorldEventService
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class WildWaifuScheduler:
         self.bot = bot
         self.database = database
         self.settings = settings or get_settings()
+        self.world_events = WorldEventService()
         self.task: asyncio.Task | None = None
         self.spawn_tasks: set[asyncio.Task] = set()
         self.stopping = False
@@ -176,39 +178,27 @@ class WildWaifuScheduler:
                 )
             return
 
-        try:
-            sent = await with_retry_after(
-                lambda: self.bot.send_message(
-                    chat_id,
-                    text,
-                    reply_markup=encounter_keyboard(encounter.id, options),
-                )
-            )
-        except Exception:
-            logger.exception("Failed to publish encounter %s in chat %s", encounter.id, chat_id)
-            async with self.database.session() as session:
-                saved = await session.get(GameEncounter, encounter.id)
-                if saved is not None:
-                    saved.status = "cancelled"
-                    await session.commit()
-            return
-
-        try:
-            async with self.database.session() as session:
-                saved = await session.get(GameEncounter, encounter.id)
-                if saved is not None:
-                    saved.message_id = sent.message_id
-                    await session.commit()
-        except Exception:
-            logger.exception(
-                "Could not persist Telegram message id for encounter %s",
-                encounter.id,
+        async with self.database.session() as session:
+            await self.world_events.schedule_waifu_arrival(
+                session,
+                chat_id=chat_id,
+                presenter=WorldPresenterRef(
+                    key="sunna",
+                    kind=PresenterKind.EXISTING_BOT,
+                ),
+                encounter_id=encounter.id,
+                character_id=character.id,
+                character_name=character.name,
+                text=text,
+                options=tuple(options),
+                dedupe_key=f"waifu-arrival:{encounter.id}",
+                expires_at=expires,
             )
 
         await asyncio.sleep(max(0, (expires - utc_now()).total_seconds()))
-        await self.expire(encounter.id, chat_id, sent.message_id)
+        await self.expire(encounter.id, chat_id)
 
-    async def expire(self, encounter_id: str, chat_id: int, message_id: int) -> None:
+    async def expire(self, encounter_id: str, chat_id: int, message_id: int | None = None) -> None:
         now = utc_now()
         async with self.database.session() as session:
             result = await session.execute(
@@ -223,6 +213,12 @@ class WildWaifuScheduler:
             if result.rowcount != 1:
                 return
             await session.commit()
+        if message_id is None:
+            async with self.database.session() as session:
+                saved = await session.get(GameEncounter, encounter_id)
+                message_id = saved.message_id if saved is not None else None
+        if message_id is None:
+            return
         try:
             await self.bot.edit_message_text(
                 chat_id=chat_id,
