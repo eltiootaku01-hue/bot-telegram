@@ -14,6 +14,7 @@ class Rarity(StrEnum):
 
 class CardTier(StrEnum):
     R = "R"
+    S = "S"
     SR = "SR"
     UR = "UR"
 
@@ -52,7 +53,7 @@ def rarity_from_power(power_score: int) -> Rarity:
 
 
 def card_tier_from_scores(popularity_score: int, power_score: int) -> CardTier:
-    """Derive card class from the two independent game axes."""
+    """Derive the four presentation classes from the two independent game axes."""
     if not 0 <= popularity_score <= 100:
         raise ValueError("popularity_score must be between 0 and 100")
     if not 0 <= power_score <= 100:
@@ -62,6 +63,8 @@ def card_tier_from_scores(popularity_score: int, power_score: int) -> CardTier:
         return CardTier.UR
     if combined >= 52:
         return CardTier.SR
+    if combined >= 40:
+        return CardTier.S
     return CardTier.R
 
 
