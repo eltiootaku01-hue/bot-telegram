@@ -7,7 +7,7 @@ Regla: una carta por vez; ningún prompt implica aprobación visual automática.
 
 ## ai-hoshino
 - Personaje: Ai Hoshino
-- Obra: 
+- Obra: Oshi no Ko
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -15,16 +15,16 @@ Regla: una carta por vez; ningún prompt implica aprobación visual automática.
 - Dirección: temática de nicho y pose dinámica
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Ai Hoshino from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Ai Hoshino from Oshi no Ko. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## akame
 - Personaje: Akame
-- Obra: 
+- Obra: Akame ga Kill!
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -32,16 +32,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: cosplay/crossover conceptual premium con compuerta adulta explícita
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Akame from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Akame from Akame ga Kill!. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## akane-kurokawa
 - Personaje: Akane Kurokawa
-- Obra: 
+- Obra: Oshi no Ko
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -49,16 +49,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: temática de nicho y pose dinámica
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Akane Kurokawa from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Akane Kurokawa from Oshi no Ko. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## akeno-himejima
 - Personaje: Akeno Himejima
-- Obra: 
+- Obra: High School DxD
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -68,14 +68,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Akeno Himejima from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Akeno Himejima from High School DxD. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## aki-nijou
 - Personaje: Aki Nijou
-- Obra: 
+- Obra: Maken-Ki!
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -85,14 +85,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Aki Nijou from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Aki Nijou from Maken-Ki!. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## ako-tamaki
 - Personaje: Ako Tamaki
-- Obra: 
+- Obra: And You Thought There Is Never a Girl Online?
 - Art tier: R
 - Perfil: D_C_B_R
 - Encuadre: primer plano / close-up
@@ -100,16 +100,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: atuendo base, cotidiano o uniforme
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Ako Tamaki from . Production tier: D_C_B_R. primer plano / close-up; rostro y hombros; atuendo base, cotidiano o uniforme.
+WaifuMon card art for Ako Tamaki from And You Thought There Is Never a Girl Online?. Production profile: D_C_B_R. primer plano / close-up; rostro y hombros; atuendo base, cotidiano o uniforme.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## albedo
 - Personaje: Albedo
-- Obra: 
+- Obra: Overlord
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -119,14 +119,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Albedo from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Albedo from Overlord. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## alisa-kujo
 - Personaje: Alisa Mikhailovna Kujo
-- Obra: 
+- Obra: Alya Sometimes Hides Her Feelings in Russian
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -136,14 +136,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Alisa Mikhailovna Kujo from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Alisa Mikhailovna Kujo from Alya Sometimes Hides Her Feelings in Russian. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## anya-forger
 - Personaje: Anya Forger
-- Obra: 
+- Obra: SPY x FAMILY
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -153,14 +153,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Anya Forger from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Anya Forger from SPY x FAMILY. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## asuna-yuuki
 - Personaje: Asuna
-- Obra: 
+- Obra: Sword Art Online
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -170,14 +170,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Asuna from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Asuna from Sword Art Online. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## banri-shiunji
 - Personaje: Banri Shiunji
-- Obra: 
+- Obra: The Shiunji Family Children
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -187,14 +187,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Banri Shiunji from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Banri Shiunji from The Shiunji Family Children. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## boa-hancock
 - Personaje: Boa Hancock
-- Obra: 
+- Obra: One Piece
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -204,14 +204,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Boa Hancock from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Boa Hancock from One Piece. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## cana-alberona
 - Personaje: Cana Alberona
-- Obra: 
+- Obra: Fairy Tail
 - Art tier: S
 - Perfil: S
 - Encuadre: plano medio
@@ -221,14 +221,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Cana Alberona from . Production tier: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
+WaifuMon card art for Cana Alberona from Fairy Tail. Production profile: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## celistia-ralgris
 - Personaje: Celistia Ralgris
-- Obra: 
+- Obra: Undefeated Bahamut Chronicle
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -238,14 +238,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Celistia Ralgris from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Celistia Ralgris from Undefeated Bahamut Chronicle. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## cha-hae-in
 - Personaje: Cha Hae-In
-- Obra: 
+- Obra: Solo Leveling
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -255,14 +255,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Cha Hae-In from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Cha Hae-In from Solo Leveling. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## chelsea
 - Personaje: Chelsea
-- Obra: 
+- Obra: Akame Ga Kill
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -270,16 +270,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: temática de nicho y pose dinámica
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Chelsea from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Chelsea from Akame Ga Kill. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## chinatsu-kano
 - Personaje: Chinatsu Kano
-- Obra: 
+- Obra: Blue Box
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -289,14 +289,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Chinatsu Kano from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Chinatsu Kano from Blue Box. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## chisato-hasegawa
 - Personaje: Chisato Hasegawa
-- Obra: 
+- Obra: The Testament of Sister New Devil
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -306,14 +306,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Chisato Hasegawa from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Chisato Hasegawa from The Testament of Sister New Devil. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## chizuru-mizuhara
 - Personaje: Chizuru Mizuhara
-- Obra: 
+- Obra: Rent-a-Girlfriend
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -323,14 +323,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Chizuru Mizuhara from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Chizuru Mizuhara from Rent-a-Girlfriend. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## darkness
 - Personaje: Darkness
-- Obra: 
+- Obra: KonoSuba: God's Blessing on This Wonderful World!
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -340,14 +340,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Darkness from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Darkness from KonoSuba: God's Blessing on This Wonderful World!. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## elizabeth-liones
 - Personaje: Elizabeth Liones
-- Obra: 
+- Obra: The Seven Deadly Sins
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -357,14 +357,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Elizabeth Liones from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Elizabeth Liones from The Seven Deadly Sins. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## emilia
 - Personaje: Emilia
-- Obra: 
+- Obra: Re:ZERO -Starting Life in Another World-
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -372,16 +372,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: temática de nicho y pose dinámica
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Emilia from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Emilia from Re:ZERO -Starting Life in Another World-. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## erina-nakiri
 - Personaje: Erina Nakiri
-- Obra: 
+- Obra: Food Wars!: Shokugeki no Soma
 - Art tier: S
 - Perfil: S
 - Encuadre: plano medio
@@ -389,16 +389,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: glamour moderado con compuerta adulta explícita
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Erina Nakiri from . Production tier: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
+WaifuMon card art for Erina Nakiri from Food Wars!: Shokugeki no Soma. Production profile: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## erza-scarlet
 - Personaje: Erza Scarlet
-- Obra: 
+- Obra: Fairy Tail
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -406,16 +406,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: cosplay/crossover conceptual premium con compuerta adulta explícita
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Erza Scarlet from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Erza Scarlet from Fairy Tail. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## esdeath
 - Personaje: Esdeath
-- Obra: 
+- Obra: Akame ga Kill!
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -425,14 +425,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Esdeath from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Esdeath from Akame ga Kill!. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## hina-chono
 - Personaje: Hina Chono
-- Obra: 
+- Obra: Blue Box
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -442,14 +442,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Hina Chono from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Hina Chono from Blue Box. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## hinako-yaotose
 - Personaje: Hinako Yaotose
-- Obra: 
+- Obra: The Shiunji Family Children
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -459,14 +459,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Hinako Yaotose from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Hinako Yaotose from The Shiunji Family Children. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## hinata-hyuga
 - Personaje: Hinata Hyuga
-- Obra: 
+- Obra: Naruto
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -474,16 +474,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: temática de nicho y pose dinámica
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Hinata Hyuga from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Hinata Hyuga from Naruto. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## ino-yamanaka
 - Personaje: Ino Yamanaka
-- Obra: 
+- Obra: Naruto
 - Art tier: S
 - Perfil: S
 - Encuadre: plano medio
@@ -491,16 +491,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: glamour moderado con compuerta adulta explícita
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Ino Yamanaka from . Production tier: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
+WaifuMon card art for Ino Yamanaka from Naruto. Production profile: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## irina-shidou
 - Personaje: Irina Shidou
-- Obra: 
+- Obra: High School DxD
 - Art tier: S
 - Perfil: S
 - Encuadre: plano medio
@@ -510,14 +510,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Irina Shidou from . Production tier: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
+WaifuMon card art for Irina Shidou from High School DxD. Production profile: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## jibril
 - Personaje: Jibril
-- Obra: 
+- Obra: No Game No Life
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -527,14 +527,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Jibril from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Jibril from No Game No Life. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## kaoruko-waguri
 - Personaje: Kaoruko Waguri
-- Obra: 
+- Obra: The Fragrant Flower Blooms with Dignity
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -544,14 +544,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Kaoruko Waguri from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Kaoruko Waguri from The Fragrant Flower Blooms with Dignity. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## kuroka
 - Personaje: Kuroka
-- Obra: 
+- Obra: High School DxD
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -561,14 +561,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Kuroka from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Kuroka from High School DxD. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## kurumi-tokisaki
 - Personaje: Kurumi Tokisaki
-- Obra: 
+- Obra: Date A Live
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -578,14 +578,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Kurumi Tokisaki from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Kurumi Tokisaki from Date A Live. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## leone
 - Personaje: Leone
-- Obra: 
+- Obra: Akame Ga Kill
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -595,14 +595,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Leone from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Leone from Akame Ga Kill. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## lilith-asami
 - Personaje: Lilith Asami
-- Obra: 
+- Obra: Trinity Seven
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -612,14 +612,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Lilith Asami from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Lilith Asami from Trinity Seven. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## lucy-heartfilia
 - Personaje: Lucy Heartfilia
-- Obra: 
+- Obra: Fairy Tail
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -629,14 +629,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Lucy Heartfilia from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Lucy Heartfilia from Fairy Tail. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## makima
 - Personaje: Makima
-- Obra: 
+- Obra: Chainsaw Man
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -646,14 +646,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Makima from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Makima from Chainsaw Man. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## maomao
 - Personaje: Maomao
-- Obra: 
+- Obra: The Apothecary Diaries Season 2
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -663,14 +663,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Maomao from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Maomao from The Apothecary Diaries Season 2. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## marin-kitagawa
 - Personaje: Marin Kitagawa
-- Obra: 
+- Obra: My Dress-Up Darling Season 2
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -680,14 +680,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Marin Kitagawa from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Marin Kitagawa from My Dress-Up Darling Season 2. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## mary-kikakujou
 - Personaje: Mary Kikakujou
-- Obra: 
+- Obra: Busou Shoujo Machiavellianism
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -697,14 +697,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Mary Kikakujou from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Mary Kikakujou from Busou Shoujo Machiavellianism. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## midnight
 - Personaje: Midnight
-- Obra: 
+- Obra: My Hero Academia
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -714,14 +714,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Midnight from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Midnight from My Hero Academia. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## mikasa-ackerman
 - Personaje: Mikasa Ackerman
-- Obra: 
+- Obra: Attack on Titan
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -731,14 +731,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Mikasa Ackerman from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Mikasa Ackerman from Attack on Titan. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## mirajane-strauss
 - Personaje: Mirajane Strauss
-- Obra: 
+- Obra: Fairy Tail
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -748,14 +748,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Mirajane Strauss from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Mirajane Strauss from Fairy Tail. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## momo-ayase
 - Personaje: Momo Ayase
-- Obra: 
+- Obra: DAN DA DAN Season 2
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -765,14 +765,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Momo Ayase from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Momo Ayase from DAN DA DAN Season 2. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## momo-yaoyorozu
 - Personaje: Momo Yaoyorozu
-- Obra: 
+- Obra: My Hero Academia
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -782,14 +782,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Momo Yaoyorozu from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Momo Yaoyorozu from My Hero Academia. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## mutsumi-wakaba
 - Personaje: Mutsumi “Mortis” Wakaba
-- Obra: 
+- Obra: BanG Dream! Ave Mujica
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -799,14 +799,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Mutsumi “Mortis” Wakaba from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Mutsumi “Mortis” Wakaba from BanG Dream! Ave Mujica. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## nami
 - Personaje: Nami
-- Obra: 
+- Obra: One Piece
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -816,14 +816,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Nami from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Nami from One Piece. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## nejire-hadou
 - Personaje: Nejire Hado
-- Obra: 
+- Obra: My Hero Academia
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -833,14 +833,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Nejire Hado from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Nejire Hado from My Hero Academia. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## nene-yashiro
 - Personaje: Nene Yashiro
-- Obra: 
+- Obra: Toilet-Bound Hanako-kun Season 2
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -848,16 +848,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: temática de nicho y pose dinámica
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Nene Yashiro from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Nene Yashiro from Toilet-Bound Hanako-kun Season 2. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## nezuko-kamado
 - Personaje: Nezuko Kamado
-- Obra: 
+- Obra: Demon Slayer
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -867,14 +867,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Nezuko Kamado from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Nezuko Kamado from Demon Slayer. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## nico-robin
 - Personaje: Nico Robin
-- Obra: 
+- Obra: One Piece
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -884,14 +884,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Nico Robin from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Nico Robin from One Piece. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## nico-wakatsuki
 - Personaje: Nico Wakatsuki
-- Obra: 
+- Obra: WITCH WATCH
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -901,14 +901,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Nico Wakatsuki from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Nico Wakatsuki from WITCH WATCH. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## ochako-uraraka
 - Personaje: Ochako Uraraka
-- Obra: 
+- Obra: My Hero Academia FINAL SEASON
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -918,14 +918,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Ochako Uraraka from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Ochako Uraraka from My Hero Academia FINAL SEASON. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## oguri-cap
 - Personaje: Oguri Cap
-- Obra: 
+- Obra: Umamusume: Cinderella Gray
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -933,16 +933,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: cosplay/crossover conceptual premium con compuerta adulta explícita
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Oguri Cap from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Oguri Cap from Umamusume: Cinderella Gray. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## orihime-inoue
 - Personaje: Orihime Inoue
-- Obra: 
+- Obra: Bleach
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -952,14 +952,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Orihime Inoue from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Orihime Inoue from Bleach. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## ouka-shiunji
 - Personaje: Ouka Shiunji
-- Obra: 
+- Obra: The Shiunji Family Children
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -969,14 +969,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Ouka Shiunji from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Ouka Shiunji from The Shiunji Family Children. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## power
 - Personaje: Power
-- Obra: 
+- Obra: Chainsaw Man
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -986,14 +986,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Power from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Power from Chainsaw Man. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## rangiku-matsumoto
 - Personaje: Rangiku Matsumoto
-- Obra: 
+- Obra: Bleach
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1003,14 +1003,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Rangiku Matsumoto from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Rangiku Matsumoto from Bleach. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## raphtalia
 - Personaje: Raphtalia
-- Obra: 
+- Obra: The Rising of the Shield Hero
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1020,14 +1020,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Raphtalia from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Raphtalia from The Rising of the Shield Hero. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## reiko-kujirai
 - Personaje: Reiko Kujirai
-- Obra: 
+- Obra: Rurouni Kenshin
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1035,16 +1035,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: temática de nicho y pose dinámica
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Reiko Kujirai from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Reiko Kujirai from Rurouni Kenshin. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## reze
 - Personaje: Reze
-- Obra: 
+- Obra: Chainsaw Man
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1054,14 +1054,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Reze from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Reze from Chainsaw Man. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## rias-gremory
 - Personaje: Rias Gremory
-- Obra: 
+- Obra: High School DxD
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -1071,14 +1071,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Rias Gremory from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Rias Gremory from High School DxD. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## rin-tohsaka
 - Personaje: Rin Tohsaka
-- Obra: 
+- Obra: Fate/stay night
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1086,16 +1086,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: temática de nicho y pose dinámica
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Rin Tohsaka from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Rin Tohsaka from Fate/stay night. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## saeko-busujima
 - Personaje: Saeko Busujima
-- Obra: 
+- Obra: Highschool of the Dead
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1105,14 +1105,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Saeko Busujima from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Saeko Busujima from Highschool of the Dead. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## sakiko-togawa
 - Personaje: Sakiko “Oblivionis” Togawa
-- Obra: 
+- Obra: BanG Dream! Ave Mujica
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -1122,14 +1122,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Sakiko “Oblivionis” Togawa from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Sakiko “Oblivionis” Togawa from BanG Dream! Ave Mujica. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## sayaka-kirasaka
 - Personaje: Sayaka Kirasaka
-- Obra: 
+- Obra: Strike the Blood
 - Art tier: S
 - Perfil: S
 - Encuadre: plano medio
@@ -1139,14 +1139,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Sayaka Kirasaka from . Production tier: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
+WaifuMon card art for Sayaka Kirasaka from Strike the Blood. Production profile: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## sinon
 - Personaje: Sinon
-- Obra: 
+- Obra: Sword Art Online II
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1156,14 +1156,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Sinon from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Sinon from Sword Art Online II. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## taiga
 - Personaje: Taiga Aisaka
-- Obra: 
+- Obra: Toradora!
 - Art tier: S
 - Perfil: S
 - Encuadre: plano medio
@@ -1171,16 +1171,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: glamour moderado con compuerta adulta explícita
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Taiga Aisaka from . Production tier: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
+WaifuMon card art for Taiga Aisaka from Toradora!. Production profile: S. plano medio; tórax; foco en busto, espalda o cadera; glamour moderado con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## takane-takamine
 - Personaje: Takane Takamine
-- Obra: 
+- Obra: Please Put Them On, Takamine-san
 - Art tier: R
 - Perfil: D_C_B_R
 - Encuadre: primer plano / close-up
@@ -1190,14 +1190,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Takane Takamine from . Production tier: D_C_B_R. primer plano / close-up; rostro y hombros; atuendo base, cotidiano o uniforme.
+WaifuMon card art for Takane Takamine from Please Put Them On, Takamine-san. Production profile: D_C_B_R. primer plano / close-up; rostro y hombros; atuendo base, cotidiano o uniforme.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## tohka-yatogami
 - Personaje: Tohka Yatogami
-- Obra: 
+- Obra: Date A Live
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1207,14 +1207,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Tohka Yatogami from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Tohka Yatogami from Date A Live. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## tsunade
 - Personaje: Tsunade
-- Obra: 
+- Obra: Naruto
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -1224,14 +1224,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Tsunade from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Tsunade from Naruto. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## venelana-gremory
 - Personaje: Venelana Gremory
-- Obra: 
+- Obra: High School DxD
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1241,14 +1241,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Venelana Gremory from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Venelana Gremory from High School DxD. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## violet-evergarden
 - Personaje: Violet Evergarden
-- Obra: 
+- Obra: Violet Evergarden
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1256,16 +1256,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: temática de nicho y pose dinámica
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Violet Evergarden from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Violet Evergarden from Violet Evergarden. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## xenovia
 - Personaje: Xenovia
-- Obra: 
+- Obra: High School DxD
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1275,14 +1275,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Xenovia from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Xenovia from High School DxD. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## yor-forger
 - Personaje: Yor Forger
-- Obra: 
+- Obra: SPY x FAMILY
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -1290,16 +1290,16 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Dirección: cosplay/crossover conceptual premium con compuerta adulta explícita
 - Elegibilidad adulta explícita: false
 - Estado del asset: quarantined_noncompliant
-- Auditoría visual: not_inspected
+- Auditoría visual: failed
 
-WaifuMon card art for Yor Forger from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Yor Forger from SPY x FAMILY. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## yoruichi-shihoin
 - Personaje: Yoruichi Shihoin
-- Obra: 
+- Obra: Bleach
 - Art tier: UR
 - Perfil: UR
 - Encuadre: plano general
@@ -1309,14 +1309,14 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Yoruichi Shihoin from . Production tier: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
+WaifuMon card art for Yoruichi Shihoin from Bleach. Production profile: UR. plano general; cuerpo completo de pies a cabeza; cosplay/crossover conceptual premium con compuerta adulta explícita.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
 
 ## yumeko-jabami
 - Personaje: Yumeko Jabami
-- Obra: 
+- Obra: Kakegurui
 - Art tier: SR
 - Perfil: SR
 - Encuadre: plano tres cuartos
@@ -1326,7 +1326,7 @@ Original anime-fantasy illustration; do not imitate a living artist or copy a na
 - Estado del asset: pending
 - Auditoría visual: not_inspected
 
-WaifuMon card art for Yumeko Jabami from . Production tier: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
+WaifuMon card art for Yumeko Jabami from Kakegurui. Production profile: SR. plano tres cuartos; casi cuerpo completo; temática de nicho y pose dinámica.
 NON-SUGGESTIVE PRODUCTION MODE.
 Correct anatomy, natural hands, five fingers per hand, no extra limbs, no broken joints, no duplicated facial features, stable perspective, no watermark, no logos, no baked-in text.
 Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style. Output JPG 1024x1536.
