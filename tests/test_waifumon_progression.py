@@ -55,15 +55,18 @@ def test_s_level_11_is_stronger_than_r_level_10_but_lower_than_sr_level_21() -> 
     assert s11.waifumon_class is WaifuMonClass.S
     assert sr21.waifumon_class is WaifuMonClass.SR
 
-    assert s11.strength > r10.strength
-    assert s11.defense > r10.defense
-    assert s11.speed > r10.speed
-    assert s11.special_power > r10.special_power
-
-    assert s11.strength < sr21.strength
-    assert s11.defense < sr21.defense
-    assert s11.speed < sr21.speed
-    assert s11.special_power < sr21.special_power
+    for field in (
+        "max_hp",
+        "strength",
+        "defense",
+        "speed",
+        "healing",
+        "special_power",
+        "fire_skill",
+        "critical_rate",
+    ):
+        assert getattr(r10, field) < getattr(s11, field)
+        assert getattr(s11, field) < getattr(sr21, field)
 
 
 @pytest.mark.parametrize(
