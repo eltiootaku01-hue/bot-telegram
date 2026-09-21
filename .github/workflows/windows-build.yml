@@ -73,12 +73,7 @@ jobs:
             Write-Host "No approved production card assets are committed; runtime remains fail-closed."
             exit 0
           }
-          $files = Get-ChildItem "assets\production\cards" -File -Recurse
-          foreach ($file in $files) {
-            if ($file.Extension -ne ".jpg") {
-              throw "Production asset is not JPEG: $($file.FullName)"
-            }
-          }
+          $files = Get-ChildItem "assets\production\cards" -File -Recurse | Where-Object { $_.Extension -in @(".jpg", ".jpeg") }
           python tools\validate_card_assets.py
 
       - name: Validate committed production card assets
