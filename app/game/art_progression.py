@@ -5,7 +5,7 @@ from enum import StrEnum
 
 from app.game.art_directions import direction_for
 from app.game.models import CardTier
-from app.game.waifumon_progression import class_band_for_level, combat_style_for_element
+from app.game.waifumon_progression import class_band_for_level
 
 
 class CardArtTier(StrEnum):
