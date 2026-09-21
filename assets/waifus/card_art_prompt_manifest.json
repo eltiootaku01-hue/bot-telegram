@@ -1,13 +1,14 @@
 {
-  "version": 1,
-  "matrix_version": "2026-09-card-art-matrix-v1",
+  "version": 2,
+  "matrix_version": "2026-09-card-art-matrix-v2",
   "source_manifest": "assets/waifus/art_manifest.json",
   "prompt_policy": {
     "production_unit": "one-card-at-a-time",
     "output": "JPG 1024x1536",
     "negative_policy": "No nudity, no exposed genitals, no exposed nipples, no explicit sexual activity, no sexualized minors, no gore, no watermark, no logos, no text baked into the image.",
-    "adult_gate": "S/SR/UR suggestive directions require adult_eligible=true; otherwise generator emits non-suggestive mode.",
-    "style_policy": "Original anime-fantasy illustration; do not imitate a living artist or copy a named studio's style."
+    "adult_gate": "S/SR/UR glamour variants remain non-explicit; UR_ALT_HOLO additionally requires adult_eligible=true and is never inferred from rarity.",
+    "style_policy": "Original anime-fantasy collectible-card illustration; use final-ascension progression language only as a high-level design reference, not a named-game artwork/style copy.",
+    "ur_alt_holo": "UR alternate holographic/shiny glamour edition with contextual occlusion allowed; no explicit nudity, intimate exposure, sexual acts, fetish framing or sexualized minors."
   },
   "matrix": {
     "D_C_B_R": {
@@ -69,7 +70,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/ai-hoshino--normal.jpg"
+      "production_file": "assets/production/cards/ai-hoshino--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "akame",
@@ -80,7 +86,19 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/akame--normal.jpg"
+      "production_file": "assets/production/cards/akame--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/akame--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "akane-kurokawa",
@@ -91,7 +109,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/akane-kurokawa--normal.jpg"
+      "production_file": "assets/production/cards/akane-kurokawa--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "akeno-himejima",
@@ -102,7 +125,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/akeno-himejima--normal.jpg"
+      "production_file": "assets/production/cards/akeno-himejima--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/akeno-himejima--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "aki-nijou",
@@ -113,7 +148,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/aki-nijou--normal.jpg"
+      "production_file": "assets/production/cards/aki-nijou--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "ako-tamaki",
@@ -124,7 +164,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/ako-tamaki--normal.jpg"
+      "production_file": "assets/production/cards/ako-tamaki--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "albedo",
@@ -135,7 +180,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/albedo--normal.jpg"
+      "production_file": "assets/production/cards/albedo--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/albedo--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "alisa-kujo",
@@ -146,7 +203,12 @@
       "adult_eligible": false,
       "asset_status": "production_approved",
       "visual_audit_status": "approved",
-      "production_file": "assets/production/cards/alisa-kujo--normal.jpg"
+      "production_file": "assets/production/cards/alisa-kujo--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "anya-forger",
@@ -157,7 +219,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/anya-forger--normal.jpg"
+      "production_file": "assets/production/cards/anya-forger--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "asuna-yuuki",
@@ -168,7 +235,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/asuna-yuuki--normal.jpg"
+      "production_file": "assets/production/cards/asuna-yuuki--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/asuna-yuuki--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "banri-shiunji",
@@ -179,7 +258,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/banri-shiunji--normal.jpg"
+      "production_file": "assets/production/cards/banri-shiunji--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "boa-hancock",
@@ -190,7 +274,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/boa-hancock--normal.jpg"
+      "production_file": "assets/production/cards/boa-hancock--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "cana-alberona",
@@ -201,7 +290,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/cana-alberona--normal.jpg"
+      "production_file": "assets/production/cards/cana-alberona--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "celistia-ralgris",
@@ -212,7 +306,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/celistia-ralgris--normal.jpg"
+      "production_file": "assets/production/cards/celistia-ralgris--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "cha-hae-in",
@@ -223,7 +322,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/cha-hae-in--normal.jpg"
+      "production_file": "assets/production/cards/cha-hae-in--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "chelsea",
@@ -234,7 +338,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/chelsea--normal.jpg"
+      "production_file": "assets/production/cards/chelsea--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "chinatsu-kano",
@@ -245,7 +354,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/chinatsu-kano--normal.jpg"
+      "production_file": "assets/production/cards/chinatsu-kano--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "chisato-hasegawa",
@@ -256,7 +370,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/chisato-hasegawa--normal.jpg"
+      "production_file": "assets/production/cards/chisato-hasegawa--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "chizuru-mizuhara",
@@ -267,7 +386,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/chizuru-mizuhara--normal.jpg"
+      "production_file": "assets/production/cards/chizuru-mizuhara--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "darkness",
@@ -278,7 +402,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/darkness--normal.jpg"
+      "production_file": "assets/production/cards/darkness--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "elizabeth-liones",
@@ -289,7 +418,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/elizabeth-liones--normal.jpg"
+      "production_file": "assets/production/cards/elizabeth-liones--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "emilia",
@@ -300,7 +434,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/emilia--normal.jpg"
+      "production_file": "assets/production/cards/emilia--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "erina-nakiri",
@@ -311,7 +450,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/erina-nakiri--normal.jpg"
+      "production_file": "assets/production/cards/erina-nakiri--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "erza-scarlet",
@@ -322,7 +466,19 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/erza-scarlet--normal.jpg"
+      "production_file": "assets/production/cards/erza-scarlet--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/erza-scarlet--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "esdeath",
@@ -333,7 +489,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/esdeath--normal.jpg"
+      "production_file": "assets/production/cards/esdeath--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/esdeath--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "hina-chono",
@@ -344,7 +512,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/hina-chono--normal.jpg"
+      "production_file": "assets/production/cards/hina-chono--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "hinako-yaotose",
@@ -355,7 +528,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/hinako-yaotose--normal.jpg"
+      "production_file": "assets/production/cards/hinako-yaotose--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "hinata-hyuga",
@@ -366,7 +544,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/hinata-hyuga--normal.jpg"
+      "production_file": "assets/production/cards/hinata-hyuga--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "ino-yamanaka",
@@ -377,7 +560,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/ino-yamanaka--normal.jpg"
+      "production_file": "assets/production/cards/ino-yamanaka--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "irina-shidou",
@@ -388,7 +576,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/irina-shidou--normal.jpg"
+      "production_file": "assets/production/cards/irina-shidou--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "jibril",
@@ -399,7 +592,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/jibril--normal.jpg"
+      "production_file": "assets/production/cards/jibril--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "kaoruko-waguri",
@@ -410,7 +608,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/kaoruko-waguri--normal.jpg"
+      "production_file": "assets/production/cards/kaoruko-waguri--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "kuroka",
@@ -421,7 +624,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/kuroka--normal.jpg"
+      "production_file": "assets/production/cards/kuroka--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/kuroka--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "kurumi-tokisaki",
@@ -432,7 +647,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/kurumi-tokisaki--normal.jpg"
+      "production_file": "assets/production/cards/kurumi-tokisaki--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "leone",
@@ -443,7 +663,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/leone--normal.jpg"
+      "production_file": "assets/production/cards/leone--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "lilith-asami",
@@ -454,7 +679,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/lilith-asami--normal.jpg"
+      "production_file": "assets/production/cards/lilith-asami--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "lucy-heartfilia",
@@ -465,7 +695,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/lucy-heartfilia--normal.jpg"
+      "production_file": "assets/production/cards/lucy-heartfilia--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "makima",
@@ -476,7 +711,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/makima--normal.jpg"
+      "production_file": "assets/production/cards/makima--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/makima--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "maomao",
@@ -487,7 +734,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/maomao--normal.jpg"
+      "production_file": "assets/production/cards/maomao--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "marin-kitagawa",
@@ -498,7 +750,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/marin-kitagawa--normal.jpg"
+      "production_file": "assets/production/cards/marin-kitagawa--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "mary-kikakujou",
@@ -509,7 +766,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/mary-kikakujou--normal.jpg"
+      "production_file": "assets/production/cards/mary-kikakujou--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "midnight",
@@ -520,7 +782,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/midnight--normal.jpg"
+      "production_file": "assets/production/cards/midnight--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "mikasa-ackerman",
@@ -531,7 +798,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/mikasa-ackerman--normal.jpg"
+      "production_file": "assets/production/cards/mikasa-ackerman--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "mirajane-strauss",
@@ -542,7 +814,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/mirajane-strauss--normal.jpg"
+      "production_file": "assets/production/cards/mirajane-strauss--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "momo-ayase",
@@ -553,7 +830,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/momo-ayase--normal.jpg"
+      "production_file": "assets/production/cards/momo-ayase--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/momo-ayase--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "momo-yaoyorozu",
@@ -564,7 +853,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/momo-yaoyorozu--normal.jpg"
+      "production_file": "assets/production/cards/momo-yaoyorozu--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "mutsumi-wakaba",
@@ -575,7 +869,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/mutsumi-wakaba--normal.jpg"
+      "production_file": "assets/production/cards/mutsumi-wakaba--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "nami",
@@ -586,7 +885,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/nami--normal.jpg"
+      "production_file": "assets/production/cards/nami--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/nami--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "nejire-hadou",
@@ -597,7 +908,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/nejire-hadou--normal.jpg"
+      "production_file": "assets/production/cards/nejire-hadou--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "nene-yashiro",
@@ -608,7 +924,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/nene-yashiro--normal.jpg"
+      "production_file": "assets/production/cards/nene-yashiro--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "nezuko-kamado",
@@ -619,7 +940,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/nezuko-kamado--normal.jpg"
+      "production_file": "assets/production/cards/nezuko-kamado--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "nico-robin",
@@ -630,7 +956,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/nico-robin--normal.jpg"
+      "production_file": "assets/production/cards/nico-robin--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/nico-robin--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "nico-wakatsuki",
@@ -641,7 +979,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/nico-wakatsuki--normal.jpg"
+      "production_file": "assets/production/cards/nico-wakatsuki--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "ochako-uraraka",
@@ -652,7 +995,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/ochako-uraraka--normal.jpg"
+      "production_file": "assets/production/cards/ochako-uraraka--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/ochako-uraraka--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "oguri-cap",
@@ -663,7 +1018,19 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/oguri-cap--normal.jpg"
+      "production_file": "assets/production/cards/oguri-cap--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/oguri-cap--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "orihime-inoue",
@@ -674,7 +1041,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/orihime-inoue--normal.jpg"
+      "production_file": "assets/production/cards/orihime-inoue--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "ouka-shiunji",
@@ -685,7 +1057,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/ouka-shiunji--normal.jpg"
+      "production_file": "assets/production/cards/ouka-shiunji--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "power",
@@ -696,7 +1073,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/power--normal.jpg"
+      "production_file": "assets/production/cards/power--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/power--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "rangiku-matsumoto",
@@ -707,7 +1096,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/rangiku-matsumoto--normal.jpg"
+      "production_file": "assets/production/cards/rangiku-matsumoto--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "raphtalia",
@@ -718,7 +1112,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/raphtalia--normal.jpg"
+      "production_file": "assets/production/cards/raphtalia--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "reiko-kujirai",
@@ -729,7 +1128,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/reiko-kujirai--normal.jpg"
+      "production_file": "assets/production/cards/reiko-kujirai--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "reze",
@@ -740,7 +1144,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/reze--normal.jpg"
+      "production_file": "assets/production/cards/reze--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "rias-gremory",
@@ -751,7 +1160,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/rias-gremory--normal.jpg"
+      "production_file": "assets/production/cards/rias-gremory--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/rias-gremory--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "rin-tohsaka",
@@ -762,7 +1183,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/rin-tohsaka--normal.jpg"
+      "production_file": "assets/production/cards/rin-tohsaka--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "saeko-busujima",
@@ -773,7 +1199,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/saeko-busujima--normal.jpg"
+      "production_file": "assets/production/cards/saeko-busujima--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "sakiko-togawa",
@@ -784,7 +1215,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/sakiko-togawa--normal.jpg"
+      "production_file": "assets/production/cards/sakiko-togawa--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/sakiko-togawa--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "sayaka-kirasaka",
@@ -795,7 +1238,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/sayaka-kirasaka--normal.jpg"
+      "production_file": "assets/production/cards/sayaka-kirasaka--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "sinon",
@@ -806,7 +1254,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/sinon--normal.jpg"
+      "production_file": "assets/production/cards/sinon--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "taiga",
@@ -817,7 +1270,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/taiga--normal.jpg"
+      "production_file": "assets/production/cards/taiga--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "takane-takamine",
@@ -828,7 +1286,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/takane-takamine--normal.jpg"
+      "production_file": "assets/production/cards/takane-takamine--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "tohka-yatogami",
@@ -839,7 +1302,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/tohka-yatogami--normal.jpg"
+      "production_file": "assets/production/cards/tohka-yatogami--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "tsunade",
@@ -850,7 +1318,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/tsunade--normal.jpg"
+      "production_file": "assets/production/cards/tsunade--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/tsunade--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "venelana-gremory",
@@ -861,7 +1341,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/venelana-gremory--normal.jpg"
+      "production_file": "assets/production/cards/venelana-gremory--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "violet-evergarden",
@@ -872,7 +1357,12 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/violet-evergarden--normal.jpg"
+      "production_file": "assets/production/cards/violet-evergarden--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "xenovia",
@@ -883,7 +1373,12 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/xenovia--normal.jpg"
+      "production_file": "assets/production/cards/xenovia--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     },
     {
       "character_id": "yor-forger",
@@ -894,7 +1389,19 @@
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
       "visual_audit_status": "failed",
-      "production_file": "assets/production/cards/yor-forger--normal.jpg"
+      "production_file": "assets/production/cards/yor-forger--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/yor-forger--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "yoruichi-shihoin",
@@ -905,7 +1412,19 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/yoruichi-shihoin--normal.jpg"
+      "production_file": "assets/production/cards/yoruichi-shihoin--normal.jpg",
+      "variant_support": [
+        "normal",
+        "ur-alt-holo"
+      ],
+      "ur_final_ascension": true,
+      "ur_alt_holo": {
+        "supported": true,
+        "adult_gate_required": true,
+        "adult_eligible": false,
+        "prompt_mode": "non-explicit-premium-glamour",
+        "production_file": "assets/production/cards/yoruichi-shihoin--ur-alt-holo.jpg"
+      }
     },
     {
       "character_id": "yumeko-jabami",
@@ -916,7 +1435,83 @@
       "adult_eligible": false,
       "asset_status": "pending",
       "visual_audit_status": "not_inspected",
-      "production_file": "assets/production/cards/yumeko-jabami--normal.jpg"
+      "production_file": "assets/production/cards/yumeko-jabami--normal.jpg",
+      "variant_support": [
+        "normal"
+      ],
+      "ur_final_ascension": false,
+      "ur_alt_holo": null
     }
-  ]
+  ],
+  "visual_progression": {
+    "R": {
+      "phase": "Fase 1",
+      "framing": "close-up",
+      "crop": "rostro y hombros",
+      "direction": "atuendo cotidiano, uniforme escolar o base completamente cubierto"
+    },
+    "S": {
+      "phase": "Fase 2",
+      "framing": "plano medio",
+      "crop": "cabeza a cintura/muslos",
+      "direction": "pose de combate o atuendo dinámico mejorado"
+    },
+    "SR": {
+      "phase": "Fase 2",
+      "framing": "plano tres cuartos",
+      "crop": "casi cuerpo completo",
+      "direction": "pose de combate/acción o vestuario mejorado y elegante"
+    },
+    "UR": {
+      "phase": "Final Ascension / Magnificent Art",
+      "framing": "plano general",
+      "crop": "cuerpo completo",
+      "direction": "fondo elaborado, efectos de alta gama e ilustración definitiva"
+    }
+  },
+  "variant_catalog": {
+    "normal": {
+      "id": "normal",
+      "label": "Normal / Canónica",
+      "available_for": [
+        "R",
+        "S",
+        "SR",
+        "UR"
+      ],
+      "adult_gate": false
+    },
+    "shiny": {
+      "id": "shiny",
+      "label": "Shiny / legacy holographic accent",
+      "available_for": [
+        "R",
+        "S",
+        "SR",
+        "UR"
+      ],
+      "adult_gate": false,
+      "note": "Variant legacy; no cambia la regla de contenido."
+    },
+    "ur-alt-holo": {
+      "id": "ur-alt-holo",
+      "label": "UR Alternate Holo / Shiny",
+      "available_for": [
+        "UR"
+      ],
+      "adult_gate": true,
+      "non_explicit": true,
+      "occlusion_strategy": [
+        "backlighting",
+        "bright_light_beams",
+        "steam_or_mist",
+        "foreground_shadows",
+        "flowing_hair",
+        "ribbons",
+        "fabric_layers",
+        "battle_worn_clothing"
+      ],
+      "production_filename": "<character-id>--ur-alt-holo.jpg"
+    }
+  }
 }
