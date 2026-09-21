@@ -54,9 +54,23 @@ jobs:
       - name: Verify visual assets
         shell: pwsh
         run: |
-          $asset = "dist\assets\waifus\generated\waifu-card-concept.jpg"
-          if (-not (Test-Path $asset)) { throw "Missing visual asset: $asset" }
-          if ((Get-Item $asset).Length -lt 10KB) { throw "Visual asset looks unexpectedly small: $asset" }
+          $reference = "dist\assets\waifus\generated\waifu-card-concept.jpg"
+          if (-not (Test-Path $reference)) { throw "Missing visual reference: $reference" }
+          if ((Get-Item $reference).Length -lt 10KB) { throw "Visual reference looks unexpectedly small: $reference" }
+
+          $progress = Get-Content "dist\assets\waifus\art_progress.json" -Raw | ConvertFrom-Json
+          if ($progress.completed_cards -ne $progress.completed_character_ids.Count) {
+            throw "Art progress ledger count does not match completed character ids"
+          }
+          if ($progress.completed_cards -gt $progress.total_cards) {
+            throw "Completed art count exceeds total card count"
+          }
+
+          foreach ($characterId in $progress.completed_character_ids) {
+            $asset = "dist\assets\waifus\$characterId.svg"
+            if (-not (Test-Path $asset)) { throw "Missing approved character art: $asset" }
+            if ((Get-Item $asset).Length -lt 5KB) { throw "Character art looks unexpectedly small: $asset" }
+          }
 
       - name: Verify executables
         shell: pwsh
