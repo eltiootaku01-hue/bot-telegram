@@ -244,3 +244,65 @@ La investigación pública de Reddit, GitHub y documentación de Telegram se uti
 - estados activos que quedan bloqueados tras una expiración.
 
 La investigación completa se conserva en `docs/research/2026-09-21-game-risks/` y `docs/research/2026-09-21-game-and-telegram-risk-research.md`.
+
+## 12. Monetización y referidos en Mini App
+
+La monetización de bienes y servicios digitales dentro de WaifuMon se realizará exclusivamente mediante Telegram Stars (XTR). El frontend de la Mini App no calcula precios finales ni valida pagos: el bot/backend debe crear la factura, atender el flujo de pre-checkout y confirmar el successful_payment antes de entregar el producto. El identificador telegram_payment_charge_id debe conservarse para trazabilidad y posibles reembolsos. Telegram documenta XTR como la moneda obligatoria para pagos de bienes y servicios digitales mediante su Payments API.
+
+### 12.1 Productos in-game
+
+La primera tienda puede exponer, por ejemplo:
+
+- Ticket Premium — ítem consumible para funciones premium de WaifuMon.
+- Starter Pack — paquete digital de inicio.
+
+Reglas:
+1. El precio y el invoice_payload son autoridad del backend.
+2. El cliente web solamente solicita/inicia la compra; nunca acredita el producto por sí mismo.
+3. Una compra confirmada debe ser idempotente por telegram_payment_charge_id y/o por una referencia interna única.
+4. Una respuesta de pago fallida, cancelada o no validada no entrega ningún recurso.
+5. El ledger de monetización debe conservar usuario, producto, cantidad de Stars, payload interno, charge ID, fecha y estado.
+
+### 12.2 Referidos propios de WaifuMon
+
+Se añade un programa simple de crecimiento:
+
+**3 usuarios nuevos validados = 1 Ticket Premium.**
+
+Un referido cuenta solamente cuando el backend confirma que:
+
+- el usuario referido es nuevo para este programa;
+- el enlace/parámetro de referencia pertenece a un invitador válido;
+- la relación invitador → referido todavía no fue registrada;
+- el nuevo usuario completó la condición de activación definida por el backend (por defecto, abrir la Mini App y completar la inicialización del perfil).
+
+La concesión del tercer referido debe ser atómica e idempotente. La misma persona invitada no puede generar dos veces la recompensa para el mismo invitador.
+
+La Mini App puede mostrar progreso (0/3, 1/3, 2/3, 3/3) y ofrecer un botón de compartir, pero no puede declararse a sí misma como dueña de la recompensa. El servidor debe calcular y devolver el contador/recompensa.
+
+### 12.3 Parámetros de referencia
+
+Para el programa propio puede utilizarse un parámetro de referencia en el deep link del bot/Mini App. El valor recibido en el cliente se considera no confiable hasta que el backend valide la identidad de Telegram mediante initData. Telegram advierte expresamente que initDataUnsafe no debe tratarse como fuente confiable.
+
+Telegram también dispone de Affiliate Programs para Mini Apps, donde un creador o usuario puede recibir una comisión en Stars por compras realizadas por personas referidas. Ese mecanismo es distinto del programa interno 3 referidos = 1 Ticket Premium; ambos pueden coexistir, pero no deben mezclarse en el mismo ledger de recompensas.
+
+### 12.4 UI estática
+
+La Mini App de webapp/ implementa:
+
+- interfaz mobile-first;
+- adaptación al tema actual de Telegram;
+- tienda visual preparada para productos digitales;
+- indicador de referidos;
+- botón de compartir;
+- advertencia de que pago y recompensa son funciones server-side;
+- Canvas 2D para combate;
+- cut-in temporal de 1.5 segundos con carta HD.
+
+La interfaz se mantiene libre de framework y dependencias de build para reducir tamaño, coste y carga en hardware modesto. Telegram recomienda diseños móviles, rápidos, adaptados a los colores dinámicos del cliente y respetuosos del área segura.
+
+### 12.5 Despliegue
+
+webapp/ se publica como artefacto estático mediante .github/workflows/deploy-pages.yml en cada push a main. GitHub Pages soporta este patrón mediante configure-pages, upload-pages-artifact y deploy-pages; el repositorio debe tener GitHub Pages configurado para usar GitHub Actions como fuente.
+
+Las referencias documentales utilizadas para esta sección son la documentación oficial de Telegram Mini Apps/Payments/Affiliate Programs y la documentación oficial de GitHub Pages.
