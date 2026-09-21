@@ -1,1 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="680" viewBox="0 0 480 680"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#28315b"/><stop offset="1" stop-color="#090c14"/></linearGradient><radialGradient id="glow"><stop stop-color="#e5e4ff" stop-opacity=".24"/><stop offset="1" stop-color="#7879ff" stop-opacity="0"/></radialGradient></defs><rect x="8" y="8" width="464" height="664" rx="28" fill="url(#bg)" stroke="#7879ff" stroke-width="8"/><rect x="20" y="20" width="440" height="640" rx="20" fill="url(#glow)"/><text x="34" y="52" fill="#e5e4ff" font-size="20" font-family="Arial" font-weight="700">WAIFUMON • CARTA 19</text><text x="446" y="52" text-anchor="end" fill="#7879ff" font-size="26" font-family="Arial" font-weight="700">R</text><ellipse cx="240" cy="355" rx="122" ry="176" fill="#11151f" opacity=".65"/><path d="M145 330 Q150 215 240 190 Q330 215 335 330 L325 410 Q240 465 155 410 Z" fill="#8b4d2d"/><ellipse cx="240" cy="335" rx="88" ry="110" fill="#f2d1bd"/><path d="M152 310 Q158 208 240 184 Q322 208 328 310 Q300 270 282 252 Q252 270 214 254 Q185 276 152 310Z" fill="#8b4d2d"/><path d="M170 425 Q240 382 310 425 L345 540 L135 540Z" fill="#7879ff"/><ellipse cx="205" cy="334" rx="12" ry="16" fill="#dc8cff"/><ellipse cx="275" cy="334" rx="12" ry="16" fill="#dc8cff"/><circle cx="208" cy="337" r="5" fill="#10131b"/><circle cx="278" cy="337" r="5" fill="#10131b"/><path d="M216 384 Q240 400 264 384" fill="none" stroke="#9e5c66" stroke-width="5" stroke-linecap="round"/><circle cx="335" cy="248" r="24" fill="#7879ff"/><text x="335" y="257" text-anchor="middle" fill="#e5e4ff" font-size="22" font-family="Arial" font-weight="700">✦</text><rect x="32" y="560" width="416" height="74" rx="18" fill="#0a0d14" stroke="#7879ff" stroke-width="2"/><text x="48" y="591" fill="#fff" font-size="23" font-family="Arial" font-weight="700">Hinata Hyuga</text><text x="48" y="616" fill="#e5e4ff" font-size="14" font-family="Arial">Naruto</text><text x="350" y="589" fill="#7879ff" font-size="20" font-family="Arial" font-weight="700">CLASE C</text><text x="350" y="614" fill="#e5e4ff" font-size="12" font-family="Arial">ELEMENTO: RAYO</text><text x="240" y="654" text-anchor="middle" fill="#aab3c7" font-size="11" font-family="Arial">ARTE ORIGINAL LOCAL • NO CANON VISUAL</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#171633"/><stop offset=".48" stop-color="#343e71"/><stop offset="1" stop-color="#15162b"/></linearGradient>
+<radialGradient id="m" cx=".5" cy=".26" r=".72"><stop stop-color="#d8d8ff" stop-opacity=".3"/><stop offset=".55" stop-color="#8d92d8" stop-opacity=".11"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6e5a85"/><stop offset=".55" stop-color="#8c7da4"/><stop offset="1" stop-color="#403653"/></linearGradient>
+<linearGradient id="coat" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e6e5ef"/><stop offset="1" stop-color="#b8bacb"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#c9c8ef" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#m)"/>
+<text x="52" y="78" fill="#f5f4ff" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#c9c8ef" font-family="Arial" font-size="32" font-weight="800">SR</text>
+<text x="52" y="112" fill="#d8d6ea" font-family="Arial" font-size="13" letter-spacing="3">HINATA • 60-80% • CHAKRA / BOSQUE NOCTURNO</text>
+
+<g fill="#d9e2ff" opacity=".7">
+<circle cx="112" cy="202" r="4"/><circle cx="602" cy="202" r="5"/><circle cx="92" cy="360" r="3"/><circle cx="628" cy="352" r="4"/>
+</g>
+<g fill="none" stroke="#a7b3e8" opacity=".38" stroke-width="3">
+<path d="M92 270 Q150 194 208 270"/><path d="M510 270 Q568 194 628 270"/>
+</g>
+
+<g stroke="#121326" stroke-width="9" stroke-linejoin="round">
+<path d="M202 420 Q187 260 260 177 Q358 74 469 166 Q544 230 513 420 Q497 533 444 608 L275 608 Q214 524 202 420Z" fill="url(#hair)"/>
+<path d="M269 238 Q359 164 451 239 L457 363 Q440 445 359 472 Q278 444 260 362Z" fill="#f3d5c5"/>
+<path d="M256 249 Q285 150 367 148 Q450 151 470 249 Q430 214 404 239 Q370 191 339 239 Q299 206 256 249Z" fill="url(#hair)"/>
+<path d="M274 228 Q251 338 280 443" fill="none" stroke="#a7b3e8" stroke-width="10"/>
+<path d="M445 226 Q468 338 439 443" fill="none" stroke="#a7b3e8" stroke-width="10"/>
+<ellipse cx="320" cy="337" rx="13" ry="18" fill="#8c77b2"/><ellipse cx="399" cy="337" rx="13" ry="18" fill="#8c77b2"/>
+<circle cx="323" cy="331" r="5" fill="#fff" stroke="none"/><circle cx="402" cy="331" r="5" fill="#fff" stroke="none"/>
+<path d="M338 402 Q359 413 380 402" fill="none" stroke="#a15e70" stroke-width="5"/>
+
+<path d="M284 452 Q359 425 434 452 L482 706 Q438 764 359 780 Q281 764 237 706Z" fill="url(#coat)"/>
+<path d="M314 458 L359 512 L404 458" fill="none" stroke="#7d7294" stroke-width="8"/>
+<path d="M359 512 L359 730" stroke="#8b91ad" stroke-width="5"/>
+<path d="M282 482 Q230 521 187 595 Q170 624 192 645 Q216 666 239 637 L321 546" fill="url(#coat)"/>
+<path d="M431 482 Q490 522 532 594 Q550 623 529 645 Q506 666 480 638 L398 546" fill="url(#coat)"/>
+
+<!-- gentle defensive stance -->
+<path d="M301 584 Q359 542 418 584 L405 638 Q359 660 314 638Z" fill="#666a9a"/>
+<circle cx="359" cy="616" r="18" fill="#c9c3ef"/>
+<path d="M351 616 h16 M359 608 v16" stroke="#706b9b" stroke-width="4"/>
+
+<path d="M247 700 Q359 733 471 700 L487 847 Q431 888 359 896 Q287 888 231 847Z" fill="#555c83"/>
+</g>
+
+<g fill="#dfe5ff" opacity=".72"><path d="M126 470 l12-24 13 24 -13 20z"/><path d="M580 474 l12-24 13 24 -13 20z"/><path d="M150 710 l10-20 11 20 -11 16z"/></g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#0b1120" opacity=".93" stroke="#c9c8ef" stroke-width="2"/>
+<text x="64" y="929" fill="#f4f3ff" font-family="Arial" font-size="22" font-weight="700">Hinata Hyuga</text>
+<text x="64" y="952" fill="#d4d4e7" font-family="Arial" font-size="12">Naruto • SR visual • 60-80% • bosque nocturno</text>
+<text x="656" y="929" text-anchor="end" fill="#c9c8ef" font-family="Arial" font-size="14" font-weight="700">CALMA / DEFENSA</text>
+<text x="656" y="952" text-anchor="end" fill="#d4d4e7" font-family="Arial" font-size="11">chakra • movimiento suave • dirección unitaria</text>
+</svg>
