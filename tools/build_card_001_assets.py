@@ -85,18 +85,18 @@ def update_manifests() -> None:
 
 def write_report() -> None:
     REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text("# WaifuMon — Carta #001 / Alisa Mikhailovna Kujo\n\n"
-        "Character ID: alisa-kujo\nObra: Alya Sometimes Hides Her Feelings in Russian\n\n"
-        "Etapa 1 — R: close-up de rostro y hombros, atuendo base, no sugestivo.\n\n"
-        + STAGE_PROMPTS["R"] + "\n\n"
-        "Etapa 2 — SR: plano tres cuartos, casi cuerpo completo, vestuario totalmente cubierto.\n\n"
-        + STAGE_PROMPTS["SR"] + "\n\n"
-        "Etapa 3 — UR: plano general, cuerpo completo, vestuario premium totalmente cubierto. "
-        "El asset queda en cuarentena hasta segunda revisión independiente.\n\n"
-        + STAGE_PROMPTS["UR"] + "\n", encoding="utf-8")
+    REPORT.write_text(
+        "# WaifuMon — Carta #001 / Alisa Mikhailovna Kujo\n\n"
+        "Character ID: alisa-kujo\n"
+        "Obra: Alya Sometimes Hides Her Feelings in Russian\n\n"
+        "Etapa 1 — R: close-up de rostro y hombros, atuendo cotidiano/base, modo no sugestivo.\n"
+        "Etapa 2 — SR: plano tres cuartos, casi cuerpo completo, vestuario completamente cubierto.\n"
+        "Etapa 3 — UR: plano general, cuerpo completo, edición premium completamente cubierta.\n\n"
+        "QA: R y SR pasan revisión primaria. El SR es el asset canónico de producción. "
+        "UR queda en cuarentena porque el contrato exige una segunda revisión independiente para aprobar una carta UR.\n",
+        encoding="utf-8",
+    )
 
-
-# Carta 001 production source: deterministic three-stage renderer.
 if __name__ == "__main__":
     CHARACTER_ID = "alisa-kujo"
     save_image("R", PROD / "alisa-kujo--r.jpg")
