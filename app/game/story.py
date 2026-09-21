@@ -166,17 +166,22 @@ class StoryService:
         session: AsyncSession,
         *,
         chat_id: int,
-    ) -> StoryView:
+        expected_chapter: int,
+    ) -> tuple[StoryView, bool]:
         view = await cls.current(session, chat_id=chat_id)
-        if view.progress.completed:
-            return view
-        if view.progress.chapter >= len(cls.CHAPTERS):
+        if view.progress.completed or view.progress.chapter != expected_chapter:
+            return view, False
+
+        if expected_chapter >= len(cls.CHAPTERS):
             view.progress.completed = True
         else:
-            view.progress.chapter += 1
+            view.progress.chapter = expected_chapter + 1
         view.progress.updated_at = utc_now()
         await session.flush()
-        return StoryView(
-            progress=view.progress,
-            chapter=cls._chapter(view.progress.chapter),
+        return (
+            StoryView(
+                progress=view.progress,
+                chapter=cls._chapter(view.progress.chapter),
+            ),
+            True,
         )
