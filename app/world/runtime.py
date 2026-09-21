@@ -29,6 +29,7 @@ class WorldRuntime:
         tools: WorldToolPolicy | None = None,
         poll_seconds: float = 5.0,
         stale_timeout_seconds: int = 300,
+        presenter_key: str | None = None,
     ) -> None:
         if poll_seconds <= 0:
             raise ValueError("poll_seconds must be positive")
@@ -40,6 +41,7 @@ class WorldRuntime:
         self.tools = tools or WorldToolPolicy()
         self.poll_seconds = poll_seconds
         self.stale_timeout_seconds = stale_timeout_seconds
+        self.presenter_key = presenter_key
         self.heartbeat_seconds = max(1.0, min(60.0, stale_timeout_seconds / 3))
         self.events = WorldEventService()
         self._stopping = asyncio.Event()
@@ -77,7 +79,10 @@ class WorldRuntime:
                 session,
                 timeout_seconds=self.stale_timeout_seconds,
             )
-            event = await self.events.claim_due(session)
+            event = await self.events.claim_due(
+                session,
+                presenter_key=self.presenter_key,
+            )
         if event is None:
             return False
 
