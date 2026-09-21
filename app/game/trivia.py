@@ -49,11 +49,13 @@ class TriviaService:
             )
             .values(status="expired")
         )
-        active = await session.scalar(select(TriviaRound).where(
-            TriviaRound.chat_id == chat_id,
-            TriviaRound.status == "active",
-            TriviaRound.expires_at > now,
-        ))
+        active = await session.scalar(
+            select(TriviaRound).where(
+                TriviaRound.chat_id == chat_id,
+                TriviaRound.status.in_(("active", "publishing", "delivery_unknown")),
+                TriviaRound.expires_at > now,
+            )
+        )
         if active is not None:
             return None
         question = self.choose_question()
