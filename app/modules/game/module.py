@@ -999,20 +999,6 @@ class GameModule(BotModule):
                 await callback.answer(response_text, show_alert=True)
                 return
 
-            now = utc_now()
-            claimed = await session.execute(
-                update(GameEncounter)
-                .where(
-                    GameEncounter.id == encounter_id,
-                    GameEncounter.status == 'active',
-                    GameEncounter.expires_at > now,
-                )
-                .values(status='captured')
-            )
-            if claimed.rowcount != 1:
-                await callback.answer('Alguien llegó antes. 😭', show_alert=True)
-                return
-
             profile = await MemberRepository().get_or_create_game_profile(
                 session, callback.from_user.id, encounter.chat_id, commit=False
             )
