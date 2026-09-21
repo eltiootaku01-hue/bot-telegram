@@ -8,7 +8,7 @@ Hay tres ejes diferentes y no deben mezclarse:
 
 - **Rareza de gameplay:** D, C, B, A, S, SS, SSS.
 - **Nivel de la waifu:** 1 a 25.
-- **Clase de carta:** R, SR, UR.
+- **Clase de carta:** R, S, SR, UR.
 
 La rareza decide principalmente disponibilidad y requisitos de evolución. El nivel determina la progresión de poder/arte. La clase de carta identifica una presentación especial de la misma waifu.
 
