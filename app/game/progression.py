@@ -45,9 +45,12 @@ def add_character_experience(*, level: int, experience: int, evolution_stage: in
         raise ValueError("Progression values cannot be negative")
     total = experience + gained
     current_level = max(1, level)
-    while total >= current_level * 100:
+    while current_level < 25 and total >= current_level * 100:
         total -= current_level * 100
         current_level += 1
+    if current_level >= 25:
+        current_level = 25
+        total = 0
     return ProgressionResult(current_level, total, max(1, evolution_stage), False, 0)
 
 
@@ -124,7 +127,10 @@ async def apply_capture_progression(
         .where(GameProfile.id == profile_id)
         .values(
             experience=GameProfile.experience + gained,
-            level=cast((GameProfile.experience + gained) / 500, Integer) + 1,
+            level=case(
+                (GameProfile.experience + gained >= 12000, 25),
+                else_=cast((GameProfile.experience + gained) / 500, Integer) + 1,
+            ),
             updated_at=utc_now(),
         )
     )
