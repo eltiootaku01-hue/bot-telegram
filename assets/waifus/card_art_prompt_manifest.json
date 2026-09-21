@@ -63,40 +63,40 @@
     {
       "character_id": "ai-hoshino",
       "name": "Ai Hoshino",
-      "anime": "",
+      "anime": "Oshi no Ko",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/ai-hoshino--normal.jpg"
     },
     {
       "character_id": "akame",
       "name": "Akame",
-      "anime": "",
+      "anime": "Akame ga Kill!",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/akame--normal.jpg"
     },
     {
       "character_id": "akane-kurokawa",
       "name": "Akane Kurokawa",
-      "anime": "",
+      "anime": "Oshi no Ko",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/akane-kurokawa--normal.jpg"
     },
     {
       "character_id": "akeno-himejima",
       "name": "Akeno Himejima",
-      "anime": "",
+      "anime": "High School DxD",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -107,7 +107,7 @@
     {
       "character_id": "aki-nijou",
       "name": "Aki Nijou",
-      "anime": "",
+      "anime": "Maken-Ki!",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -118,18 +118,18 @@
     {
       "character_id": "ako-tamaki",
       "name": "Ako Tamaki",
-      "anime": "",
+      "anime": "And You Thought There Is Never a Girl Online?",
       "art_tier": "R",
       "framing_profile": "D_C_B_R",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/ako-tamaki--normal.jpg"
     },
     {
       "character_id": "albedo",
       "name": "Albedo",
-      "anime": "",
+      "anime": "Overlord",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -140,7 +140,7 @@
     {
       "character_id": "alisa-kujo",
       "name": "Alisa Mikhailovna Kujo",
-      "anime": "",
+      "anime": "Alya Sometimes Hides Her Feelings in Russian",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -151,7 +151,7 @@
     {
       "character_id": "anya-forger",
       "name": "Anya Forger",
-      "anime": "",
+      "anime": "SPY x FAMILY",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -162,7 +162,7 @@
     {
       "character_id": "asuna-yuuki",
       "name": "Asuna",
-      "anime": "",
+      "anime": "Sword Art Online",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -173,7 +173,7 @@
     {
       "character_id": "banri-shiunji",
       "name": "Banri Shiunji",
-      "anime": "",
+      "anime": "The Shiunji Family Children",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -184,7 +184,7 @@
     {
       "character_id": "boa-hancock",
       "name": "Boa Hancock",
-      "anime": "",
+      "anime": "One Piece",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -195,7 +195,7 @@
     {
       "character_id": "cana-alberona",
       "name": "Cana Alberona",
-      "anime": "",
+      "anime": "Fairy Tail",
       "art_tier": "S",
       "framing_profile": "S",
       "adult_eligible": false,
@@ -206,7 +206,7 @@
     {
       "character_id": "celistia-ralgris",
       "name": "Celistia Ralgris",
-      "anime": "",
+      "anime": "Undefeated Bahamut Chronicle",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -217,7 +217,7 @@
     {
       "character_id": "cha-hae-in",
       "name": "Cha Hae-In",
-      "anime": "",
+      "anime": "Solo Leveling",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -228,18 +228,18 @@
     {
       "character_id": "chelsea",
       "name": "Chelsea",
-      "anime": "",
+      "anime": "Akame Ga Kill",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/chelsea--normal.jpg"
     },
     {
       "character_id": "chinatsu-kano",
       "name": "Chinatsu Kano",
-      "anime": "",
+      "anime": "Blue Box",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -250,7 +250,7 @@
     {
       "character_id": "chisato-hasegawa",
       "name": "Chisato Hasegawa",
-      "anime": "",
+      "anime": "The Testament of Sister New Devil",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -261,7 +261,7 @@
     {
       "character_id": "chizuru-mizuhara",
       "name": "Chizuru Mizuhara",
-      "anime": "",
+      "anime": "Rent-a-Girlfriend",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -272,7 +272,7 @@
     {
       "character_id": "darkness",
       "name": "Darkness",
-      "anime": "",
+      "anime": "KonoSuba: God's Blessing on This Wonderful World!",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -283,7 +283,7 @@
     {
       "character_id": "elizabeth-liones",
       "name": "Elizabeth Liones",
-      "anime": "",
+      "anime": "The Seven Deadly Sins",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -294,40 +294,40 @@
     {
       "character_id": "emilia",
       "name": "Emilia",
-      "anime": "",
+      "anime": "Re:ZERO -Starting Life in Another World-",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/emilia--normal.jpg"
     },
     {
       "character_id": "erina-nakiri",
       "name": "Erina Nakiri",
-      "anime": "",
+      "anime": "Food Wars!: Shokugeki no Soma",
       "art_tier": "S",
       "framing_profile": "S",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/erina-nakiri--normal.jpg"
     },
     {
       "character_id": "erza-scarlet",
       "name": "Erza Scarlet",
-      "anime": "",
+      "anime": "Fairy Tail",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/erza-scarlet--normal.jpg"
     },
     {
       "character_id": "esdeath",
       "name": "Esdeath",
-      "anime": "",
+      "anime": "Akame ga Kill!",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -338,7 +338,7 @@
     {
       "character_id": "hina-chono",
       "name": "Hina Chono",
-      "anime": "",
+      "anime": "Blue Box",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -349,7 +349,7 @@
     {
       "character_id": "hinako-yaotose",
       "name": "Hinako Yaotose",
-      "anime": "",
+      "anime": "The Shiunji Family Children",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -360,29 +360,29 @@
     {
       "character_id": "hinata-hyuga",
       "name": "Hinata Hyuga",
-      "anime": "",
+      "anime": "Naruto",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/hinata-hyuga--normal.jpg"
     },
     {
       "character_id": "ino-yamanaka",
       "name": "Ino Yamanaka",
-      "anime": "",
+      "anime": "Naruto",
       "art_tier": "S",
       "framing_profile": "S",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/ino-yamanaka--normal.jpg"
     },
     {
       "character_id": "irina-shidou",
       "name": "Irina Shidou",
-      "anime": "",
+      "anime": "High School DxD",
       "art_tier": "S",
       "framing_profile": "S",
       "adult_eligible": false,
@@ -393,7 +393,7 @@
     {
       "character_id": "jibril",
       "name": "Jibril",
-      "anime": "",
+      "anime": "No Game No Life",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -404,7 +404,7 @@
     {
       "character_id": "kaoruko-waguri",
       "name": "Kaoruko Waguri",
-      "anime": "",
+      "anime": "The Fragrant Flower Blooms with Dignity",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -415,7 +415,7 @@
     {
       "character_id": "kuroka",
       "name": "Kuroka",
-      "anime": "",
+      "anime": "High School DxD",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -426,7 +426,7 @@
     {
       "character_id": "kurumi-tokisaki",
       "name": "Kurumi Tokisaki",
-      "anime": "",
+      "anime": "Date A Live",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -437,7 +437,7 @@
     {
       "character_id": "leone",
       "name": "Leone",
-      "anime": "",
+      "anime": "Akame Ga Kill",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -448,7 +448,7 @@
     {
       "character_id": "lilith-asami",
       "name": "Lilith Asami",
-      "anime": "",
+      "anime": "Trinity Seven",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -459,7 +459,7 @@
     {
       "character_id": "lucy-heartfilia",
       "name": "Lucy Heartfilia",
-      "anime": "",
+      "anime": "Fairy Tail",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -470,7 +470,7 @@
     {
       "character_id": "makima",
       "name": "Makima",
-      "anime": "",
+      "anime": "Chainsaw Man",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -481,7 +481,7 @@
     {
       "character_id": "maomao",
       "name": "Maomao",
-      "anime": "",
+      "anime": "The Apothecary Diaries Season 2",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -492,7 +492,7 @@
     {
       "character_id": "marin-kitagawa",
       "name": "Marin Kitagawa",
-      "anime": "",
+      "anime": "My Dress-Up Darling Season 2",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -503,7 +503,7 @@
     {
       "character_id": "mary-kikakujou",
       "name": "Mary Kikakujou",
-      "anime": "",
+      "anime": "Busou Shoujo Machiavellianism",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -514,7 +514,7 @@
     {
       "character_id": "midnight",
       "name": "Midnight",
-      "anime": "",
+      "anime": "My Hero Academia",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -525,7 +525,7 @@
     {
       "character_id": "mikasa-ackerman",
       "name": "Mikasa Ackerman",
-      "anime": "",
+      "anime": "Attack on Titan",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -536,7 +536,7 @@
     {
       "character_id": "mirajane-strauss",
       "name": "Mirajane Strauss",
-      "anime": "",
+      "anime": "Fairy Tail",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -547,7 +547,7 @@
     {
       "character_id": "momo-ayase",
       "name": "Momo Ayase",
-      "anime": "",
+      "anime": "DAN DA DAN Season 2",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -558,7 +558,7 @@
     {
       "character_id": "momo-yaoyorozu",
       "name": "Momo Yaoyorozu",
-      "anime": "",
+      "anime": "My Hero Academia",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -569,7 +569,7 @@
     {
       "character_id": "mutsumi-wakaba",
       "name": "Mutsumi “Mortis” Wakaba",
-      "anime": "",
+      "anime": "BanG Dream! Ave Mujica",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -580,7 +580,7 @@
     {
       "character_id": "nami",
       "name": "Nami",
-      "anime": "",
+      "anime": "One Piece",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -591,7 +591,7 @@
     {
       "character_id": "nejire-hadou",
       "name": "Nejire Hado",
-      "anime": "",
+      "anime": "My Hero Academia",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -602,18 +602,18 @@
     {
       "character_id": "nene-yashiro",
       "name": "Nene Yashiro",
-      "anime": "",
+      "anime": "Toilet-Bound Hanako-kun Season 2",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/nene-yashiro--normal.jpg"
     },
     {
       "character_id": "nezuko-kamado",
       "name": "Nezuko Kamado",
-      "anime": "",
+      "anime": "Demon Slayer",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -624,7 +624,7 @@
     {
       "character_id": "nico-robin",
       "name": "Nico Robin",
-      "anime": "",
+      "anime": "One Piece",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -635,7 +635,7 @@
     {
       "character_id": "nico-wakatsuki",
       "name": "Nico Wakatsuki",
-      "anime": "",
+      "anime": "WITCH WATCH",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -646,7 +646,7 @@
     {
       "character_id": "ochako-uraraka",
       "name": "Ochako Uraraka",
-      "anime": "",
+      "anime": "My Hero Academia FINAL SEASON",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -657,18 +657,18 @@
     {
       "character_id": "oguri-cap",
       "name": "Oguri Cap",
-      "anime": "",
+      "anime": "Umamusume: Cinderella Gray",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/oguri-cap--normal.jpg"
     },
     {
       "character_id": "orihime-inoue",
       "name": "Orihime Inoue",
-      "anime": "",
+      "anime": "Bleach",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -679,7 +679,7 @@
     {
       "character_id": "ouka-shiunji",
       "name": "Ouka Shiunji",
-      "anime": "",
+      "anime": "The Shiunji Family Children",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -690,7 +690,7 @@
     {
       "character_id": "power",
       "name": "Power",
-      "anime": "",
+      "anime": "Chainsaw Man",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -701,7 +701,7 @@
     {
       "character_id": "rangiku-matsumoto",
       "name": "Rangiku Matsumoto",
-      "anime": "",
+      "anime": "Bleach",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -712,7 +712,7 @@
     {
       "character_id": "raphtalia",
       "name": "Raphtalia",
-      "anime": "",
+      "anime": "The Rising of the Shield Hero",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -723,18 +723,18 @@
     {
       "character_id": "reiko-kujirai",
       "name": "Reiko Kujirai",
-      "anime": "",
+      "anime": "Rurouni Kenshin",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/reiko-kujirai--normal.jpg"
     },
     {
       "character_id": "reze",
       "name": "Reze",
-      "anime": "",
+      "anime": "Chainsaw Man",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -745,7 +745,7 @@
     {
       "character_id": "rias-gremory",
       "name": "Rias Gremory",
-      "anime": "",
+      "anime": "High School DxD",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -756,18 +756,18 @@
     {
       "character_id": "rin-tohsaka",
       "name": "Rin Tohsaka",
-      "anime": "",
+      "anime": "Fate/stay night",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/rin-tohsaka--normal.jpg"
     },
     {
       "character_id": "saeko-busujima",
       "name": "Saeko Busujima",
-      "anime": "",
+      "anime": "Highschool of the Dead",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -778,7 +778,7 @@
     {
       "character_id": "sakiko-togawa",
       "name": "Sakiko “Oblivionis” Togawa",
-      "anime": "",
+      "anime": "BanG Dream! Ave Mujica",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -789,7 +789,7 @@
     {
       "character_id": "sayaka-kirasaka",
       "name": "Sayaka Kirasaka",
-      "anime": "",
+      "anime": "Strike the Blood",
       "art_tier": "S",
       "framing_profile": "S",
       "adult_eligible": false,
@@ -800,7 +800,7 @@
     {
       "character_id": "sinon",
       "name": "Sinon",
-      "anime": "",
+      "anime": "Sword Art Online II",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -811,18 +811,18 @@
     {
       "character_id": "taiga",
       "name": "Taiga Aisaka",
-      "anime": "",
+      "anime": "Toradora!",
       "art_tier": "S",
       "framing_profile": "S",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/taiga--normal.jpg"
     },
     {
       "character_id": "takane-takamine",
       "name": "Takane Takamine",
-      "anime": "",
+      "anime": "Please Put Them On, Takamine-san",
       "art_tier": "R",
       "framing_profile": "D_C_B_R",
       "adult_eligible": false,
@@ -833,7 +833,7 @@
     {
       "character_id": "tohka-yatogami",
       "name": "Tohka Yatogami",
-      "anime": "",
+      "anime": "Date A Live",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -844,7 +844,7 @@
     {
       "character_id": "tsunade",
       "name": "Tsunade",
-      "anime": "",
+      "anime": "Naruto",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -855,7 +855,7 @@
     {
       "character_id": "venelana-gremory",
       "name": "Venelana Gremory",
-      "anime": "",
+      "anime": "High School DxD",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -866,18 +866,18 @@
     {
       "character_id": "violet-evergarden",
       "name": "Violet Evergarden",
-      "anime": "",
+      "anime": "Violet Evergarden",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/violet-evergarden--normal.jpg"
     },
     {
       "character_id": "xenovia",
       "name": "Xenovia",
-      "anime": "",
+      "anime": "High School DxD",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
@@ -888,18 +888,18 @@
     {
       "character_id": "yor-forger",
       "name": "Yor Forger",
-      "anime": "",
+      "anime": "SPY x FAMILY",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
       "asset_status": "quarantined_noncompliant",
-      "visual_audit_status": "not_inspected",
+      "visual_audit_status": "failed",
       "production_file": "assets/production/cards/yor-forger--normal.jpg"
     },
     {
       "character_id": "yoruichi-shihoin",
       "name": "Yoruichi Shihoin",
-      "anime": "",
+      "anime": "Bleach",
       "art_tier": "UR",
       "framing_profile": "UR",
       "adult_eligible": false,
@@ -910,7 +910,7 @@
     {
       "character_id": "yumeko-jabami",
       "name": "Yumeko Jabami",
-      "anime": "",
+      "anime": "Kakegurui",
       "art_tier": "SR",
       "framing_profile": "SR",
       "adult_eligible": false,
