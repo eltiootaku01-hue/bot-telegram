@@ -36,3 +36,13 @@ jobs:
         run: ruff check app tests
       - name: Pytest
         run: pytest -q
+      - name: Validate card assets
+        run: python tools/validate_card_assets.py
+      - name: Export card art prompts
+        run: python tools/export_card_art_prompts.py --output /tmp/WAIFUMON_CARD_ART_PROMPTS.md
+      - name: Export sticker prompts
+        run: python tools/export_sticker_prompts.py --output /tmp/STICKER_PROMPTS.md
+      - name: Verify generated prompt artifacts are non-empty
+        run: |
+          test -s /tmp/WAIFUMON_CARD_ART_PROMPTS.md
+          test -s /tmp/STICKER_PROMPTS.md
