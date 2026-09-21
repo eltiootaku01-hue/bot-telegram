@@ -107,6 +107,7 @@ dist\\bots\\Cari.exe
 dist\\bots\\Sunna.exe
 dist\\bots\\Cami.exe
 dist\\bots\\Chie.exe
+dist\\bots\\WorldBot.exe
 ```
 
 The installer definition lives at `installer/bot-telegram.iss` and packages those executables into a normal Windows setup program. GitHub Actions installs Inno Setup, compiles the installer, verifies it, and publishes the resulting artifact/release asset.

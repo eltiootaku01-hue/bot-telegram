@@ -2006,3 +2006,66 @@ Cerrado. La advertencia restante pertenece a `datetime.utcnow()` dentro de SQLAl
 
 ## Próximo objetivo
 Ampliar comportamiento de producto sobre el World Core ya estabilizado: más eventos authored, escenas contextuales y presentadores, manteniendo la lógica de juego independiente de personalidad e IA.
+
+# 37. WORLDBOT — PRESENTADOR NEUTRAL DEL MUNDO DE JUEGO — 2026-09-21
+
+## Objetivo
+Implementar un proceso Telegram opcional que presente eventos persistidos del World Core sin convertirse en personaje, propietario del mundo ni dueño de reglas.
+
+## Auditoría
+- El `World Core` ya tenía `PresenterKind.WORLD_BOT` y eventos persistentes.
+- Faltaban runner, token/configuración y packaging del presentador neutral.
+- Se buscó uso real de `WorldEventService` en módulos/servicios: no existen productores actuales fuera del sistema del mundo/recuperación. No se inventó un productor artificial.
+- Se revisó el límite World Core ↔ Telegram: WorldBot debe permanecer outbound-only.
+
+## Implementación
+- `app/bots/world.py` añadido como runner independiente.
+- `WORLD_BOT_PRESENTER = world_bot:world`.
+- `BOT_TOKEN_WORLD` y `BOT_LINK_WORLD` añadidos a configuración.
+- `WorldBot.exe` incorporado al build e instalador.
+- CI Windows ahora comprueba seis ejecutables.
+- Regresión de integración demuestra routing de un `GameWorldEvent` a `world_bot:world`.
+- Se corrigió el cierre de recursos cuando `create_schema()` falla.
+
+## Investigación aplicada
+Documentación oficial de Telegram/aiogram utilizada para validar `getMe`, `sendMessage` y el hecho de que un bot no inicia chats privados por sí mismo. Estas verificaciones sostienen el diseño outbound-only.
+
+## Archivos principales
+- `app/bots/world.py`
+- `app/core/config.py`
+- `.env.example`
+- `tests/test_world_bot.py`
+- `tests/test_world_runtime.py`
+- `tools/build_launcher.bat`
+- `installer/bot-telegram.iss`
+- `.github/workflows/windows-build.yml`
+- `docs/WORLDBOT.md`
+
+## Commits
+- `8054818b60946e86effea6c6e3ba987910acca34` — runner.
+- `b2dd95520af9929152c05cac6a767ebe3513b0c7` — configuración/packaging.
+- `7a8e242061bfab408a39df5ed0eadd37e78cacb1` — resource cleanup.
+- `03bc9e2aa1185b72e925c78f83d1ddae38d918d5` — integración WorldBot.
+
+## Validación
+- CI #2001: SUCCESS.
+- Ruff: SUCCESS.
+- Pytest: **650 passed, 58 warnings**.
+- Windows Build #1604: SUCCESS.
+- Se verificaron seis ejecutables, visual assets, card assets, smoke test de BotManager, instalador, manifest, ZIP portable, checksums y artefactos.
+
+Artefactos:
+- installer: 120,782,520 bytes; SHA-256 `24eff24fd8f64aa09824a3c2b3acda26a250ab851e937fce7f92006e2b647270`.
+- portable: 118,880,824 bytes; SHA-256 `b99d4d2d0c048d4d9b9e3ced5ef077b396125d9220a13bddd26f8b2eff2743e6`.
+
+## Riesgo pendiente
+WorldBot está listo como presentador pero todavía no hay un productor de eventos del juego usando `world_bot:world` en producción. El siguiente bloque debe conectar una fuente auténtica de eventos sin duplicar mensajes ni reglas.
+
+## Porcentaje
+La estimación global conservadora permanece en 85%. La nueva capacidad de presentación neutral es real y empaquetada, pero no justifica por sí sola aumentar el porcentaje global mientras falten profundidad de contenido, productores de eventos, herramientas avanzadas de operador y GUI.
+
+## Estado
+cerrado
+
+## Siguiente auditoría
+Productor real de `GameWorldEvent` + política de selección de presentador intercambiable.
