@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.core.time import utc_now
@@ -108,7 +108,14 @@ class StoryProgress(Base):
 
 class GameProfile(Base):
     __tablename__ = "game_profiles"
-    __table_args__ = (UniqueConstraint("user_id", "chat_id", name="uq_game_profile"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "chat_id", name="uq_game_profile"),
+        CheckConstraint("level >= 1", name="ck_game_profile_level_positive"),
+        CheckConstraint("experience >= 0", name="ck_game_profile_experience_nonnegative"),
+        CheckConstraint("points >= 0", name="ck_game_profile_points_nonnegative"),
+        CheckConstraint("coins >= 0", name="ck_game_profile_coins_nonnegative"),
+        CheckConstraint("gacha_d_streak >= 0", name="ck_game_profile_streak_nonnegative"),
+    )
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
@@ -123,7 +130,16 @@ class GameProfile(Base):
 
 class PointTransaction(Base):
     __tablename__ = "point_transactions"
-    __table_args__ = (UniqueConstraint("user_id", "chat_id", "reference_type", "reference_id", name="uq_point_transaction_reference"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "chat_id",
+            "reference_type",
+            "reference_id",
+            name="uq_point_transaction_reference",
+        ),
+        CheckConstraint("amount <> 0", name="ck_point_transaction_amount_nonzero"),
+    )
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(BigInteger)
@@ -136,7 +152,13 @@ class PointTransaction(Base):
 
 class GameCollection(Base):
     __tablename__ = "game_collection"
-    __table_args__ = (UniqueConstraint("profile_id", "character_id", name="uq_collection_character"),)
+    __table_args__ = (
+        UniqueConstraint("profile_id", "character_id", name="uq_collection_character"),
+        CheckConstraint("level >= 1", name="ck_game_collection_level_positive"),
+        CheckConstraint("copies >= 1", name="ck_game_collection_copies_positive"),
+        CheckConstraint("experience >= 0", name="ck_game_collection_experience_nonnegative"),
+        CheckConstraint("evolution_stage >= 1", name="ck_game_collection_stage_positive"),
+    )
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(ForeignKey("game_profiles.id", ondelete="CASCADE"))
     character_id: Mapped[str] = mapped_column(String(100))
@@ -259,6 +281,7 @@ class WaifuDetectorDailyUsage(Base):
             "day_key",
             name="uq_detector_daily_usage_user_chat_day",
         ),
+        CheckConstraint("uses >= 0 AND uses <= 3", name="ck_detector_daily_usage_bounds"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -352,6 +375,8 @@ class GameDailyMissionProgress(Base):
             "mission_key",
             name="uq_game_daily_mission_progress",
         ),
+        CheckConstraint("progress >= 0", name="ck_daily_mission_progress_nonnegative"),
+        CheckConstraint("target > 0", name="ck_daily_mission_target_positive"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
