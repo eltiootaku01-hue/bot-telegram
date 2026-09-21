@@ -1,1 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="680"><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5b1020"/><stop offset="1" stop-color="#090c14"/></linearGradient></defs><rect x="8" y="8" width="464" height="664" rx="28" fill="url(#b)" stroke="#d64a4a" stroke-width="8"/><text x="34" y="52" fill="#ffd1d1" font-size="20" font-family="Arial" font-weight="700">WAIFUMON • CARTA 26</text><text x="446" y="52" text-anchor="end" fill="#d64a4a" font-size="26" font-family="Arial" font-weight="700">R</text><circle cx="240" cy="340" r="138" fill="#0a0d14" opacity=".45"/><path d="M145 340 Q150 215 240 190 Q330 215 335 340 L320 425 Q240 470 160 425Z" fill="#3f6384"/><ellipse cx="240" cy="340" rx="86" ry="112" fill="#f2d1bd"/><path d="M152 312 Q165 205 240 184 Q315 205 328 312 Q284 265 240 282 Q196 265 152 312Z" fill="#3f6384"/><path d="M170 430 Q240 395 310 430 L345 535 L135 535Z" fill="#d64a4a"/><ellipse cx="205" cy="336" rx="12" ry="16" fill="#efc84f"/><ellipse cx="275" cy="336" rx="12" ry="16" fill="#efc84f"/><circle cx="208" cy="339" r="5"/><circle cx="278" cy="339" r="5"/><path d="M216 386 Q240 400 264 386" fill="none" stroke="#9e5c66" stroke-width="5" stroke-linecap="round"/><circle cx="335" cy="250" r="24" fill="#d64a4a"/><text x="335" y="258" text-anchor="middle" fill="#ffd1d1" font-size="20" font-family="Arial">✦</text><rect x="32" y="555" width="416" height="80" rx="18" fill="#0a0d14" stroke="#d64a4a" stroke-width="2"/><text x="48" y="585" fill="#fff" font-size="22" font-family="Arial" font-weight="700">Emilia</text><text x="48" y="612" fill="#ffd1d1" font-size="13" font-family="Arial">Re:ZERO -Starting Life in Another World-</text><text x="330" y="585" fill="#d64a4a" font-size="20" font-family="Arial" font-weight="700">CLASE B</text><text x="330" y="612" fill="#ffd1d1" font-size="12" font-family="Arial">ARTE ORIGINAL</text><text x="240" y="657" text-anchor="middle" fill="#aab3c7" font-size="11" font-family="Arial">VISUAL NO CANÓNICO • V1</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#102b35"/><stop offset=".52" stop-color="#6e7996"/><stop offset="1" stop-color="#dfeefa"/></linearGradient>
+<radialGradient id="h" cx=".5" cy=".32" r=".7"><stop stop-color="#eaffff" stop-opacity=".58"/><stop offset=".6" stop-color="#a9dfff" stop-opacity=".2"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3fbff"/><stop offset=".55" stop-color="#d6b9ef"/><stop offset="1" stop-color="#8b6aa7"/></linearGradient>
+<linearGradient id="dress" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#d5dce6"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#d9f4ff" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#h)"/>
+<text x="52" y="78" fill="#f7ffff" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#f3d98b" font-family="Arial" font-size="32" font-weight="800">UR</text>
+<text x="52" y="112" fill="#e2f0f6" font-family="Arial" font-size="13" letter-spacing="3">EMILIA • CUERPO COMPLETO • 100%+</text>
+
+<g fill="#eefaff" opacity=".86">
+<path d="M106 286 l18 -36 18 36 -18 22z"/><path d="M600 286 l18 -36 18 36 -18 22z"/>
+<path d="M118 710 l14 -28 14 28 -14 19z"/><path d="M584 714 l14 -28 14 28 -14 19z"/>
+</g>
+
+<g fill="none" stroke="#d8f8ff" opacity=".4" stroke-width="5">
+<path d="M82 226 Q360 56 638 226"/><path d="M95 258 Q360 108 625 258"/>
+<path d="M90 860 Q360 942 630 860"/>
+</g>
+
+<g stroke="#17222a" stroke-width="9" stroke-linejoin="round">
+<path d="M230 398 Q204 249 277 164 Q360 64 466 162 Q539 227 512 406 Q490 534 438 603 L282 603 Q230 520 230 398Z" fill="url(#hair)"/>
+<path d="M274 225 Q359 156 450 225 L456 345 Q440 426 360 452 Q279 426 262 346Z" fill="#f4d8c7"/>
+<path d="M260 237 Q288 139 368 136 Q449 138 469 237 Q430 202 405 228 Q371 182 340 229 Q300 198 260 237Z" fill="url(#hair)"/>
+<path d="M277 221 Q255 332 281 438" fill="none" stroke="#ffffff" stroke-width="11"/>
+<path d="M446 219 Q468 328 440 438" fill="none" stroke="#ffffff" stroke-width="11"/>
+<ellipse cx="321" cy="327" rx="13" ry="18" fill="#4d708d"/><ellipse cx="399" cy="327" rx="13" ry="18" fill="#4d708d"/>
+<circle cx="324" cy="322" r="5" fill="#fff" stroke="none"/><circle cx="402" cy="322" r="5" fill="#fff" stroke="none"/>
+<path d="M339 388 Q360 400 381 388" fill="none" stroke="#a35b71" stroke-width="5"/>
+
+<path d="M286 438 Q360 411 434 438 L481 672 Q434 729 360 744 Q286 729 239 672Z" fill="url(#dress)"/>
+<path d="M315 440 L360 492 L404 440" fill="none" stroke="#8a62a8" stroke-width="8"/>
+<path d="M360 492 L360 710" stroke="#a9bfd0" stroke-width="6"/>
+
+<path d="M289 450 Q226 492 181 566 Q164 596 185 616 Q207 637 232 605 L322 506" fill="#eef4f8"/>
+<path d="M431 450 Q496 490 544 562 Q563 592 541 614 Q518 635 493 604 L399 506" fill="#eef4f8"/>
+
+<path d="M360 606 q-55 45 -92 102 q55 65 92 84 q37-19 92-84 q-37-57 -92-102Z" fill="#9bd6df" opacity=".5"/>
+<path d="M241 652 Q360 690 479 652 L516 807 Q444 860 360 870 Q276 860 204 807Z" fill="#b7c5d1"/>
+<path d="M289 822 L341 827 L329 947 Q318 971 293 962 L268 941Z" fill="#f2d0bd"/>
+<path d="M379 827 L431 822 L455 942 Q445 966 420 964 L398 944Z" fill="#f2d0bd"/>
+<path d="M267 939 L331 940 L339 974 L285 981 L250 966Z" fill="#edf7fa"/>
+<path d="M398 943 L455 939 L474 969 L431 983 L401 969Z" fill="#edf7fa"/>
+</g>
+
+<!-- crystals -->
+<g fill="#bcefff" opacity=".88">
+<path d="M136 500 l28-36 26 41 -30 26z"/><path d="M560 503 l30-39 24 43 -30 26z"/>
+<path d="M126 798 l24-30 19 34 -24 22z"/><path d="M584 798 l24-30 18 32 -24 23z"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#0d1921" opacity=".9" stroke="#d9f4ff" stroke-width="2"/>
+<text x="64" y="929" fill="#f7ffff" font-family="Arial" font-size="22" font-weight="700">Emilia</text>
+<text x="64" y="952" fill="#dce9ef" font-family="Arial" font-size="12">Re:ZERO • UR visual • cuerpo completo • hielo y cristal</text>
+<text x="656" y="929" text-anchor="end" fill="#f3d98b" font-family="Arial" font-size="14" font-weight="700">LUZ / HIELO</text>
+<text x="656" y="952" text-anchor="end" fill="#dce9ef" font-family="Arial" font-size="11">pose defensiva • dirección unitaria</text>
+</svg>
