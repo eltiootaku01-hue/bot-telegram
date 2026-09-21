@@ -1,11 +1,7 @@
-from app.core.time import utc_now
-
 import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.db.database import Database
-from app.db.trivia_models import TriviaRound
-
 from app.db.models import (
     GameCollection,
     GameDailyMissionProgress,
@@ -18,6 +14,9 @@ from app.db.models import (
     Chat,
     WaifuDetectorDailyUsage,
 )
+from app.db.trivia_models import TriviaRound
+
+from app.core.time import utc_now
 
 
 @pytest.fixture
@@ -199,7 +198,7 @@ async def test_database_rejects_invalid_trivia_round_state(database):
                     explanation="",
                     points=10,
                     status="active",
-                    expires_at=__import__("app.core.time", fromlist=["utc_now"]).utc_now(),
+                    expires_at=utc_now(),
                 )
             )
 
