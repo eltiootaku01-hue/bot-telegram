@@ -1,1 +1,73 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="680" viewBox="0 0 480 680"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#18365a"/><stop offset="1" stop-color="#090c14"/></linearGradient><radialGradient id="glow"><stop stop-color="#eafaff" stop-opacity=".24"/><stop offset="1" stop-color="#8bd7ff" stop-opacity="0"/></radialGradient></defs><rect x="8" y="8" width="464" height="664" rx="28" fill="url(#bg)" stroke="#8bd7ff" stroke-width="8"/><rect x="20" y="20" width="440" height="640" rx="20" fill="url(#glow)"/><text x="34" y="52" fill="#eafaff" font-size="20" font-family="Arial" font-weight="700">WAIFUMON • CARTA 16</text><text x="446" y="52" text-anchor="end" fill="#8bd7ff" font-size="26" font-family="Arial" font-weight="700">R</text><ellipse cx="240" cy="355" rx="122" ry="176" fill="#11151f" opacity=".65"/><path d="M145 330 Q150 215 240 190 Q330 215 335 330 L325 410 Q240 465 155 410 Z" fill="#355b78"/><ellipse cx="240" cy="335" rx="88" ry="110" fill="#f2d1bd"/><path d="M152 310 Q158 208 240 184 Q322 208 328 310 Q300 270 282 252 Q252 270 214 254 Q185 276 152 310Z" fill="#355b78"/><path d="M170 425 Q240 382 310 425 L345 540 L135 540Z" fill="#8bd7ff"/><ellipse cx="205" cy="334" rx="12" ry="16" fill="#efc64e"/><ellipse cx="275" cy="334" rx="12" ry="16" fill="#efc64e"/><circle cx="208" cy="337" r="5" fill="#10131b"/><circle cx="278" cy="337" r="5" fill="#10131b"/><path d="M216 384 Q240 400 264 384" fill="none" stroke="#9e5c66" stroke-width="5" stroke-linecap="round"/><circle cx="335" cy="248" r="24" fill="#8bd7ff"/><text x="335" y="257" text-anchor="middle" fill="#eafaff" font-size="22" font-family="Arial" font-weight="700">✦</text><rect x="32" y="560" width="416" height="74" rx="18" fill="#0a0d14" stroke="#8bd7ff" stroke-width="2"/><text x="48" y="591" fill="#fff" font-size="23" font-family="Arial" font-weight="700">Erza Scarlet</text><text x="48" y="616" fill="#eafaff" font-size="14" font-family="Arial">Fairy Tail</text><text x="350" y="589" fill="#8bd7ff" font-size="20" font-family="Arial" font-weight="700">CLASE B</text><text x="350" y="614" fill="#eafaff" font-size="12" font-family="Arial">ELEMENTO: HIELO</text><text x="240" y="654" text-anchor="middle" fill="#aab3c7" font-size="11" font-family="Arial">ARTE ORIGINAL LOCAL • NO CANON VISUAL</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#260b12"/><stop offset=".55" stop-color="#531526"/><stop offset="1" stop-color="#08111f"/></linearGradient>
+<radialGradient id="h" cx=".5" cy=".4" r=".7"><stop stop-color="#ffe7a0" stop-opacity=".34"/><stop offset=".7" stop-color="#d94d6a" stop-opacity=".08"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<linearGradient id="r" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e06a83"/><stop offset=".5" stop-color="#9f263e"/><stop offset="1" stop-color="#41131f"/></linearGradient>
+<linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f4ead6"/><stop offset="1" stop-color="#aeb5c0"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#efbb69" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#h)"/>
+<text x="52" y="78" fill="#fff3d5" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#f3c56e" font-family="Arial" font-size="32" font-weight="800">UR</text>
+<text x="52" y="112" fill="#e5cfc0" font-family="Arial" font-size="13" letter-spacing="3">ERZA • CUERPO COMPLETO • 100%+</text>
+
+<g opacity=".65" stroke="#f1c26b" fill="none">
+<path d="M80 200 Q160 160 228 200"/><path d="M492 188 Q560 150 642 188"/>
+<path d="M82 816 Q156 766 232 816"/><path d="M494 822 Q568 772 642 822"/>
+</g>
+<g opacity=".32" stroke="#9fd2ff" stroke-width="4">
+<path d="M106 300 L208 236 L250 338"/><path d="M614 310 L514 232 L476 340"/>
+</g>
+
+<!-- cape silhouette -->
+<path d="M188 446 Q132 586 102 790 Q191 840 242 820 L260 560 Z" fill="#161d2a" opacity=".92" stroke="#090c12" stroke-width="8"/>
+<path d="M532 446 Q590 588 618 790 Q529 840 478 820 L460 560 Z" fill="#161d2a" opacity=".92" stroke="#090c12" stroke-width="8"/>
+
+<!-- full body -->
+<g stroke="#0b0d13" stroke-width="9" stroke-linejoin="round">
+<path d="M252 366 Q210 250 255 181 Q314 91 386 114 Q479 121 498 220 Q515 304 468 372 L444 448 L276 448 Z" fill="#9b2742"/>
+<path d="M276 206 Q356 139 438 208 L448 334 Q430 415 359 435 Q288 414 270 334Z" fill="#f3d1bd"/>
+<path d="M264 220 Q283 126 360 126 Q449 125 456 224 Q423 192 395 216 Q366 170 334 216 Q296 187 264 220Z" fill="#a52b43"/>
+<path d="M287 206 Q274 307 291 394" fill="none" stroke="#db506c" stroke-width="10"/>
+<path d="M430 204 Q450 306 432 394" fill="none" stroke="#db506c" stroke-width="10"/>
+<ellipse cx="320" cy="310" rx="14" ry="20" fill="#8b293e"/><ellipse cx="399" cy="310" rx="14" ry="20" fill="#8b293e"/>
+<circle cx="323" cy="304" r="5" fill="#fff2d2" stroke="none"/><circle cx="402" cy="304" r="5" fill="#fff2d2" stroke="none"/>
+<path d="M338 366 Q359 379 380 366" fill="none" stroke="#a25d67" stroke-width="5"/>
+
+<!-- armor -->
+<path d="M282 430 Q359 398 436 430 L482 650 Q440 701 359 716 Q278 701 238 650Z" fill="url(#a)"/>
+<path d="M312 432 L359 486 L406 432" fill="none" stroke="#7a2234" stroke-width="10"/>
+<path d="M359 486 L359 650" stroke="#9e3448" stroke-width="7"/>
+<path d="M270 526 Q359 559 449 526" fill="none" stroke="#5d6676" stroke-width="6"/>
+
+<!-- arms -->
+<path d="M282 447 Q216 482 173 560 Q158 592 181 609 Q205 626 228 597 L318 497" fill="url(#a)"/>
+<path d="M434 447 Q502 488 549 556 Q568 586 546 607 Q520 625 495 594 L404 498" fill="url(#a)"/>
+
+<!-- sword -->
+<path d="M170 564 L92 386 L111 377 L190 555 Z" fill="#d9e2ea"/>
+<path d="M90 386 L73 360 L105 364 L116 378 Z" fill="#f0bd61"/>
+<path d="M550 555 L628 382 L647 391 L570 567 Z" fill="#d9e2ea"/>
+<path d="M628 382 L645 359 L612 365 L602 378 Z" fill="#f0bd61"/>
+
+<!-- skirt and legs -->
+<path d="M241 638 Q359 675 478 638 L520 800 Q446 852 359 861 Q273 850 200 800Z" fill="#5b2635"/>
+<path d="M285 813 L341 817 L329 951 Q313 977 289 963 L264 944Z" fill="#f2d0bd"/>
+<path d="M377 817 L433 812 L456 944 Q444 970 419 968 L397 947Z" fill="#f2d0bd"/>
+<path d="M260 940 L331 940 L341 976 L284 984 L246 968Z" fill="#171b25"/>
+<path d="M397 944 L456 941 L474 969 L431 985 L400 969Z" fill="#171b25"/>
+
+<!-- crest -->
+<path d="M330 505 L359 478 L388 505 L382 545 L336 545 Z" fill="none" stroke="#efbb69" stroke-width="5"/>
+</g>
+
+<g fill="#f4d07a">
+<circle cx="142" cy="252" r="5"/><circle cx="580" cy="244" r="4"/><circle cx="128" cy="678" r="4"/><circle cx="594" cy="684" r="5"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#090d14" opacity=".93" stroke="#efbb69" stroke-width="2"/>
+<text x="64" y="929" fill="#fff2d0" font-family="Arial" font-size="22" font-weight="700">Erza Scarlet</text>
+<text x="64" y="952" fill="#d8c3bf" font-family="Arial" font-size="12">Fairy Tail • UR visual • cuerpo completo • armadura y espadas</text>
+<text x="656" y="929" text-anchor="end" fill="#f3c56e" font-family="Arial" font-size="14" font-weight="700">POSE HEROICA</text>
+<text x="656" y="952" text-anchor="end" fill="#d8c3bf" font-family="Arial" font-size="11">escenario de combate • dirección unitaria</text>
+</svg>
