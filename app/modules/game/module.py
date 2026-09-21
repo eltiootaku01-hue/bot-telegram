@@ -1013,7 +1013,7 @@ class GameModule(BotModule):
                 amount=progress.points_gained,
                 reason='Captura de waifu',
                 reference_type='encounter',
-                reference_id=encounter.id,
+                reference_id=f"{encounter.id}:{callback.from_user.id}",
                 commit=False,
             )
             mission_claimed, mission_balance, _, _ = await self._record_mission(
@@ -1022,7 +1022,7 @@ class GameModule(BotModule):
                 chat_id=encounter.chat_id,
                 mission_key='capture_waifu',
                 reference_type='encounter',
-                reference_id=encounter.id,
+                reference_id=f"{encounter.id}:{callback.from_user.id}",
             )
             if mission_claimed:
                 balance = mission_balance
@@ -1034,7 +1034,8 @@ class GameModule(BotModule):
         result_text = (
             f'🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n'
             f'✨ Clase {encounter.rarity} · colección ×{owned.copies}\n'
-            f'⭐ +{progress.points_gained} puntos · saldo: {balance}'
+            f'⭐ +{progress.points_gained} puntos · saldo: {balance}\n'
+            f'👥 Oportunidades ocupadas: <b>{participant_count}/3</b>'
         )
         if reaction:
             result_text += f'\n\n🐍 <b>Sunna:</b> {reaction}'
