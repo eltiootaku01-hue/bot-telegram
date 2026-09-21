@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from aiogram import Bot
-
 from app.core.config import Settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.db.database import Database
+from app.db.models import GameEncounter
+from app.ui.game_keyboards import encounter_keyboard
+from app.world.models import WorldEventType
 from app.world.presenter import WorldPresenter
 from app.world.runtime import WorldRuntime
 
@@ -31,13 +33,38 @@ class WorldPresentationModule(BotModule):
         return None
 
     async def on_startup(self, bot: Bot) -> None:
-        async def send(presenter_key: str, chat_id: int, text: str) -> int:
-            if presenter_key != self.identity.value:
+        async def send(event) -> int:
+            if event.presenter.key != self.identity.value:
                 raise RuntimeError(
-                    f"World event addressed to presenter {presenter_key!r}, "
+                    f"World event addressed to presenter {event.presenter.key!r}, "
                     f"but this process owns {self.identity.value!r}"
                 )
-            sent = await bot.send_message(chat_id, text)
+
+            reply_markup = None
+            if event.event_type is WorldEventType.WAIFU_ARRIVAL:
+                encounter_id = str(event.payload.get("encounter_id") or "")
+                raw_options = event.payload.get("options")
+                if not encounter_id or not isinstance(raw_options, list) or not raw_options:
+                    raise RuntimeError(
+                        f"Waifu arrival event #{event.event_id} has invalid interaction payload"
+                    )
+                options = [str(value) for value in raw_options]
+                reply_markup = encounter_keyboard(encounter_id, options)
+
+            sent = await bot.send_message(
+                event.chat_id,
+                event.render_text(),
+                reply_markup=reply_markup,
+            )
+
+            if event.event_type is WorldEventType.WAIFU_ARRIVAL:
+                encounter_id = str(event.payload.get("encounter_id") or "")
+                async with self.database.session() as session:
+                    encounter = await session.get(GameEncounter, encounter_id)
+                    if encounter is not None and encounter.message_id is None:
+                        encounter.message_id = sent.message_id
+                        await session.commit()
+
             return sent.message_id
 
         presenter = WorldPresenter(send)
