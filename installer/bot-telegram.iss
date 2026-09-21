@@ -28,6 +28,8 @@ Source: "..\dist\bots\Sunna.exe"; DestDir: "{app}\bots"; Flags: ignoreversion
 Source: "..\dist\bots\Cami.exe"; DestDir: "{app}\bots"; Flags: ignoreversion
 Source: "..\dist\bots\Chie.exe"; DestDir: "{app}\bots"; Flags: ignoreversion
 Source: "..\dist\bots\WorldBot.exe"; DestDir: "{app}\bots"; Flags: ignoreversion
+Source: "..\dist\engine\waifumon-engine.jar"; DestDir: "{app}\engine"; Flags: ignoreversion
+Source: "..\dist\engine\jre\*"; DestDir: "{app}\engine\jre"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\dist\assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\README.md"; DestDir: "{app}"; Flags: isreadme
 
