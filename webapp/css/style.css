@@ -1,0 +1,99 @@
+ :root {
+  color-scheme: light dark;
+  --tg-bg: var(--tg-theme-bg-color, #111318);
+  --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #191c24);
+  --tg-text: var(--tg-theme-text-color, #f3f5f7);
+  --tg-hint: var(--tg-theme-hint-color, #9ca3af);
+  --tg-link: var(--tg-theme-link-color, #62a8ff);
+  --tg-button: var(--tg-theme-button-color, #2aabee);
+  --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+  --card: var(--tg-secondary-bg);
+  --border: color-mix(in srgb, var(--tg-text) 12%, transparent);
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.24);
+  --radius: 18px;
+  --safe-top: max(12px, var(--tg-safe-area-inset-top, env(safe-area-inset-top)));
+  --safe-bottom: max(16px, var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom)));
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; background: var(--tg-bg); color: var(--tg-text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+body { padding: var(--safe-top) 14px calc(var(--safe-bottom) + 12px); }
+button { border: 0; font: inherit; }
+button:focus-visible { outline: 3px solid var(--tg-link); outline-offset: 3px; }
+
+.app-shell { width: min(100%, 900px); margin: 0 auto; }
+.topbar, .section-heading, .resource-row, .combat-actions, .referral-card, .footer { display: flex; align-items: center; }
+.topbar { justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+
+.eyebrow { margin: 0 0 3px; color: var(--tg-hint); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: clamp(1.65rem, 7vw, 2.4rem); }
+h2 { margin-bottom: 0; font-size: 1.05rem; }
+.muted, .legal-note { color: var(--tg-hint); }
+.muted { margin: 7px 0 0; line-height: 1.45; }
+
+.player-badge, .resource-pill { background: var(--card); border: 1px solid var(--border); border-radius: 999px; }
+.player-badge { display: inline-flex; align-items: center; gap: 7px; max-width: 46vw; padding: 7px 11px; font-size: 0.8rem; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #41d17b; box-shadow: 0 0 10px #41d17b; }
+
+.hero-card, .combat-panel, .referral-card, .store-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.hero-card { padding: 18px; margin-bottom: 20px; }
+.resource-row { flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.resource-pill { padding: 6px 10px; font-size: 0.82rem; }
+
+.section { margin-bottom: 20px; }
+.section-heading { justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.section-meta { color: var(--tg-hint); font-size: 0.8rem; }
+
+.team-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.team-slot { min-height: 112px; padding: 8px; background: var(--card); border: 1px dashed var(--border); border-radius: 14px; text-align: center; }
+.team-slot img, .sprite-fallback { width: 72px; height: 72px; object-fit: contain; image-rendering: pixelated; border-radius: 12px; background: var(--tg-bg); }
+.team-slot strong { display: block; margin-top: 4px; font-size: 0.72rem; }
+
+.combat-panel { overflow: hidden; }
+#combat-canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: var(--tg-bg); }
+.combat-actions { gap: 8px; padding: 10px; overflow-x: auto; }
+.action-btn, .secondary-btn { min-height: 42px; border-radius: 13px; cursor: pointer; }
+.action-btn { flex: 1 0 0; padding: 9px 12px; background: var(--tg-button); color: var(--tg-button-text); font-weight: 700; }
+.action-btn:disabled { opacity: 0.5; cursor: default; }
+.secondary-btn { flex: 0 0 auto; padding: 9px 14px; background: transparent; color: var(--tg-link); border: 1px solid var(--border); }
+
+.store-grid { display: grid; gap: 8px; }
+.store-card { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px; color: var(--tg-text); text-align: left; cursor: pointer; }
+.store-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: var(--tg-bg); font-size: 1.3rem; }
+.store-card strong, .store-card small { display: block; }
+.store-card small { margin-top: 3px; color: var(--tg-hint); }
+.legal-note { margin: 9px 2px 0; font-size: 0.72rem; line-height: 1.45; }
+
+.referral-card { justify-content: space-between; gap: 12px; padding: 14px; }
+.referral-card p { margin: 4px 0 0; font-size: 0.78rem; }
+
+.footer { justify-content: space-between; gap: 10px; color: var(--tg-hint); font-size: 0.7rem; }
+
+.cut-in { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; pointer-events: none; opacity: 0; visibility: hidden; }
+.cut-in.is-active { opacity: 1; visibility: visible; }
+.cut-in-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.82); }
+.cut-in-card { position: relative; display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 14px; width: min(92vw, 620px); padding: 12px; border-radius: 18px; background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow); transform: translateX(-10vw) rotate(-1.5deg); }
+.cut-in.is-active .cut-in-card { animation: cut-in-card 1.5s ease both; }
+.cut-in-card img { width: 92px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 14px; background: var(--tg-bg); }
+.cut-in-copy strong, .cut-in-copy span { display: block; }
+.cut-in-copy strong { margin-top: 4px; font-size: 1.3rem; }
+.cut-in-copy #cut-in-subtitle { margin-top: 5px; color: var(--tg-hint); font-size: 0.8rem; }
+
+@keyframes cut-in-card {
+  0% { opacity: 0; transform: translateX(-35vw) rotate(-5deg) scale(0.96); }
+  18% { opacity: 1; }
+  32% { transform: translateX(2vw) rotate(1deg); }
+  42% { transform: translateX(-1vw) rotate(-0.5deg); }
+  70% { transform: translateX(0) rotate(0deg); }
+  100% { opacity: 1; transform: translateX(0) rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cut-in.is-active .cut-in-card { animation: none; opacity: 1; transform: none; }
+}
+
+@media (min-width: 680px) {
+  body { padding-left: 24px; padding-right: 24px; }
+  .store-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
