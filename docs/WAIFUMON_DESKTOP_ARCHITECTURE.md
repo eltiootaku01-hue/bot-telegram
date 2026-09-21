@@ -1,243 +1,260 @@
-# WaifuMon — arquitectura del cliente de escritorio
+# WaifuMon — arquitectura de runtime y cliente
 
-## Objetivo
+Fecha: 2026-09-21
 
-WaifuMon puede crecer mucho más allá de las limitaciones de una conversación de Telegram: combate visual, selección de equipo, estadísticas completas, animaciones, inventario, colecciones, evolución, escenas y futuros minijuegos.
+## Autoridad del gameplay
 
-La decisión arquitectónica es separar:
+La autoridad de las reglas de WaifuMon se está migrando a un **motor Java independiente de Telegram**.
 
-- **Game/World Core en Python:** autoridad absoluta.
-- **Cliente de escritorio JavaFX:** presentación interactiva.
-- **Telegram:** interfaz social y puerta de entrada al juego.
-
-## Regla de autoridad
-
-El cliente JavaFX nunca debe escribir directamente en SQLite ni resolver reglas de juego.
-
-La arquitectura objetivo es:
+La arquitectura oficial es:
 
 ```text
-                 GAME WORLD / GAME CORE
-                         │
-                Game Services / Rules
-                         │
-                    Persistence
-                         │
-                  Local Game API
-                         │
-                  ┌──────┴──────┐
-                  │             │
-             JavaFX client   Telegram bots
-             presentación     presentación
+Telegram / JavaFX / futuros clientes
+              ↓
+         Adaptadores
+              ↓
+      Java WaifuMon Engine
+              ↓
+        Game Rules
+              ↓
+   transición de Game State
+              ↓
+ Python Persistence / SQLite
 ```
 
-El servidor Python es el único que decide:
+Los clientes no calculan reglas. Los adaptadores tampoco deben duplicarlas.
 
-- estadísticas reales;
-- clase D–SSS;
-- nivel 1–30;
-- experiencia;
-- etapas de evolución;
+## Contrato Python ↔ Java
+
+El engine recibe NDJSON por `stdin` y responde NDJSON por `stdout`.
+
+Request versión `1.0`:
+
+```json
+{
+  "contract_version": "1.0",
+  "request_id": "uuid",
+  "correlation_id": "uuid",
+  "player_id": 123,
+  "community_id": -100123,
+  "command": "gacha.roll",
+  "payload": {},
+  "idempotency_key": "..."
+}
+```
+
+Response:
+
+```json
+{
+  "request_id": "uuid",
+  "success": true,
+  "result_type": "gacha_roll",
+  "payload": {},
+  "state_version": 0,
+  "event_ids": [],
+  "reward_ids": [],
+  "error_code": null,
+  "error_message": null
+}
+```
+
+Los nombres del wire contract usan `snake_case`. La versión es obligatoria.
+
+La idempotencia tiene dos niveles:
+
+1. **Python/SQLite:** autoridad durable para cobros, recompensas, inventario y estado persistente.
+2. **Java engine:** evita reutilizar una clave idempotente con un payload diferente dentro de un mismo proceso y puede repetir una respuesta determinista.
+
+Una clave idempotente reutilizada con otra operación devuelve `IDEMPOTENCY_CONFLICT`.
+
+## Reglas ya migradas
+
+El engine Java es actualmente la única autoridad de:
+
+- rareza base del gacha D/C/B/A/S/SS/SSS;
+- cálculo determinista de combate;
+- cálculo de nivel, experiencia y etapa de evolución.
+
+Python conserva solamente la persistencia y la presentación de esos resultados. La clase `GameEngine` de Python es una **fachada de compatibilidad**, no un segundo calculador.
+
+La progresión Python `add_character_experience()` delega directamente en Java.
+
+## Reglas todavía pendientes de migración
+
+Para completar la autoridad Java sin duplicación deben trasladarse de forma progresiva las reglas puramente de gameplay que todavía viven en Python:
+
+- estadísticas derivadas completas de WaifuMon;
 - potencial individual;
-- resultados de combate;
-- recompensas;
-- puntos;
-- inventario;
+- fusiones D→C→B→A→S;
+- resolución de encuentros;
+- límites de participantes y reclamaciones;
 - misiones;
-- encuentros;
-- estados persistentes.
+- Detector;
+- regalos y absorción;
+- evolución visual;
+- sistema de cartas cuando incluya reglas y no solamente presentación.
 
-JavaFX recibe estado ya resuelto y envía **intenciones** de jugador, por ejemplo:
+Cada migración debe retirar la fórmula anterior de Python o convertirla en una fachada sin lógica duplicada.
+
+## Persistencia
+
+SQLite sigue siendo la persistencia durable actual de la plataforma Python.
+
+El engine Java no conoce:
+
+- Telegram;
+- chats;
+- usuarios de Telegram;
+- SQLite;
+- tokens;
+- permisos;
+- HTTP;
+- LLMs.
+
+Esto permite que el mismo motor sea usado por Telegram, un cliente JavaFX, un simulador o futuras interfaces.
+
+La persistencia Python aplica las garantías de:
+
+- transacción atómica;
+- claves únicas;
+- ledger;
+- referencias idempotentes;
+- fencing de jobs;
+- rollback;
+- recuperación después de reinicios.
+
+## Telegram
+
+Telegram es un adaptador/presentador.
+
+La cadena de ejecución de una acción de juego es:
 
 ```text
-GET /game/profile
-GET /game/collection
-GET /game/waifumon/{id}
-
-POST /game/combat/start
-POST /game/combat/{id}/action
-POST /game/encounter/{id}/answer
-POST /game/item/{id}/absorb
+Callback / Command
+      ↓
+validación Telegram
+      ↓
+validación de usuario/chat/estado
+      ↓
+servicio de juego
+      ↓
+Java engine
+      ↓
+resultado tipado
+      ↓
+transacción Python
+      ↓
+presentación Telegram
 ```
 
-El API real todavía no forma parte de este bloque; estas rutas son contratos objetivo, no endpoints actualmente disponibles.
+El adapter no debe decidir una recompensa, modificar un saldo directamente ni volver a calcular daño.
 
-## Por qué no acceder SQLite desde JavaFX
+## JavaFX
 
-Un acceso directo del cliente a SQLite rompería varias garantías:
+JavaFX es un cliente visual.
 
-- dos procesos podrían mutar el mismo estado sin pasar por los servicios;
-- la política de transacciones quedaría duplicada;
-- sería más difícil aplicar fencing e idempotencia;
-- la seguridad de permisos se repartiría entre dos runtimes;
-- las reglas podrían divergir entre Python y Java;
-- futuras plataformas no podrían reutilizar el mismo Game Core.
-
-Por eso SQLite sigue siendo interno al servidor Python.
-
-## Cliente JavaFX
-
-JavaFX debe limitarse a:
+Puede encargarse de:
 
 - escenas;
-- botones;
-- animaciones;
-- navegación;
-- render de estadísticas;
-- arte;
-- sonido;
 - HUD;
-- barras de HP/EXP;
-- selección de equipos;
-- visualización de colección;
-- presentación de combates;
-- accesibilidad y escalado de ventana.
+- animaciones;
+- arte;
+- barras HP/EXP;
+- selección de equipo;
+- navegación;
+- inventario;
+- presentación de estadísticas;
+- accesibilidad.
 
-No debe contener fórmulas de daño ni recompensas.
+No debe:
 
-## Estadísticas
+- abrir SQLite;
+- escribir el estado de juego directamente;
+- recalcular daño;
+- otorgar recompensas;
+- cambiar rarezas;
+- validar permisos de Telegram.
 
-El catálogo/card público muestra únicamente información mínima:
+## Game World
 
-```text
-Nombre
-Anime
-Clase
-Elemento
-Arte
-```
-
-La vista completa aparece al entrar al juego o después de poseer la WaifuMon.
-
-El backend resuelve:
+El Game World es independiente de las personalidades.
 
 ```text
-stats = f(
-  personaje,
-  clase,
-  nivel,
-  elemento,
-  potencial_individual
-)
+Ciudad Animals
+├── Café Otaku
+├── WaifuMon
+├── eventos
+├── misiones
+├── misterios
+├── encuentros
+├── temporadas
+├── recompensas
+└── estado global
 ```
 
-El mismo resultado debe ser idéntico en Telegram, JavaFX y futuras interfaces.
+Cari, Sunna, Cami y Chie presentan partes de ese mundo.
 
-## Nivel y clase
+WorldBot puede presentar eventos sin convertirse en propietario del gameplay ni de una personalidad.
 
-Son dimensiones diferentes:
+## Seguridad
 
-### Clase de combate
+Los contratos deben fallar de forma cerrada:
 
-D → C → B → A → S → SS → SSS
+- versión desconocida → rechazo;
+- comando desconocido → rechazo;
+- payload inválido → rechazo;
+- clave idempotente reutilizada con otro payload → conflicto;
+- estado persistente inválido → rechazo;
+- transición concurrente perdida → no se concede recompensa.
 
-Determina multiplicadores de base, potencial de combate y disponibilidad de arte de clase.
+La IA no forma parte de ninguna transición crítica.
 
-### Nivel
+## Packaging
 
-1 → 30
+El repositorio construye:
 
-Determina crecimiento por experiencia.
+- `waifumon-engine.jar`;
+- un runtime JRE reducido para Windows mediante `jlink`;
+- `BotManager.exe`;
+- `Cari.exe`;
+- `Sunna.exe`;
+- `Cami.exe`;
+- `Chie.exe`;
+- `WorldBot.exe`.
 
-Subir de nivel **no cambia la clase**.
+El instalador copia el JAR y el runtime Java junto con los binarios Python.
 
-### Evolución visual por nivel
+## Estado actual
 
-La evolución de nivel tiene cuatro etapas:
+**Implementado:**
 
-```text
-Etapa 1 — Nv. 1–5
-Etapa 2 — Nv. 6–10
-Etapa 3 — Nv. 11–20
-Etapa 4 — Nv. 21–30
-```
+- proyecto Maven Java 21;
+- DTO request/response versión 1.0;
+- protocolo NDJSON;
+- idempotencia local del engine;
+- gacha, combate y progresión migrados;
+- bridge persistente Python → Java;
+- pruebas JUnit del engine;
+- pruebas Python del contrato;
+- CI Ubuntu construyendo y probando Java antes de Python;
+- packaging Windows con JAR + JRE bundled.
 
-Por lo tanto, una WaifuMon clase D nivel 20 sigue siendo clase D nivel 20; una clase S nivel 20 sigue siendo clase S nivel 20 y puede tener estadísticas muy superiores.
+**Pendiente:**
 
-## Potencial individual
-
-Cada primera adquisición posee un `potential_seed` persistente.
-
-La semilla:
-
-- se genera una sola vez;
-- sobrevive reinicios;
-- no se recalcula en cada consulta;
-- produce variaciones deterministas de las estadísticas;
-- no reemplaza el efecto de la clase;
-- permite diferenciar ejemplares con la misma clase y nivel en futuras versiones del modelo.
-
-Las filas heredadas de instalaciones antiguas sin semilla usan una semilla de compatibilidad derivada del personaje para no alterar inesperadamente colecciones existentes.
-
-## Arte
-
-Existen tres conceptos distintos:
-
-1. **Arte de carta:** R/S/SR/UR.
-2. **Arte de clase:** D/C/B/A/S/SS/SSS.
-3. **Arte de evolución:** etapas de nivel 1/2/3/4.
-
-La existencia de un registro de rutas de arte no implica que todas las imágenes finales ya estén producidas. El repositorio debe diferenciar siempre entre:
-
-- ruta declarada;
-- asset existente;
-- asset pendiente.
-
-## Integración con Telegram
-
-Telegram sigue siendo útil para:
-
-- descubrir una WaifuMon;
-- capturar un encuentro;
-- consultar colección;
-- recibir recompensas;
-- iniciar una partida;
-- recibir notificaciones;
-- compartir resultados.
-
-El cliente JavaFX se reserva la experiencia de juego profunda.
-
-## Futuras extensiones
-
-La misma API local puede soportar:
-
+- mover el resto de las reglas puras de gameplay;
+- definir eventos/versionado de estado real;
+- contrato durable de `state_version`;
+- API local autenticada para clientes externos;
 - cliente JavaFX;
-- cliente web local;
-- herramientas de administración;
-- simulador de combate;
-- modo espectador;
-- tests de gameplay;
-- otros bots presentadores.
+- sincronización de estado en tiempo real.
 
-La regla central permanece:
+## Regla de mantenimiento
+
+No añadir una nueva fórmula de gameplay en Python después de que esa regla haya sido migrada a Java.
+
+La regla válida es:
 
 ```text
-múltiples clientes
-      ↓
-mismo Game Core
-      ↓
-misma Persistence
-      ↓
-mismo estado verdadero
+1 regla → 1 autoridad → muchos presentadores
 ```
-
-## Estado de implementación
-
-Implementado en el core:
-
-- separación entre clase y nivel;
-- cuatro etapas de evolución;
-- potencial persistente;
-- estadísticas deterministas;
-- carta con información mínima;
-- vista detallada tras posesión;
-- registros de arte por clase y etapa.
-
-Pendiente como bloque separado:
-
-- API local autenticada;
-- proyecto JavaFX;
-- sincronización en tiempo real;
-- empaquetado del cliente desktop;
-- sistema de escenas/combate visual;
-- pruebas contractuales Python ↔ Java.
