@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from typing import Mapping
 
@@ -50,7 +51,7 @@ class WorldEventEnvelope:
     title: str
     payload: Mapping[str, object]
     status: WorldEventStatus
-    lock_time: object
+    lock_time: datetime
 
     def render_text(self) -> str:
         body = self.payload.get("text")
