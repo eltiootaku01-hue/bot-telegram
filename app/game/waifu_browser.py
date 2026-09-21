@@ -3,10 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from app.game.art_progression import art_frame_for
 from app.game.catalog import CHARACTERS
 from app.game.models import Character
-from app.game.waifumon_progression import stats_for_character, waifumon_class_for_level, level_cap_for_class, class_band_for_level
+from app.game.waifumon_progression import stats_for_character, class_band_for_level
 from app.game.waifu_catalog import ANIME_CORNER_2025_SOURCE, RANKER_2026_SOURCE
 
 
