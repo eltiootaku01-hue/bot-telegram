@@ -20,10 +20,12 @@ async def test_schema_removes_legacy_evolution_stage_column(tmp_path):
     await database.create_schema()
 
     async with database.engine.begin() as connection:
-        columns = {
-            column["name"]
-            for column in inspect(connection).get_columns("game_collection")
-        }
+        columns = await connection.run_sync(
+            lambda sync_connection: {
+                column["name"]
+                for column in inspect(sync_connection).get_columns("game_collection")
+            }
+        )
         table_sql = (
             await connection.execute(
                 text(
