@@ -194,6 +194,50 @@ class WaifuMonJavaEngine:
             defender_hp=int(result["defender_hp"]),
         )
 
+    def stats(
+        self,
+        *,
+        character: dict[str, Any],
+        level: int,
+        rarity: str,
+        potential_seed: str | None = None,
+    ) -> dict[str, Any]:
+        response = self._call(
+            player_id=0,
+            community_id=0,
+            command="stats.resolve",
+            payload={
+                "character": character,
+                "level": level,
+                "rarity": rarity,
+                "potential_seed": potential_seed or "preview-neutral",
+            },
+            idempotency_key=(
+                f"stats:{character['id']}:{level}:{rarity}:{potential_seed or 'preview-neutral'}"
+            ),
+        )
+        return dict(response["payload"])
+
+    def style(self, *, element: str) -> str:
+        response = self._call(
+            player_id=0,
+            community_id=0,
+            command="style.resolve",
+            payload={"element": element},
+            idempotency_key=f"style:{element}",
+        )
+        return str(response["payload"]["style"])
+
+    def potential_score(self, *, seed: str) -> int:
+        response = self._call(
+            player_id=0,
+            community_id=0,
+            command="potential.resolve",
+            payload={"potential_seed": seed},
+            idempotency_key=f"potential:{seed}",
+        )
+        return int(response["payload"]["potential_score"])
+
     def progression(
         self,
         *,
