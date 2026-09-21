@@ -151,7 +151,7 @@ def _focused_stats(
         special_power += 5
         fire_skill += 20
     elif style is CombatStyle.HEALING:
-        healing += 24
+        healing += 30
         strength -= 2
     elif style is CombatStyle.BRUTE_FORCE:
         strength += 16
