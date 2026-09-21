@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from app.game.card_art_matrix import CardArtTier
 from tools.export_card_art_prompts import build_markdown, load_manifest
 
 
@@ -10,8 +11,7 @@ def test_card_art_prompt_export_uses_all_manifest_items() -> None:
 
     assert len(manifest["items"]) == 78
     assert markdown.startswith("# WaifuMon — prompts de arte de cartas")
-    assert markdown.count("
-## ") == 78
+    assert markdown.count("\n## ") == 78
     assert "Production tier: UR" in markdown
     assert "Output JPG 1024x1536." in markdown
 
@@ -23,3 +23,11 @@ def test_prompt_manifest_has_same_item_count() -> None:
     assert data["matrix_version"] == "2026-09-card-art-matrix-v1"
     assert len(data["items"]) == 78
     assert all(item["production_file"].endswith("--normal.jpg") for item in data["items"])
+
+
+def test_card_art_prompt_manifest_tracks_only_known_tiers() -> None:
+    data = json.loads(
+        Path("assets/waifus/card_art_prompt_manifest.json").read_text(encoding="utf-8")
+    )
+    allowed = {CardArtTier.CLOSE_UP.value, "S", "SR", "UR"}
+    assert {item["framing_profile"] for item in data["items"]} <= allowed
