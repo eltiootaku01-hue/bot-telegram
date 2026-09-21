@@ -62,7 +62,6 @@ async def test_database_rejects_invalid_collection_state(database):
                     level=1,
                     copies=0,
                     experience=0,
-                    evolution_stage=1,
                 )
             )
 
