@@ -166,7 +166,7 @@ def render_detail(character: Character) -> str:
             f"📺 {character.anime}",
             "",
             f"🏷️ Carta: <b>{character.card_tier.value}</b>",
-            f"🎨 Arte: <b>{art_frame_for(popularity_score=character.popularity_score, power_score=character.power_score).tier.value}</b> · {art_frame_for(popularity_score=character.popularity_score, power_score=character.power_score).visible_percent}",
+            f"🎨 Arte: <b>{art_frame_for(card_tier=character.card_tier).tier.value}</b> · {art_frame_for(card_tier=character.card_tier).visible_percent}",
             f"💠 Clase: <b>{character.rarity.value}</b>",
             f"🌟 Elemento: <b>{character.element.value}</b>",
             f"⚡ Poder de balance: <b>{character.power_score}/100</b>",
