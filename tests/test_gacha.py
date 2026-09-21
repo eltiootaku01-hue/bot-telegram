@@ -18,6 +18,50 @@ class FixedEngine(GameEngine):
     def roll_gacha(self, seed: str | None = None) -> Rarity:
         return self.rarity
 
+    def resolve_gacha(
+        self,
+        *,
+        seed: str,
+        d_streak: int,
+        candidates: list[dict[str, str]],
+        owned_character_ids: set[str] | frozenset[str],
+        player_id: int,
+        community_id: int,
+    ) -> dict[str, object]:
+        resolved = self.rarity
+        pity_triggered = False
+        next_streak = d_streak + 1 if resolved is Rarity.D else 0
+        if resolved is Rarity.D and d_streak >= 6:
+            resolved = Rarity.C
+            pity_triggered = True
+            next_streak = 0
+
+        eligible = [
+            candidate
+            for candidate in candidates
+            if Rarity(candidate["rarity"]).value == resolved.value
+        ]
+        if not eligible:
+            eligible = [
+                candidate
+                for candidate in candidates
+                if Rarity(candidate["rarity"]).value in {Rarity.D.value, Rarity.C.value}
+            ]
+        top = sorted(eligible, key=lambda candidate: candidate["id"])
+        if resolved in {Rarity.D, Rarity.C}:
+            unowned = [
+                candidate for candidate in top
+                if candidate["id"] not in owned_character_ids
+            ]
+            if unowned:
+                top = unowned
+        return {
+            "rolled_rarity": resolved.value,
+            "character_id": top[0]["id"],
+            "pity_triggered": pity_triggered,
+            "d_streak": next_streak,
+        }
+
 
 @pytest.fixture
 async def database(tmp_path):
