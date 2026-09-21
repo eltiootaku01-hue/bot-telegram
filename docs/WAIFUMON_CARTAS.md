@@ -85,12 +85,83 @@ La carta del juego se identifica por `character_id`. El único arte de producci�
 | 77 | `ouka-shiunji` | Ouka Shiunji | The Shiunji Family Children | reservado |
 
   
+## Matriz visual definitiva por rareza de carta
+
+**Versión:** 2026-09 / matriz v1.
+
+La matriz visual controla el encuadre y la escala narrativa del arte. Se mantiene separada de la rareza de combate interna (`D/C/B/A/S/SS/SSS`) para evitar que una futura modificación de balance altere el formato visual de una carta.
+
+| Tier visual | Encuadre | Escala / corte | Dirección de vestuario | Función | Nivel |
+|---|---|---|---|---|---|
+| **D / C / B / R** | Primer plano / Close-Up | Rostro y hombros | Atuendo base, cotidiano o uniforme | Legibilidad limpia para avatares y mensajes rápidos | Sin contenido sugerente |
+| **S** | Plano medio | Tórax; foco en busto, espalda o cadera | Vestimenta ajustada, traje de baño o lencería temática **solo con elegibilidad adulta explícita** | Glamour moderado | Ecchi moderado, nunca explícito |
+| **SR** | Plano tres cuartos | Casi cuerpo completo | Gothic Lolita, kemonomimi, bunny suit elegante, yukata/kimono festivo o combate estilizado | Alta fidelidad y pose dinámica | Ecchi avanzado, nunca explícito |
+| **UR** | Plano general | Cuerpo completo, de pies a cabeza | Cosplay/crossover conceptual premium; fanservice **solo con elegibilidad adulta explícita** | Edición premium y fondo elaborado | Ecchi premium, estrictamente no explícito |
+
+**Regla de compatibilidad:** el manifest continúa usando `art_tier = R/S/SR/UR`. El perfil `D_C_B_R` representa el mismo encuadre Close-Up para los niveles D, C, B y R cuando un documento externo utilice esos nombres.
+
 ## Contrato de producción visual
 
 - Directorio único: `assets/production/cards/`.
-- Formato único: JPEG/JPG.
+- Formato aceptado: **JPG/JPEG**.
+- Formato canónico de salida del generador: **JPG**.
 - Resolución exacta: **1024 × 1536** píxeles.
-- Las variantes `normal` y `shiny` usan `<character-id>--<variant>.jpg`.
-- El arte evolutivo derivado del nivel usa `<character-id>--stage1.jpg`, `stage2.jpg` y `stage3.jpg`.
-- SVG, WebP, conceptos y borradores permanecen en `assets/quarantine/`.
-- Si falta un asset validado, la carta sigue siendo válida pero el runtime no sustituye la imagen por un fallback genérico.
+- Nombres canónicos: `<character-id>--normal.jpg` y `<character-id>--shiny.jpg`.
+- El arte evolutivo derivado del nivel usa `<character-id>--stage1.jpg`, `stage2.jpg` y `stage3.jpg` cuando exista esa variante autorizada.
+- SVG, WebP, conceptos, borradores o assets rechazados no son producción y deben permanecer en `assets/quarantine/`.
+- Un asset invalidado por el validador puede moverse automáticamente con `tools/validate_card_assets.py --quarantine-invalid`.
+- La existencia de un archivo técnicamente correcto **no equivale a aprobación visual**: una revisión humana debe confirmar anatomía, manos, perspectiva, rostro, recorte y consistencia del personaje.
+
+## Producción one-card-at-a-time
+
+Cada carta se trata como una unidad aislada de producción:
+
+1. Cargar el brief de un único `character_id`.
+2. Resolver el `art_tier` del manifest y su perfil de encuadre.
+3. Generar un único arte de 1024×1536.
+4. Revisar anatomía, manos/dedos, extremidades, articulaciones, rasgos faciales, perspectiva y recorte.
+5. Para **UR**, repetir la inspección antes de marcar el asset como aprobado.
+6. Si falla cualquier criterio, retirar el archivo de producción y enviarlo a `assets/quarantine/`.
+7. Solo después de la aprobación visual y técnica se puede cambiar el estado del manifest a `approved`.
+
+## Plantilla de generación
+
+La fuente de la plantilla está en `app/game/card_art_matrix.py` y se exporta con:
+
+`python tools/export_card_art_prompts.py`
+
+Cada prompt lleva obligatoriamente identidad del personaje y obra, tier visual, encuadre, composición, vestuario, modo no sugerente o compuerta adulta explícita, control anatómico y salida JPG 1024×1536.
+
+Para S/SR/UR, **no se concede elegibilidad adulta por el mero hecho de que el personaje tenga una rareza alta**. El manifest debe marcarla explícitamente antes de generar una variante sugerente.
+
+## Auditoría técnica
+
+Ejecutar:
+
+`python tools/validate_card_assets.py`
+
+Para mover automáticamente archivos rechazados:
+
+`python tools/validate_card_assets.py --quarantine-invalid`
+
+El validador comprueba extensión JPG/JPEG, lectura real del JPEG, dimensiones exactas, tamaño máximo de 8 MiB y tamaño mínimo de 50 KiB. La auditoría anatómica y de perspectiva sigue siendo visual/humana; el código no simula una aprobación que no puede observar.
+
+## Manifestos de arte
+
+- `assets/waifus/art_manifest.json`: catálogo y estado de producción por carta.
+- `assets/waifus/card_art_prompt_manifest.json`: contrato de prompts, matriz y revisión.
+- `docs/generated/WAIFUMON_CARD_ART_PROMPTS.md`: exportación textual reproducible de los prompts.
+
+## Seguridad de estilo y contenido
+
+- Las referencias visuales externas sirven como inspiración de alto nivel; no se copian estilos concretos de artistas o estudios.
+- No se genera desnudez explícita.
+- No se generan genitales expuestos, pezones expuestos ni actividad sexual explícita.
+- No se generan personajes menores de edad en poses sexualizadas.
+- Las variantes S/SR/UR requieren una compuerta adulta explícita y siguen siendo no explícitas.
+
+## Estado de producción actual
+
+El manifest actual registra **0 assets aprobados en producción**. Esto es intencional: la infraestructura de generación y validación está lista, pero ningún archivo se marca como aprobado sin inspección individual.
+
+La matriz visual queda así cerrada para todo nuevo material; no se deben reintroducir reglas porcentuales antiguas como sustituto del encuadre.
