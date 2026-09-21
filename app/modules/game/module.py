@@ -34,7 +34,7 @@ from app.game.waifu_browser import (
 )
 from app.game.wild_scheduler import WildWaifuScheduler
 from app.game.waifu_detector import WaifuDetectorService
-from app.game.waifumon_progression import stats_for_character
+from app.game.waifumon_progression import stats_for_collection
 from app.game.waifu_gift_scheduler import WaifuGiftScheduler
 from app.game.waifu_gifts import WaifuGiftService
 from app.services.community import CommunityResolver
@@ -895,7 +895,8 @@ class GameModule(BotModule):
             await callback.answer("No encuentro esa waifu.", show_alert=True)
             return
 
-        owned_level = 1
+        owned_level = None
+        owned_seed = None
         chat_id = await self._community_chat_id(callback.from_user.id)
         if chat_id is not None:
             async with self.database.session() as session:
@@ -914,9 +915,14 @@ class GameModule(BotModule):
                     )
                     if owned is not None:
                         owned_level = owned.level
+                        owned_seed = owned.potential_seed
 
         if callback.message is not None:
-            detail_text = render_detail(character, owned_level=owned_level)
+            detail_text = render_detail(
+                character,
+                owned_level=owned_level,
+                potential_seed=owned_seed,
+            )
             evolution_paths = evolution_art_candidates_for(character_id, owned_level)
             art_file = next(
                 (
@@ -993,7 +999,7 @@ class GameModule(BotModule):
             for item in rows:
                 character = get_character(item.character_id)
                 progress = collection_status(item)
-                stats = stats_for_character(character, item.level)
+                stats = stats_for_collection(character, item)
                 next_level = item.level + 1 if item.level < 30 else None
                 promotion = ""
                 if next_level is not None and item.level in {10, 20}:
