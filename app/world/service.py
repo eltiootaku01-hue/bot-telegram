@@ -193,37 +193,44 @@ class WorldEventService:
         session: AsyncSession,
         *,
         now: datetime | None = None,
+        presenter_key: str | None = None,
     ) -> WorldEventEnvelope | None:
         """Claim exactly one due event and return its fenced immutable envelope."""
         current = now or utc_now()
         while True:
+            conditions = [
+                GameWorldEvent.status == WorldEventStatus.PENDING.value,
+                GameWorldEvent.run_at <= current,
+                (
+                    GameWorldEvent.expires_at.is_(None)
+                    | (GameWorldEvent.expires_at > current)
+                ),
+            ]
+            if presenter_key is not None:
+                conditions.append(GameWorldEvent.presenter_key == presenter_key)
             candidate = await session.scalar(
                 select(GameWorldEvent)
-                .where(
-                    GameWorldEvent.status == WorldEventStatus.PENDING.value,
-                    GameWorldEvent.run_at <= current,
-                    (
-                        GameWorldEvent.expires_at.is_(None)
-                        | (GameWorldEvent.expires_at > current)
-                    ),
-                )
+                .where(*conditions)
                 .order_by(GameWorldEvent.id.asc())
                 .limit(1)
             )
             if candidate is None:
                 return None
 
+            update_conditions = [
+                GameWorldEvent.id == candidate.id,
+                GameWorldEvent.status == WorldEventStatus.PENDING.value,
+                GameWorldEvent.run_at <= current,
+                (
+                    GameWorldEvent.expires_at.is_(None)
+                    | (GameWorldEvent.expires_at > current)
+                ),
+            ]
+            if presenter_key is not None:
+                update_conditions.append(GameWorldEvent.presenter_key == presenter_key)
             result = await session.execute(
                 update(GameWorldEvent)
-                .where(
-                    GameWorldEvent.id == candidate.id,
-                    GameWorldEvent.status == WorldEventStatus.PENDING.value,
-                    GameWorldEvent.run_at <= current,
-                    (
-                        GameWorldEvent.expires_at.is_(None)
-                        | (GameWorldEvent.expires_at > current)
-                    ),
-                )
+                .where(*update_conditions)
                 .values(
                     status=WorldEventStatus.PUBLISHING.value,
                     locked_at=current,
