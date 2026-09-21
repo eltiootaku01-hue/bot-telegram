@@ -2,7 +2,7 @@
 
 Producción unitaria. Cada pieza se aprueba por separado y queda versionada en `assets/waifus/`.
 
-## Galería actual
+## Ejemplos destacados de la galería
 
 ### Yor Forger — UR
 
