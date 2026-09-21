@@ -1,5 +1,6 @@
 from datetime import timedelta
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select
@@ -7,7 +8,7 @@ from sqlalchemy import select
 from app.core.time import utc_now
 from app.characters.models import CharacterIntent
 from app.db.database import Database
-from app.db.models import Chat, GameCollection, GameEncounter, GameProfile, PointTransaction, User
+from app.db.models import Chat, GameAttempt, GameCollection, GameEncounter, GameProfile, PointTransaction, User
 from app.modules.game.module import GameModule
 
 
@@ -55,12 +56,12 @@ async def test_capture_callback_persists_progression(tmp_path) -> None:
         collection = await session.scalar(select(GameCollection))
         transaction = await session.scalar(select(PointTransaction))
 
-    assert encounter.status == "captured"
+    assert encounter.status == "active"
     assert profile.points == 30
     assert collection.character_id == "anya"
     assert collection.copies == 1
     assert collection.experience == 25
-    assert transaction.reference_id == "encounter-1"
+    assert transaction.reference_id == "encounter-1:7"
     assert edits
     assert any("<b>Sunna:</b>" in text for text in edits)
     assert any(text in edits[-1] for text in ("Bien. Lo hiciste.", "Ganaste.", "Fue buena jugada.", "Me alegra."))
