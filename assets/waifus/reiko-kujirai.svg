@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10131c"/><stop offset=".55" stop-color="#2a4054"/><stop offset="1" stop-color="#0e1a25"/></linearGradient>
+<radialGradient id="n" cx=".5" cy=".24" r=".68"><stop stop-color="#d6efff" stop-opacity=".25"/><stop offset="1" stop-color="#95b7d5" stop-opacity="0"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9d4ea"/><stop offset=".55" stop-color="#769ab9"/><stop offset="1" stop-color="#3a5670"/></linearGradient>
+<linearGradient id="coat" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d8e6ee"/><stop offset="1" stop-color="#95aebf"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#b9d7e9" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#n)"/>
+<text x="52" y="78" fill="#effaff" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#d4e7ff" font-family="Arial" font-size="32" font-weight="800">SR</text>
+<text x="52" y="112" fill="#c8d7e2" font-family="Arial" font-size="13" letter-spacing="3">REIKO • 60-80% • MOVIMIENTO / CIUDAD NOCTURNA</text>
+
+<!-- train station silhouettes -->
+<g opacity=".72" fill="#07101a">
+  <path d="M66 780 L66 540 L124 540 L124 780Z"/><path d="M140 780 L140 600 L182 600 L182 780Z"/>
+  <path d="M540 780 L540 575 L585 575 L585 780Z"/><path d="M604 780 L604 510 L662 510 L662 780Z"/>
+</g>
+<g stroke="#b7e6ff" opacity=".32">
+  <path d="M70 540 L182 540"/><path d="M538 575 L662 575"/>
+</g>
+
+<!-- ticket papers -->
+<g fill="#eaf6ff" opacity=".72">
+  <rect x="110" y="262" width="42" height="25" rx="4" transform="rotate(-16 110 262)"/>
+  <rect x="580" y="332" width="38" height="23" rx="4" transform="rotate(13 580 332)"/>
+  <rect x="136" y="650" width="34" height="21" rx="4" transform="rotate(-8 136 650)"/>
+</g>
+
+<g stroke="#121821" stroke-width="9" stroke-linejoin="round">
+  <!-- hair -->
+  <path d="M205 420 Q191 262 263 178 Q358 74 470 167 Q542 230 513 424 Q498 532 447 607 L274 607 Q216 522 205 420Z" fill="url(#hair)"/>
+  <path d="M269 238 Q359 164 450 236 L455 363 Q438 446 359 472 Q280 446 262 364Z" fill="#f2d4c4"/>
+  <path d="M257 250 Q284 151 366 147 Q450 150 469 248 Q429 215 404 239 Q370 192 339 239 Q300 206 257 250Z" fill="url(#hair)"/>
+  <path d="M274 229 Q253 339 280 441" fill="none" stroke="#d8efff" stroke-width="10"/>
+  <path d="M446 227 Q468 340 439 441" fill="none" stroke="#d8efff" stroke-width="10"/>
+  <ellipse cx="320" cy="337" rx="13" ry="19" fill="#3f5366"/><ellipse cx="399" cy="337" rx="13" ry="19" fill="#3f5366"/>
+  <circle cx="323" cy="331" r="5" fill="#fff" stroke="none"/><circle cx="402" cy="331" r="5" fill="#fff" stroke="none"/>
+  <path d="M338 401 Q359 412 380 401" fill="none" stroke="#9d6070" stroke-width="5"/>
+
+  <!-- coat, scarf and torso -->
+  <path d="M284 454 Q359 426 435 454 L485 706 Q437 764 359 781 Q279 764 235 706Z" fill="url(#coat)"/>
+  <path d="M300 462 L358 525 L417 462" fill="none" stroke="#607b92" stroke-width="8"/>
+  <path d="M314 510 Q359 540 404 510 L394 559 Q359 582 324 559Z" fill="#6ea0bf"/>
+  <path d="M276 490 Q223 530 184 608 Q169 637 191 654 Q216 670 238 642 L321 548" fill="url(#coat)"/>
+  <path d="M433 490 Q488 529 534 602 Q552 630 531 651 Q506 669 483 642 L397 548" fill="url(#coat)"/>
+
+  <!-- messenger bag -->
+  <path d="M291 590 Q359 567 426 590 L447 740 Q359 783 270 740Z" fill="#4f6674"/>
+  <path d="M296 604 Q359 568 422 604" fill="none" stroke="#c7e0ec" stroke-width="5"/>
+  <circle cx="359" cy="655" r="16" fill="#c6e3f2"/>
+  <path d="M351 655 h16 M359 647 v16" stroke="#4d6c7e" stroke-width="4"/>
+
+  <!-- lower 70% -->
+  <path d="M266 726 Q359 761 452 726 L470 869 Q416 912 359 920 Q301 911 250 869Z" fill="#4d6170"/>
+</g>
+
+<g fill="#d6efff" opacity=".76">
+  <circle cx="118" cy="396" r="4"/><circle cx="607" cy="450" r="5"/><circle cx="172" cy="734" r="3"/><circle cx="563" cy="750" r="4"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#081019" opacity=".93" stroke="#b9d7e9" stroke-width="2"/>
+<text x="64" y="929" fill="#f0fbff" font-family="Arial" font-size="22" font-weight="700">Reiko Kujirai</text>
+<text x="64" y="952" fill="#cbdbe6" font-family="Arial" font-size="12">Rurouni Kenshin • SR visual • 60-80% • escena urbana nocturna</text>
+<text x="656" y="929" text-anchor="end" fill="#d4e7ff" font-family="Arial" font-size="14" font-weight="700">MOVIMIENTO</text>
+<text x="656" y="952" text-anchor="end" fill="#cbdbe6" font-family="Arial" font-size="11">estación / papeles / bolso • dirección unitaria</text>
+</svg>
