@@ -23,4 +23,4 @@ def test_card_art_manifest_matches_definitive_matrix_contract() -> None:
         assert item["visual_audit_status"] in {"not_inspected", "approved", "failed"}
         assert isinstance(item["adult_eligible"], bool)
 
-    assert data["completed_items"] == 0
+    assert data["completed_items"] == sum(1 for item in data["items"] if item["asset_status"] == "production_approved")
