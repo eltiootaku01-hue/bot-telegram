@@ -161,18 +161,19 @@ class TriviaModule(BotModule):
         except Exception as exc:
             logger.exception("Trivia publication failed chat=%s round=%s", chat_id, round_row.id)
             async with self.database.session(write=True) as session:
-                if isinstance(exc, RuntimeError):
-                    await session.execute(
-                        update(TriviaRound)
-                        .where(TriviaRound.id == round_row.id, TriviaRound.status == "publishing")
-                        .values(status="failed")
+                next_status = (
+                    "failed"
+                    if isinstance(exc, (TelegramBadRequest, TelegramForbiddenError, RuntimeError))
+                    else "delivery_unknown"
+                )
+                await session.execute(
+                    update(TriviaRound)
+                    .where(
+                        TriviaRound.id == round_row.id,
+                        TriviaRound.status == "publishing",
                     )
-                else:
-                    await session.execute(
-                        update(TriviaRound)
-                        .where(TriviaRound.id == round_row.id, TriviaRound.status == "publishing")
-                        .values(status="delivery_unknown")
-                    )
+                    .values(status=next_status)
+                )
             return False
 
         async with self.database.session(write=True) as session:
