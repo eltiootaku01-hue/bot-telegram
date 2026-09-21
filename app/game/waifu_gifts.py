@@ -153,6 +153,23 @@ class WaifuGiftService:
             .values(status="pending", updated_at=utc_now())
         )
 
+    async def mark_publication_unknown(
+        self,
+        session: AsyncSession,
+        *,
+        drop_id: int,
+    ) -> bool:
+        result = await session.execute(
+            update(WaifuGiftDrop)
+            .where(
+                WaifuGiftDrop.id == drop_id,
+                WaifuGiftDrop.status == "publishing",
+                WaifuGiftDrop.message_id.is_(None),
+            )
+            .values(status="delivery_unknown", updated_at=utc_now())
+        )
+        return result.rowcount == 1
+
     async def claim(
         self,
         session: AsyncSession,
