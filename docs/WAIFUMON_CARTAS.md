@@ -1,6 +1,6 @@
 # WaifuMon — catálogo de cartas
 
-Cartas registradas: **77**.
+Cartas registradas: **78**.
 
 La carta del juego se identifica por `character_id`; el arte específico se enlaza solamente cuando existe un archivo aprobado en `assets/waifus/<character_id>.png`.
 
