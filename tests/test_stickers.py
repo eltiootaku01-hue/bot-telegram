@@ -30,3 +30,35 @@ def test_sticker_keys_are_unique() -> None:
     keys = [spec.key for spec in STICKER_CATALOG]
     assert len(keys) == len(set(keys))
     assert len(STICKER_CATALOG) == 48
+
+def test_sticker_service_resolves_configured_file_id() -> None:
+    from app.stickers.service import StickerService
+
+    settings = __import__("app.core.config", fromlist=["Settings"]).Settings(
+        telegram_sticker_file_ids_json='{"cari-celebration-01":"CAAC123"}'
+    )
+    service = StickerService(settings)
+    assert service.file_id_for(
+        BotIdentity.CARI,
+        CharacterIntent.CELEBRATION,
+    ) == "CAAC123"
+
+
+@pytest.mark.asyncio
+async def test_sticker_service_sends_only_when_configured() -> None:
+    from app.stickers.service import StickerService
+
+    settings = __import__("app.core.config", fromlist=["Settings"]).Settings()
+    service = StickerService(settings)
+    bot = AsyncMock()
+    message = AsyncMock()
+
+    sent = await service.send_if_configured(
+        bot,
+        message,
+        BotIdentity.CARI,
+        CharacterIntent.CELEBRATION,
+    )
+
+    assert sent is False
+    bot.send_sticker.assert_not_awaited()
