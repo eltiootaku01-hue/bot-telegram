@@ -1,6 +1,5 @@
 import pytest
 
-from app.core.time import utc_now
 from app.db.database import Database
 from app.db.models import Chat, GameProfile, User
 from app.game.catalog import get_character
