@@ -132,7 +132,7 @@ def sticker_prompt(spec: StickerSpec) -> str:
         f"Telegram sticker of {spec.identity.value.title()}, "
         f"cute clean anime/chibi style, expressive but non-explicit, "
         f"{spec.pose}, {spec.face}, holding or using {spec.prop}. "
-        "Simple readable silhouette, transparent background, bold clean outline, "
+        "Simple readable silhouette, fondo transparente, contorno limpio marcado, "
         "no nudity, no sexualized pose, no gore, no watermark."
         + (f' Include the short Spanish text "{spec.text}".' if spec.text else "")
     )
