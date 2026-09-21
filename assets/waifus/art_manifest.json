@@ -809,5 +809,14 @@
       "asset_status": "pending"
     }
   ],
-  "progress_percent": 21.79
+  "progress_percent": 21.79,
+  "generated_extras": [
+    {
+      "asset_id": "kuro-shiny-card-v1",
+      "file": "assets/waifus/generated/kuro-shiny-card-v1.jpg",
+      "status": "generated_concept",
+      "catalog_binding": null,
+      "note": "Original OC variant; not a playable catalog character."
+    }
+  ]
 }
