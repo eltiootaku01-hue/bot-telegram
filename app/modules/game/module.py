@@ -1127,6 +1127,21 @@ class GameModule(BotModule):
             )
             await session.commit()
 
+        captured_stats = None
+        if result.granted:
+            async with self.database.session() as session:
+                owned = await session.scalar(
+                    select(GameCollection)
+                    .join(GameProfile, GameProfile.id == GameCollection.profile_id)
+                    .where(
+                        GameProfile.user_id == callback.from_user.id,
+                        GameProfile.chat_id == chat_id,
+                        GameCollection.character_id == result.character.id,
+                    )
+                )
+            if owned is not None:
+                captured_stats = stats_for_collection(result.character, owned)
+
         await self._observe_action("gacha_roll", callback.from_user.id, chat_id)
 
         if result.approval is not None:
@@ -1306,6 +1321,7 @@ class GameModule(BotModule):
             if mission_claimed:
                 balance = mission_balance
 
+        captured_stats = stats_for_collection(character, owned)
         reaction = self._game_reaction(
             CharacterIntent.GAME_SUCCESS,
             callback.from_user.id + callback.message.chat.id,
@@ -1314,7 +1330,9 @@ class GameModule(BotModule):
             f'🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n'
             f'✨ Clase {encounter.rarity} · colección ×{owned.copies}\n'
             f'⭐ +{progress.points_gained} puntos · saldo: {balance}\n'
-            f'👥 Oportunidades ocupadas: <b>{participant_count}/3</b>'
+            f'👥 Oportunidades ocupadas: <b>{participant_count}/3</b>\n'
+            f'📊 <b>Stats iniciales:</b> ❤️ {captured_stats.max_hp} · 💪 {captured_stats.strength} · '
+            f'🛡️ {captured_stats.defense} · 💨 {captured_stats.speed}'
         )
         if reaction:
             result_text += f'\n\n🐍 <b>Sunna:</b> {reaction}'
