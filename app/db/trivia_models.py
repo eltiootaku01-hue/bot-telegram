@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.time import utc_now
@@ -9,6 +9,14 @@ from app.db.models import Base
 
 class TriviaRound(Base):
     __tablename__ = "trivia_rounds"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('active', 'won', 'expired', 'failed', 'cancelled')",
+            name="ck_trivia_round_status",
+        ),
+        CheckConstraint("answer_index >= 0", name="ck_trivia_answer_index_nonnegative"),
+        CheckConstraint("points > 0", name="ck_trivia_points_positive"),
+    )
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     chat_id: Mapped[int] = mapped_column(BigInteger)
     question: Mapped[str] = mapped_column(String(2000))
