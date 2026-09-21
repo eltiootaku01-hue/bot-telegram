@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, UniqueConstraint
+from sqlalchemy import BigInteger, DateTime, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.time import utc_now
@@ -103,7 +103,7 @@ class GameWorldEvent(Base):
     event_key: Mapped[str] = mapped_column(String(100))
     event_type: Mapped[str] = mapped_column(String(64))
     dedupe_key: Mapped[str] = mapped_column(String(255))
-    chat_id: Mapped[int] = mapped_column(Integer)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
     presenter_key: Mapped[str] = mapped_column(String(64))
     title: Mapped[str] = mapped_column(String(255))
     payload_json: Mapped[str] = mapped_column(String(12000), default="{}")
@@ -112,7 +112,7 @@ class GameWorldEvent(Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime)
     locked_at: Mapped[datetime | None] = mapped_column(DateTime)
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime)
-    message_id: Mapped[int | None] = mapped_column(Integer)
+    message_id: Mapped[int | None] = mapped_column(BigInteger)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     last_error: Mapped[str | None] = mapped_column(String(4000))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
