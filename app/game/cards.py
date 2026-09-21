@@ -54,8 +54,22 @@ class WaifuCard:
 
 
 SHINY_CHANCE_DENOMINATOR = 8
-NORMAL_OUTFITS = tuple(item.value for item in NormalOutfit)
-SHINY_OUTFITS = tuple(item.value for item in ShinyOutfit)
+NORMAL_OUTFITS = tuple(item.value for item in NormalOutfit) + (
+    "uniforme_de_verano",
+    "look_callejero",
+    "look_academia",
+    "look_invernal",
+)
+SHINY_OUTFITS = tuple(item.value for item in ShinyOutfit) + (
+    "cosplay_heroina",
+    "cosplay_detective",
+    "traje_orejas_gatunas",
+    "traje_zorrita",
+    "uniforme_medico",
+    "uniforme_cocinera",
+    "uniforme_mecanica",
+    "uniforme_reportera",
+)
 
 
 def _digest(seed: str) -> bytes:
@@ -94,7 +108,7 @@ def card_for_character(
         tier=character.card_tier,
         variant=variant,
         outfit=outfit,
-        mature_art_allowed=mature_art_allowed and variant is CardVariant.SHINY,
+        mature_art_allowed=mature_pair and variant is CardVariant.SHINY,
     )
 
 
@@ -107,6 +121,10 @@ def fusion_card_for_characters(
 ) -> WaifuCard:
     if first.id == second.id:
         raise ValueError("UR fusion requires two different waifus")
+    mature_pair = (
+        mature_art_is_approved(first.id)
+        and mature_art_is_approved(second.id)
+    )
     parents = tuple(sorted((first.id, second.id)))
     variant = _variant_for_seed(seed)
     outfit = _outfit_for_seed(seed, variant)
