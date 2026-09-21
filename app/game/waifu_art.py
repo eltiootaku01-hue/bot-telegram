@@ -48,3 +48,17 @@ def variant_art_candidates_for(character_id: str, variant: str) -> tuple[str, ..
         str(root / f"{character_id}--{safe_variant}{suffix}")
         for suffix in RUNTIME_ART_SUFFIXES
     )
+
+
+def evolution_art_candidates_for(character_id: str, level: int) -> tuple[str, ...]:
+    """Return R/S/SR evolution-art candidates for a WaifuMon level."""
+    if character_id not in CHARACTERS:
+        raise KeyError(character_id)
+    from app.game.waifumon_progression import waifumon_class_for_level
+
+    waifu_class = waifumon_class_for_level(level).value.casefold()
+    root = PurePosixPath("assets", "waifus")
+    return tuple(
+        str(root / f"{character_id}--{waifu_class}{suffix}")
+        for suffix in RUNTIME_ART_SUFFIXES
+    )
