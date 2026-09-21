@@ -199,6 +199,38 @@ public final class WaifuMonRuleEngine {
     }
 
 
+    private EngineResponse evolutionResolve(EngineRequest request) {
+        int level = boundedInt(request.payload(), "level", 1, MAX_LEVEL);
+        int stage = stageForLevel(level);
+        ObjectNode result = mapper.createObjectNode();
+        result.put("level", level);
+        result.put("evolution_stage", stage);
+        result.put("min_level", switch (stage) {
+            case 1 -> 1;
+            case 2 -> 6;
+            case 3 -> 11;
+            case 4 -> 21;
+            default -> throw new IllegalStateException("Unknown evolution stage: " + stage);
+        });
+        result.put("max_level", switch (stage) {
+            case 1 -> 5;
+            case 2 -> 10;
+            case 3 -> 20;
+            case 4 -> 30;
+            default -> throw new IllegalStateException("Unknown evolution stage: " + stage);
+        });
+        result.put("next_level", switch (stage) {
+            case 1 -> 6;
+            case 2 -> 11;
+            case 3 -> 21;
+            case 4 -> 0;
+            default -> throw new IllegalStateException("Unknown evolution stage: " + stage);
+        });
+        return EngineResponse.success(
+            request.requestId(), "evolution_result", result, 0L, List.of(), List.of()
+        );
+    }
+
     private EngineResponse statsResolve(EngineRequest request) {
         JsonNode payload = request.payload();
         JsonNode character = requiredObject(payload, "character");
