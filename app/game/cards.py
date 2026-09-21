@@ -36,7 +36,7 @@ class NormalOutfit(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class WaifuCard:
-    """Concrete collectible card instance resolved deterministically from a seed."""
+    """Concrete collectible card resolved deterministically from a seed."""
 
     card_id: str
     character_id: str
@@ -46,7 +46,7 @@ class WaifuCard:
     variant: CardVariant
     outfit: str
     fusion_of: tuple[str, str] = ()
-    mature_art_allowed: bool = False
+    adult_style_allowed: bool = False
 
     @property
     def is_fusion(self) -> bool:
@@ -70,6 +70,34 @@ SHINY_OUTFITS = tuple(item.value for item in ShinyOutfit) + (
     "uniforme_mecanica",
     "uniforme_reportera",
 )
+
+# Only explicitly approved adult characters may receive the optional adult
+# visual direction. All other characters always use the standard safe direction.
+ADULT_STYLE_ALLOWED_CHARACTER_IDS = frozenset(
+    {
+        "yor-forger",
+        "nami",
+        "nico-robin",
+        "yoruichi-shihoin",
+        "esdeath",
+        "albedo",
+        "makima",
+        "mirajane-strauss",
+        "erza-scarlet",
+        "tsunade",
+        "boa-hancock",
+        "midnight",
+        "chizuru-mizuhara",
+        "leone",
+        "rangiku-matsumoto",
+        "venelana-gremory",
+        "saeko-busujima",
+    }
+)
+
+
+def adult_style_is_allowed(character_id: str) -> bool:
+    return character_id in ADULT_STYLE_ALLOWED_CHARACTER_IDS
 
 
 def _digest(seed: str) -> bytes:
@@ -95,20 +123,21 @@ def card_for_character(
     character: Character,
     *,
     seed: str,
-    mature_art_allowed: bool = False,
 ) -> WaifuCard:
     variant = _variant_for_seed(seed)
     outfit = _outfit_for_seed(seed, variant)
-    card_id = f"{character.id}:{character.card_tier.value}:{variant.value}:{outfit}"
     return WaifuCard(
-        card_id=card_id,
+        card_id=f"{character.id}:{character.card_tier.value}:{variant.value}:{outfit}",
         character_id=character.id,
         name=character.name,
         anime=character.anime,
         tier=character.card_tier,
         variant=variant,
         outfit=outfit,
-        mature_art_allowed=mature_pair and variant is CardVariant.SHINY,
+        adult_style_allowed=(
+            adult_style_is_allowed(character.id)
+            and variant is CardVariant.SHINY
+        ),
     )
 
 
@@ -117,20 +146,15 @@ def fusion_card_for_characters(
     second: Character,
     *,
     seed: str,
-    mature_art_allowed: bool = False,
 ) -> WaifuCard:
     if first.id == second.id:
         raise ValueError("UR fusion requires two different waifus")
-    mature_pair = (
-        mature_art_is_approved(first.id)
-        and mature_art_is_approved(second.id)
-    )
+
     parents = tuple(sorted((first.id, second.id)))
     variant = _variant_for_seed(seed)
     outfit = _outfit_for_seed(seed, variant)
-    card_id = f"ur-fusion:{parents[0]}+{parents[1]}:{variant.value}:{outfit}"
     return WaifuCard(
-        card_id=card_id,
+        card_id=f"ur-fusion:{parents[0]}+{parents[1]}:{variant.value}:{outfit}",
         character_id=f"fusion:{parents[0]}+{parents[1]}",
         name=f"{first.name} × {second.name}",
         anime=f"{first.anime} × {second.anime}",
@@ -138,12 +162,16 @@ def fusion_card_for_characters(
         variant=variant,
         outfit=outfit,
         fusion_of=parents,
-        mature_art_allowed=mature_art_allowed and variant is CardVariant.SHINY,
+        adult_style_allowed=(
+            variant is CardVariant.SHINY
+            and adult_style_is_allowed(first.id)
+            and adult_style_is_allowed(second.id)
+        ),
     )
 
 
 def generic_r_card(seed: str) -> WaifuCard:
-    """Generate an original R-rarity generic waifu card without polluting the IP catalog."""
+    """Generate an original R-rarity generic card without polluting the IP catalog."""
     digest = _digest(seed)
     archetypes = (
         "barista aventurera",
@@ -184,11 +212,11 @@ def generic_r_card(seed: str) -> WaifuCard:
 
 
 def card_variants_for(character: Character) -> tuple[WaifuCard, ...]:
-    """Return a compact deterministic preview of the first 16 visual variants."""
+    """Return a deterministic preview set covering normal and shiny possibilities."""
     return tuple(
         card_for_character(
             character,
             seed=f"{character.id}:preview:{index}",
         )
-        for index in range(16)
+        for index in range(32)
     )
