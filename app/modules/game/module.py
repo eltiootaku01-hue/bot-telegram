@@ -14,10 +14,10 @@ from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.core.time import utc_now
 from app.db.database import Database
-from app.db.models import GameAttempt, GameCollection, GameEncounter
+from app.db.models import GameCollection, GameEncounter
 from app.db.repositories import MemberRepository
 from app.game.catalog import get_character
-from app.game.encounter_store import EncounterStore
+from app.game.encounter_store import EncounterAttemptResult, EncounterStore
 from app.game.encounters import Encounter, encounter_options
 from app.game.engine import GameEngine
 from app.game.fusion import fuse_collection
@@ -659,23 +659,24 @@ class GameModule(BotModule):
         await callback.answer(f"{result.action.label}: {result.damage} daño{critical}", show_alert=True)
 
     async def encounter_answer(self, callback: CallbackQuery) -> None:
-        parts = (callback.data or "").split(":")
-        if len(parts) != 5 or parts[0] != "game" or parts[1] != "encounter" or parts[3] != "answer":
-            await callback.answer("Evento inválido.", show_alert=True)
+        parts = (callback.data or '').split(':')
+        if len(parts) != 5 or parts[0] != 'game' or parts[1] != 'encounter' or parts[3] != 'answer':
+            await callback.answer('Evento inválido.', show_alert=True)
             return
         encounter_id, index = parts[2], parts[4]
         if callback.message is None or not index.isdigit():
-            await callback.answer("Respuesta inválida.", show_alert=True)
+            await callback.answer('Respuesta inválida.', show_alert=True)
             return
-        async with self.database.session() as session:
+
+        async with self.database.session(write=True) as session:
             encounter = await self.encounters.get(session, encounter_id)
-            now = utc_now()
-            if encounter is None or now >= encounter.expires_at or encounter.status != "active":
-                await callback.answer("La waifu ya se fue. 😭", show_alert=True)
+            if encounter is None:
+                await callback.answer('Este encuentro ya no existe.', show_alert=True)
                 return
             if callback.message.chat.id != encounter.chat_id:
-                await callback.answer("Este encuentro pertenece a otra comunidad. 😰", show_alert=True)
+                await callback.answer('Este encuentro pertenece a otra comunidad. 😰', show_alert=True)
                 return
+
             character = get_character(encounter.character_id)
             plan = Encounter(
                 id=encounter.id,
@@ -685,47 +686,49 @@ class GameModule(BotModule):
                 answer=encounter.answer,
             )
             options = encounter_options(plan)
-            if int(index) >= len(options):
-                await callback.answer("Respuesta inválida.", show_alert=True)
+            option_index = int(index)
+            if option_index >= len(options):
+                await callback.answer('Respuesta inválida.', show_alert=True)
                 return
-            attempt = GameAttempt(
-                encounter_id=encounter_id,
-                user_id=callback.from_user.id,
-                answer=options[int(index)],
-                correct=options[int(index)].casefold().strip() == (encounter.answer or "").casefold().strip(),
+
+            result = await self.encounters.claim_attempt(
+                session, encounter_id, callback.from_user.id, options[option_index]
             )
-            session.add(attempt)
-            try:
-                await session.flush()
-            except IntegrityError:
-                await session.rollback()
-                await callback.answer("Ya intentaste o el evento terminó. 😭", show_alert=True)
+            if result is EncounterAttemptResult.EXPIRED:
+                await callback.answer('La waifu ya se fue. 😭', show_alert=True)
                 return
-            if not attempt.correct:
-                await session.commit()
-                await self._observe_action("encounter_attempt_wrong", callback.from_user.id, encounter.chat_id)
+            if result is EncounterAttemptResult.ALREADY_ATTEMPTED:
+                await callback.answer('Ya usaste tu única oportunidad en este encuentro. 😭', show_alert=True)
+                return
+            if result is EncounterAttemptResult.FULL:
+                await callback.answer('Este encuentro ya tiene sus 3 oportunidades ocupadas.', show_alert=True)
+                return
+            if result is EncounterAttemptResult.WRONG:
                 reaction = self._game_reaction(
                     CharacterIntent.GAME_MISS,
                     callback.from_user.id + callback.message.chat.id,
                 )
-                message = "❌ Fallaste. Esta oportunidad era solo tuya."
+                response_text = '❌ Fallaste. Esta oportunidad era solo tuya.'
                 if reaction:
-                    message += f"\n\n🐍 <b>Sunna:</b> {reaction}"
-                await callback.answer(message, show_alert=True)
+                    response_text += f'\n\n🐍 <b>Sunna:</b> {reaction}'
+                await self._observe_action(
+                    'encounter_attempt_wrong', callback.from_user.id, encounter.chat_id
+                )
+                await callback.answer(response_text, show_alert=True)
                 return
 
+            now = utc_now()
             claimed = await session.execute(
                 update(GameEncounter)
                 .where(
                     GameEncounter.id == encounter_id,
-                    GameEncounter.status == "active",
+                    GameEncounter.status == 'active',
                     GameEncounter.expires_at > now,
                 )
-                .values(status="captured")
+                .values(status='captured')
             )
             if claimed.rowcount != 1:
-                await session.commit()
-                await callback.answer("Alguien llegó antes. 😭", show_alert=True)
+                await callback.answer('Alguien llegó antes. 😭', show_alert=True)
                 return
 
             profile = await MemberRepository().get_or_create_game_profile(
@@ -742,8 +745,8 @@ class GameModule(BotModule):
                 user_id=callback.from_user.id,
                 chat_id=encounter.chat_id,
                 amount=progress.points_gained,
-                reason="Captura de waifu",
-                reference_type="encounter",
+                reason='Captura de waifu',
+                reference_type='encounter',
                 reference_id=encounter.id,
                 commit=False,
             )
@@ -751,23 +754,26 @@ class GameModule(BotModule):
                 session,
                 user_id=callback.from_user.id,
                 chat_id=encounter.chat_id,
-                mission_key="capture_waifu",
-                reference_type="encounter",
+                mission_key='capture_waifu',
+                reference_type='encounter',
                 reference_id=encounter.id,
             )
             if mission_claimed:
                 balance = mission_balance
-            await session.commit()
+
         reaction = self._game_reaction(
             CharacterIntent.GAME_SUCCESS,
             callback.from_user.id + callback.message.chat.id,
         )
         result_text = (
-            f"🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n"
-            f"✨ Clase {encounter.rarity} · colección ×{owned.copies}\n⭐ +{progress.points_gained} puntos · saldo: {balance}"
+            f'🎉 <b>{callback.from_user.first_name}</b> capturó a {character.name}!\n'
+            f'✨ Clase {encounter.rarity} · colección ×{owned.copies}\n'
+            f'⭐ +{progress.points_gained} puntos · saldo: {balance}'
         )
         if reaction:
-            result_text += f"\n\n🐍 <b>Sunna:</b> {reaction}"
+            result_text += f'\n\n🐍 <b>Sunna:</b> {reaction}'
         await callback.message.edit_text(result_text)
-        await self._observe_action("encounter_capture", callback.from_user.id, encounter.chat_id)
-        await callback.answer("¡CAPTURADA! 🎉", show_alert=True)
+        await self._observe_action(
+            'encounter_capture', callback.from_user.id, encounter.chat_id
+        )
+        await callback.answer('¡CAPTURADA! 🎉', show_alert=True)
