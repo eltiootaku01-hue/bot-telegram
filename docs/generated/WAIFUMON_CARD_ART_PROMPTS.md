@@ -335,7 +335,7 @@ WaifuMon card art for Erina Nakiri from Food Wars!: Shokugeki no Soma. Productio
 - Encuadre: plano general
 - Composición: cuerpo completo de pies a cabeza, fondo elaborado, múltiples planos de profundidad, efectos visuales de alta gama y jerarquía focal cinematográfica
 - Vestuario: atuendo definitivo de combate, gala, fantasía o concepto premium; la versión canónica no requiere contenido sugerente
-- Elegibilidad adulta explícita en manifest: False
+- Elegibilidad adulta explícita en manifest: True
 - Variantes soportadas: normal, ur-alt-holo
 - Estado del asset: quarantined_noncompliant
 
@@ -349,7 +349,7 @@ WaifuMon card art for Erza Scarlet from Fairy Tail. Production tier: UR. Visual 
 - Encuadre: plano general
 - Composición: cuerpo completo de pies a cabeza, fondo elaborado, múltiples planos de profundidad, efectos visuales de alta gama y jerarquía focal cinematográfica
 - Vestuario: atuendo definitivo de combate, gala, fantasía o concepto premium; la versión canónica no requiere contenido sugerente
-- Elegibilidad adulta explícita en manifest: False
+- Elegibilidad adulta explícita en manifest: True
 - Variantes soportadas: normal, ur-alt-holo
 - Estado del asset: pending
 
@@ -671,7 +671,7 @@ WaifuMon card art for Mutsumi “Mortis” Wakaba from BanG Dream! Ave Mujica. P
 - Encuadre: plano general
 - Composición: cuerpo completo de pies a cabeza, fondo elaborado, múltiples planos de profundidad, efectos visuales de alta gama y jerarquía focal cinematográfica
 - Vestuario: atuendo definitivo de combate, gala, fantasía o concepto premium; la versión canónica no requiere contenido sugerente
-- Elegibilidad adulta explícita en manifest: False
+- Elegibilidad adulta explícita en manifest: True
 - Variantes soportadas: normal, ur-alt-holo
 - Estado del asset: pending
 
@@ -727,7 +727,7 @@ WaifuMon card art for Nezuko Kamado from Demon Slayer. Production tier: SR. Visu
 - Encuadre: plano general
 - Composición: cuerpo completo de pies a cabeza, fondo elaborado, múltiples planos de profundidad, efectos visuales de alta gama y jerarquía focal cinematográfica
 - Vestuario: atuendo definitivo de combate, gala, fantasía o concepto premium; la versión canónica no requiere contenido sugerente
-- Elegibilidad adulta explícita en manifest: False
+- Elegibilidad adulta explícita en manifest: True
 - Variantes soportadas: normal, ur-alt-holo
 - Estado del asset: pending
 
@@ -1007,7 +1007,7 @@ WaifuMon card art for Tohka Yatogami from Date A Live. Production tier: SR. Visu
 - Encuadre: plano general
 - Composición: cuerpo completo de pies a cabeza, fondo elaborado, múltiples planos de profundidad, efectos visuales de alta gama y jerarquía focal cinematográfica
 - Vestuario: atuendo definitivo de combate, gala, fantasía o concepto premium; la versión canónica no requiere contenido sugerente
-- Elegibilidad adulta explícita en manifest: False
+- Elegibilidad adulta explícita en manifest: True
 - Variantes soportadas: normal, ur-alt-holo
 - Estado del asset: pending
 
@@ -1063,7 +1063,7 @@ WaifuMon card art for Xenovia from High School DxD. Production tier: SR. Visual 
 - Encuadre: plano general
 - Composición: cuerpo completo de pies a cabeza, fondo elaborado, múltiples planos de profundidad, efectos visuales de alta gama y jerarquía focal cinematográfica
 - Vestuario: atuendo definitivo de combate, gala, fantasía o concepto premium; la versión canónica no requiere contenido sugerente
-- Elegibilidad adulta explícita en manifest: False
+- Elegibilidad adulta explícita en manifest: True
 - Variantes soportadas: normal, ur-alt-holo
 - Estado del asset: quarantined_noncompliant
 
