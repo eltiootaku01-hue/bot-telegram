@@ -136,9 +136,35 @@ def _java_rules() -> WaifuMonJavaEngine:
 
 
 def evolution_band_for_level(level: int) -> EvolutionBand:
-    if not 1 <= level <= MAX_WAIFUMON_LEVEL:
-        raise ValueError("WaifuMon level must be between 1 and 30")
-    return next(band for band in EVOLUTION_BANDS if band.min_level <= level <= band.max_level)
+    result = _java_rules().evolution(level=level)
+    stage = EvolutionStage(int(result["evolution_stage"]))
+    metadata = {
+        EvolutionStage.BASE: ("15%", "rostro y hombros", "forma base"),
+        EvolutionStage.EVOLUTION_1: (
+            "30%",
+            "cabeza, hombros y torso",
+            "primera evolución; silueta y pose renovadas",
+        ),
+        EvolutionStage.EVOLUTION_2: (
+            "60%",
+            "medio cuerpo hasta cintura",
+            "segunda evolución; vestuario y presencia de combate ampliados",
+        ),
+        EvolutionStage.EVOLUTION_3: (
+            "100%",
+            "cuerpo completo",
+            "tercera evolución; arte final y composición completa",
+        ),
+    }
+    art_visibility, framing, design_language = metadata[stage]
+    return EvolutionBand(
+        stage=stage,
+        min_level=int(result["min_level"]),
+        max_level=int(result["max_level"]),
+        art_visibility=art_visibility,
+        framing=framing,
+        design_language=design_language,
+    )
 
 
 def evolution_stage_for_level(level: int) -> EvolutionStage:
@@ -146,26 +172,24 @@ def evolution_stage_for_level(level: int) -> EvolutionStage:
 
 
 def evolution_next_level(stage: EvolutionStage) -> int | None:
-    if stage is EvolutionStage.BASE:
-        return 6
-    if stage is EvolutionStage.EVOLUTION_1:
-        return 11
-    if stage is EvolutionStage.EVOLUTION_2:
-        return 21
-    return None
+    result = _java_rules().evolution(level=level_floor_for_evolution_stage(stage))
+    next_level = int(result["next_level"])
+    return next_level or None
 
 
 def level_cap_for_evolution_stage(stage: EvolutionStage) -> int:
-    return next(band.max_level for band in EVOLUTION_BANDS if band.stage is stage)
+    return evolution_band_for_level(level_floor_for_evolution_stage(stage)).max_level
 
 
 def level_floor_for_evolution_stage(stage: EvolutionStage) -> int:
-    return next(band.min_level for band in EVOLUTION_BANDS if band.stage is stage)
-
-
-def combat_style_for_element(element: Element) -> CombatStyle:
-    return CombatStyle(_java_rules().style(element=element.value))
-
+    if not isinstance(stage, EvolutionStage):
+        stage = EvolutionStage(stage)
+    return {
+        EvolutionStage.BASE: 1,
+        EvolutionStage.EVOLUTION_1: 6,
+        EvolutionStage.EVOLUTION_2: 11,
+        EvolutionStage.EVOLUTION_3: 21,
+    }[stage]
 
 def promotion_message(from_stage: EvolutionStage, to_stage: EvolutionStage) -> str:
     return (
