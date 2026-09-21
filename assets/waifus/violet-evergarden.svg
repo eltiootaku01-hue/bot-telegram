@@ -1,1 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="680" viewBox="0 0 480 680"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17313b"/><stop offset="1" stop-color="#090c14"/></linearGradient><radialGradient id="glow"><stop stop-color="#d8ffff" stop-opacity=".24"/><stop offset="1" stop-color="#65cbd3" stop-opacity="0"/></radialGradient></defs><rect x="8" y="8" width="464" height="664" rx="28" fill="url(#bg)" stroke="#65cbd3" stroke-width="8"/><rect x="20" y="20" width="440" height="640" rx="20" fill="url(#glow)"/><text x="34" y="52" fill="#d8ffff" font-size="20" font-family="Arial" font-weight="700">WAIFUMON • CARTA 15</text><text x="446" y="52" text-anchor="end" fill="#65cbd3" font-size="26" font-family="Arial" font-weight="700">SR</text><ellipse cx="240" cy="355" rx="122" ry="176" fill="#11151f" opacity=".65"/><path d="M145 330 Q150 215 240 190 Q330 215 335 330 L325 410 Q240 465 155 410 Z" fill="#355b78"/><ellipse cx="240" cy="335" rx="88" ry="110" fill="#f2d1bd"/><path d="M152 310 Q158 208 240 184 Q322 208 328 310 Q300 270 282 252 Q252 270 214 254 Q185 276 152 310Z" fill="#355b78"/><path d="M170 425 Q240 382 310 425 L345 540 L135 540Z" fill="#65cbd3"/><ellipse cx="205" cy="334" rx="12" ry="16" fill="#dc8cff"/><ellipse cx="275" cy="334" rx="12" ry="16" fill="#dc8cff"/><circle cx="208" cy="337" r="5" fill="#10131b"/><circle cx="278" cy="337" r="5" fill="#10131b"/><path d="M216 384 Q240 400 264 384" fill="none" stroke="#9e5c66" stroke-width="5" stroke-linecap="round"/><circle cx="335" cy="248" r="24" fill="#65cbd3"/><text x="335" y="257" text-anchor="middle" fill="#d8ffff" font-size="22" font-family="Arial" font-weight="700">✦</text><rect x="32" y="560" width="416" height="74" rx="18" fill="#0a0d14" stroke="#65cbd3" stroke-width="2"/><text x="48" y="591" fill="#fff" font-size="23" font-family="Arial" font-weight="700">Violet Evergarden</text><text x="48" y="616" fill="#d8ffff" font-size="14" font-family="Arial">Violet Evergarden</text><text x="350" y="589" fill="#65cbd3" font-size="20" font-family="Arial" font-weight="700">CLASE S</text><text x="350" y="614" fill="#d8ffff" font-size="12" font-family="Arial">ELEMENTO: AIRE</text><text x="240" y="654" text-anchor="middle" fill="#aab3c7" font-size="11" font-family="Arial">ARTE ORIGINAL LOCAL • NO CANON VISUAL</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#16243f"/><stop offset=".45" stop-color="#4a527b"/><stop offset="1" stop-color="#1b1528"/></linearGradient>
+  <radialGradient id="mist" cx=".5" cy=".32" r=".7"><stop stop-color="#e3dcff" stop-opacity=".4"/><stop offset="1" stop-color="#8eb1d9" stop-opacity="0"/></radialGradient>
+  <linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d9ecff"/><stop offset=".5" stop-color="#8eb0d0"/><stop offset="1" stop-color="#547095"/></linearGradient>
+  <linearGradient id="dress" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#eef1ea"/><stop offset="1" stop-color="#aeb6b8"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#bg)" stroke="#c4d5e8" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#mist)"/>
+
+<text x="52" y="78" fill="#f0f6ff" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#e7ca73" font-family="Arial,sans-serif" font-size="32" font-weight="800">SR</text>
+<text x="52" y="112" fill="#cfd8e6" font-family="Arial,sans-serif" font-size="13" letter-spacing="3">VIOLET • 60-80% • CARTA PREMIUM</text>
+
+<!-- floating letters -->
+<g fill="#f4f6ff" opacity=".72" font-family="Georgia,serif">
+  <text x="93" y="206" font-size="26">A</text><text x="136" y="250" font-size="19">Dear</text>
+  <text x="566" y="226" font-size="24">V</text><text x="600" y="270" font-size="18">iolet</text>
+  <text x="94" y="640" font-size="17">—</text><text x="620" y="648" font-size="20">✦</text>
+</g>
+
+<!-- flowers -->
+<g fill="#e6b6c8" opacity=".82">
+  <circle cx="112" cy="756" r="16"/><circle cx="596" cy="728" r="19"/><circle cx="152" cy="810" r="10"/>
+</g>
+<g stroke="#8bb095" stroke-width="5" opacity=".9">
+  <path d="M112 772 Q110 816 94 844"/><path d="M596 747 Q608 795 626 826"/><path d="M151 820 Q145 852 126 884"/>
+</g>
+
+<!-- 70% composition -->
+<g stroke="#121722" stroke-width="8" stroke-linejoin="round">
+  <!-- long hair -->
+  <path d="M196 388 Q183 230 258 155 Q352 62 470 161 Q546 229 517 403 Q502 548 451 611 L271 611 Q208 538 196 388Z" fill="url(#hair)"/>
+  <!-- face -->
+  <path d="M264 226 Q358 153 452 226 L459 354 Q441 435 359 462 Q278 438 258 356Z" fill="#f3d8c8"/>
+  <path d="M252 239 Q286 142 368 146 Q445 148 469 241 Q431 205 405 232 Q371 184 340 231 Q301 199 252 239Z" fill="url(#hair)"/>
+  <path d="M273 226 Q251 344 279 457" fill="none" stroke="#e8f4ff" stroke-width="10"/>
+  <path d="M446 221 Q466 346 439 456" fill="none" stroke="#e8f4ff" stroke-width="10"/>
+  <!-- eyes -->
+  <ellipse cx="320" cy="334" rx="13" ry="18" fill="#56739d"/>
+  <ellipse cx="399" cy="334" rx="13" ry="18" fill="#56739d"/>
+  <circle cx="323" cy="329" r="5" fill="#fff" stroke="none"/>
+  <circle cx="402" cy="329" r="5" fill="#fff" stroke="none"/>
+  <path d="M338 396 Q359 408 380 396" fill="none" stroke="#9d6471" stroke-width="5"/>
+
+  <!-- shoulders and arms -->
+  <path d="M287 447 Q240 483 208 548 Q195 576 217 593 Q239 608 258 579 L321 507" fill="#f0f1eb"/>
+  <path d="M430 447 Q479 484 512 544 Q529 572 508 592 Q485 608 464 579 L399 508" fill="#f0f1eb"/>
+  <!-- mechanical gloves -->
+  <path d="M204 548 L230 566 L244 604 L220 618 L195 586Z" fill="#c3a454"/>
+  <path d="M515 544 L488 566 L475 605 L499 618 L526 584Z" fill="#c3a454"/>
+
+  <!-- dress torso to thigh -->
+  <path d="M287 447 Q359 426 431 447 L474 708 Q438 764 359 780 Q281 762 245 708Z" fill="url(#dress)"/>
+  <path d="M320 451 L359 492 L399 451" fill="none" stroke="#8c3048" stroke-width="7"/>
+  <path d="M359 496 L359 726" stroke="#758a9f" stroke-width="5"/>
+  <path d="M277 576 Q359 604 442 576" fill="none" stroke="#c2a95d" stroke-width="6"/>
+
+  <!-- open letter held at center -->
+  <rect x="302" y="590" width="114" height="76" rx="8" fill="#fffaf0" stroke="#2d394b" stroke-width="6"/>
+  <path d="M306 594 L359 636 L412 594" fill="none" stroke="#cf9fa9" stroke-width="4"/>
+  <text x="359" y="622" text-anchor="middle" fill="#5f6573" font-size="11" font-family="Georgia,serif" stroke="none">dear</text>
+
+  <!-- lower silhouette for 70% -->
+  <path d="M277 756 Q359 783 441 756 L460 872 Q412 908 359 914 Q306 908 258 872Z" fill="#8d9ba3"/>
+  <path d="M315 780 L318 896" stroke="#d8e0e5" stroke-width="5"/>
+  <path d="M403 780 L400 896" stroke="#d8e0e5" stroke-width="5"/>
+</g>
+
+<!-- petals / paper -->
+<g fill="#f4e7ed" opacity=".86">
+  <path d="M126 430 q22 -16 36 6 q-14 18 -36 -6z"/><path d="M598 462 q20 -18 35 2 q-15 18 -35 -2z"/>
+  <path d="M168 590 q16 -10 27 4 q-11 14 -27 -4z"/><path d="M558 584 q19 -13 27 5 q-12 14 -27 -5z"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#101622" opacity=".92" stroke="#c4d5e8" stroke-width="2"/>
+<text x="64" y="929" fill="#f3f7ff" font-family="Arial,sans-serif" font-size="22" font-weight="700">Violet Evergarden</text>
+<text x="64" y="953" fill="#c8d3e1" font-family="Arial,sans-serif" font-size="12">Violet Evergarden • SR visual • 60-80% • carta premium</text>
+<text x="656" y="930" text-anchor="end" fill="#e7ca73" font-family="Arial,sans-serif" font-size="14" font-weight="700">MEDIO CUERPO AMPLIO</text>
+<text x="656" y="952" text-anchor="end" fill="#c8d3e1" font-family="Arial,sans-serif" font-size="11">cartas / flores / mecánica dorada</text>
+</svg>
