@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1020" viewBox="0 0 720 1020">
+<defs>
+<linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2b1839"/><stop offset=".5" stop-color="#673e69"/><stop offset="1" stop-color="#11182e"/></linearGradient>
+<radialGradient id="g" cx=".5" cy=".25" r=".68"><stop stop-color="#ffd9ef" stop-opacity=".38"/><stop offset=".5" stop-color="#b1c4ff" stop-opacity=".12"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3e6fb"/><stop offset=".5" stop-color="#c8b7e3"/><stop offset="1" stop-color="#8e7ab8"/></linearGradient>
+<linearGradient id="dress" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e7d7f0"/><stop offset=".6" stop-color="#b79cc8"/><stop offset="1" stop-color="#6f547d"/></linearGradient>
+</defs>
+<rect x="14" y="14" width="692" height="992" rx="40" fill="url(#b)" stroke="#e4c7f3" stroke-width="7"/>
+<rect x="28" y="28" width="664" height="964" rx="30" fill="url(#g)"/>
+<text x="52" y="78" fill="#fff4ff" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="2">WAIFUMON</text>
+<text x="666" y="80" text-anchor="end" fill="#e6c0ff" font-family="Arial" font-size="32" font-weight="800">SR</text>
+<text x="52" y="112" fill="#dccce4" font-family="Arial" font-size="13" letter-spacing="3">NENE • 60-80% • ESPÍRITU / PAPEL / FLORES</text>
+
+<g opacity=".48" fill="#f4e4ff">
+<path d="M100 230 q55-70 110 0 q-55 62-110 0z"/><path d="M510 250 q50-72 108 0 q-55 61-108 0z"/>
+</g>
+<g stroke="#c8b5e3" stroke-width="3" opacity=".5">
+<path d="M100 230 L90 850"/><path d="M620 250 L630 850"/>
+</g>
+
+<g stroke="#151122" stroke-width="9" stroke-linejoin="round">
+<path d="M202 420 Q188 260 262 178 Q357 71 467 166 Q543 232 513 422 Q496 538 445 610 L275 610 Q214 528 202 420Z" fill="url(#hair)"/>
+<path d="M268 239 Q359 164 451 238 L456 362 Q439 445 359 472 Q279 445 261 361Z" fill="#f4d8c9"/>
+<path d="M256 250 Q285 151 366 149 Q450 151 469 250 Q430 214 405 239 Q371 191 339 239 Q299 206 256 250Z" fill="url(#hair)"/>
+<path d="M274 228 Q251 339 280 443" fill="none" stroke="#fbf4ff" stroke-width="10"/>
+<path d="M445 225 Q468 338 439 443" fill="none" stroke="#fbf4ff" stroke-width="10"/>
+<ellipse cx="320" cy="337" rx="13" ry="19" fill="#5c4c88"/><ellipse cx="399" cy="337" rx="13" ry="19" fill="#5c4c88"/>
+<circle cx="323" cy="331" r="5" fill="#fff" stroke="none"/><circle cx="402" cy="331" r="5" fill="#fff" stroke="none"/>
+<path d="M338 400 Q359 412 380 400" fill="none" stroke="#a35d73" stroke-width="5"/>
+
+<path d="M286 452 Q359 426 434 452 L482 705 Q437 764 359 781 Q282 763 238 705Z" fill="url(#dress)"/>
+<path d="M313 460 L359 510 L405 460" fill="none" stroke="#6f8ac4" stroke-width="8"/>
+<path d="M359 510 L359 728" stroke="#8e73a1" stroke-width="5"/>
+
+<path d="M282 483 Q229 529 187 597 Q169 627 191 647 Q214 667 238 638 L321 548" fill="url(#dress)"/>
+<path d="M431 483 Q490 529 532 599 Q549 628 528 649 Q505 669 479 638 L398 548" fill="url(#dress)"/>
+
+<!-- paper talisman -->
+<rect x="490" y="567" width="82" height="118" rx="7" fill="#fff7e9"/>
+<path d="M531 579 L531 670" stroke="#ad5478" stroke-width="4"/>
+<path d="M506 603 H555 M506 626 H555 M506 649 H555" stroke="#8e7da5" stroke-width="4"/>
+
+<!-- lower silhouette -->
+<path d="M247 692 Q359 731 471 692 L490 846 Q430 890 359 898 Q288 890 229 846Z" fill="#795f83"/>
+</g>
+
+<g fill="#f5ddff" opacity=".86">
+<circle cx="117" cy="394" r="5"/><circle cx="604" cy="420" r="4"/><circle cx="162" cy="745" r="3"/><circle cx="572" cy="758" r="5"/>
+</g>
+
+<rect x="42" y="900" width="636" height="70" rx="20" fill="#0d1321" opacity=".94" stroke="#e4c7f3" stroke-width="2"/>
+<text x="64" y="929" fill="#fff4ff" font-family="Arial" font-size="22" font-weight="700">Nene Yashiro</text>
+<text x="64" y="952" fill="#d9cbe5" font-family="Arial" font-size="12">Toilet-Bound Hanako-kun • SR visual • 60-80% • espíritu y papel</text>
+<text x="656" y="929" text-anchor="end" fill="#e6c0ff" font-family="Arial" font-size="14" font-weight="700">LUNA / TINTA</text>
+<text x="656" y="952" text-anchor="end" fill="#d9cbe5" font-family="Arial" font-size="11">talismanes • flores • dirección unitaria</text>
+</svg>
