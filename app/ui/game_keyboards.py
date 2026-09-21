@@ -11,6 +11,9 @@ def game_hub_keyboard() -> InlineKeyboardMarkup:
     builder.row(InlineKeyboardButton(text="📚 Catálogo de waifus", callback_data="game:waifus:page:1"))
     builder.row(
         InlineKeyboardButton(text="⚔️ Combate", callback_data="game:combat:open"),
+        InlineKeyboardButton(text="📡 Waifu Detector", callback_data="game:detector:open"),
+    )
+    builder.row(
         InlineKeyboardButton(text="🎯 Misiones", callback_data="game:missions:open"),
     )
     return builder.as_markup()
@@ -245,3 +248,15 @@ def mystery_keyboard(round_id: int, options: tuple[str, ...]) -> InlineKeyboardM
     builder.adjust(2)
     return builder.as_markup()
 
+
+
+
+def detector_keyboard(round_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="⚔️ Enfrentar mob",
+            callback_data=f"game:detector:fight:{round_id}",
+        )
+    )
+    return builder.as_markup()
