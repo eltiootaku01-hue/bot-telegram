@@ -169,3 +169,34 @@ La fuente canónica de producción continúa siendo el directorio del repositori
 La especificación queda formalizada.
 
 La producción de sprites todavía puede estar vacía: agregar el contrato y la estructura no implica declarar que una Waifu ya tiene un sprite visual aprobado.
+
+## 10. Frontera de seguridad de Telegram Mini Apps
+
+La Mini App debe usar la integración oficial de Telegram para inicializarse, pero los datos entregados al cliente no se consideran autoridad de sesión por sí solos.
+
+- El frontend puede leer `window.Telegram.WebApp.initData` para enviarlo al backend.
+- `initDataUnsafe` no debe utilizarse como fuente de autenticación o autorización.
+- El backend valida `initData` antes de asociar la sesión a un usuario/comunidad.
+- Los identificadores de chat deben mantenerse en enteros de precisión segura; Telegram documenta que los IDs de chat pueden tener hasta 52 bits significativos.
+- La URL de una Web App de producción debe ser HTTPS.
+
+Esta frontera es independiente del engine de combate: autentica la solicitud, pero no calcula gameplay.
+
+Referencias oficiales:
+
+- Telegram Mini Apps: https://core.telegram.org/bots/webapps
+- Telegram Bot API / WebAppInfo: https://core.telegram.org/bots/api
+
+## 11. No duplicación de autoridad
+
+El cliente puede solicitar una acción de combate, pero nunca puede declarar por sí mismo el daño, la precisión, los multiplicadores, el crítico o la vida restante como resultado definitivo.
+
+El flujo es:
+
+1. Mini App valida su contexto de Telegram en backend.
+2. Backend construye un `EngineRequest` válido.
+3. `WaifuMonRuleEngine.java` ejecuta `combat.resolve`.
+4. Backend devuelve el DTO resuelto.
+5. Mini App selecciona la animación correspondiente.
+
+Una repetición de la solicitud usa la idempotencia del engine/backend; una repetición visual nunca crea un nuevo resultado de combate.
