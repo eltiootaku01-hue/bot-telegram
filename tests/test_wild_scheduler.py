@@ -151,3 +151,38 @@ async def test_group_ids_returns_only_authorized_configured_communities(database
     )
 
     assert await scheduler._group_ids() == [-100]
+
+
+@pytest.mark.asyncio
+async def test_spawn_persists_world_arrival_instead_of_sending_telegram(database, monkeypatch) -> None:
+    from app.core.config import Settings
+    from app.db.world_models import GameWorldEvent
+    from sqlalchemy import select
+
+    async def no_wait(_seconds):
+        return None
+
+    monkeypatch.setattr("app.game.wild_scheduler.asyncio.sleep", no_wait)
+
+    bot = AsyncMock()
+    scheduler = WildWaifuScheduler(
+        bot,
+        database,
+        Settings(authorized_chat_ids="-100"),
+    )
+
+    await scheduler.spawn(-100)
+
+    async with database.session() as session:
+        encounter = await session.scalar(select(GameEncounter))
+        event = await session.scalar(select(GameWorldEvent))
+
+    assert encounter is not None
+    assert event is not None
+    assert event.chat_id == -100
+    assert event.event_type == "waifu_arrival"
+    assert event.presenter_key == "existing_bot:sunna"
+    assert event.status == "pending"
+    assert encounter.message_id is None
+    assert bot.send_message.assert_not_awaited is not None
+    bot.send_message.assert_not_awaited()
