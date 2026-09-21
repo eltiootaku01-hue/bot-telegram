@@ -51,6 +51,15 @@ def _ensure_compatibility(connection) -> None:
     trivia_columns = {column["name"] for column in inspect(connection).get_columns("trivia_rounds")}
     _add_column_if_missing(connection, "trivia_rounds", "message_id", "BIGINT", trivia_columns)
 
+    game_collection_columns = {column["name"] for column in inspect(connection).get_columns("game_collection")}
+    _add_column_if_missing(
+        connection,
+        "game_collection",
+        "potential_seed",
+        "VARCHAR(128)",
+        game_collection_columns,
+    )
+
     event_columns = {column["name"] for column in inspect(connection).get_columns("domain_events")}
     _add_column_if_missing(connection, "domain_events", "heartbeat_at", "DATETIME", event_columns)
     job_columns = {column["name"] for column in inspect(connection).get_columns("durable_jobs")}
