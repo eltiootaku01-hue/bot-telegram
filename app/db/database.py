@@ -35,6 +35,12 @@ def _ensure_compatibility(connection) -> None:
     _add_column_if_missing(connection, "media_assets", "publish_group_chat_id", "BIGINT", media_columns)
     _add_column_if_missing(connection, "media_assets", "media_group_id", "VARCHAR(128)", media_columns)
 
+    profile_columns = {column["name"] for column in inspect(connection).get_columns("game_profiles")}
+    _add_column_if_missing(connection, "game_profiles", "gacha_d_streak", "INTEGER NOT NULL DEFAULT 0", profile_columns)
+
+    gacha_roll_columns = {column["name"] for column in inspect(connection).get_columns("game_gacha_rolls")}
+    _add_column_if_missing(connection, "game_gacha_rolls", "pity_triggered", "BOOLEAN NOT NULL DEFAULT 0", gacha_roll_columns)
+
     chat_columns = {column["name"] for column in inspect(connection).get_columns("chats")}
     _add_column_if_missing(connection, "chats", "last_human_message_at", "DATETIME", chat_columns)
     _add_column_if_missing(connection, "chats", "last_bot_message_at", "DATETIME", chat_columns)
