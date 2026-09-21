@@ -186,7 +186,7 @@ class GameModule(BotModule):
         return claimed, balance, progress.progress, progress.target
 
     async def cards(self, message: Message) -> None:
-        if message.chat.type != "private" || message.from_user is None:
+        if message.chat.type != "private" or message.from_user is None:
             return
         chat_id = await self._community_chat_id(message.from_user.id)
         if chat_id is None:
