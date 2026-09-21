@@ -96,6 +96,8 @@ def write_report() -> None:
         "El asset queda en cuarentena hasta segunda revisión independiente.\n\n"
         + STAGE_PROMPTS["UR"] + "\n", encoding="utf-8")
 
+
+# Carta 001 production source: deterministic three-stage renderer.
 if __name__ == "__main__":
     CHARACTER_ID = "alisa-kujo"
     save_image("R", PROD / "alisa-kujo--r.jpg")
