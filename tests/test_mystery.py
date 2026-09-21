@@ -276,3 +276,28 @@ def test_everyday_mystery_cases_are_nonviolent_and_have_valid_answers(case_key: 
     )
     forbidden = ("asesin", "homicid", "cadáver", "matar", "muert")
     assert not any(term in " ".join((case.title, case.question, *case.clues)).casefold() for term in forbidden)
+
+
+def test_mystery_catalog_passes_content_validation() -> None:
+    MysteryService.validate_cases()
+
+
+def test_mystery_validation_rejects_untraceable_answer() -> None:
+    from app.game.mystery import MysteryCase
+
+    original = MysteryService.CASES
+    MysteryService.CASES = (
+        MysteryCase(
+            "invalid",
+            "Caso inválido",
+            "¿Quién fue?",
+            ("Nadie lo dice.", "Tampoco.", "Sin pista."),
+            ("Cari", "Cami", "Sunna", "Chie"),
+            0,
+        ),
+    )
+    try:
+        with pytest.raises(ValueError, match="no clue"):
+            MysteryService.validate_cases()
+    finally:
+        MysteryService.CASES = original
