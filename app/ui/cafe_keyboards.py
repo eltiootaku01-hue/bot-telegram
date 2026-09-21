@@ -48,3 +48,21 @@ def cafe_menu_keyboard(settings: Settings) -> InlineKeyboardMarkup:
             builder.row(InlineKeyboardButton(text=label, url=url))
 
     return builder.as_markup()
+
+
+def story_keyboard(chapter: int, completed: bool) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    if not completed:
+        builder.row(
+            InlineKeyboardButton(
+                text="▶️ Continuar historia",
+                callback_data=f"cafe:story:next:{chapter}",
+            )
+        )
+    builder.row(
+        InlineKeyboardButton(
+            text="☕ Volver al Café",
+            callback_data="cafe:event:open",
+        )
+    )
+    return builder.as_markup()
