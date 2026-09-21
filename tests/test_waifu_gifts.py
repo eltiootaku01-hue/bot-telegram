@@ -51,6 +51,8 @@ async def test_one_gift_drop_has_at_most_three_recipients_and_one_claim_per_user
             day_key="2026-09-21",
             slot=0,
         )
+        assert await service.claim_publication(session, drop_id=drop.id) is True
+        assert await service.mark_published(session, drop_id=drop.id, message_id=1000) is True
         profiles = list(
             await session.scalars(
                 select(GameProfile).where(GameProfile.chat_id == -100).order_by(GameProfile.user_id)
@@ -166,6 +168,9 @@ async def test_concurrent_gift_claims_allow_only_three_winners(tmp_path):
             day_key="2026-09-21",
             slot=0,
         )
+        service_for_publish = WaifuGiftService()
+        assert await service_for_publish.claim_publication(session, drop_id=drop.id) is True
+        assert await service_for_publish.mark_published(session, drop_id=drop.id, message_id=2000) is True
         drop_id = drop.id
 
     service = WaifuGiftService()
