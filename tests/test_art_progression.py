@@ -32,8 +32,8 @@ def test_four_visual_card_tiers_are_deterministic(score, tier, visible):
 @pytest.mark.parametrize(
     ("level", "style"),
     [
-        (1, "anime base"),
-        (5, "anime base"),
+        (1, "chibi"),
+        (5, "chibi"),
         (6, "anime"),
         (10, "anime"),
         (11, "anime premium"),
