@@ -1,5 +1,18 @@
 # WAIFUMON — reglas técnicas y de diseño
 
+
+## 0. Autoridad de reglas
+
+
+Reglas actualmente delegadas a Java:
+
+- rareza determinista del gacha;
+- resolución determinista de combate;
+- progresión de nivel, experiencia y etapa.
+
+La migración es incremental. Las reglas que todavía viven en Python deben migrarse antes de que otra interfaz las use como autoridad. No se permiten dos implementaciones activas de la misma fórmula.
+
+
 Fecha: 2026-09-21
 
 ## 1. Separación de sistemas
