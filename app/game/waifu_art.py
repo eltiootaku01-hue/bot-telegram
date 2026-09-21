@@ -37,6 +37,21 @@ def declared_art_for_catalog() -> tuple[WaifuArt, ...]:
 
 
 
+def rarity_art_candidates_for(character_id: str, rarity: str) -> tuple[str, ...]:
+    """Return art candidates for the WaifuMon's combat rarity/class."""
+    if character_id not in CHARACTERS:
+        raise KeyError(character_id)
+    safe_rarity = rarity.upper()
+    if safe_rarity not in {"D", "C", "B", "A", "S", "SS", "SSS"}:
+        raise ValueError("rarity must be D, C, B, A, S, SS or SSS")
+    root = PurePosixPath("assets", "waifus")
+    return tuple(
+        str(root / f"{character_id}--class-{safe_rarity.casefold()}{suffix}")
+        for suffix in RUNTIME_ART_SUFFIXES
+    )
+
+
+
 def variant_art_candidates_for(character_id: str, variant: str) -> tuple[str, ...]:
     if character_id not in CHARACTERS:
         raise KeyError(character_id)
@@ -51,12 +66,12 @@ def variant_art_candidates_for(character_id: str, variant: str) -> tuple[str, ..
 
 
 def evolution_art_candidates_for(character_id: str, level: int) -> tuple[str, ...]:
-    """Return R/S/SR evolution-art candidates for a WaifuMon level."""
+    """Return base + three level-evolution art candidates for a WaifuMon level."""
     if character_id not in CHARACTERS:
         raise KeyError(character_id)
-    from app.game.waifumon_progression import waifumon_class_for_level
+    from app.game.waifumon_progression import evolution_stage_for_level
 
-    waifu_class = waifumon_class_for_level(level).value.casefold()
+    stage = evolution_stage_for_level(level).value
     root = PurePosixPath("assets", "waifus")
     return tuple(
         str(root / f"{character_id}--{waifu_class}{suffix}")
