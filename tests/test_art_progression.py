@@ -106,3 +106,15 @@ def test_art_prompt_prefers_explicit_character_id_for_visual_direction() -> None
     assert "azul hielo" in prompt
     assert "cafetería escolar" in prompt
     assert "Character: Alisa Mikhailovna Kujo" in prompt
+
+
+def test_waifumon_rarity_art_has_separate_combat_class_visibility() -> None:
+    from app.game.art_progression import (
+        WAIFUMON_RARITY_ART_VISIBILITY,
+        waifumon_rarity_art_visibility,
+    )
+    from app.game.models import Rarity
+
+    assert set(WAIFUMON_RARITY_ART_VISIBILITY) == set(Rarity)
+    assert waifumon_rarity_art_visibility(Rarity.D) == "15%"
+    assert waifumon_rarity_art_visibility(Rarity.SSS) == "100%"
