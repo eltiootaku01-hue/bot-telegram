@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time import utc_now
-from app.db.models import GameCollection, GameProfile, User, WaifuDetectorDailyUsage, WaifuDetectorRound
+from app.db.models import GameCollection, GameProfile, WaifuDetectorDailyUsage, WaifuDetectorRound
 from app.game.models import Rarity
 from app.game.progression import add_collection_experience
 
