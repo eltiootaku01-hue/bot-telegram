@@ -184,6 +184,67 @@ class RareDropApproval(Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
+class GameItemInventory(Base):
+    """Items received from Sunna and stored for later waifu absorption."""
+
+    __tablename__ = "game_item_inventory"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "item_key",
+            name="uq_game_item_inventory_profile_item",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    profile_id: Mapped[int] = mapped_column(ForeignKey("game_profiles.id", ondelete="CASCADE"))
+    item_key: Mapped[str] = mapped_column(String(64))
+    quantity: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class WaifuGiftDrop(Base):
+    """A community gift drop that can be claimed by at most three users."""
+
+    __tablename__ = "waifu_gift_drops"
+    __table_args__ = (
+        UniqueConstraint(
+            "chat_id",
+            "day_key",
+            "slot",
+            name="uq_waifu_gift_drop_chat_day_slot",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    day_key: Mapped[str] = mapped_column(String(16))
+    slot: Mapped[int] = mapped_column(Integer)
+    gift_key: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class WaifuGiftClaim(Base):
+    """One claim per user for one community gift drop."""
+
+    __tablename__ = "waifu_gift_claims"
+    __table_args__ = (
+        UniqueConstraint(
+            "drop_id",
+            "user_id",
+            name="uq_waifu_gift_claim_drop_user",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    drop_id: Mapped[int] = mapped_column(ForeignKey("waifu_gift_drops.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class WaifuDetectorDailyUsage(Base):
     """Daily counter limiting each player to three Waifu Detector fights."""
 
