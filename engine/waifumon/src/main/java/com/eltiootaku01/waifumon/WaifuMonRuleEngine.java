@@ -198,6 +198,170 @@ public final class WaifuMonRuleEngine {
         );
     }
 
+
+    private EngineResponse statsResolve(EngineRequest request) {
+        JsonNode payload = request.payload();
+        JsonNode character = requiredObject(payload, "character");
+        int level = boundedInt(payload, "level", 1, MAX_LEVEL);
+        String rarity = requiredText(payload, "rarity");
+        String element = requiredText(character, "element");
+        int powerScore = boundedInt(character, "power_score", 0, 100);
+        String seed = payload.path("potential_seed").isTextual()
+            ? payload.path("potential_seed").asText()
+            : "preview-neutral";
+
+        int foundation = 45 + Math.round((float) (powerScore * 0.55));
+        double rarityScale = rarityScale(rarity);
+        int maxHp = Math.round((float) (foundation * 2.20 * rarityScale));
+        int strength = Math.round((float) (foundation * 0.55 * rarityScale));
+        int defense = Math.round((float) (foundation * 0.50 * rarityScale));
+        int speed = Math.round((float) (foundation * 0.50 * rarityScale));
+        int healing = Math.round((float) ((10 + foundation * 0.16) * rarityScale));
+        int special = Math.round((float) (foundation * 0.60 * rarityScale));
+        int fire = Math.round((float) (foundation * 0.55 * rarityScale));
+        int critical = Math.max(
+            1,
+            Math.round((float) ((4 + foundation * 0.04) * (0.8 + 0.2 * rarityScale)))
+        );
+
+        double levelFactor = 1.0 + (level - 1) * 0.038;
+        maxHp = Math.max(1, Math.round((float) (maxHp * levelFactor * (1.0 + variation(seed, "max_hp")))));
+        strength = Math.max(1, Math.round((float) (strength * levelFactor * (1.0 + variation(seed, "strength")))));
+        defense = Math.max(1, Math.round((float) (defense * levelFactor * (1.0 + variation(seed, "defense")))));
+        speed = Math.max(1, Math.round((float) (speed * levelFactor * (1.0 + variation(seed, "speed")))));
+        healing = Math.max(1, Math.round((float) (healing * levelFactor * (1.0 + variation(seed, "healing")))));
+        special = Math.max(1, Math.round((float) (special * levelFactor * (1.0 + variation(seed, "special")))));
+        fire = Math.max(1, Math.round((float) (fire * levelFactor * (1.0 + variation(seed, "fire")))));
+        critical = Math.max(1, Math.round((float) (critical * levelFactor * (1.0 + variation(seed, "critical")))));
+
+        String style = styleForElement(element);
+        switch (style) {
+            case "velocidad" -> {
+                speed += 12;
+                strength = Math.max(1, strength - 2);
+            }
+            case "dureza" -> {
+                maxHp += 35;
+                defense += 12;
+            }
+            case "habilidad de fuego" -> {
+                special += 5;
+                fire += 20;
+            }
+            case "curación" -> {
+                healing += 30;
+                strength = Math.max(1, strength - 2);
+            }
+            case "fuerza bruta" -> {
+                strength += 16;
+                defense += 4;
+            }
+            case "control" -> {
+                speed += 4;
+                special += 12;
+            }
+            case "soporte" -> {
+                healing += 8;
+                special += 14;
+            }
+            case "golpe crítico" -> {
+                critical += 12;
+                speed += 3;
+            }
+            case "ataque explosivo" -> {
+                speed += 6;
+                special += 10;
+            }
+            case "precisión" -> {
+                speed += 5;
+                critical += 7;
+                special += 5;
+            }
+            case "poder arcano" -> {
+                special += 22;
+                fire += 8;
+            }
+            default -> throw new IllegalStateException("Unknown combat style: " + style);
+        }
+
+        ObjectNode result = mapper.createObjectNode();
+        result.put("level", level);
+        result.put("rarity", rarity);
+        result.put("evolution_stage", stageForLevel(level));
+        result.put("style", style);
+        result.put("potential_score", potentialScore(seed));
+        result.put("max_hp", maxHp);
+        result.put("strength", strength);
+        result.put("defense", defense);
+        result.put("speed", speed);
+        result.put("healing", healing);
+        result.put("special_power", special);
+        result.put("fire_skill", fire);
+        result.put("critical_rate", Math.min(95, critical));
+
+        return EngineResponse.success(
+            request.requestId(), "stats_result", result, 0L, List.of(), List.of()
+        );
+    }
+
+    private EngineResponse styleResolve(EngineRequest request) {
+        String element = requiredText(request.payload(), "element");
+        ObjectNode result = mapper.createObjectNode();
+        result.put("style", styleForElement(element));
+        return EngineResponse.success(
+            request.requestId(), "style_result", result, 0L, List.of(), List.of()
+        );
+    }
+
+    private EngineResponse potentialResolve(EngineRequest request) {
+        String seed = requiredText(request.payload(), "potential_seed");
+        ObjectNode result = mapper.createObjectNode();
+        result.put("potential_score", potentialScore(seed));
+        return EngineResponse.success(
+            request.requestId(), "potential_result", result, 0L, List.of(), List.of()
+        );
+    }
+
+    private static double rarityScale(String rarity) {
+        return switch (rarity) {
+            case "D" -> 0.78;
+            case "C" -> 0.92;
+            case "B" -> 1.10;
+            case "A" -> 1.35;
+            case "S" -> 1.68;
+            case "SS" -> 2.08;
+            case "SSS" -> 2.55;
+            default -> throw new IllegalArgumentException("Unknown rarity: " + rarity);
+        };
+    }
+
+    private static int potentialScore(String seed) {
+        byte[] digest = sha256(seed + ":potential");
+        return 1 + (Byte.toUnsignedInt(digest[0]) * 100 / 256);
+    }
+
+    private static double variation(String seed, String statName) {
+        byte[] digest = sha256(seed + ":" + statName);
+        return -0.08 + (Byte.toUnsignedInt(digest[0]) / 255.0) * 0.16;
+    }
+
+    private static String styleForElement(String element) {
+        return switch (element) {
+            case "aire" -> "velocidad";
+            case "tierra" -> "dureza";
+            case "fuego" -> "habilidad de fuego";
+            case "agua" -> "curación";
+            case "neutro" -> "fuerza bruta";
+            case "hielo" -> "control";
+            case "luz" -> "soporte";
+            case "oscuridad" -> "golpe crítico";
+            case "rayo" -> "ataque explosivo";
+            case "mente" -> "precisión";
+            case "arcano" -> "poder arcano";
+            default -> throw new IllegalArgumentException("Unknown element: " + element);
+        };
+    }
+
     private static int stageForLevel(int level) {
         if (level <= 5) return 1;
         if (level <= 10) return 2;
