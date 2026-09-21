@@ -67,6 +67,10 @@ class CafeModule(BotModule):
             F.data == "cafe:recommendation",
         )
         self.router.callback_query.register(
+            self.cafe_menu_callback,
+            F.data == "cafe:menu",
+        )
+        self.router.callback_query.register(
             self.event_callback,
             F.data == "cafe:event:open",
         )
@@ -116,6 +120,38 @@ class CafeModule(BotModule):
             reply_markup=cafe_menu_keyboard(self.settings),
         )
         await self._observe("cafe_menu", message)
+
+    async def cafe_menu_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None:
+            await callback.answer("No pude abrir el Café.", show_alert=True)
+            return
+        lines = [
+            "☕ <b>Café Otaku</b>",
+            "",
+            "Bienvenido. Este es el punto de encuentro de Ciudad Animals.",
+            "",
+            "<b>Disponible ahora:</b>",
+        ]
+        lines.extend(
+            f"• <b>{escape(name)}</b> — {escape(description)}"
+            for name, description in CAFE_MENU
+        )
+        lines.extend(
+            (
+                "",
+                "🎀 <code>/recomendacion</code> — recomendación del día.",
+                "📖 <code>/historia</code> — arco narrativo del Café.",
+                "🌤️ <code>/momento</code> — escena contextual.",
+            )
+        )
+        await callback.message.edit_text(
+            "\n".join(lines),
+            reply_markup=cafe_menu_keyboard(self.settings),
+        )
+        if callback.from_user is not None:
+            await self._observe("cafe_menu", callback.message)
+
+        await callback.answer()
 
     async def recommendation_callback(self, callback: CallbackQuery) -> None:
         if callback.message is None or callback.from_user is None:
