@@ -74,6 +74,6 @@ def evolution_art_candidates_for(character_id: str, level: int) -> tuple[str, ..
     stage = evolution_stage_for_level(level).value
     root = PurePosixPath("assets", "waifus")
     return tuple(
-        str(root / f"{character_id}--{waifu_class}{suffix}")
+        str(root / f"{character_id}--stage{stage}{suffix}")
         for suffix in RUNTIME_ART_SUFFIXES
     )
