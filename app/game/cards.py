@@ -123,16 +123,17 @@ def card_for_character(
     character: Character,
     *,
     seed: str,
+    variant: CardVariant | None = None,
 ) -> WaifuCard:
-    variant = _variant_for_seed(seed)
-    outfit = _outfit_for_seed(seed, variant)
+    resolved_variant = variant or _variant_for_seed(seed)
+    outfit = _outfit_for_seed(seed, resolved_variant)
     return WaifuCard(
-        card_id=f"{character.id}:{character.card_tier.value}:{variant.value}:{outfit}",
+        card_id=f"{character.id}:{character.card_tier.value}:{resolved_variant.value}:{outfit}",
         character_id=character.id,
         name=character.name,
         anime=character.anime,
         tier=character.card_tier,
-        variant=variant,
+        variant=resolved_variant,
         outfit=outfit,
         adult_style_allowed=(
             adult_style_is_allowed(character.id)
