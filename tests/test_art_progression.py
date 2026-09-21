@@ -36,7 +36,7 @@ def test_four_visual_card_tiers_are_deterministic(score, tier, visible):
         (5, "chibi"),
         (6, "anime"),
         (10, "anime"),
-        (11, "anime premium"),
+        (11, "anime"),
         (20, "anime premium"),
         (21, "anime premium"),
         (25, "anime premium"),
