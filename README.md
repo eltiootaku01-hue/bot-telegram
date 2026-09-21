@@ -411,3 +411,11 @@ python -m app.bots.world
 ```
 
 The World Core must already have a persisted event addressed to `world_bot:world`. The presenter module enforces the typed reference and the central authorized-community allowlist before sending. This keeps World Core independent from Telegram and keeps WorldBot interchangeable with Cari, Sunna, Cami or Chie as an event presenter.
+
+## Telegram Mini App
+
+La interfaz de jugador vive en `webapp/` y se publica como sitio estático en GitHub Pages mediante `.github/workflows/deploy-pages.yml`. No requiere Node, bundler ni framework para ejecutarse. Usa el SDK oficial de Telegram, tema dinámico, safe areas y Canvas 2D para el combate.
+
+Para activarla en GitHub: **Settings → Pages → Build and deployment → Source → GitHub Actions**. Esa selección es necesaria una sola vez; después, los cambios de `webapp/` en `main` disparan el despliegue automáticamente.
+
+La UI no contiene autoridad de combate ni pagos. Las compras digitales se deben validar en el backend mediante Telegram Stars (XTR), y los referidos deben ser confirmados por servidor.
