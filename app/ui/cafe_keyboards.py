@@ -62,7 +62,7 @@ def story_keyboard(chapter: int, completed: bool) -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text="☕ Volver al Café",
-            callback_data="cafe:event:open",
+            callback_data="cafe:menu",
         )
     )
     return builder.as_markup()
