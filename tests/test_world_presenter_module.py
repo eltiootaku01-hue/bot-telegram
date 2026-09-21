@@ -2,17 +2,14 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from sqlalchemy import select
-
 from app.core.config import Settings
 from app.core.identity import BotIdentity
 from app.db.database import Database
 from app.db.models import GameEncounter
-from app.db.world_models import GameWorldEvent
 from app.game.catalog import wild_characters
 from app.game.encounters import encounter_options, new_encounter
 from app.modules.world.presenter import WorldPresentationModule
-from app.world.models import PresenterKind, WorldEventType, WorldPresenterRef
+from app.world.models import PresenterKind, WorldPresenterRef
 from app.world.service import WorldEventService
 
 
