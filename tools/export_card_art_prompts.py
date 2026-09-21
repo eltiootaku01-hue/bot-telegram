@@ -4,7 +4,11 @@ import argparse
 import json
 from pathlib import Path
 
-from app.game.card_art_matrix import art_profile, build_card_art_prompt
+from app.game.card_art_matrix import (
+    art_profile,
+    build_card_art_prompt,
+    variant_from_label,
+)
 
 
 DEFAULT_MANIFEST = Path("assets/waifus/art_manifest.json")
@@ -18,7 +22,11 @@ def load_manifest(path: Path) -> dict:
     return data
 
 
-def build_markdown(manifest: dict, character_id: str | None = None) -> str:
+def build_markdown(
+    manifest: dict,
+    character_id: str | None = None,
+    variant: str = "normal",
+) -> str:
     items = manifest["items"]
     if character_id is not None:
         matches = [item for item in items if item.get("character_id") == character_id]
@@ -26,34 +34,48 @@ def build_markdown(manifest: dict, character_id: str | None = None) -> str:
             raise ValueError(f"Unknown character_id: {character_id}")
         items = matches
 
+    resolved_variant = variant_from_label(variant)
     lines = [
         "# WaifuMon — prompts de arte de cartas",
         "",
-        "Generado desde `assets/waifus/art_manifest.json` y app/game/card_art_matrix.py.",
+        "Generado desde assets/waifus/art_manifest.json y app/game/card_art_matrix.py.",
         "",
+        f"Variante exportada: {resolved_variant.value}.",
         "Producción individual: una carta por prompt, sin reutilizar el encuadre de otro tier.",
         "",
     ]
     for item in items:
         tier = str(item.get("art_tier", "")).strip()
+        adult_eligible = bool(item.get("adult_eligible", False))
+        if resolved_variant.value == "ur-alt-holo":
+            if tier != "UR":
+                raise ValueError(f"{item['character_id']}: UR_ALT_HOLO requires tier=UR")
+            if not adult_eligible:
+                raise ValueError(
+                    f"{item['character_id']}: UR_ALT_HOLO requires adult_eligible=true"
+                )
         profile = art_profile(tier)
         prompt = build_card_art_prompt(
             character_name=str(item["name"]),
             anime=str(item.get("anime", "")),
             tier=tier,
-            adult_eligible=bool(item.get("adult_eligible", False)),
+            adult_eligible=adult_eligible,
+            variant=resolved_variant,
             outfit_note=str(item.get("outfit_direction", "")),
             background_note=str(item.get("background_direction", "")),
         )
+        variants = ", ".join(item.get("variant_support", ["normal"]))
         lines.extend([
             f"## {item['character_id']}",
             f"- Personaje: {item['name']}",
             f"- Obra: {item.get('anime', '')}",
             f"- Art tier: {profile.tier.value}",
+            f"- Fase visual: {profile.visual_phase}",
             f"- Encuadre: {profile.framing}",
             f"- Composición: {profile.composition}",
             f"- Vestuario: {profile.wardrobe}",
-            f"- Elegibilidad adulta explícita en manifest: {bool(item.get('adult_eligible', False))}",
+            f"- Elegibilidad adulta explícita en manifest: {adult_eligible}",
+            f"- Variantes soportadas: {variants}",
             f"- Estado del asset: {item.get('asset_status', 'pending')}",
             "",
             prompt,
@@ -72,15 +94,29 @@ def main() -> int:
         "--character-id",
         help="Prepare exactly one card prompt instead of exporting the full catalog.",
     )
+    parser.add_argument(
+        "--variant",
+        default="normal",
+        choices=("normal", "shiny", "ur-alt-holo"),
+        help="Prompt edition to export. UR ALT Holo requires an explicitly adult-eligible UR card.",
+    )
     args = parser.parse_args()
 
     manifest = load_manifest(args.manifest)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    selected = [item for item in manifest["items"] if args.character_id is None or item.get("character_id") == args.character_id]
+    selected = [
+        item
+        for item in manifest["items"]
+        if args.character_id is None or item.get("character_id") == args.character_id
+    ]
     if args.character_id is not None and not selected:
         raise ValueError(f"Unknown character_id: {args.character_id}")
     args.output.write_text(
-        build_markdown(manifest, character_id=args.character_id),
+        build_markdown(
+            manifest,
+            character_id=args.character_id,
+            variant=args.variant,
+        ),
         encoding="utf-8",
     )
     print(f"Wrote {len(selected)} card prompt(s) to {args.output}")
