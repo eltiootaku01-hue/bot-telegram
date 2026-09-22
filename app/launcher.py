@@ -530,6 +530,8 @@ class BotLauncher(tk.Tk):
         if not self.save_config():
             return
 
+        self._restart_tma_api()
+
         if self.supervisor.running:
             self.status.set("Ya hay un arranque en curso")
             return
