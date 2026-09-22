@@ -10,6 +10,8 @@ def test_combat_frontend_imports_lightweight_effects_module() -> None:
     effects = (WEBAPP / "js" / "effects.js").read_text(encoding="utf-8")
 
     assert './effects.js' in combat
+    assert '../assets/production/sprites/' in combat
+    assert '../assets/production/cards/' in combat
     assert "LightweightCombatEffects" in effects
     assert "MAX_PARTICLES = 96" in effects
 
