@@ -21,6 +21,7 @@ from app.modules.requests.module import RequestModule
 from app.modules.story.module import StoryModule
 from app.modules.system.module import SystemModule
 from app.modules.trivia.module import TriviaModule
+from app.modules.tma_payments.module import TmaPaymentsModule
 from app.modules.world.module import WorldCatalogModule
 from app.modules.world.presenter import WorldPresentationModule
 from app.modules.world.recovery import WorldEventRecoveryModule
@@ -57,6 +58,7 @@ def build_bot_modules(
         _spec("trivia", lambda: TriviaModule(database, settings=settings), BotIdentity.CARI),
         _spec("media", lambda: MediaModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("sunna-admin", lambda: AdminModule(database, settings=settings), BotIdentity.SUNNA),
+        _spec("tma-payments", lambda: TmaPaymentsModule(database, settings=settings), BotIdentity.SUNNA),
         _spec("mystery", lambda: MysteryModule(database, settings=settings), BotIdentity.CAMI),
         _spec("cami-media", lambda: CamiMediaModule(database, settings=settings), BotIdentity.CAMI),
         _spec("cami-publisher", lambda: CamiMediaPublisher(database, settings=settings), BotIdentity.CAMI),
