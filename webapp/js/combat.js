@@ -8,11 +8,11 @@ const POSES = ["idle", "attack", "hit"];
 const ASSET_FILTER = "contrast(1.3) saturate(1.5) hue-rotate(-10deg)";
 
 function spriteUrl(characterId, pose = "idle") {
-  return new URL(`../../assets/production/sprites/${characterId}_${pose}.png`, import.meta.url).href;
+  return new URL(`../assets/production/sprites/${characterId}_${pose}.png`, import.meta.url).href;
 }
 
 function cardUrl(characterId) {
-  return new URL(`../../assets/production/cards/${characterId}--normal.jpg`, import.meta.url).href;
+  return new URL(`../assets/production/cards/${characterId}--normal.jpg`, import.meta.url).href;
 }
 
 function loadImage(src) {
