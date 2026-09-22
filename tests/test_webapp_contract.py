@@ -51,3 +51,22 @@ def test_holographic_tcg_card_contract_is_present() -> None:
     assert "color-dodge" in style
     assert "--card-tilt-x" in style
     assert "--glare-x" in style
+
+
+def test_card_admin_form_and_client_contract_are_present() -> None:
+    index = (WEBAPP / "index.html").read_text(encoding="utf-8")
+    api = (WEBAPP / "js" / "api.js").read_text(encoding="utf-8")
+    main = (WEBAPP / "js" / "main.js").read_text(encoding="utf-8")
+
+    assert 'id="deck-builder-tab"' in index
+    assert 'id="create-card-form"' in index
+    assert 'id="card-image"' in index
+    assert 'name="character-name"' in index
+    assert 'name="anime-origin"' in index
+    assert 'name="rarity"' in index
+    assert 'name="source-provider"' in index
+    assert 'name="collection-points"' in index
+    assert "createCard(formData)" in api
+    assert "/api/admin/cards" in api
+    assert "setupCardAdmin" in main
+    assert "Ya forma parte del pool de /roll" in main
