@@ -1293,5 +1293,11 @@
       "production_suffix": "--ur-alt-holo.jpg",
       "second_review": true
     }
+  },
+  "provenance_manifest": "assets/waifus/provenance_manifest.json",
+  "provenance_policy": {
+    "new_assets": "original or explicit rights to modify and redistribute",
+    "legacy_assets": "grandfathered_legacy only; rights remain unverified",
+    "transformations": "do not treat crop, recolor, compositing, UI masking, or watermark concealment as a license grant"
   }
 }
