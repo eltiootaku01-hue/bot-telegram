@@ -93,8 +93,25 @@ El workflow de Pages copia `assets/production` a `webapp/assets/production` ante
 
 Bot Manager escucha en `TMA_API_HOST:TMA_API_PORT`. Para usarlo desde GitHub Pages en producción, el API debe ser accesible mediante HTTPS desde Internet. El puerto local de aiohttp está pensado para estar detrás de un reverse proxy/TLS o túnel controlado. `TMA_ALLOWED_ORIGINS` debe contener únicamente los orígenes reales del frontend.
 
-No se debe colocar ningún token de Telegram en JavaScript ni dentro del artifact de Pages.
+El workflow de Pages toma la variable de repositorio `TMA_API_BASE_URL` y la inyecta en el meta `waifumon-api-base-url` del artifact desplegado. Cuando la variable está definida, debe ser una URL absoluta HTTPS sin query ni fragment. Si está vacía, Pages se despliega sin conexión al backend deliberadamente; esto evita publicar un dominio ficticio o enviar `initData` a un destino no verificado.
 
+Configuración de producción recomendada:
+
+```text
+GitHub repository variable:
+TMA_API_BASE_URL=https://api.example.com
+        |
+        v
+.github/workflows/deploy-pages.yml
+        |
+        v
+webapp/index.html (artifact)
+        |
+        v
+WaifuMonApi._url(...)
+```
+
+La URL pública del backend no se guarda en JavaScript como secreto: solamente es una dirección pública. Los tokens de Telegram permanecen exclusivamente en el servidor/Bot Manager.
 ## Verificación
 
 La integración automatizada valida:
