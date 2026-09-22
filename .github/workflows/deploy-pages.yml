@@ -36,6 +36,11 @@ jobs:
           test -f webapp/js/api.js
           grep -q 'telegram-web-app.js' webapp/index.html
           grep -q 'class="crt-overlay"' webapp/index.html
+          grep -q 'class="tcg-card" id="sujetoCero"' webapp/index.html
+          grep -q 'class="foil-glare" id="hologram"' webapp/index.html
+          grep -q 'setupHolographicCard' webapp/js/main.js
+          grep -q 'deviceorientation' webapp/js/main.js
+          grep -q 'requestPermission' webapp/js/main.js
           grep -q '#0a0a0a' webapp/css/style.css
           grep -q '#b026ff' webapp/css/style.css
           grep -q '#ff2a2a' webapp/css/style.css
@@ -80,6 +85,8 @@ jobs:
           rm -rf webapp/assets/production
           mkdir -p webapp/assets
           cp -R assets/production webapp/assets/production
+          test -d webapp/assets/production/cards
+          test -n "$(find webapp/assets/production/cards -type f -name '*--normal.jpg' -print -quit)"
 
       - name: Verify configured API endpoint
         shell: python
