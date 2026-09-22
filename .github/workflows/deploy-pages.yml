@@ -34,6 +34,15 @@ jobs:
           test -f webapp/js/combat.js
           test -f webapp/js/api.js
           grep -q 'telegram-web-app.js' webapp/index.html
+          grep -q 'class="crt-overlay"' webapp/index.html
+          grep -q '#0a0a0a' webapp/css/style.css
+          grep -q '#b026ff' webapp/css/style.css
+          grep -q '#ff2a2a' webapp/css/style.css
+          grep -q 'clip-path: polygon' webapp/css/style.css
+          grep -q '@keyframes crt-flicker' webapp/css/style.css
+          grep -q 'ctx.filter = ASSET_FILTER' webapp/js/combat.js
+          grep -q 'Math.random() \* 10' webapp/js/combat.js
+          grep -q 'HIT_FLASH_FRAMES = 3' webapp/js/combat.js
           node --check webapp/js/main.js
           node --check webapp/js/combat.js
           node --check webapp/js/api.js
