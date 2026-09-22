@@ -256,3 +256,76 @@ Las reglas que gobiernan WaifuMon son exclusivamente las presentes en
 y sus recursos JSON.
 
 No se importan automáticamente personajes, cartas, textos, assets ni fórmulas propietarias de terceros.
+
+
+## 12. Fórmulas y estructuras capturadas con mayor precisión
+
+### Pokémon Showdown / damage-calc
+
+La familia moderna de fórmulas usa una base del tipo:
+
+`baseDamage = floor(floor(floor((2 * Level / 5 + 2) * Power * Attack / Defense) / 50) + 2)`
+
+y después aplica modificadores como objetivo múltiple, clima, crítico, aleatoriedad, STAB, efectividad y otros efectos de la generación. El propio calculador separa explícitamente cálculo de potencia, ataque, defensa, daño base y modificadores finales.
+
+Fuentes:
+- https://github.com/smogon/pokemon-showdown/blob/master/sim/battle-actions.ts
+- https://github.com/smogon/pokemon-showdown/blob/master/sim/battle.ts
+- https://github.com/smogon/damage-calc/blob/master/calc/src/mechanics/gen789.ts
+
+**Conversión WaifuMon:** se conserva el pipeline y el uso de enteros/rounding por etapas, pero se cambia la constante final y los modificadores para que sean reglas originales del proyecto. La fórmula actual está formalizada en `combat-formula.json` y ejecutada por Java.
+
+### RPG Maker
+
+Un `Skill` serializado puede contener:
+- `damage.formula`;
+- tipo de daño;
+- elemento;
+- varianza;
+- crítico;
+- repeticiones;
+- objetivo;
+- costes;
+- `effects[]`.
+
+Un `State` mantiene duración/condiciones de retirada y puede modificar cómo se comporta un actor durante el combate.
+
+Fuentes:
+- https://github.com/Apress/beg-rpg-maker-mv/blob/master/9781484219669/9781484219669_Ch3/Chapter%203/data/Skills.json
+- https://github.com/tonbijp/RPGMakerMZ/blob/master/Reference/Game_Action.md
+- https://github.com/DKPlugins/DK-Doctor/blob/main/docs/rpgmaker-format-spec.md
+
+**Conversión WaifuMon:** no se ejecuta JavaScript arbitrario. `skill_effect` es un objeto tipado y cada estado tiene un `status_id`, duración y resolución controlada por el engine.
+
+### M.U.G.E.N
+
+El ejemplo KFM muestra:
+- `[Data]`: vida, ataque, defensa y parámetros persistentes;
+- `[Statedef]`: tipo de estado, física, control y animación;
+- `HitDef`: daño, guard damage, prioridad, ventanas, hit/guard flags y comportamiento tras recibir el golpe.
+
+Fuentes:
+- https://github.com/fanyer/mugen/blob/master/chars/kfm/kfm.cns
+- https://github.com/fanyer/mugen/blob/master/docs/cns.html
+
+**Conversión WaifuMon:** esos conceptos se reducen a `Character`, `Skill`, `CombatState` y `StatusEffect`; no se incorpora el engine M.U.G.E.N ni contenido de KFM. La licencia del entorno M.U.G.E.N tiene restricciones de uso comercial, por lo que el repositorio de WaifuMon no depende de sus binarios o assets.
+
+### TCG / Hearthstone-like
+
+Un clon abierto sencillo separa:
+- comienzo de partida;
+- draw phase;
+- play phase;
+- use phase;
+- ending condition.
+
+Otro clon documenta recursos por turno, robo y botón de final de turno, además de efectos tipados como daño, curación, robo, armadura y empowerment.
+
+Fuentes:
+- https://github.com/weepingwitch/cardgame
+- https://github.com/EnginKARATAS/hearthstone-clone-game
+- https://github.com/oyachai/HearthSim
+
+**Conversión WaifuMon:** la máquina propia queda:
+DRAW → ACTION → RESOLUTION → CLEANUP → END,
+con una cola conceptual de triggers y un único commit de estado al cerrar el turno.
