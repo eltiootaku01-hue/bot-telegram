@@ -26,11 +26,6 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
