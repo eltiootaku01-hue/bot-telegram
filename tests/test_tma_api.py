@@ -70,14 +70,6 @@ def test_validate_init_data_covers_signature_field_in_bot_hash() -> None:
     assert context.user.id == USER_ID
 
 
-def test_all_tma_endpoints_require_hmac_authentication() -> None:
-    # The HTTP middleware is shared by every API route, so missing initData
-    # must fail before request-body or business logic is evaluated.
-    assert "/api/combat/init" in {"/api/combat/init"}
-    assert "/api/combat/action" in {"/api/combat/action"}
-    assert "/api/store/invoice" in {"/api/store/invoice"}
-
-
 def test_validate_init_data_rejects_stale_auth_date() -> None:
     stale = int(time.time()) - 7200
     with pytest.raises(ValueError, match="expired"):
@@ -202,6 +194,71 @@ def test_combat_asset_contract_is_typed() -> None:
     )
     assert contract.sprite_size == 128
     assert contract.sprite_poses == ["idle", "attack", "hit"]
+
+
+
+@pytest.mark.asyncio
+async def test_tma_rejects_disallowed_origin_even_with_valid_init_data() -> None:
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    settings = Settings(
+        bot_token_sunna=BOT_TOKEN,
+        authorized_chat_ids="-100123",
+        tma_bot_identity="sunna",
+        tma_allowed_origins="https://allowed.example",
+    )
+    app = create_tma_app(settings, database, FakeEngine())
+
+    async with TestServer(app) as server:
+        client = TestClient(server)
+        await client.start_server()
+        try:
+            response = await client.get(
+                "/api/combat/init",
+                headers={
+                    "Origin": "https://evil.example",
+                    "X-Telegram-Init-Data": make_init_data(),
+                },
+            )
+            assert response.status == 403
+            payload = await response.json()
+            assert payload["error"] == "ORIGIN_NOT_ALLOWED"
+        finally:
+            await client.close()
+
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_tma_options_is_cors_preflight_and_does_not_execute_business_logic() -> None:
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    settings = Settings(
+        bot_token_sunna=BOT_TOKEN,
+        authorized_chat_ids="-100123",
+        tma_bot_identity="sunna",
+        tma_allowed_origins="https://allowed.example",
+    )
+    app = create_tma_app(settings, database, FakeEngine())
+
+    async with TestServer(app) as server:
+        client = TestClient(server)
+        await client.start_server()
+        try:
+            response = await client.options(
+                "/api/combat/action",
+                headers={
+                    "Origin": "https://allowed.example",
+                    "Access-Control-Request-Method": "POST",
+                    "Access-Control-Request-Headers": "content-type,x-telegram-init-data",
+                },
+            )
+            assert response.status == 204
+            assert response.headers["Access-Control-Allow-Origin"] == "https://allowed.example"
+        finally:
+            await client.close()
+
+    await database.close()
 
 
 class FakeEngine:
