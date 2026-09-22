@@ -520,7 +520,7 @@ public final class WaifuMonRuleEngine {
         JsonNode character = requiredObject(payload, "character");
         int level = boundedInt(payload, "level", 1, MAX_LEVEL);
         String rarity = requiredText(payload, "rarity");
-        String element = requiredText(character, "element");
+        String element = requiredText(character, "element_type");
         int powerScore = boundedInt(character, "power_score", 0, 100);
         String seed = payload.path("potential_seed").isTextual()
             ? payload.path("potential_seed").asText()
