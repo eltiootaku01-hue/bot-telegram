@@ -9,7 +9,6 @@ from app.card_vault.contracts import CardRegistration, CardRarity
 from app.card_vault.service import CardVaultService
 from app.db.card_vault_models import CardHolderType, CardInventory, TransactionHistory
 from app.db.database import Database
-from app.db.models import CardDefinition
 
 
 @pytest.fixture
