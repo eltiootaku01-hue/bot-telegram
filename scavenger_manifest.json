@@ -297,9 +297,9 @@
       "source_url": "https://opengameart.org/content/slash-effect",
       "license": "CC0-1.0",
       "license_verified": true,
-      "status": "captured_via_related_collection",
+      "status": "research_only_related_collection",
       "target_dir": "assets/raw/vfx",
-      "reason": "CC0 slash effect reference retained as provenance target; current automatic downloads already include the larger Slash Effect Collection."
+      "reason": "CC0 slash effect reference retained for provenance; the larger CC0 Slash Effect Collection is already an automatic download."
     }
   ]
 }
