@@ -34,7 +34,16 @@ jobs:
           test -f webapp/js/combat.js
           test -f webapp/js/effects.js
           test -f webapp/js/api.js
+          test -f webapp/nikke_tcg_demo.html
+          test -f webapp/js/equipment_system.js
           grep -q 'telegram-web-app.js' webapp/index.html
+          grep -q 'three.js/r128/three.min.js' webapp/nikke_tcg_demo.html
+          grep -q 'three@0.128.0/examples/js/loaders/GLTFLoader.js' webapp/nikke_tcg_demo.html
+          grep -q 'three@0.128.0/examples/js/controls/OrbitControls.js' webapp/nikke_tcg_demo.html
+          grep -q 'equipment_system.js' webapp/nikke_tcg_demo.html
+          grep -q 'Cañón Neón' webapp/nikke_tcg_demo.html
+          grep -q 'eq_cannon_01' webapp/nikke_tcg_demo.html
+          grep -q 'class EquipmentSystem' webapp/js/equipment_system.js
           grep -q 'class="crt-overlay"' webapp/index.html
           grep -q 'class="tcg-card" id="sujetoCero"' webapp/index.html
           grep -q 'class="foil-glare" id="hologram"' webapp/index.html
@@ -55,6 +64,17 @@ jobs:
           node --check webapp/js/combat.js
           node --check webapp/js/effects.js
           node --check webapp/js/api.js
+          node --check webapp/js/equipment_system.js
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("webapp/nikke_tcg_demo.html").read_text(encoding="utf-8")
+          scripts = re.findall(r'<script type="module">\\s*(.*?)\\s*</script>', html, flags=re.S)
+          if len(scripts) != 1:
+              raise SystemExit(f"Expected one inline module script, found {len(scripts)}")
+          Path("/tmp/nikke_tcg_demo-inline.js").write_text(scripts[0], encoding="utf-8")
+          PY
+          node --check /tmp/nikke_tcg_demo-inline.js
 
       - name: Configure WebApp API endpoint
         shell: python
