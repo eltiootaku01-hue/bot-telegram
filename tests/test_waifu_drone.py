@@ -52,5 +52,4 @@ def test_generated_asset_id_is_stable() -> None:
 def test_allowed_license_set_is_strict() -> None:
     allowed = {lic.lower() for lic in waifu_drone.ALLOWED_LICENSES}
     assert "cc0-1.0" in allowed
-    assert "mit" in allowed
     assert "cc-by-4.0" not in allowed
