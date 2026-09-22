@@ -1,4 +1,5 @@
 import { WaifuMonCombatCanvas, playCutIn } from "./combat.js";
+import { WaifuMonApi } from "./api.js";
 
 const tg = window.Telegram?.WebApp;
 
