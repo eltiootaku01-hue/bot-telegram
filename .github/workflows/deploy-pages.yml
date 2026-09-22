@@ -44,12 +44,19 @@ jobs:
           TMA_API_BASE_URL: ${{ vars.TMA_API_BASE_URL }}
         run: |
           from pathlib import Path
+          from urllib.parse import urlparse
           import os
+
+          raw = os.environ.get("TMA_API_BASE_URL", "").strip().rstrip("/")
+          if raw:
+              parsed = urlparse(raw)
+              if parsed.scheme != "https" or not parsed.netloc or parsed.query or parsed.fragment:
+                  raise SystemExit("TMA_API_BASE_URL must be an absolute HTTPS URL without query or fragment")
 
           path = Path("webapp/index.html")
           text = path.read_text(encoding="utf-8")
           marker = '<meta name="waifumon-api-base-url" content="">'
-          replacement = f'<meta name="waifumon-api-base-url" content="{os.environ.get("TMA_API_BASE_URL", "").strip().rstrip("/")}">'
+          replacement = f'<meta name="waifumon-api-base-url" content="{raw}">'
           if marker not in text:
               raise SystemExit("TMA API meta tag was not found")
           path.write_text(text.replace(marker, replacement, 1), encoding="utf-8")
