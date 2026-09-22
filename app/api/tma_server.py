@@ -9,7 +9,6 @@ from urllib.parse import urljoin
 
 from aiohttp import web
 from aiogram import Bot
-from aiogram.types import LabeledPrice
 from pydantic import ValidationError
 from sqlalchemy import select
 
@@ -24,6 +23,7 @@ from app.api.dtos import (
     TurnResultDTO,
 )
 from app.api.tma_auth import TmaAuthContext, TmaAuthError, init_data_from_request, validate_init_data
+from app.api.tma_payments import TmaStarsService
 from app.core.access import is_authorized_community
 from app.core.config import Settings
 from app.core.identity import BotIdentity
@@ -274,7 +274,7 @@ class TmaCombatService:
 COMBAT_SERVICE_KEY = web.AppKey("combat_service", TmaCombatService)
 SETTINGS_KEY = web.AppKey("settings", Settings)
 DATABASE_KEY = web.AppKey("database", Database)
-INVOICE_BOT_FACTORY_KEY = web.AppKey("invoice_bot_factory", object)
+STARS_SERVICE_KEY = web.AppKey("stars_service", TmaStarsService)
 TMA_CONTEXT_KEY = web.RequestKey("tma_context", TmaAuthContext)
 
 
@@ -375,7 +375,7 @@ def create_tma_app(
     app[SETTINGS_KEY] = settings
     app[DATABASE_KEY] = database
     app[COMBAT_SERVICE_KEY] = combat_service
-    app[INVOICE_BOT_FACTORY_KEY] = invoice_bot_factory
+    app[STARS_SERVICE_KEY] = TmaStarsService(settings, bot_factory=invoice_bot_factory)
     app.router.add_get("/api/combat/init", _combat_init)
     app.router.add_post("/api/combat/action", _combat_action)
     app.router.add_post("/api/store/invoice", _create_invoice)
@@ -446,47 +446,13 @@ async def _create_invoice(request: web.Request) -> web.Response:
     except (ValueError, ValidationError):
         return _json_error(400, "INVALID_BODY", "Producto inválido.")
 
-    settings: Settings = request.app[SETTINGS_KEY]
-    token = settings.token_for(settings.tma_bot_identity.value)
-    if not token:
-        return _json_error(503, "PAYMENTS_UNAVAILABLE", "El bot de pagos no está configurado.")
-
-    prices = {
-        "premium_ticket": (
-            settings.tma_premium_ticket_price_stars,
-            "Ticket Premium",
-            "Ticket Premium para WaifuMon",
-        ),
-        "starter_pack": (
-            settings.tma_starter_pack_price_stars,
-            "Starter Pack",
-            "Pack inicial digital de WaifuMon",
-        ),
-    }
-    amount, title, description = prices[dto.product]
-    if amount <= 0:
-        return _json_error(503, "INVALID_PRICE", "El precio del producto no está configurado.")
-
-    context: TmaAuthContext = request[TMA_CONTEXT_KEY]
-    payload = f"tma:{context.user.id}:{dto.product}:{uuid.uuid4().hex}"
-    bot_factory = request.app.get(INVOICE_BOT_FACTORY_KEY)
-    bot = bot_factory(token) if bot_factory is not None else Bot(token=token)
     try:
-        invoice_link = await bot.create_invoice_link(
-            title=title,
-            description=description,
-            payload=payload,
-            currency="XTR",
-            prices=[LabeledPrice(label=title, amount=amount)],
+        response = await request.app[STARS_SERVICE_KEY].create_invoice_link(
+            request[TMA_CONTEXT_KEY],
+            product=dto.product,
         )
-    finally:
-        await bot.session.close()
-
-    response = InvoiceResponseDTO(
-        product=dto.product,
-        currency="XTR",
-        amount=amount,
-        invoice_link=invoice_link,
-        payload=payload,
-    )
+    except RuntimeError as exc:
+        return _json_error(503, "PAYMENTS_UNAVAILABLE", str(exc))
+    except ValueError as exc:
+        return _json_error(400, "INVALID_PRODUCT", str(exc))
     return web.json_response(response.model_dump(mode="json"))
