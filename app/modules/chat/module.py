@@ -8,6 +8,7 @@ from aiogram.types import Message
 
 from app.characters.models import CharacterIntent
 from app.characters.router import CharacterIntentRouter
+from app.core.access import is_authorized_community
 from app.core.config import Settings, get_settings
 from app.core.identity import BotIdentity
 from app.core.module import BotModule
@@ -180,6 +181,12 @@ class ChatModule(BotModule):
         text: str,
     ) -> bool:
         """Send a scene through the Telegram identity that authored it."""
+        if message.chat.type in {"group", "supergroup"} and not is_authorized_community(
+            self.settings,
+            message.chat.id,
+        ):
+            return False
+
         if speaker is self.identity:
             await message.answer(text)
             return True
