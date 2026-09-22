@@ -5,7 +5,8 @@ from sqlalchemy import select
 
 from app.core.config import Settings
 from app.db.database import Database
-from app.db.models import Chat, GameItemInventory, TmaStarPurchase
+from app.db.community_models import SetupSession
+from app.db.models import Chat, GameItemInventory, GameProfile, TmaStarPurchase
 from app.services.tma_payments import (
     TmaPaymentError,
     TmaPaymentService,
@@ -59,7 +60,7 @@ async def test_fulfill_is_idempotent_by_telegram_charge_id() -> None:
 
     async with database.session() as session:
         session.add(Chat(id=-100123, type="supergroup", title="Test"))
-    
+
     service = TmaPaymentService(Settings(tma_premium_ticket_price_stars=10))
 
     payload = "tma:777:premium_ticket:0123456789abcdef0123456789abcdef"
@@ -157,6 +158,60 @@ async def test_same_invoice_payload_can_be_paid_again_with_new_charge_id() -> No
     await database.close()
 
 
+
+@pytest.mark.asyncio
+async def test_starter_pack_credits_tickets_and_coins() -> None:
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+
+    async with database.session() as session:
+        session.add(Chat(id=-100123, type="supergroup", title="Test"))
+
+    service = TmaPaymentService(
+        Settings(
+            tma_premium_ticket_price_stars=10,
+            tma_starter_pack_price_stars=25,
+        )
+    )
+    payload = "tma:888:starter_pack:fedcba9876543210fedcba9876543210"
+
+    async with database.session(write=True) as session:
+        await service.fulfill(
+            session,
+            user_id=888,
+            first_name="Buyer",
+            last_name=None,
+            username="buyer",
+            payload=payload,
+            currency="XTR",
+            amount=25,
+            telegram_payment_charge_id="starter-charge-1",
+            provider_payment_charge_id=None,
+            chat_id=-100123,
+        )
+
+    async with database.session() as session:
+        profile = await session.scalar(
+            select(GameProfile).where(
+                GameProfile.user_id == 888,
+                GameProfile.chat_id == -100123,
+            )
+        )
+        tickets = await session.scalar(
+            select(GameItemInventory).where(
+                GameItemInventory.profile_id == profile.id,
+                GameItemInventory.item_key == "premium_ticket",
+            )
+        )
+
+    assert profile is not None
+    assert profile.coins == 250
+    assert tickets is not None
+    assert tickets.quantity == 3
+
+    await database.close()
+
+
 @pytest.mark.asyncio
 async def test_payment_updates_validate_then_fulfill_once() -> None:
     from types import SimpleNamespace
@@ -168,6 +223,14 @@ async def test_payment_updates_validate_then_fulfill_once() -> None:
     await database.create_schema()
     async with database.session() as session:
         session.add(Chat(id=-100123, type="supergroup", title="Test"))
+        session.add(
+            SetupSession(
+                user_id=1,
+                chat_id=-100123,
+                bot_identity="chie",
+                status="configured",
+            )
+        )
 
     settings = Settings(
         authorized_chat_ids="-100123",
