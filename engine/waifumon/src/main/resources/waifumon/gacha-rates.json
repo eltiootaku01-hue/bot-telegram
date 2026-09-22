@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "rarities": [
+    {"rarity": "SSS", "probability": 0.0005},
+    {"rarity": "SS", "probability": 0.0015},
+    {"rarity": "S", "probability": 0.005},
+    {"rarity": "A", "probability": 0.013},
+    {"rarity": "B", "probability": 0.04},
+    {"rarity": "C", "probability": 0.24},
+    {"rarity": "D", "probability": 0.70}
+  ],
+  "pity": {
+    "tracked_rarity": "D",
+    "consecutive_failures": 6,
+    "forced_rarity": "C"
+  }
+}
