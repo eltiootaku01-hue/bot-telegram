@@ -229,6 +229,54 @@ async def test_invoice_endpoint_uses_xtr_and_backend_identity() -> None:
 
 
 @pytest.mark.asyncio
+async def test_tma_tutorial_allows_empty_existing_profile() -> None:
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    async with database.session() as session:
+        session.add(
+            SetupSession(
+                user_id=USER_ID,
+                chat_id=-100123,
+                bot_identity="chie",
+                status="configured",
+            )
+        )
+        session.add(GameProfile(user_id=USER_ID, chat_id=-100123))
+
+    settings = Settings(
+        bot_token_sunna=BOT_TOKEN,
+        authorized_chat_ids="-100123",
+        tma_bot_identity="sunna",
+    )
+    engine = FakeEngine()
+    app = create_tma_app(settings, database, engine)
+
+    async with TestServer(app) as server:
+        client = TestClient(server)
+        await client.start_server()
+        try:
+            response = await client.post(
+                "/api/combat/action",
+                headers={"X-Telegram-Init-Data": make_init_data()},
+                json={
+                    "action": "attack",
+                    "attacker_id": "taiga",
+                    "defender_id": "anya",
+                    "turn_id": "tutorial-existing-profile",
+                    "idempotency_key": "tutorial-idem",
+                },
+            )
+            assert response.status == 200
+            payload = await response.json()
+            assert payload["attacker"] == "Taiga Aisaka"
+            assert engine.calls[0]["attacker"]["level"] == 1
+        finally:
+            await client.close()
+
+    await database.close()
+
+
+@pytest.mark.asyncio
 async def test_tma_action_reaches_real_java_engine() -> None:
     from pathlib import Path
 
