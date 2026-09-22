@@ -56,8 +56,9 @@ class TurnResultDTO(BaseModel):
     critical: bool
     defender_hp: int = Field(ge=0)
     defender_max_hp: int = Field(gt=0)
-    events: list[str] = Field(default_factory=list)
-    rewards: list[str] = Field(default_factory=list)
+    state_version: int = Field(ge=0)
+    event_ids: list[str] = Field(default_factory=list)
+    reward_ids: list[str] = Field(default_factory=list)
 
 
 class InvoiceRequestDTO(BaseModel):
