@@ -78,6 +78,7 @@ def _ensure_compatibility(connection) -> None:
     _add_column_if_missing(connection, "card_definitions", "asset_sha256", "VARCHAR(64)", card_columns)
     _add_column_if_missing(connection, "card_definitions", "coin_value", "INTEGER DEFAULT 0", card_columns)
     _add_column_if_missing(connection, "card_definitions", "telegram_protected", "BOOLEAN DEFAULT 1", card_columns)
+    _add_column_if_missing(connection, "card_definitions", "custom_emoji_id", "VARCHAR(255)", card_columns)
 
     media_columns = {column["name"] for column in inspector.get_columns("media_assets")}
     _add_column_if_missing(connection, "media_assets", "request_id", "BIGINT REFERENCES fan_requests(id) ON DELETE SET NULL", media_columns)
