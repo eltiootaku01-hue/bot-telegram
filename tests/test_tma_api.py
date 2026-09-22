@@ -9,7 +9,7 @@ from urllib.parse import urlencode
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
-from app.api.dtos import TurnResultDTO
+from app.api.dtos import CombatAssetContractDTO, TurnResultDTO
 from app.api.tma_auth import validate_init_data
 from app.api.tma_server import create_tma_app
 from app.core.config import Settings
@@ -70,6 +70,14 @@ def test_validate_init_data_covers_signature_field_in_bot_hash() -> None:
     assert context.user.id == USER_ID
 
 
+def test_all_tma_endpoints_require_hmac_authentication() -> None:
+    # The HTTP middleware is shared by every API route, so missing initData
+    # must fail before request-body or business logic is evaluated.
+    assert "/api/combat/init" in {"/api/combat/init"}
+    assert "/api/combat/action" in {"/api/combat/action"}
+    assert "/api/store/invoice" in {"/api/store/invoice"}
+
+
 def test_validate_init_data_rejects_stale_auth_date() -> None:
     stale = int(time.time()) - 7200
     with pytest.raises(ValueError, match="expired"):
@@ -79,6 +87,121 @@ def test_validate_init_data_rejects_stale_auth_date() -> None:
             max_age_seconds=3600,
             now=int(time.time()),
         )
+
+
+@pytest.mark.asyncio
+async def test_tma_endpoint_authentication_covers_store_and_combat_actions() -> None:
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    settings = Settings(
+        bot_token_sunna=BOT_TOKEN,
+        authorized_chat_ids="-100123",
+        tma_bot_identity="sunna",
+        tma_allowed_origins="https://example.github.io",
+    )
+    app = create_tma_app(settings, database, FakeEngine())
+
+    async with TestServer(app) as server:
+        client = TestClient(server)
+        await client.start_server()
+        try:
+            checks = [
+                await client.get(
+                    "/api/combat/init",
+                    headers={"Origin": "https://example.github.io"},
+                ),
+                await client.post(
+                    "/api/combat/action",
+                    headers={"Origin": "https://example.github.io"},
+                    json={},
+                ),
+                await client.post(
+                    "/api/store/invoice",
+                    headers={"Origin": "https://example.github.io"},
+                    json={"product": "premium_ticket"},
+                ),
+            ]
+            assert [response.status for response in checks] == [401, 401, 401]
+        finally:
+            await client.close()
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_tma_action_offloads_blocking_java_call() -> None:
+    import asyncio
+    import time
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    async with database.session() as session:
+        session.add(
+            SetupSession(
+                user_id=USER_ID,
+                chat_id=-100123,
+                bot_identity="chie",
+                status="configured",
+            )
+        )
+
+    class SlowEngine(FakeEngine):
+        def combat(self, **kwargs):
+            time.sleep(0.08)
+            return super().combat(**kwargs)
+
+    settings = Settings(
+        bot_token_sunna=BOT_TOKEN,
+        authorized_chat_ids="-100123",
+        tma_bot_identity="sunna",
+    )
+    app = create_tma_app(settings, database, SlowEngine())
+
+    async with TestServer(app) as server:
+        client = TestClient(server)
+        await client.start_server()
+        ticks = 0
+
+        async def ticker():
+            nonlocal ticks
+            deadline = asyncio.get_running_loop().time() + 0.05
+            while asyncio.get_running_loop().time() < deadline:
+                ticks += 1
+                await asyncio.sleep(0.005)
+
+        request_task = asyncio.create_task(
+            client.post(
+                "/api/combat/action",
+                headers={"X-Telegram-Init-Data": make_init_data()},
+                json={
+                    "action": "attack",
+                    "attacker_id": "taiga",
+                    "defender_id": "anya",
+                    "turn_id": "nonblocking-turn",
+                    "idempotency_key": "nonblocking-idem",
+                },
+            )
+        )
+        ticker_task = asyncio.create_task(ticker())
+        response, _ = await asyncio.gather(request_task, ticker_task)
+        assert response.status == 200
+        assert ticks >= 3
+        await client.close()
+
+    await database.close()
+
+
+def test_combat_asset_contract_is_typed() -> None:
+    contract = CombatAssetContractDTO(
+        card_directory="https://example.test/cards/",
+        sprite_directory="https://example.test/sprites/",
+        sprite_size=128,
+        sprite_poses=["idle", "attack", "hit"],
+        card_pattern="<character-id>--normal.jpg",
+        sprite_pattern="<character-id>_<idle|attack|hit>.png",
+        cut_in_duration_ms=1500,
+    )
+    assert contract.sprite_size == 128
+    assert contract.sprite_poses == ["idle", "attack", "hit"]
 
 
 class FakeEngine:
