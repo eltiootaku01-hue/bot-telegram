@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from html import escape
 from pathlib import Path
 
 from aiogram import Bot, F
@@ -216,11 +217,11 @@ class GameModule(BotModule):
         asset_path = Path(self.settings.card_assets_dir) / filename
         caption = (
             f"🎴 <b>¡CARTA OBTENIDA!</b>\n"
-            f"👤 <b>{definition.character_name}</b>\n"
-            f"📺 {definition.anime_origin}\n"
-            f"💎 Rareza: <b>{definition.rarity}</b>\n"
+            f"👤 <b>{escape(definition.character_name)}</b>\n"
+            f"📺 {escape(definition.anime_origin)}\n"
+            f"💎 Rareza: <b>{escape(definition.rarity)}</b>\n"
             f"⭐ Valor de colección: <b>{definition.collection_points}</b>\n"
-            f"🎨 Origen: {definition.source_provider}\n"
+            f"🎨 Origen: {escape(definition.source_provider)}\n"
             f"📦 Copias: <b>×{result.copies}</b>"
         )
         if result.already_claimed:
