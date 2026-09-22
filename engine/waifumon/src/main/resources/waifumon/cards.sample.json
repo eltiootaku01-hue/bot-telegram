@@ -1,0 +1,45 @@
+[
+  {
+    "card_id": "sample-neko",
+    "name": "Sample Neko",
+    "base_atk": 52,
+    "base_def": 40,
+    "element_type": "rayo",
+    "skills": [
+      {
+        "skill_id": "claw",
+        "name": "Garra Eléctrica",
+        "power": 55,
+        "category": "physical",
+        "crit_rate": 8,
+        "crit_multiplier": 1.5,
+        "element_multiplier": 1.0,
+        "status_effect": "stun"
+      },
+      {
+        "skill_id": "guard",
+        "name": "Guardia",
+        "power": 1,
+        "category": "defense",
+        "crit_rate": 0,
+        "crit_multiplier": 1.0,
+        "element_multiplier": 1.0,
+        "status_effect": "shield"
+      }
+    ],
+    "status_effects": [
+      {
+        "status_id": "stun",
+        "duration_turns": 1,
+        "power": 0,
+        "max_stacks": 1
+      },
+      {
+        "status_id": "shield",
+        "duration_turns": 1,
+        "power": 20,
+        "max_stacks": 2
+      }
+    ]
+  }
+]
