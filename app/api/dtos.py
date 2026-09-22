@@ -42,6 +42,8 @@ class CombatInitDTO(BaseModel):
     contract_version: str
     player_id: int
     community_id: int
+    premium_tickets: int = Field(ge=0)
+    coins: int = Field(ge=0)
     asset_contract: CombatAssetContractDTO
     team: list[CombatFighterDTO]
     opponents: list[CombatFighterDTO]
