@@ -1,7 +1,7 @@
 import hashlib
 from pathlib import Path
 
-from tools.validate_card_assets import _validate_provenance
+from app.game.art_provenance import validate_provenance
 
 
 def test_cleared_provenance_accepts_matching_sha256(tmp_path: Path) -> None:
@@ -10,7 +10,7 @@ def test_cleared_provenance_accepts_matching_sha256(tmp_path: Path) -> None:
     digest = hashlib.sha256(asset.read_bytes()).hexdigest()
     failures: list[str] = []
 
-    _validate_provenance(
+    validate_provenance(
         asset,
         {
             "asset": str(asset).replace("\\", "/"),
