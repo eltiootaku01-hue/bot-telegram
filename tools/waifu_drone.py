@@ -21,19 +21,57 @@ SEARCH_TAGS = (
     "game character sprite CC0",
 )
 
-OGA_DIRECT_SOURCES = (
-    ("https://opengameart.org/content/rpg-character-sprites", "https://opengameart.org/sites/default/files/RPG_assets.png"),
-    ("https://opengameart.org/content/hero-character-sprite-sheet", "https://opengameart.org/sites/default/files/player_41.png"),
-    ("https://opengameart.org/content/hero-character-sprite-sheet", "https://opengameart.org/sites/default/files/player_44.png"),
-    ("https://opengameart.org/content/simple-character-1", "https://opengameart.org/sites/default/files/Character%20Front_0.png"),
-    ("https://opengameart.org/content/simple-character-1", "https://opengameart.org/sites/default/files/Character%20Left%201.png"),
-    ("https://opengameart.org/content/free-2d-game-characters", "https://opengameart.org/sites/default/files/character1_0.png"),
-    ("https://opengameart.org/content/free-2d-game-characters", "https://opengameart.org/sites/default/files/character2_0.png"),
-    ("https://opengameart.org/content/free-2d-game-characters", "https://opengameart.org/sites/default/files/walk_animation_frame1_2.png"),
-    ("https://opengameart.org/content/pixel-character", "https://opengameart.org/sites/default/files/AloneSPRhh.png"),
-    ("https://opengameart.org/content/character-1616", "https://opengameart.org/sites/default/files/human_0.png"),
-    ("https://opengameart.org/content/8-bit-character", "https://opengameart.org/sites/default/files/back-sheet.png"),
-    ("https://opengameart.org/content/hero-character", "https://opengameart.org/sites/default/files/HeroCharacter%20Final.png"),
+GITHUB_CC0_SOURCES = (
+    (
+        "https://github.com/SpriteCook/spritecook-free-game-assets",
+        "master",
+        "detailed-characters-anime/battleworn_knight.png",
+    ),
+    (
+        "https://github.com/SpriteCook/spritecook-free-game-assets",
+        "master",
+        "detailed-characters-anime/clockwork_owl.png",
+    ),
+    (
+        "https://github.com/SpriteCook/spritecook-free-game-assets",
+        "master",
+        "detailed-characters-anime/deepsea_knight.png",
+    ),
+    (
+        "https://github.com/SpriteCook/spritecook-free-game-assets",
+        "master",
+        "detailed-characters-anime/forest_archer.png",
+    ),
+    (
+        "https://github.com/SpriteCook/spritecook-free-game-assets",
+        "master",
+        "detailed-characters-anime/frog_paladin.png",
+    ),
+    (
+        "https://github.com/SpriteCook/spritecook-free-game-assets",
+        "master",
+        "detailed-characters-anime/gnome_merchant.png",
+    ),
+    (
+        "https://github.com/SpriteCook/spritecook-free-game-assets",
+        "master",
+        "detailed-characters-anime/monster_hunter.png",
+    ),
+    (
+        "https://github.com/SpriteCook/spritecook-free-game-assets",
+        "master",
+        "detailed-characters-anime/mouse_knight.png",
+    ),
+    (
+        "https://github.com/SpriteCook/spritecook-free-game-assets",
+        "master",
+        "detailed-characters-anime/mushroom_druid.png",
+    ),
+    (
+        "https://github.com/SpriteCook/spritecook-free-game-assets",
+        "master",
+        "detailed-characters-anime/noble_vampire.png",
+    ),
 )
 ALLOWED_LICENSES = {"CC0-1.0", "CC0", "Public domain", "Public Domain"}
 BLOCKED_TERMS = {
@@ -54,7 +92,7 @@ OGA_PAGES = (
     "https://opengameart.org/content/8-bit-character",
     "https://opengameart.org/content/bird-like-rpg-character",
 )
-USER_AGENT = "WaifuMon-WaifuDrone/1.3"
+USER_AGENT = "WaifuMon-WaifuDrone/1.4"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -142,30 +180,23 @@ def _oga_candidates() -> list[dict]:
     return candidates
 
 
-def _oga_direct_candidates() -> list[dict]:
-    candidates = []
-    seen = set()
-
-    for page_url, source_url in OGA_DIRECT_SOURCES:
-        try:
-            html = _fetch_text(page_url)
-        except Exception:
-            continue
-        lowered = re.sub(r"\\s+", " ", html).casefold()
-        if "cc0" not in lowered or any(term in lowered for term in BLOCKED_TERMS):
-            continue
-        if source_url in seen:
-            continue
-        seen.add(source_url)
-        candidates.append(
-            {
-                "title": Path(urllib.parse.urlparse(source_url).path).name,
-                "source_page": page_url,
-                "source_url": source_url,
-                "license": "CC0",
-            }
-        )
-    return candidates
+def _github_cc0_candidates() -> list[dict]:
+    return [
+        {
+            "title": Path(path).name,
+            "source_page": repo_url + "/tree/" + branch + "/" + urllib.parse.quote(path, safe="/"),
+            "source_url": (
+                "https://raw.githubusercontent.com/"
+                + repo_url.removeprefix("https://github.com/")
+                + "/"
+                + branch
+                + "/"
+                + urllib.parse.quote(path, safe="/")
+            ),
+            "license": "CC0-1.0",
+        }
+        for repo_url, branch, path in GITHUB_CC0_SOURCES
+    ]
 
 
 def _api_get(params: dict[str, str]) -> dict:
@@ -275,7 +306,8 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
     RAW_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
     PROD_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
 
-    candidates = _oga_direct_candidates()
+    candidates = _github_cc0_candidates()
+    candidates.extend(_oga_direct_candidates())
     if len(candidates) < target_amount:
         candidates.extend(
             item for item in _oga_candidates()
