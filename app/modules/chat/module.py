@@ -181,7 +181,8 @@ class ChatModule(BotModule):
         text: str,
     ) -> bool:
         """Send a scene through the Telegram identity that authored it."""
-        if message.chat.type in {"group", "supergroup"} and not is_authorized_community(
+        chat_type = getattr(message.chat, "type", None)
+        if chat_type in {"group", "supergroup"} and not is_authorized_community(
             self.settings,
             message.chat.id,
         ):
