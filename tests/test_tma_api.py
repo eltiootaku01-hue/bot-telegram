@@ -33,6 +33,7 @@ def make_init_data(*, auth_date: int | None = None, user_id: int = USER_ID) -> s
         "auth_date": str(auth_date if auth_date is not None else int(time.time())),
         "query_id": "AAE-test-query",
         "user": json.dumps(user, ensure_ascii=False, separators=(",", ":")),
+        "signature": "telegram-third-party-signature-placeholder",
     }
     data_check_string = "\n".join(
         f"{key}={values[key]}" for key in sorted(values)
@@ -61,6 +62,11 @@ def test_validate_init_data_rejects_tampered_payload() -> None:
     init_data = make_init_data().replace("Johan", "Intruder")
     with pytest.raises(ValueError, match="HMAC"):
         validate_init_data(init_data, BOT_TOKEN, now=int(time.time()))
+
+
+def test_validate_init_data_covers_signature_field_in_bot_hash() -> None:
+    context = validate_init_data(make_init_data(), BOT_TOKEN, now=int(time.time()))
+    assert context.user.id == USER_ID
 
 
 def test_validate_init_data_rejects_stale_auth_date() -> None:
@@ -212,7 +218,7 @@ async def test_invoice_endpoint_uses_xtr_and_backend_identity() -> None:
             assert payload["amount"] == 10
             assert payload["invoice_link"] == "https://t.me/invoice/test"
             assert fake_bot.calls[0]["currency"] == "XTR"
-            assert fake_bot.calls[0]["provider_token"] == ""
+            assert "provider_token" not in fake_bot.calls[0]
             assert len(fake_bot.calls[0]["prices"]) == 1
             assert fake_bot.calls[0]["prices"][0].label == "Ticket Premium"
             assert fake_bot.calls[0]["prices"][0].amount == 10
