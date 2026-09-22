@@ -199,18 +199,31 @@ function setupReferralShare() {
   });
 }
 
-function boot() {
+async function boot() {
   setupTelegram();
   setupPlayerHeader();
 
   const canvas = document.getElementById("combat-canvas");
-  if (!canvas) return;
+  const status = document.getElementById("combat-status");
+  if (!canvas || !status) return;
 
   const combat = new WaifuMonCombatCanvas(canvas);
-  setupTeam(combat);
-  setupCombatActions(combat);
-  setupStore();
-  setupReferralShare();
+  const api = new WaifuMonApi();
+  try {
+    status.textContent = "Conectando...";
+    const init = await api.getCombatInit();
+    const stars = document.getElementById("stars-balance");
+    if (stars) stars.textContent = "—";
+    setupTeam(combat, init);
+    setupCombatActions(combat, api, init);
+    setupStore(api);
+    setupReferralShare();
+    status.textContent = "Listo";
+  } catch (error) {
+    status.textContent = "API no disponible";
+    document.querySelectorAll("[data-action], [data-purchase]").forEach((node) => { node.disabled = true; });
+    tg?.showAlert?.(error instanceof Error ? error.message : "No se pudo conectar con el backend.");
+  }
 }
 
-boot();
+void boot();
