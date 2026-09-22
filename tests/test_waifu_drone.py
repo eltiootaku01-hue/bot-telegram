@@ -28,8 +28,9 @@ def test_quota_short_circuits_before_network(tmp_path, monkeypatch) -> None:
     quarantine.mkdir()
 
     for index in range(10):
+        sprite = waifu_drone._make_offline_sprite(index)
         (quarantine / f"spr_{index:08x}_raw.png").write_bytes(
-            waifu_drone.PNG_SIGNATURE + b"x" * 1024
+            sprite + b"x" * max(0, waifu_drone.MIN_PNG_BYTES - len(sprite))
         )
 
     monkeypatch.setattr(waifu_drone, "RAW_SPRITE_DIR", quarantine)
