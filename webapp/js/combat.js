@@ -2,8 +2,8 @@ const SPRITE_SIZE = 128;
 const CUT_IN_DURATION_MS = 1500;
 const IMPACT_SHAKE_MS = 200;
 const HIT_FLASH_FRAMES = 3;
-const ASSET_FILTER = "contrast(1.3) saturate(1.5) hue-rotate(-10deg)";
 const POSES = ["idle", "attack", "hit"];
+const ASSET_FILTER = "contrast(1.3) saturate(1.5) hue-rotate(-10deg)";
 
 function spriteUrl(characterId, pose = "idle") {
   return new URL(`../../assets/production/sprites/${characterId}_${pose}.png`, import.meta.url).href;
@@ -24,13 +24,13 @@ function loadImage(src) {
 }
 
 function drawFallback(ctx, x, y, size, label, hostile = false) {
-  ctx.fillStyle = hostile ? "#231f4f" : "#102030";
+  ctx.fillStyle = hostile ? "#2a0b0b" : "#1b0a27";
   ctx.fillRect(x, y, size, size);
-  ctx.strokeStyle = hostile ? "#7c6cff" : "#2aabee";
+  ctx.strokeStyle = hostile ? "#ff2a2a" : "#b026ff";
   ctx.lineWidth = Math.max(2, size * 0.025);
   ctx.strokeRect(x + 1, y + 1, size - 2, size - 2);
-  ctx.fillStyle = hostile ? "#b5a9ff" : "#62c0ff";
-  ctx.font = `700 ${Math.max(14, size * 0.12)}px sans-serif`;
+  ctx.fillStyle = hostile ? "#ff7676" : "#dd9bff";
+  ctx.font = `900 ${Math.max(14, size * 0.12)}px "Cascadia Mono", Consolas, monospace`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(label.slice(0, 12), x + size / 2, y + size / 2);
@@ -83,14 +83,39 @@ export class WaifuMonCombatCanvas {
     for (const entity of this.entities) {
       if (entity.id === characterId) entity.pose = pose;
     }
+    if (pose === "hit") {
+      this.triggerImpact();
+      return;
+    }
     this.render();
+  }
+
+  triggerImpact() {
+    this.hitFlashFrames = HIT_FLASH_FRAMES;
+    if (!this.reducedMotion) {
+      this.shakeUntil = performance.now() + IMPACT_SHAKE_MS;
+    }
+    if (!this.shakeFrameId) {
+      this.shakeFrameId = requestAnimationFrame(() => this._impactFrame());
+    }
+    this.render();
+  }
+
+  _impactFrame() {
+    this.shakeFrameId = 0;
+    this.render();
+    if (performance.now() < this.shakeUntil || this.hitFlashFrames > 0) {
+      this.shakeFrameId = requestAnimationFrame(() => this._impactFrame());
+    } else {
+      this.shakeUntil = 0;
+    }
   }
 
   render() {
     const ctx = this.ctx;
     const scaleX = this.canvas.width / this.width;
     const scaleY = this.canvas.height / this.height;
-
+    const now = performance.now();
     const shaking = !this.reducedMotion && now < this.shakeUntil;
 
     ctx.save();
@@ -102,7 +127,7 @@ export class WaifuMonCombatCanvas {
       ctx.translate(Math.random() * 10, Math.random() * 10);
     }
 
-    ctx.fillStyle = "rgba(255,255,255,0.035)";
+    ctx.fillStyle = "rgba(176, 38, 255, 0.05)";
     ctx.fillRect(0, this.height * 0.7, this.width, this.height * 0.3);
 
     for (const entity of this.entities) {
@@ -111,23 +136,23 @@ export class WaifuMonCombatCanvas {
       const size = entity.size;
       const image = this.images.get(`${entity.id}:${entity.pose}`) ?? this.images.get(`${entity.id}:idle`);
 
+      ctx.save();
+      ctx.filter = ASSET_FILTER;
       if (image) {
         ctx.imageSmoothingEnabled = false;
-        ctx.filter = ASSET_FILTER;
         ctx.drawImage(image, px - size / 2, py - size, size, size);
       } else {
-        ctx.filter = ASSET_FILTER;
         drawFallback(ctx, px - size / 2, py - size, size, entity.name, entity.team === "enemy");
       }
-      ctx.filter = "none";
+      ctx.restore();
 
-      ctx.fillStyle = "rgba(0,0,0,0.56)";
+      ctx.fillStyle = "rgba(0,0,0,0.68)";
       ctx.fillRect(px - size / 2, py + 8, size, 20);
-      ctx.fillStyle = "#fff";
-      ctx.font = "700 12px sans-serif";
+      ctx.fillStyle = "#f6f0ff";
+      ctx.font = '900 12px "Cascadia Mono", Consolas, monospace';
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(entity.name, px, py + 18);
+      ctx.fillText(entity.name.toUpperCase(), px, py + 18);
     }
 
     if (this.hitFlashFrames > 0) {
