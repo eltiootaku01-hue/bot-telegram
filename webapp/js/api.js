@@ -19,22 +19,25 @@ export class WaifuMonApi {
     return this.baseUrl + path;
   }
 
-  _headers() {
+  _headers({ json = true } = {}) {
     const initData = window.Telegram?.WebApp?.initData || "";
     if (!initData) {
       throw new Error("Telegram initData is unavailable. Abrí la Mini App desde Telegram.");
     }
-    return {
-      "Content-Type": "application/json",
+    const headers = {
       "X-Telegram-Init-Data": initData,
     };
+    if (json) {
+      headers["Content-Type"] = "application/json";
+    }
+    return headers;
   }
 
   async _request(path, options = {}) {
     const response = await fetch(this._url(path), {
       ...options,
       headers: {
-        ...this._headers(),
+        ...this._headers({ json: !(options.body instanceof FormData) }),
         ...(options.headers || {}),
       },
       cache: "no-store",
@@ -63,5 +66,29 @@ export class WaifuMonApi {
       method: "POST",
       body: JSON.stringify({ product }),
     });
+  }
+
+  async listAdminCards() {
+    return this._request("/api/admin/cards", { method: "GET" });
+  }
+
+  async createCard(formData) {
+    return this._request("/api/admin/cards", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  cardAssetUrl(imageUrl) {
+    const value = String(imageUrl || "").replace(/^\/+/, "");
+    const prefix = "assets/cards/";
+    if (!value.startsWith(prefix)) {
+      throw new Error("Invalid card asset path.");
+    }
+    const filename = value.slice(prefix.length);
+    if (!/^[A-Za-z0-9_-]+\.(?:jpg|png|webp)$/i.test(filename)) {
+      throw new Error("Invalid card asset filename.");
+    }
+    return this._url(`/api/cards/assets/${encodeURIComponent(filename)}`);
   }
 }
