@@ -243,6 +243,25 @@ El catálogo de cartas administrables vive en la tabla SQLite `card_definitions`
 
 La Mini App incorpora el panel administrativo `CREADOR DE BARAJAS & CARTAS IA`. Solo `ADMIN_USER_ID` puede verlo y cargar JPG/PNG/WEBP. Las imágenes se persisten en `CARD_ASSETS_DIR`; la definición almacenada mantiene rutas relativas como `assets/cards/asuna_summer_ssr.jpg`.
 
+
+## Local Card Vault y Casa de Comando
+
+El sistema incluye una frontera local para separar la gestión de cartas del runtime social. La Bóveda conserva originales HD en `data/card_assets`, genera thumbnails en `data/card_thumbnails`, controla inventarios y mantiene un ledger append-only de cartas/Café Coins.
+
+La Casa de Comando se integra mediante `CardVaultClient` sobre `http://127.0.0.1:8765` y usa `TelegramGateway` para las operaciones de Telegram. El estado de cada bot —modo manual/automático, zona, mesa, `chat_id` y `message_thread_id`— queda en `bot_states`, permitiendo que una futura interfaz 2D PySide6 sea una capa de presentación y no una autoridad paralela.
+
+Para registrar una carta desde código se usa `CardVaultService.register_card()`. El proceso verifica la imagen, copia el original, genera el thumbnail, calcula SHA-256 y asigna un código humano como `#001`. Las cartas protegidas se publican mediante el parámetro de Telegram `protect_content=True`.
+
+La estructura SQL de las cuatro tablas principales está en `docs/card-vault-schema.sql` y el contrato completo de integración en `docs/CARD_VAULT_ARCHITECTURE.md`.
+
+Para levantar la Bóveda local de forma independiente:
+
+```bat
+python -m app.card_vault.server
+```
+
+La API queda ligada a loopback; usa `VAULT_API_TOKEN` para autenticación explícita entre procesos cuando se configure.
+
 ## Shared points
 
 Every successful waifu capture can award community points. Points belong to the player + community and use an auditable transaction ledger. Fan requests and Gacha spend those same points.
