@@ -8,6 +8,7 @@ Frontend estático sin framework para GitHub Pages.
 - `css/style.css` — layout mobile-first, tema dinámico y safe areas.
 - `js/main.js` — inicialización Telegram, equipo, acciones visuales, tienda y referidos.
 - `js/combat.js` — Canvas 2D, carga de sprites 128×128 y cut-in HD de 1.5 s.
+- `js/effects.js` — partículas y destellos de combate originales, con límite de 96 partículas y sin dependencias externas.
 
 Los assets de combate se resuelven desde:
 
