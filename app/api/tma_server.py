@@ -28,7 +28,7 @@ from app.core.config import Settings
 from app.core.identity import BotIdentity
 from app.db.database import Database
 from app.db.community_models import SetupSession
-from app.db.models import GameCollection, GameProfile
+from app.db.models import GameCollection, GameItemInventory, GameProfile
 from app.game.catalog import CHARACTERS, get_character
 from app.game.java_engine import WaifuMonJavaEngine
 
@@ -131,13 +131,16 @@ class TmaCombatService:
     async def init(self, context: TmaAuthContext) -> CombatInitDTO:
         community_id = await self.community_id()
         async with self.database.session() as session:
-            profile_id = await session.scalar(
-                select(GameProfile.id).where(
+            profile = await session.scalar(
+                select(GameProfile).where(
                     GameProfile.user_id == context.user.id,
                     GameProfile.chat_id == community_id,
                 )
             )
+            profile_id = profile.id if profile is not None else None
             owned_rows = []
+            premium_tickets = 0
+            coins = profile.coins if profile is not None else 0
             if profile_id is not None:
                 owned_rows = list(
                     await session.scalars(
@@ -147,6 +150,13 @@ class TmaCombatService:
                         .limit(3)
                     )
                 )
+                ticket_row = await session.scalar(
+                    select(GameItemInventory).where(
+                        GameItemInventory.profile_id == profile_id,
+                        GameItemInventory.item_key == "premium_ticket",
+                    )
+                )
+                premium_tickets = ticket_row.quantity if ticket_row is not None else 0
 
         team = [
             _fighter(self.settings, row.character_id, team="player", level=row.level)
@@ -173,6 +183,8 @@ class TmaCombatService:
             contract_version=TMA_API_VERSION,
             player_id=context.user.id,
             community_id=community_id,
+            premium_tickets=premium_tickets,
+            coins=coins,
             asset_contract=CombatAssetContractDTO(
                 card_directory=f"{_asset_base(self.settings)}assets/production/cards/",
                 sprite_directory=f"{_asset_base(self.settings)}assets/production/sprites/",
