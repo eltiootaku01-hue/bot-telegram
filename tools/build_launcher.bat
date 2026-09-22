@@ -2,9 +2,6 @@
 setlocal
 cd /d "%~dp0.."
 
-if exist dist rmdir /s /q dist
-if exist build rmdir /s /q build
-mkdir dist\bots
 
 python -m pip install -e ".[dev]"
 if errorlevel 1 exit /b %errorlevel%
@@ -33,6 +30,8 @@ echo.
 echo ============================================
 echo Build completo.
 echo.
+echo Java:      dist\engine\waifumon-engine.jar
+echo Runtime:   dist\engine\jre\bin\java.exe
 echo Iniciador: dist\BotManager.exe
 echo Java:      dist\engine\waifumon-engine.jar
 echo Runtime:   dist\engine\jre
