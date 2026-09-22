@@ -37,9 +37,46 @@ jobs:
           node --check webapp/js/main.js
           node --check webapp/js/combat.js
           node --check webapp/js/api.js
+
+      - name: Configure WebApp API endpoint
+        shell: python
+        env:
+          TMA_API_BASE_URL: ${{ vars.TMA_API_BASE_URL }}
+        run: |
+          from pathlib import Path
+          import os
+
+          path = Path("webapp/index.html")
+          text = path.read_text(encoding="utf-8")
+          marker = '<meta name="waifumon-api-base-url" content="">'
+          replacement = f'<meta name="waifumon-api-base-url" content="{os.environ.get("TMA_API_BASE_URL", "").strip().rstrip("/")}">'
+          if marker not in text:
+              raise SystemExit("TMA API meta tag was not found")
+          path.write_text(text.replace(marker, replacement, 1), encoding="utf-8")
+
+      - name: Copy production combat assets
+        shell: bash
+        run: |
           rm -rf webapp/assets/production
           mkdir -p webapp/assets
           cp -R assets/production webapp/assets/production
+
+      - name: Verify configured API endpoint
+        shell: python
+        env:
+          TMA_API_BASE_URL: ${{ vars.TMA_API_BASE_URL }}
+        run: |
+          from pathlib import Path
+          import os
+
+          configured = os.environ.get("TMA_API_BASE_URL", "").strip()
+          if configured:
+              html = Path("webapp/index.html").read_text(encoding="utf-8")
+              expected = f'<meta name="waifumon-api-base-url" content="{configured.rstrip("/")}"">'
+              if expected not in html:
+                  raise SystemExit("Generated WebApp API endpoint does not match TMA_API_BASE_URL")
+          else:
+              print("TMA_API_BASE_URL is not configured; Pages artifact remains API-disconnected by design.")
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
