@@ -757,8 +757,9 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
             f"[OFFLINE FALLBACK] {missing} PNG originales transparentes CC0 "
             "serán creados porque no se pudieron obtener suficientes recursos remotos."
         )
+        base_seed = accepted_count
         for index in range(missing):
-            seed = accepted_count + index
+            seed = base_seed + index
             data = _make_offline_sprite(seed)
             asset_id = f"spr_local_cc0_{seed + 1:02d}"
             destination = RAW_SPRITE_DIR / f"{asset_id}_raw.png"
