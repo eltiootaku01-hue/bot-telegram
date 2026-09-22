@@ -297,6 +297,95 @@ function setupReferralShare() {
   });
 }
 
+function renderAdminCardPool(api, cards) {
+  const grid = document.getElementById("card-pool-grid");
+  const count = document.getElementById("card-pool-count");
+  if (!grid) return;
+
+  grid.replaceChildren();
+  for (const card of cards) {
+    const article = document.createElement("article");
+    article.className = "admin-card-item";
+
+    const image = document.createElement("img");
+    image.alt = String(card.character_name || card.id || "Carta");
+    image.loading = "lazy";
+    try {
+      image.src = api.cardAssetUrl(card.image_url);
+    } catch {
+      image.remove();
+    }
+
+    const title = document.createElement("strong");
+    title.textContent = String(card.character_name || card.id || "Carta");
+
+    const meta = document.createElement("small");
+    meta.textContent = `${card.anime_origin || "—"} · ${card.rarity || "—"} · ${card.collection_points ?? 0} pts`;
+
+    const id = document.createElement("code");
+    id.textContent = String(card.id || "");
+
+    article.append(image, title, meta, id);
+    grid.append(article);
+  }
+
+  if (count) count.textContent = `${cards.length} carta${cards.length === 1 ? "" : "s"}`;
+}
+
+async function setupCardAdmin(api) {
+  const section = document.getElementById("deck-builder-tab");
+  const form = document.getElementById("create-card-form");
+  const status = document.getElementById("card-admin-status");
+  const submit = document.getElementById("create-card-submit");
+  const imageInput = document.getElementById("card-image");
+  if (!section || !form || !status || !submit || !imageInput) return;
+
+  try {
+    const response = await api.listAdminCards();
+    section.hidden = false;
+    renderAdminCardPool(api, response.cards || []);
+    status.textContent = "Administrador autenticado. Las cartas nuevas entran al /roll al guardarse.";
+  } catch {
+    // A normal player receives 403 and never sees the administrative surface.
+    return;
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const file = imageInput.files?.[0];
+    if (!file) {
+      status.textContent = "Seleccioná una imagen.";
+      return;
+    }
+
+    const maxBytes = 10 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      status.textContent = "La imagen supera el máximo de 10 MB.";
+      return;
+    }
+
+    submit.disabled = true;
+    status.textContent = "Guardando carta...";
+    try {
+      const formData = new FormData(form);
+      const created = await api.createCard(formData);
+      status.textContent = `✅ ${created.character_name} guardada. Ya forma parte del pool de /roll.`;
+      form.reset();
+      const points = document.getElementById("collection-points");
+      const provider = document.getElementById("source-provider");
+      if (points) points.value = "150";
+      if (provider) provider.value = "IA (PixAI/Midjourney)";
+
+      const response = await api.listAdminCards();
+      renderAdminCardPool(api, response.cards || []);
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : "No se pudo guardar la carta.";
+    } finally {
+      submit.disabled = false;
+    }
+  });
+}
+
 async function boot() {
   setupTelegram();
   setupPlayerHeader();
@@ -317,6 +406,7 @@ async function boot() {
     setupCombatActions(combat, api, init);
     setupStore(api);
     setupReferralShare();
+    await setupCardAdmin(api);
     status.textContent = "Listo";
   } catch (error) {
     status.textContent = "API no disponible";
