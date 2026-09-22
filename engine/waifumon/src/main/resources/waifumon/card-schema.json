@@ -15,6 +15,8 @@
     "name": {"type": "string", "minLength": 1},
     "base_atk": {"type": "integer", "minimum": 1, "maximum": 10000},
     "base_def": {"type": "integer", "minimum": 1, "maximum": 10000},
+    "base_hp": {"type": "integer", "minimum": 1, "maximum": 100000},
+    "cost": {"type": "integer", "minimum": 0, "maximum": 1000},
     "element_type": {
       "type": "string",
       "enum": ["fuego", "agua", "tierra", "aire", "hielo", "luz", "oscuridad", "rayo", "mente", "arcano", "neutro"]
@@ -34,7 +36,24 @@
           "crit_rate": {"type": "integer", "minimum": 0, "maximum": 100},
           "crit_multiplier": {"type": "number", "minimum": 1.0, "maximum": 4.0},
           "element_multiplier": {"type": "number", "minimum": 0.0, "maximum": 4.0},
-          "status_effect": {"type": ["string", "null"]}
+          "status_effect": {"type": ["string", "null"]},
+          "skill_effect": {
+            "type": ["object", "null"],
+            "properties": {
+              "effect_type": {
+                "type": "string",
+                "enum": ["damage", "heal", "shield", "apply_status", "draw", "resource"]
+              },
+              "value": {"type": "integer", "minimum": 0, "maximum": 100000},
+              "target": {
+                "type": "string",
+                "enum": ["self", "enemy", "all_enemies", "all_allies"]
+              },
+              "formula_id": {"type": ["string", "null"]}
+            },
+            "required": ["effect_type"],
+            "additionalProperties": false
+          }
         },
         "additionalProperties": false
       }
