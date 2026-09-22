@@ -69,7 +69,7 @@ jobs:
           from pathlib import Path
           import re
           html = Path("webapp/nikke_tcg_demo.html").read_text(encoding="utf-8")
-          scripts = re.findall(r'<script type="module">\\s*(.*?)\\s*</script>', html, flags=re.S)
+          scripts = re.findall(r'<script type="module">\s*(.*?)\s*</script>', html, flags=re.S)
           if len(scripts) != 1:
               raise SystemExit(f"Expected one inline module script, found {len(scripts)}")
           Path("/tmp/nikke_tcg_demo-inline.js").write_text(scripts[0], encoding="utf-8")
