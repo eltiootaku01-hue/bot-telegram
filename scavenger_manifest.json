@@ -1,6 +1,6 @@
 {
   "project": "WaifuMon Scavenger Protocol",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "policy": {
     "only_direct_downloads_in_downloads": true,
     "license_gate": "CC0-or-equivalent-redistribution-rights-required",
@@ -43,6 +43,92 @@
       "license": "CC0-1.0",
       "license_verified": true,
       "target_dir": "assets/raw/icons"
+    },
+    {
+      "category": "vfx",
+      "name": "cethiel_weapon_slash_classic",
+      "kind": "zip",
+      "url": "https://opengameart.org/sites/default/files/Classic.zip",
+      "source_url": "https://opengameart.org/content/weapon-slash-effect",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/vfx"
+    },
+    {
+      "category": "vfx",
+      "name": "metashinryu_slash_effect_collection",
+      "kind": "zip",
+      "url": "https://opengameart.org/sites/default/files/Slash%20Effect%20Collection.zip",
+      "source_url": "https://opengameart.org/content/slash-effect-collection",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/vfx"
+    },
+    {
+      "category": "vfx",
+      "name": "stumpystust_explosion_sheet",
+      "kind": "file",
+      "filename": "boom3.png",
+      "url": "https://opengameart.org/sites/default/files/boom3_0.png",
+      "source_url": "https://opengameart.org/content/explosion-sheet",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/vfx"
+    },
+    {
+      "category": "vfx",
+      "name": "elnineo_explosion_001",
+      "kind": "file",
+      "filename": "Explosion_001_Tile_8x8_256x256.png",
+      "url": "https://opengameart.org/sites/default/files/Explosion_001_Tile_8x8_256x256.png",
+      "source_url": "https://opengameart.org/content/explosion-tilesets",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/vfx"
+    },
+    {
+      "category": "vfx",
+      "name": "elnineo_explosion_003",
+      "kind": "file",
+      "filename": "Explosion_003_Tile_8x8_256x256.png",
+      "url": "https://opengameart.org/sites/default/files/Explosion_003_Tile_8x8_256x256.png",
+      "source_url": "https://opengameart.org/content/explosion-tilesets",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/vfx"
+    },
+    {
+      "category": "sfx",
+      "name": "elnineo_big_explosion",
+      "kind": "file",
+      "filename": "Big Explosion.ogg",
+      "url": "https://opengameart.org/sites/default/files/Big%20Explosion.ogg",
+      "source_url": "https://opengameart.org/content/explosion-tilesets",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/audio"
+    },
+    {
+      "category": "sfx",
+      "name": "elnineo_double_explosion",
+      "kind": "file",
+      "filename": "Double Explosion.ogg",
+      "url": "https://opengameart.org/sites/default/files/Double%20Explosion.ogg",
+      "source_url": "https://opengameart.org/content/explosion-tilesets",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/audio"
+    },
+    {
+      "category": "sfx",
+      "name": "elnineo_preshifted_explosion",
+      "kind": "file",
+      "filename": "PreShifted Explosion.ogg",
+      "url": "https://opengameart.org/sites/default/files/PreShifted%20Explosion.ogg",
+      "source_url": "https://opengameart.org/content/explosion-tilesets",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/audio"
     }
   ],
   "research_only": [
@@ -99,6 +185,24 @@
       "license_verified": true,
       "status": "code_reference_only",
       "reason": "Useful for lightweight screen-shake behavior, but not an asset bundle for assets/raw."
+    },
+    {
+      "category": "ui",
+      "name": "cyberpunk_ui_kit_out_of_tokens",
+      "source_url": "https://outoftokensstudio.itch.io/cyberpunk-game-ui-kit",
+      "license": "custom-commercial",
+      "license_verified": true,
+      "status": "reference_or_purchase_only",
+      "reason": "Commercial pack permits use in finished projects but prohibits redistribution of the asset itself; no raw asset bytes are imported automatically."
+    },
+    {
+      "category": "ui",
+      "name": "free_cyberpunk_ui_starter_kit_djy66",
+      "source_url": "https://djy66.itch.io/free-sample-cyberpunk-slums-vol3-4k-backgrounds",
+      "license": "custom-commercial",
+      "license_verified": true,
+      "status": "reference_or_manual_use",
+      "reason": "Free commercial-use sample, but raw asset redistribution is prohibited by the source license, so it is not downloaded into the repository automatically."
     }
   ]
 }
