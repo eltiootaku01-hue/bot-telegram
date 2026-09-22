@@ -100,7 +100,11 @@ function setupCombatActions(combat, api, init) {
 
     try {
       if (status) status.textContent = action === "special" ? "Especial..." : "Acción...";
-      combat.setPose(attacker.id, action === "defend" ? "hit" : "attack");
+      combat.setPose(
+        attacker.id,
+        action === "defend" ? "hit" : "attack",
+        { impact: false },
+      );
 
       if (action === "special") {
         await playCutIn(attacker.id, {
