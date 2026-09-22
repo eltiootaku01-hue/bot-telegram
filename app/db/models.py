@@ -390,10 +390,6 @@ class TmaStarPurchase(Base):
             "telegram_payment_charge_id",
             name="uq_tma_star_purchase_charge",
         ),
-        UniqueConstraint(
-            "invoice_payload",
-            name="uq_tma_star_purchase_payload",
-        ),
         CheckConstraint("amount > 0", name="ck_tma_star_purchase_amount_positive"),
     )
 
