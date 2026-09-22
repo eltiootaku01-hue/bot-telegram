@@ -46,3 +46,30 @@ class CardVaultClient:
                 response.raise_for_status()
                 body = await response.json()
                 return list(body["items"])
+
+    async def transfer(
+        self,
+        *,
+        card_id: str,
+        from_type: str,
+        from_key: str,
+        to_type: str,
+        to_key: str,
+        quantity: int,
+        actor_user_id: int | None,
+        reference_id: str,
+    ) -> dict:
+        payload = {
+            "card_id": card_id,
+            "from_type": from_type,
+            "from_key": from_key,
+            "to_type": to_type,
+            "to_key": to_key,
+            "quantity": quantity,
+            "actor_user_id": actor_user_id,
+            "reference_id": reference_id,
+        }
+        async with aiohttp.ClientSession(headers=self._headers()) as http:
+            async with http.post(f"{self.base_url}/v1/transfer", json=payload) as response:
+                response.raise_for_status()
+                return await response.json()
