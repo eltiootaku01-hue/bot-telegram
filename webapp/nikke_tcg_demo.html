@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="WaifuMon TCG demo táctico 3D con Three.js y equipamiento sobre modelo GLTF.">
+  <title>WaifuMon TCG — Perspectiva NIKKE</title>
+
+  <link rel="stylesheet" href="css/bosozoku.css">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #050508;
+      color: #d0f0ff;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    #viewport-container {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    #viewport-container canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #hud-overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .stat-badge {
+      background: rgba(10, 10, 15, 0.86);
+      border: 1px solid #ff003c;
+      padding: 6px 12px;
+      color: #00e1ff;
+      font-size: 12px;
+      font-weight: bold;
+      clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+      box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
+      white-space: nowrap;
+    }
+
+    #status-overlay {
+      position: absolute;
+      top: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 11;
+      min-width: 220px;
+      max-width: calc(100% - 32px);
+      padding: 8px 12px;
+      text-align: center;
+      background: rgba(5, 10, 18, 0.9);
+      border: 1px solid rgba(0, 225, 255, 0.75);
+      box-shadow: 0 0 12px rgba(0, 225, 255, 0.18);
+      font-size: 11px;
+      color: #d0f0ff;
+      pointer-events: none;
+    }
+
+    #hand-container {
+      position: absolute;
+      bottom: -42px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 8px;
+      width: 100%;
+      max-width: 600px;
+      padding: 0 12px 50px;
+      transition: bottom 0.3s ease;
+    }
+
+    #hand-container:hover,
+    #hand-container:focus-within {
+      bottom: 0;
+    }
+
+    .tcg-card {
+      width: 120px;
+      height: 180px;
+      flex: 0 0 120px;
+      background: #0f0f14;
+      border: 2px solid #00aaff;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0, 170, 255, 0.4);
+      display: flex;
+      flex-direction: column;
+      padding: 4px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0.2s ease;
+      position: relative;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    .tcg-card:hover,
+    .tcg-card:focus-visible {
+      transform: translateY(-35px) scale(1.25);
+      box-shadow: 0 0 20px rgba(255, 0, 60, 0.9);
+      border-color: #ff003c;
+      z-index: 100 !important;
+      outline: none;
+    }
+
+    .tcg-card.equipped {
+      box-shadow: 0 0 20px rgba(0, 225, 255, 0.95);
+      border-color: #00e1ff;
+    }
+
+    .tcg-title {
+      background: rgba(0, 43, 71, 0.9);
+      color: #00e1ff;
+      font-weight: bold;
+      font-size: 9px;
+      padding: 2px;
+      border: 1px solid #00aaff;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tcg-art-box {
+      width: 100%;
+      height: 80px;
+      margin-top: 3px;
+      border: 1px solid #00aaff;
+      background:
+        radial-gradient(circle at 50% 45%, rgba(176, 38, 255, 0.35), transparent 48%),
+        linear-gradient(145deg, #12121c, #25253a);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .tcg-effect-box {
+      margin-top: 3px;
+      flex-grow: 1;
+      padding: 4px;
+      background: rgba(5, 14, 23, 0.96);
+      border: 1px solid #00aaff;
+      color: #d0f0ff;
+      font-size: 7px;
+      line-height: 1.18;
+      overflow: hidden;
+    }
+
+    .tcg-cost {
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #ff003c;
+      border: 1px solid #fff;
+      box-shadow: 0 0 5px #ff003c;
+      color: #fff;
+      font-weight: bold;
+      font-size: 11px;
+    }
+
+    .crt-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%,
+        rgba(0, 0, 0, 0.25) 50%
+      );
+      background-size: 100% 4px;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      #hud-overlay {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      #status-overlay {
+        top: 86px;
+        font-size: 10px;
+      }
+
+      #hand-container {
+        transform: translateX(-50%) scale(0.85);
+        transform-origin: bottom center;
+      }
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+
+<body>
+  <div class="crt-overlay" aria-hidden="true"></div>
+
+  <div id="hud-overlay">
+    <div class="stat-badge">PILOTO: SUJETO CERO</div>
+    <div class="stat-badge" style="border-color:#00e1ff;">ENERGÍA: <span id="energy-value">4/5</span></div>
+  </div>
+
+  <div id="status-overlay" role="status" aria-live="polite">
+    SISTEMA TÁCTICO ONLINE // MODELO LOCAL DE RESERVA
+  </div>
+
+  <div id="viewport-container"></div>
+
+  <section id="hand-container" aria-label="Mano de cartas TCG">
+    <button
+      class="tcg-card"
+      type="button"
+      style="transform: rotate(-6deg);"
+      onclick="playCard('Sueño Eterno')"
+      aria-label="Jugar Sueño Eterno"
+    >
+      <span class="tcg-cost">2</span>
+      <span class="tcg-title">Sueño Eterno</span>
+      <span
+        class="tcg-art-box"
+        style="background-image:url('assets/production/cards/alisa-kujo--normal.jpg');"
+      ></span>
+      <span class="tcg-effect-box">
+        <strong>[EVENTO]</strong> Otorga invulnerabilidad por 1 turno y regenera 15% HP.
+      </span>
+    </button>
+
+    <button
+      id="cannon-card"
+      class="tcg-card"
+      type="button"
+      style="border-color:#ff003c; transform:rotate(-2deg) translateY(-8px);"
+      onclick="playCard('Cañón Neón')"
+      aria-label="Equipar o desequipar Cañón Neón"
+    >
+      <span class="tcg-cost">3</span>
+      <span class="tcg-title" style="color:#ff003c;border-color:#ff003c;background:#2b000d;">Cañón Neón</span>
+      <span
+        class="tcg-art-box"
+        style="border-color:#ff003c;background-image:url('assets/production/cards/alisa-kujo--r.jpg');"
+      ></span>
+      <span class="tcg-effect-box" style="border-color:#ff003c;">
+        <strong>[EQUIPO]</strong> Acopla un cañón pesado a la espalda. ATK +40.
+      </span>
+    </button>
+
+    <button
+      class="tcg-card"
+      type="button"
+      style="border-color:#b026ff;transform:rotate(4deg);"
+      onclick="playCard('Sobrecarga')"
+      aria-label="Jugar Sobrecarga"
+    >
+      <span class="tcg-cost">4</span>
+      <span class="tcg-title" style="color:#b026ff;border-color:#b026ff;background:#1a002b;">Sobrecarga</span>
+      <span class="tcg-art-box" style="border-color:#b026ff;background-color:#330044;"></span>
+      <span class="tcg-effect-box" style="border-color:#b026ff;">
+        <strong>[CLÍMAX]</strong> Ejecuta el ataque ráfaga trasero directo sobre el objetivo.
+      </span>
+    </button>
+  </section>
+
+  <script type="module">
+    import { EquipmentSystem } from "./js/equipment_system.js";
+
+    const THREE_NS = globalThis.THREE;
+    const container = document.getElementById("viewport-container");
+    const statusOverlay = document.getElementById("status-overlay");
+    const cannonCard = document.getElementById("cannon-card");
+
+    if (!THREE_NS) {
+      throw new Error("Three.js no está disponible.");
+    }
+
+    const scene = new THREE_NS.Scene();
+    scene.background = new THREE_NS.Color(0x050508);
+    scene.fog = new THREE_NS.FogExp2(0x050508, 0.15);
+
+    const renderer = new THREE_NS.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.outputEncoding = THREE_NS.sRGBEncoding;
+    container.appendChild(renderer.domElement);
+
+    const camera = new THREE_NS.PerspectiveCamera(
+      60,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+    camera.position.set(-0.3, 1.3, 2.2);
+
+    const controls = THREE_NS.OrbitControls
+      ? new THREE_NS.OrbitControls(camera, renderer.domElement)
+      : null;
+
+    if (controls) {
+      controls.target.set(0, 1.1, -2);
+      controls.enablePan = false;
+      controls.enableDamping = true;
+      controls.minDistance = 1.4;
+      controls.maxDistance = 5;
+      controls.maxPolarAngle = Math.PI * 0.58;
+    } else {
+      camera.lookAt(0, 1.1, -2);
+    }
+
+    const ambientLight = new THREE_NS.AmbientLight(0x221133, 1.5);
+    scene.add(ambientLight);
+
+    const backNeonLight = new THREE_NS.PointLight(0xff003c, 3, 5);
+    backNeonLight.position.set(0, 1.5, 0.5);
+    scene.add(backNeonLight);
+
+    const frontCyberLight = new THREE_NS.DirectionalLight(0x00e1ff, 2);
+    frontCyberLight.position.set(0, 5, -5);
+    scene.add(frontCyberLight);
+
+    const gridHelper = new THREE_NS.GridHelper(20, 20, 0xff003c, 0x004466);
+    gridHelper.position.y = 0;
+    scene.add(gridHelper);
+
+    let waifuModel = null;
+    let modelLoadedFromGLTF = false;
+
+    function createWaifuPlaceholder() {
+      const group = new THREE_NS.Group();
+      group.name = "waifu-placeholder";
+
+      const body = new THREE_NS.Mesh(
+        new THREE_NS.CylinderGeometry(0.25, 0.18, 0.9, 16),
+        new THREE_NS.MeshStandardMaterial({
+          color: 0x111116,
+          roughness: 0.3,
+          metalness: 0.8
+        })
+      );
+      body.position.y = 0.85;
+      group.add(body);
+
+      const coat = new THREE_NS.Mesh(
+        new THREE_NS.CylinderGeometry(0.32, 0.38, 0.7, 16),
+        new THREE_NS.MeshStandardMaterial({
+          color: 0xff003c,
+          roughness: 0.5
+        })
+      );
+      coat.position.y = 0.8;
+      group.add(coat);
+
+      const head = new THREE_NS.Mesh(
+        new THREE_NS.SphereGeometry(0.18, 16, 16),
+        new THREE_NS.MeshStandardMaterial({ color: 0xffdbac })
+      );
+      head.position.y = 1.45;
+      group.add(head);
+
+      const hair = new THREE_NS.Mesh(
+        new THREE_NS.ConeGeometry(0.25, 0.5, 16),
+        new THREE_NS.MeshStandardMaterial({ color: 0xb026ff })
+      );
+      hair.rotation.x = Math.PI;
+      hair.position.set(0, 1.45, 0.1);
+      group.add(hair);
+
+      group.position.set(0, 0, 0);
+      scene.add(group);
+      return group;
+    }
+
+    const placeholder = createWaifuPlaceholder();
+    waifuModel = placeholder;
+
+    const equipmentManager = new EquipmentSystem(scene);
+
+    // Cambiá esta URL por cualquier GLB/GLTF real de tu proyecto.
+    const CHARACTER_MODEL_URL = "assets/models/waifu_base.gltf";
+
+    const characterLoader = new THREE_NS.GLTFLoader();
+    characterLoader.load(
+      CHARACTER_MODEL_URL,
+      (gltf) => {
+        scene.remove(waifuModel);
+        waifuModel = gltf.scene;
+        waifuModel.position.set(0, 0, 0);
+        waifuModel.rotation.y = Math.PI;
+        scene.add(waifuModel);
+
+        equipmentManager.initCharacterBones(waifuModel);
+        modelLoadedFromGLTF = true;
+        statusOverlay.textContent =
+          "MODELO GLTF ACTIVO // ESQUELETO INDEXADO // EQUIPAMIENTO LISTO";
+      },
+      undefined,
+      () => {
+        equipmentManager.initCharacterBones(waifuModel);
+        statusOverlay.textContent =
+          "RESERVA LOCAL ACTIVA // agregá assets/models/waifu_base.gltf para usar huesos reales";
+      }
+    );
+
+    function recoilCamera() {
+      const originalZ = camera.position.z;
+      camera.position.z += 0.2;
+
+      window.setTimeout(() => {
+        camera.position.z = originalZ;
+      }, 150);
+    }
+
+    function pulseModel() {
+      if (!waifuModel) {
+        return;
+      }
+
+      waifuModel.scale.set(1.1, 1.1, 1.1);
+      window.setTimeout(() => {
+        if (waifuModel) {
+          waifuModel.scale.set(1, 1, 1);
+        }
+      }, 200);
+    }
+
+    window.playCard = function playCard(cardName) {
+      console.info("[CARTA JUGADA]", cardName);
+      recoilCamera();
+      pulseModel();
+
+      if (cardName === "Cañón Neón") {
+        const alreadyEquipped = cannonCard.classList.contains("equipped");
+
+        if (alreadyEquipped) {
+          equipmentManager.detachEquipment("eq_cannon_01");
+          cannonCard.classList.remove("equipped");
+          statusOverlay.textContent =
+            "CAÑÓN NEÓN DESEQUIPADO // CONFIGURACIÓN ORIGINAL RESTAURADA";
+          return;
+        }
+
+        equipmentManager
+          .attachEquipment({
+            cardId: "eq_cannon_01",
+            modelUrl:
+              "assets/production/models/weapons/shoulder_cannon.gltf",
+            targetBone: "spine",
+            offsetPos: [0.3, 0.4, -0.2],
+            offsetRot: [0, Math.PI, 0],
+            scale: [0.5, 0.5, 0.5]
+          })
+          .then(() => {
+            cannonCard.classList.add("equipped");
+            statusOverlay.textContent =
+              "CAÑÓN NEÓN ACOPLADO // SOCKET: SPINE // ATK +40";
+          })
+          .catch((error) => {
+            console.warn("No se pudo cargar el arma 3D:", error);
+            statusOverlay.textContent =
+              "NO SE ENCONTRÓ EL ASSET DEL CAÑÓN // la demo sigue operativa";
+          });
+        return;
+      }
+
+      const messages = {
+        "Sueño Eterno":
+          "SUEÑO ETERNO // invulnerabilidad 1 turno // +15% HP",
+        Sobrecarga:
+          "SOBRECARGA // ráfaga trasera simulada // coste 4"
+      };
+
+      statusOverlay.textContent =
+        messages[cardName] || `CARTA: ${cardName}`;
+    };
+
+    let clock = new THREE_NS.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const time = clock.getElapsedTime();
+
+      if (waifuModel) {
+        const baseY = waifuModel.position.y > 0.001
+          ? waifuModel.position.y
+          : 0;
+        waifuModel.position.y = baseY + Math.sin(time * 2) * 0.0005;
+      }
+
+      backNeonLight.intensity = 2.5 + Math.sin(time * 5) * 0.5;
+
+      if (controls) {
+        controls.update();
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Exponemos referencias mínimas para depuración manual desde la consola.
+    window.waifumonTCG = {
+      scene,
+      camera,
+      renderer,
+      equipmentManager,
+      get waifuModel() {
+        return waifuModel;
+      },
+      get modelLoadedFromGLTF() {
+        return modelLoadedFromGLTF;
+      }
+    };
+  </script>
+</body>
+</html>
