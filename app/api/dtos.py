@@ -11,6 +11,18 @@ class SpriteAssetDTO(BaseModel):
     hit: str
 
 
+class CombatAssetContractDTO(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    card_directory: str
+    sprite_directory: str
+    sprite_size: int = Field(ge=1)
+    sprite_poses: list[str]
+    card_pattern: str
+    sprite_pattern: str
+    cut_in_duration_ms: int = Field(ge=0)
+
+
 class CombatFighterDTO(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -30,7 +42,7 @@ class CombatInitDTO(BaseModel):
     contract_version: str
     player_id: int
     community_id: int
-    asset_contract: dict[str, object]
+    asset_contract: CombatAssetContractDTO
     team: list[CombatFighterDTO]
     opponents: list[CombatFighterDTO]
 
