@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import hashlib
 import json
 import re
@@ -95,6 +96,7 @@ API_URL = "https://commons.wikimedia.org/w/api.php"
 OGA_SEARCH_URL = "https://opengameart.org/search/node"
 ITCH_SEARCH_URL = "https://itch.io/search"
 USER_AGENT = "WaifuMon-WaifuDrone/2.0"
+OFFLINE_MODE = os.getenv("WAIFU_DRONE_OFFLINE", "").strip().casefold() in {"1", "true", "yes", "on"}
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 GITHUB_CC0_SOURCES = (
