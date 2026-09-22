@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from app.command_center.models import BotAvatar, CafeTable, ManualMessageCommand, MoveCommand, OperationMode
 from app.command_center.telegram_gateway import TelegramGateway
