@@ -521,9 +521,11 @@
     }
 
     function updateEquipmentCardState(cardId) {
-      const cardNode = equipmentCardList?.querySelector(
-        `[data-equipment-card-id="${CSS.escape(cardId)}"]`,
-      );
+      const cardNode = equipmentCardList
+        ? [...equipmentCardList.querySelectorAll("[data-equipment-card-id]")].find(
+          (node) => node.dataset.equipmentCardId === cardId,
+        )
+        : null;
       if (!cardNode) {
         return;
       }
