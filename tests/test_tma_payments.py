@@ -141,10 +141,10 @@ async def test_same_invoice_payload_can_be_paid_again_with_new_charge_id() -> No
             )
 
     async with database.session() as session:
-        purchases = list(await session.scalars(TmaStarPurchase.__table__.select()))
+        purchases = list(await session.scalars(select(TmaStarPurchase)))
         items = list(
             await session.scalars(
-                GameItemInventory.__table__.select().where(
+                select(GameItemInventory).where(
                     GameItemInventory.item_key == "premium_ticket"
                 )
             )
