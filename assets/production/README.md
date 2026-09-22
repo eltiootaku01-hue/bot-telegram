@@ -16,3 +16,7 @@ Every production card asset MUST be:
 The runtime must fail closed when an asset is absent or fails validation. Drafts, concepts, vectors and legacy assets stay under `assets/quarantine/`.
 
 No PNG, WebP or other raster format is accepted here.
+
+External assets that permit use but prohibit redistribution MUST NOT be copied into
+this directory. Temporary/uncleared source files belong in `assets/quarantine/`.
+See `docs/assets/INTERNATIONAL_ASSET_RADAR.md` for the provenance gate.
