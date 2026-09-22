@@ -16,7 +16,7 @@ from app.core.identity import BotIdentity
 from app.core.module import BotModule
 from app.core.processing_feedback import ProcessingFeedback, ProcessingResultDTO
 from app.db.database import Database
-from app.db.models import GameCardCollection, GameCollection, GameItemInventory, GameProfile
+from app.db.models import CardDefinition, GameCardCollection, GameCollection, GameItemInventory, GameProfile
 from app.db.repositories import MemberRepository
 from app.game.card_definitions import CardDefinitionService
 from app.game.card_service import CardCollectionService
@@ -307,6 +307,17 @@ class GameModule(BotModule):
                         .limit(page_size)
                     )
                 )
+            custom_ids = [
+                row.card_id.removeprefix("definition:")
+                for row in rows
+                if row.card_id.startswith("definition:")
+            ]
+            custom_definitions = {}
+            if custom_ids:
+                custom_rows = await session.scalars(
+                    select(CardDefinition).where(CardDefinition.id.in_(custom_ids))
+                )
+                custom_definitions = {row.id: row for row in custom_rows}
         total = int(total or 0)
         total_pages = max(1, (total + page_size - 1) // page_size)
         safe_page = min(max(page, 1), total_pages)
@@ -318,7 +329,7 @@ class GameModule(BotModule):
         if not rows:
             text = (
                 "🎴 <b>Mis cartas</b>\n\n"
-                "Todavía no tenés cartas. Las obtendrás con el gacha y otros eventos."
+                "Todavía no tenés cartas. Las obtendrás con el gacha, /roll y otros eventos."
             )
             await source.edit_text(text, reply_markup=cards_keyboard([], safe_page, total_pages))
             return
@@ -328,17 +339,27 @@ class GameModule(BotModule):
             "",
         ]
         for row in rows:
-            character_name = (
-                row.character_id
-                if row.character_id.startswith("fusion:")
-                else get_character(row.character_id).name
-            )
-            lines.append(
-                f"• <b>{character_name}</b> · {row.card_tier} · "
-                f"{'✨ SHINY' if row.variant == 'shiny' else 'Normal'} · ×{row.copies}"
-            )
-            lines.append(f"  👗 {row.outfit}")
-        lines.extend(("", "Elegí una carta para iniciar o completar una fusión UR."))
+            if row.card_id.startswith("definition:"):
+                definition = custom_definitions.get(row.card_id.removeprefix("definition:"))
+                character_name = definition.character_name if definition is not None else row.character_id
+                source_label = "IA" if definition is None else definition.source_provider
+                lines.append(
+                    f"• <b>{escape(character_name)}</b> · {escape(row.card_tier)} · "
+                    f"Personalizada · ×{row.copies}"
+                )
+                lines.append(f"  🎨 {escape(source_label)}")
+            else:
+                character_name = (
+                    row.character_id
+                    if row.character_id.startswith("fusion:")
+                    else get_character(row.character_id).name
+                )
+                lines.append(
+                    f"• <b>{character_name}</b> · {row.card_tier} · "
+                    f"{'✨ SHINY' if row.variant == 'shiny' else 'Normal'} · ×{row.copies}"
+                )
+                lines.append(f"  👗 {row.outfit}")
+        lines.extend(("", "Las cartas personalizadas de /roll son coleccionables; las cartas base siguen disponibles para fusión UR."))
         await source.edit_text(
             "\n".join(lines),
             reply_markup=cards_keyboard(rows, safe_page, total_pages),
@@ -380,6 +401,21 @@ class GameModule(BotModule):
         if row is None:
             await callback.answer(
                 "Esta carta ya no está disponible o no pertenece a tu colección.",
+                show_alert=True,
+            )
+            return
+
+        if row.card_id.startswith("definition:"):
+            definition = None
+            async with self.database.session() as session:
+                definition = await session.get(
+                    CardDefinition,
+                    row.card_id.removeprefix("definition:"),
+                )
+            label = definition.character_name if definition is not None else row.character_id
+            await callback.answer(
+                f"🎴 {label} es una carta personalizada. Se puede coleccionar y obtener por /roll, "
+                "pero todavía no se usa como base de una fusión UR.",
                 show_alert=True,
             )
             return
