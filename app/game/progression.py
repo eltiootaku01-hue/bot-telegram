@@ -209,7 +209,7 @@ def stats_for_character(
         character={
             "id": character.id,
             "name": character.name,
-            "element": character.element.value,
+            "element_type": character.element.value,
             "power_score": character.power_score,
         },
         level=level,
