@@ -543,6 +543,29 @@ class BotLauncher(tk.Tk):
             return
         self._schedule_startup_poll()
 
+    def _restart_tma_api(self) -> None:
+        if self.tma_api is not None:
+            self.tma_api.stop()
+            self.tma_api = None
+        if not self.tma_enabled_var.get():
+            return
+        try:
+            settings = Settings(_env_file=ENV_PATH)
+            server = TmaApiServer(settings)
+            server.start()
+            self.tma_api = server
+            self.status.set(
+                f"API TMA activa en {settings.tma_api_host}:{settings.tma_api_port}"
+            )
+        except Exception as exc:
+            self.status.set(
+                "API TMA no pudo iniciar; los bots seguirán disponibles"
+            )
+            messagebox.showwarning(
+                "API TMA",
+                "No se pudo iniciar el puente TMA:" + chr(10) + chr(10) + str(exc),
+                parent=self,
+            )
     def _schedule_startup_poll(self) -> None:
         if self._startup_poll_id is not None:
             self.after_cancel(self._startup_poll_id)
