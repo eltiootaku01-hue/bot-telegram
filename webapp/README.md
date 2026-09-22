@@ -40,3 +40,29 @@ La UI de tienda está preparada para productos digitales. Las compras reales deb
 ## Referidos
 
 La UI muestra el objetivo de 3 usuarios nuevos para obtener 1 Ticket Premium. El conteo y la concesión deben vivir en servidor y ser idempotentes.
+
+
+## Backend TMA API
+
+El cliente usa `js/api.js` y envía el valor crudo de `Telegram.WebApp.initData` en el header `X-Telegram-Init-Data`. El backend rechaza cada GET/POST sin una firma HMAC válida o con `auth_date` fuera de la ventana configurada.
+
+Rutas implementadas:
+
+- `GET /api/combat/init` — identidad autenticada, comunidad autorizada, roster y contrato de assets.
+- `POST /api/combat/action` — acción de combate validada por el servidor y delegada al motor Java.
+- `POST /api/store/invoice` — genera una invoice de producto digital en Telegram Stars (XTR).
+
+La URL del backend se puede fijar en el meta `waifumon-api-base-url`, en `window.WAIFUMON_API_BASE_URL` o mediante el parámetro `?api=`. No se guarda ningún token en el frontend.
+
+### Bot Manager
+
+Bot Manager levanta el servicio aiohttp cuando `TMA_API_ENABLED=true`. El host y puerto salen de `TMA_API_HOST` y `TMA_API_PORT`; para un backend accesible desde GitHub Pages se necesita exponer ese servicio detrás de HTTPS y configurar `TMA_ALLOWED_ORIGINS` con el origen exacto de Pages.
+
+### Telegram Mini App auth
+
+No uses `initDataUnsafe` como credencial. El servidor recalcula el HMAC-SHA-256 de `initData`, comprueba `auth_date` y extrae el `user.id` validado. Ese ID es el que se propaga al motor Java para el contexto del turno.
+
+### Telegram Stars
+
+La API usa `createInvoiceLink` con `currency="XTR"` y precio entero en Stars. Para productos digitales Telegram exige XTR; el flujo de pago completo aún requiere manejar `pre_checkout_query` y `successful_payment` en el bot antes de entregar el producto.
+
