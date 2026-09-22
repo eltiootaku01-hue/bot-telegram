@@ -59,9 +59,9 @@ def validate_init_data(
         values[key] = value
 
     received_hash = values.pop("hash", "")
-    # signature is for third-party validation; this backend authenticates
-    # directly with the bot-token HMAC described in Telegram's Mini App docs.
-    values.pop("signature", None)
+    # The bot-token hash covers every received field except the hash itself.
+    # Telegram also exposes ``signature`` for third-party verification; it stays
+    # in this data-check-string when the backend validates the bot HMAC.
 
     if not received_hash:
         raise TmaAuthError("initData hash is missing")
