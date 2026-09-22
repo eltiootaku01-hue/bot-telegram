@@ -133,3 +133,126 @@ C. Esta tabla es una regla de WaifuMon, no una extracción de datos de otro jueg
 
 Se reutilizan ideas de arquitectura y matemáticas genéricas; no se incorporan
 bases de datos completas, assets de personajes o textos largos de terceros.
+
+
+## 8. Fuentes externas rastreadas
+
+### Pokémon Showdown / Smogon
+
+Repositorio y calculadora:
+- https://github.com/smogon/pokemon-showdown
+- https://github.com/smogon/damage-calc
+
+Patrones útiles observados:
+- separación entre cálculo base, crítico, modificadores, efectividad de tipo y daño final;
+- datos de especie/movimiento/condiciones separados de la lógica del simulador;
+- randomización y crítico resueltos como etapas distintas;
+- efectos de estado modelados como condiciones con hooks de ciclo de turno.
+
+Referencia matemática concreta usada solo como comparación:
+- Gen 2 calcula el daño a partir de nivel, potencia, ataque y defensa y luego aplica crítico, clima, STAB y efectividad.
+- En el pipeline moderno, el crítico se aplica por separado, después se procesa el randomizador, STAB y efectividad.
+
+**Decisión WaifuMon:** no copiar la tabla de tipos ni la fórmula completa de Pokémon. Se conserva solamente la idea de pipeline por etapas y se usa una fórmula propia documentada arriba.
+
+### YGOJSON / datos de cartas Yu-Gi-Oh!
+
+Fuentes:
+- https://github.com/iconmaster5326/YGOJSON
+- https://github.com/byi8220/duellinksjson
+- https://github.com/arshtyi/ygo-cards
+
+Campos observados en registros JSON:
+- identificador;
+- nombre;
+- texto/efecto;
+- tipo de carta;
+- tipo de monstruo;
+- especie;
+- ATK;
+- DEF;
+- nivel;
+- atributo;
+- rareza;
+- límite;
+- origen/conjunto.
+
+**Normalización WaifuMon:**
+`card_id`, `name`, `base_atk`, `base_def`, `element_type`, `skills`, `status_effects`.
+
+El proyecto local no incorpora una copia masiva de esas bases de datos. El esquema JSON propio solamente modela los conceptos necesarios para el juego.
+
+### RPG Maker MV/MZ
+
+Fuentes:
+- https://github.com/nightquill/rpgmaker-agent-skills
+- https://github.com/3nginius/RuneTranslatePublic
+- https://github.com/JaimeDevCode/RPGMakerTranslator
+
+Patrones observados:
+- `Actors.json`, `Enemies.json`, `Skills.json`, `States.json`, `Troops.json` como datos declarativos;
+- una skill puede contener tipo de daño, objetivo, costes, efectos y una fórmula;
+- los estados representan efectos persistentes con reglas de duración/resolución.
+
+Una referencia de RPG Maker documenta fórmulas expresadas con variables como `a.atk`, `a.mat`, `b.def` y funciones como `Math.max`.
+
+**Decisión WaifuMon:** no evaluar JavaScript arbitrario. Las skills se representan como datos tipados y la fórmula se ejecuta únicamente en el motor Java.
+
+### Hearthstone-clone / TCG
+
+Fuente de referencia abierta:
+- https://github.com/EnginKARATAS/hearthstone-clone-game
+- https://github.com/tducasse/poc-card-game
+
+Patrones observados:
+- estado persistente del turno;
+- jugador/oponente con mazo, mano, tablero y héroe;
+- recurso por turno;
+- robo de carta al iniciar turno;
+- elección de acción;
+- resolución de interacciones;
+- botón/acción de final de turno.
+
+**Decisión WaifuMon:** el archivo `turn-phases.json` adopta una máquina de fases propia:
+DRAW → ACTION → RESOLUTION → CLEANUP → END.
+
+### M.U.G.E.N / CNS
+
+Fuentes:
+- https://github.com/fanyer/mugen/blob/master/chars/kfm/kfm.cns
+- https://github.com/fanyer/mugen/blob/master/docs/cns.html
+- https://github.com/fakoli/FightersParadise/blob/main/docs/mugen-compatibility.md
+
+Patrones observados:
+- sección `[Data]` para vida, ataque y defensa;
+- `[Statedef]` para el estado de una acción;
+- `HitDef` para daño, hit/guard flags, prioridad, pausas, tiempos de golpe y velocidades;
+- controladores separados para transiciones y efectos;
+- multiplicadores de ataque/defensa como parte del estado del luchador.
+
+**Decisión WaifuMon:** esos conceptos se convierten en atributos tipados de personaje/skill/estado, pero no se reutilizan archivos CNS ni personajes completos.
+
+## 9. Matriz de extracción → implementación
+
+| Fuente | Qué se reutiliza conceptualmente | Qué NO se copia |
+|---|---|---|
+| Pokémon Showdown | pipeline de daño y separación de modificadores | fórmula completa de una generación, tabla de tipos, datos Pokémon |
+| YGOJSON | estructura de registros de cartas | base de datos de cartas, textos, imágenes |
+| RPG Maker | esquema declarativo de skills/estados | JavaScript ejecutable de fórmulas y bases de datos de juegos |
+| Hearthstone clones | fases de turno, recursos, mano/mazo/tablero | cartas, assets, texto, lógica específica del clon |
+| M.U.G.E.N | Data/State/HitDef y separación de controladores | personajes, CNS completos, assets y contenido de combate |
+
+## 10. Correcciones de contrato realizadas durante el rastreo
+
+El esquema JSON define `element_type` como el nombre canónico. Se corrigió el bridge Python→Java y `stats.resolve` para utilizar ese campo; los tests también lo exigen.
+
+El bridge Java ofrece además wrappers async en la fachada Python para evitar bloquear el event loop de Telegram durante llamadas al proceso Java.
+
+## 11. Regla de proveniencia
+
+Las fuentes externas sirven para arquitectura, terminología y comparación matemática.
+Las reglas que gobiernan WaifuMon son exclusivamente las presentes en
+`engine/waifumon/src/main/java/com/eltiootaku01/waifumon/WaifuMonRuleEngine.java`
+y sus recursos JSON.
+
+No se importan automáticamente personajes, cartas, textos, assets ni fórmulas propietarias de terceros.
