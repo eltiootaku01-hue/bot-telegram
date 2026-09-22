@@ -9,6 +9,7 @@ Frontend estático sin framework para GitHub Pages.
 - `js/main.js` — inicialización Telegram, equipo, acciones visuales, tienda y referidos.
 - `js/combat.js` — Canvas 2D, carga de sprites 128×128 y cut-in HD de 1.5 s.
 - `js/effects.js` — partículas y destellos de combate originales, con límite de 96 partículas y sin dependencias externas.
+- `index.html` + `css/style.css` + `js/main.js` — carta TCG holográfica bōsōzoku: marco recortado, foil violeta/rojo y control por puntero o DeviceOrientation con permiso explícito cuando el navegador lo exige.
 
 Los assets de combate se resuelven desde:
 
