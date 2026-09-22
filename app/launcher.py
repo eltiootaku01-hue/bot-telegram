@@ -16,6 +16,8 @@ except ImportError:  # pragma: no cover - packaged build installs python-dotenv
     set_key = None
     dotenv_values = None
 
+from app.api.tma_server import TmaApiServer
+from app.core.config import Settings
 from app.gui.telegram_setup import TelegramSetupAssistant
 from app.services.setup_checklist import build_setup_checklist
 from app.services.telegram_setup import build_start_link
