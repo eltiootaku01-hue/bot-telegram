@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "phases": [
+    {"id": "DRAW", "order": 1, "purpose": "draw or generate available actions"},
+    {"id": "ACTION", "order": 2, "purpose": "player chooses one legal action"},
+    {"id": "RESOLUTION", "order": 3, "purpose": "resolve damage, states and triggers"},
+    {"id": "CLEANUP", "order": 4, "purpose": "expire temporary effects and prepare next turn"},
+    {"id": "END", "order": 5, "purpose": "commit turn result and advance turn id"}
+  ]
+}
