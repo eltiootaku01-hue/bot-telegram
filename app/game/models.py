@@ -122,6 +122,9 @@ class CombatResult:
     action: CombatAction
     critical: bool
     defender_hp: int
+    state_version: int = 0
+    event_ids: tuple[str, ...] = ()
+    reward_ids: tuple[str, ...] = ()
 
 
 RARITY_MULTIPLIER: dict[Rarity, float] = {
