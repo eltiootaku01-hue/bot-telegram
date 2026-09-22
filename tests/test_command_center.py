@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.command_center.models import CafeTable, ManualMessageCommand, OperationMode, TemporaryMessagePolicy
+from app.command_center.models import CafeTable, ManualMessageCommand, TemporaryMessagePolicy
 from app.command_center.telegram_gateway import TelegramGateway
 
 
