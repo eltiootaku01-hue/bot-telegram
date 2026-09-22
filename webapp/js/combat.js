@@ -1,5 +1,8 @@
 const SPRITE_SIZE = 128;
 const CUT_IN_DURATION_MS = 1500;
+const IMPACT_SHAKE_MS = 200;
+const HIT_FLASH_FRAMES = 3;
+const ASSET_FILTER = "contrast(1.3) saturate(1.5) hue-rotate(-10deg)";
 const POSES = ["idle", "attack", "hit"];
 
 function spriteUrl(characterId, pose = "idle") {
@@ -42,6 +45,9 @@ export class WaifuMonCombatCanvas {
     this.entities = [];
     this.images = new Map();
     this.reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+    this.shakeUntil = 0;
+    this.shakeFrameId = 0;
+    this.hitFlashFrames = 0;
   }
 
   setEntities(entities) {
@@ -85,9 +91,16 @@ export class WaifuMonCombatCanvas {
     const scaleX = this.canvas.width / this.width;
     const scaleY = this.canvas.height / this.height;
 
+    const shaking = !this.reducedMotion && now < this.shakeUntil;
+
     ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.scale(scaleX, scaleY);
+
+    if (shaking) {
+      ctx.translate(Math.random() * 10, Math.random() * 10);
+    }
 
     ctx.fillStyle = "rgba(255,255,255,0.035)";
     ctx.fillRect(0, this.height * 0.7, this.width, this.height * 0.3);
@@ -100,10 +113,13 @@ export class WaifuMonCombatCanvas {
 
       if (image) {
         ctx.imageSmoothingEnabled = false;
+        ctx.filter = ASSET_FILTER;
         ctx.drawImage(image, px - size / 2, py - size, size, size);
       } else {
+        ctx.filter = ASSET_FILTER;
         drawFallback(ctx, px - size / 2, py - size, size, entity.name, entity.team === "enemy");
       }
+      ctx.filter = "none";
 
       ctx.fillStyle = "rgba(0,0,0,0.56)";
       ctx.fillRect(px - size / 2, py + 8, size, 20);
@@ -114,7 +130,16 @@ export class WaifuMonCombatCanvas {
       ctx.fillText(entity.name, px, py + 18);
     }
 
+    if (this.hitFlashFrames > 0) {
+      ctx.fillStyle = "#ff2a2a";
+      ctx.globalAlpha = 0.4;
+      ctx.fillRect(0, 0, this.width, this.height);
+      ctx.globalAlpha = 1;
+      this.hitFlashFrames -= 1;
+    }
+
     ctx.restore();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 }
 
