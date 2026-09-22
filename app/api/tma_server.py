@@ -509,7 +509,6 @@ async def _admin_cards(request: web.Request) -> web.Response:
     service = request.app[CARD_SERVICE_KEY]
     async with request.app[DATABASE_KEY].session() as session:
         cards = await service.active_definitions(session)
-    base = _asset_base(request.app[SETTINGS_KEY])
     return web.json_response(
         {
             "cards": [
@@ -520,10 +519,7 @@ async def _admin_cards(request: web.Request) -> web.Response:
                     "anime_origin": card.anime_origin,
                     "rarity": card.rarity,
                     "image_url": card.image_url,
-                    "image_endpoint": urljoin(
-                        base,
-                        card.image_url.replace("assets/", "api/cards/assets/", 1),
-                    ),
+                    "image_endpoint": f"/api/cards/assets/{card.image_url.rsplit("/", 1)[-1]}",
                     "source_provider": card.source_provider,
                     "collection_points": card.collection_points,
                     "active": card.active,
