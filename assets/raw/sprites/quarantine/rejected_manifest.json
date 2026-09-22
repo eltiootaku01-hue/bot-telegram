@@ -110,73 +110,38 @@
     "status": "quarantine_only"
   },
   {
-    "asset_id": "spr_990b9f60eb",
-    "file": "assets/raw/sprites/quarantine/spr_990b9f60eb_raw.png",
-    "source_page": "https://github.com/SpriteCook/spritecook-free-game-assets/tree/master/examples/detailed-characters-anime/battleworn_knight.png",
-    "source_url": "https://raw.githubusercontent.com/SpriteCook/spritecook-free-game-assets/master/examples/detailed-characters-anime/battleworn_knight.png",
-    "license": "CC0-1.0",
-    "mime": "image/png",
-    "dimensions": "944x944",
-    "bytes": 702974,
-    "sha256": "f30e210db68638bda6e1e0a42210fccb966e1c05ca49def5bbc128f16d938dff",
-    "safe_rating": "safe",
-    "watermark_screen": "pass:metadata-only",
-    "status": "quarantine_only"
+    "title": "",
+    "source_page": "https://commons.wikimedia.org/wiki/File:PC-8001_character_set.png",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/PC-8001_character_set.png/330px-PC-8001_character_set.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "Public domain",
+    "reason": "invalid_png:PNG has no transparency channel"
   },
   {
-    "asset_id": "spr_679d6e6015",
-    "file": "assets/raw/sprites/quarantine/spr_679d6e6015_raw.png",
-    "source_page": "https://github.com/SpriteCook/spritecook-free-game-assets/tree/master/examples/detailed-characters-anime/clockwork_owl.png",
-    "source_url": "https://raw.githubusercontent.com/SpriteCook/spritecook-free-game-assets/master/examples/detailed-characters-anime/clockwork_owl.png",
-    "license": "CC0-1.0",
-    "mime": "image/png",
-    "dimensions": "936x936",
-    "bytes": 1134474,
-    "sha256": "751a8b1e6a443c24e59a28c8e83d101178cd5eba8beebe8db653135a576ad027",
-    "safe_rating": "safe",
-    "watermark_screen": "pass:metadata-only",
-    "status": "quarantine_only"
+    "title": "",
+    "source_page": "https://commons.wikimedia.org/wiki/File:ZX80_character_0x89,_ZX81_character_0x88.png",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/0/0b/ZX80_character_0x89%2C_ZX81_character_0x88.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "license": "CC0",
+    "reason": "invalid_png:unsupported PNG bit depth"
   },
   {
-    "asset_id": "spr_6588b1aa7a",
-    "file": "assets/raw/sprites/quarantine/spr_6588b1aa7a_raw.png",
-    "source_page": "https://github.com/SpriteCook/spritecook-free-game-assets/tree/master/examples/detailed-characters-anime/deepsea_knight.png",
-    "source_url": "https://raw.githubusercontent.com/SpriteCook/spritecook-free-game-assets/master/examples/detailed-characters-anime/deepsea_knight.png",
-    "license": "CC0-1.0",
-    "mime": "image/png",
-    "dimensions": "956x956",
-    "bytes": 1243131,
-    "sha256": "4d67a31df29943f445212e71fb622d57974665873ac9b23697b1e33a067684cb",
-    "safe_rating": "safe",
-    "watermark_screen": "pass:metadata-only",
-    "status": "quarantine_only"
+    "title": "",
+    "source_page": "https://commons.wikimedia.org/wiki/File:TKAT_Hexadecimal_Characters.png",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/TKAT_Hexadecimal_Characters.png/330px-TKAT_Hexadecimal_Characters.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC0",
+    "reason": "blocked_metadata"
   },
   {
-    "asset_id": "spr_90c9fd36dc",
-    "file": "assets/raw/sprites/quarantine/spr_90c9fd36dc_raw.png",
-    "source_page": "https://github.com/SpriteCook/spritecook-free-game-assets/tree/master/examples/detailed-characters-anime/forest_archer.png",
-    "source_url": "https://raw.githubusercontent.com/SpriteCook/spritecook-free-game-assets/master/examples/detailed-characters-anime/forest_archer.png",
-    "license": "CC0-1.0",
-    "mime": "image/png",
-    "dimensions": "976x976",
-    "bytes": 647485,
-    "sha256": "85761fd1f08d5ebc894d21dc305582d708d68bb347de8789147b8ad4b05e5943",
-    "safe_rating": "safe",
-    "watermark_screen": "pass:metadata-only",
-    "status": "quarantine_only"
+    "title": "",
+    "source_page": "https://commons.wikimedia.org/wiki/File:ZX80_character_0x09,_ZX81_character_0x08.png",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/5/53/ZX80_character_0x09%2C_ZX81_character_0x08.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "license": "CC0",
+    "reason": "invalid_png:unsupported PNG bit depth"
   },
   {
-    "asset_id": "spr_2aa17938d0",
-    "file": "assets/raw/sprites/quarantine/spr_2aa17938d0_raw.png",
-    "source_page": "https://github.com/SpriteCook/spritecook-free-game-assets/tree/master/examples/detailed-characters-anime/frog_paladin.png",
-    "source_url": "https://raw.githubusercontent.com/SpriteCook/spritecook-free-game-assets/master/examples/detailed-characters-anime/frog_paladin.png",
-    "license": "CC0-1.0",
-    "mime": "image/png",
-    "dimensions": "958x958",
-    "bytes": 952893,
-    "sha256": "321333d70e5274717c0d00cada847a5976e55107bbd151a9f3a6190847b9bd34",
-    "safe_rating": "safe",
-    "watermark_screen": "pass:metadata-only",
-    "status": "quarantine_only"
+    "title": "",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Lantern_Lamp_RPG_Item_Large.png",
+    "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Lantern_Lamp_RPG_Item_Large.png/330px-Lantern_Lamp_RPG_Item_Large.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "license": "CC0",
+    "reason": "blocked_metadata"
   }
 ]
