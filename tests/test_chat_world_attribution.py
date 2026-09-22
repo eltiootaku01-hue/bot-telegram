@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from unittest.mock import AsyncMock
 
@@ -400,3 +401,35 @@ def test_chie_owns_generic_greetings_and_farewells() -> None:
     assert chie._should_handle_text("me voy") is True
     assert cari._should_handle_text("hola") is False
     assert sunna._should_handle_text("hola") is False
+
+
+@pytest.mark.asyncio
+async def test_cross_bot_authored_send_rechecks_group_allowlist(database: Database) -> None:
+    from app.core.config import Settings
+
+    module = ChatModule(
+        database,
+        identity=BotIdentity.CARI,
+        settings=Settings(authorized_chat_ids="-100123"),
+    )
+    message = SimpleNamespace(
+        chat=SimpleNamespace(
+            id=-100999,
+            type="supergroup",
+            message_thread_id=None,
+        )
+    )
+    bot_factory = AsyncMock()
+    target_bot = AsyncMock()
+    bot_factory.return_value = target_bot
+    module.bot_factory = bot_factory
+
+    sent = await module._send_authored_text(
+        message,
+        AsyncMock(),
+        BotIdentity.CAMI,
+        "test",
+    )
+
+    assert sent is False
+    target_bot.send_message.assert_not_awaited()
