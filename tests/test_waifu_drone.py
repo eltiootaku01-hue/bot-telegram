@@ -17,7 +17,8 @@ def test_github_candidates_structure():
 
 
 def test_allowed_licenses_normalization():
-    """License comparisons use the normalized lowercase representation."""
+    """License comparisons use a normalized lowercase representation."""
+    assert all(lic == lic.lower() for lic in waifu_drone.ALLOWED_LICENSES)
     allowed = {lic.lower() for lic in waifu_drone.ALLOWED_LICENSES}
     assert "cc0-1.0" in allowed
 
