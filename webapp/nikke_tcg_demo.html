@@ -293,11 +293,18 @@
 
   <script type="module">
     import { EquipmentSystem } from "./js/equipment_system.js";
+    import {
+      equipmentAssetUrl,
+      equipmentCardToAttachmentConfig,
+      findEquipmentCard,
+      formatEquipmentEffects,
+      loadEquipmentCatalog,
+    } from "./js/equipment_catalog.js";
 
     const THREE_NS = globalThis.THREE;
     const container = document.getElementById("viewport-container");
     const statusOverlay = document.getElementById("status-overlay");
-    const cannonCard = document.getElementById("cannon-card");
+    const equipmentCardList = document.getElementById("equipment-card-list");
 
     if (!THREE_NS) {
       throw new Error("Three.js no está disponible.");
@@ -355,15 +362,8 @@
     let waifuModel = null;
     let modelLoadedFromGLTF = false;
     let modelBaseY = 0;
-    let cannonEquipped = false;
-    const cannonConfig = {
-      cardId: "eq_cannon_01",
-      modelUrl: "assets/production/models/weapons/shoulder_cannon.gltf",
-      targetBone: "spine",
-      offsetPos: [0.3, 0.4, -0.2],
-      offsetRot: [0, Math.PI, 0],
-      scale: [0.5, 0.5, 0.5]
-    };
+    let equipmentCatalog = [];
+    const equippedCardIds = new Set();
 
     function createWaifuPlaceholder() {
       const group = new THREE_NS.Group();
@@ -414,6 +414,146 @@
     waifuModel = placeholder;
 
     const equipmentManager = new EquipmentSystem(scene);
+    equipmentManager.initCharacterBones(waifuModel);
+
+    async function initializeEquipmentCatalog() {
+      try {
+        equipmentCatalog = await loadEquipmentCatalog();
+        renderEquipmentHand(equipmentCatalog);
+        statusOverlay.textContent =
+          `CATÁLOGO EQUIPMENT ${equipmentCatalog.length}/${equipmentCatalog.length} // DATOS 3D SIN CONFIGURACIÓN DUPLICADA`;
+      } catch (error) {
+        console.error("[EQUIPMENT CATALOG] No se pudo inicializar:", error);
+        statusOverlay.textContent =
+          "CATÁLOGO DE EQUIPAMIENTO NO DISPONIBLE // demo 3D continua operativa";
+      }
+    }
+
+    function renderEquipmentHand(cards) {
+      if (!equipmentCardList) {
+        return;
+      }
+
+      equipmentCardList.replaceChildren();
+
+      cards.forEach((card, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "tcg-card";
+        button.dataset.equipmentCardId = card.card_id;
+        button.style.borderColor = card.frame_color;
+        button.style.transform =
+          `rotate(${-4 + index * 2}deg) translateY(${index % 2 ? -5 : 0}px)`;
+        button.setAttribute(
+          "aria-label",
+          `${card.name} — equipar o desequipar`,
+        );
+
+        const cost = document.createElement("span");
+        cost.className = "tcg-cost";
+        cost.textContent = String(card.cost);
+
+        const title = document.createElement("span");
+        title.className = "tcg-title";
+        title.style.color = card.frame_color;
+        title.style.borderColor = card.frame_color;
+        title.textContent = card.name;
+
+        const art = document.createElement("span");
+        art.className = "tcg-art-box";
+        art.style.borderColor = card.frame_color;
+        art.style.backgroundImage =
+          `url("${equipmentAssetUrl(card.art_image_url)}")`;
+
+        const effectBox = document.createElement("span");
+        effectBox.className = "tcg-effect-box";
+        effectBox.style.borderColor = card.frame_color;
+
+        const effectType = document.createElement("strong");
+        effectType.textContent = `[${card.card_type}]`;
+
+        const description = document.createElement("span");
+        description.textContent =
+          `${card.description} ${formatEquipmentEffects(card.gameplay_effects)}`;
+
+        effectBox.append(effectType, document.createTextNode(" "), description);
+        button.append(cost, title, art, effectBox);
+        button.addEventListener("click", () => {
+          void playEquipmentCard(card.card_id);
+        });
+        equipmentCardList.appendChild(button);
+      });
+    }
+
+    async function playEquipmentCard(cardId) {
+      const card = findEquipmentCard(equipmentCatalog, cardId);
+      if (!card) {
+        statusOverlay.textContent = "CARTA DE EQUIPAMIENTO NO ENCONTRADA";
+        return;
+      }
+
+      const attachment = equipmentCardToAttachmentConfig(card);
+
+      if (equippedCardIds.has(card.card_id)) {
+        equippedCardIds.delete(card.card_id);
+        equipmentManager.detachEquipment(card.card_id);
+        updateEquipmentCardState(card.card_id);
+        statusOverlay.textContent =
+          `${card.name.toUpperCase()} DESEQUIPADO // SLOT: ${attachment.socketName}`;
+        return;
+      }
+
+      equippedCardIds.add(card.card_id);
+      updateEquipmentCardState(card.card_id);
+
+      try {
+        await equipmentManager.attachEquipment(attachment);
+        updateEquipmentCardState(card.card_id);
+        statusOverlay.textContent =
+          `${card.name.toUpperCase()} ACOPLADO // SOCKET: ${attachment.socketName}`;
+      } catch (error) {
+        equippedCardIds.delete(card.card_id);
+        updateEquipmentCardState(card.card_id);
+        console.warn("[EQUIPMENT] No se pudo cargar el modelo:", error);
+        statusOverlay.textContent =
+          `${card.name.toUpperCase()} // ASSET 3D NO DISPONIBLE`;
+      }
+    }
+
+    function updateEquipmentCardState(cardId) {
+      const cardNode = equipmentCardList?.querySelector(
+        `[data-equipment-card-id="${CSS.escape(cardId)}"]`,
+      );
+      if (!cardNode) {
+        return;
+      }
+
+      const equipped = equippedCardIds.has(cardId);
+      cardNode.classList.toggle("equipped", equipped);
+      cardNode.setAttribute(
+        "aria-pressed",
+        equipped ? "true" : "false",
+      );
+    }
+
+    async function reattachEquippedEquipment() {
+      for (const cardId of equippedCardIds) {
+        const card = findEquipmentCard(equipmentCatalog, cardId);
+        if (!card) {
+          continue;
+        }
+        try {
+          await equipmentManager.attachEquipment(
+            equipmentCardToAttachmentConfig(card),
+          );
+          updateEquipmentCardState(cardId);
+        } catch (error) {
+          equippedCardIds.delete(cardId);
+          updateEquipmentCardState(cardId);
+          console.warn("[EQUIPMENT] No se pudo reubicar:", cardId, error);
+        }
+      }
+    }
 
     // Cambiá esta URL por cualquier GLB/GLTF real de tu proyecto.
     const CHARACTER_MODEL_URL = "assets/models/waifu_base.gltf";
@@ -431,16 +571,9 @@
 
         equipmentManager.initCharacterBones(waifuModel);
         modelLoadedFromGLTF = true;
-        if (cannonEquipped) {
-          equipmentManager.detachEquipment(cannonConfig.cardId);
-          equipmentManager.attachEquipment(cannonConfig).catch((error) => {
-            cannonEquipped = false;
-            cannonCard.classList.remove("equipped");
-            console.warn("No se pudo reubicar el cañón en el modelo GLTF:", error);
-          });
-        }
+        void reattachEquippedEquipment();
         statusOverlay.textContent =
-          "MODELO GLTF ACTIVO // ESQUELETO INDEXADO // EQUIPAMIENTO LISTO";
+          "MODELO GLTF ACTIVO // ESQUELETO INDEXADO // EQUIPAMIENTO DEL CATÁLOGO LISTO";
       },
       undefined,
       () => {
@@ -477,39 +610,6 @@
       recoilCamera();
       pulseModel();
 
-      if (cardName === "Cañón Neón") {
-        const alreadyEquipped = cannonEquipped;
-
-        if (alreadyEquipped) {
-          cannonEquipped = false;
-          equipmentManager.detachEquipment(cannonConfig.cardId);
-          cannonCard.classList.remove("equipped");
-          statusOverlay.textContent =
-            "CAÑÓN NEÓN DESEQUIPADO // CONFIGURACIÓN ORIGINAL RESTAURADA";
-          return;
-        }
-
-        cannonEquipped = true;
-        equipmentManager
-          .attachEquipment(cannonConfig)
-          .then(() => {
-            if (!cannonEquipped) {
-              return;
-            }
-            cannonCard.classList.add("equipped");
-            statusOverlay.textContent =
-              "CAÑÓN NEÓN ACOPLADO // SOCKET: SPINE // ATK +40";
-          })
-          .catch((error) => {
-            cannonEquipped = false;
-            cannonCard.classList.remove("equipped");
-            console.warn("No se pudo cargar el arma 3D:", error);
-            statusOverlay.textContent =
-              "NO SE ENCONTRÓ EL ASSET DEL CAÑÓN // la demo sigue operativa";
-          });
-        return;
-      }
-
       const messages = {
         "Sueño Eterno":
           "SUEÑO ETERNO // invulnerabilidad 1 turno // +15% HP",
@@ -520,6 +620,10 @@
       statusOverlay.textContent =
         messages[cardName] || `CARTA: ${cardName}`;
     };
+
+    window.playEquipmentCard = playEquipmentCard;
+
+    void initializeEquipmentCatalog();
 
     let clock = new THREE_NS.Clock();
 
