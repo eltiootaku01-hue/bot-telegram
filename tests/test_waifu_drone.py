@@ -36,12 +36,22 @@ def test_quota_short_circuits_before_network(tmp_path, monkeypatch) -> None:
 
     monkeypatch.setattr(waifu_drone, "RAW_SPRITE_DIR", quarantine)
     monkeypatch.setattr(waifu_drone, "PROD_SPRITE_DIR", production)
-    monkeypatch.setattr(
-        waifu_drone,
+    for candidate_helper in (
         "_github_candidates",
-        lambda: pytest.fail("network candidate search should not run"),
-    )
+        "_oga_candidates",
+        "_itch_candidates",
+        "_commons_candidates",
+    ):
+        monkeypatch.setattr(
+            waifu_drone,
+            candidate_helper,
+            lambda *args, _name=candidate_helper, **kwargs: pytest.fail(
+                f"network candidate search should not run: {_name}"
+            ),
+        )
 
+    existing = waifu_drone.get_existing_valid_sprites()
+    assert len(existing) == 10
     assert waifu_drone.fetch_cc0_waifus(10) == 10
 
 
