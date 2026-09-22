@@ -97,3 +97,228 @@ h2 { margin-bottom: 0; font-size: 1.05rem; }
   body { padding-left: 24px; padding-right: 24px; }
   .store-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* BŌSŌZOKU SCAVENGER OVERRIDE */
+:root {
+  color-scheme: dark;
+  --tg-bg: #0a0a0a;
+  --tg-secondary-bg: #111111;
+  --tg-text: #f6f0ff;
+  --tg-hint: #a89db7;
+  --tg-link: #b026ff;
+  --tg-button: #ff2a2a;
+  --tg-button-text: #050505;
+  --card: #111111;
+  --border: rgba(176, 38, 255, 0.42);
+  --shadow: 0 0 28px rgba(176, 38, 255, 0.14);
+  --radius: 0;
+  --violet: #b026ff;
+  --fire: #ff2a2a;
+  --asphalt: #0a0a0a;
+  --acid: #d9ff00;
+}
+
+html,
+body {
+  background: #0a0a0a;
+  color: #f6f0ff;
+  font-family: "Cascadia Mono", "SFMono-Regular", "Roboto Mono", Consolas, "Liberation Mono", monospace;
+}
+
+body {
+  position: relative;
+}
+
+button,
+h1,
+h2,
+h3,
+strong,
+.section-meta,
+.eyebrow {
+  font-style: italic;
+  font-weight: 900;
+}
+
+* {
+  border-radius: 0 !important;
+}
+
+.player-badge,
+.resource-pill,
+.team-slot,
+.hero-card,
+.combat-panel,
+.referral-card,
+.store-card,
+.action-btn,
+.secondary-btn {
+  clip-path: polygon(
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px),
+    0 10px
+  );
+}
+
+.action-btn {
+  background: #ff2a2a;
+  color: #050505;
+}
+
+.action-btn-special {
+  background: #b026ff;
+  color: #ffffff;
+}
+
+.secondary-btn {
+  color: #d9ff00;
+  border-color: rgba(176, 38, 255, 0.6);
+}
+
+.resource-pill strong,
+.section-meta {
+  color: #b026ff;
+}
+
+.status-dot {
+  background: #ff2a2a;
+  box-shadow: 0 0 14px rgba(255, 42, 42, 0.8);
+}
+
+.combat-hud {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+  background: #050505;
+  border-bottom: 1px solid rgba(255, 42, 42, 0.58);
+}
+
+.hp-panel {
+  min-width: 0;
+  padding: 8px 9px;
+  background: #111111;
+  clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+}
+
+.hp-panel-enemy {
+  border-left: 1px solid #ff2a2a;
+}
+
+.hp-label {
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: #a89db7;
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.hp-label strong {
+  color: #f6f0ff;
+}
+
+.hp-bar {
+  position: relative;
+  height: 11px;
+  overflow: hidden;
+  background: #1c1c1c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 6px) 100%, 0 100%, 0 5px);
+}
+
+.hp-fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transition: width 140ms steps(4, end);
+}
+
+.hp-fill-ally {
+  background: linear-gradient(90deg, #6f14a3, #b026ff);
+  box-shadow: 0 0 12px rgba(176, 38, 255, 0.65);
+}
+
+.hp-fill-enemy {
+  background: linear-gradient(90deg, #7e1111, #ff2a2a);
+  box-shadow: 0 0 12px rgba(255, 42, 42, 0.65);
+}
+
+.canvas-frame {
+  position: relative;
+  background: #030303;
+}
+
+.canvas-tag {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 7px;
+  color: #ff2a2a;
+  background: rgba(10, 10, 10, 0.78);
+  border: 1px solid rgba(255, 42, 42, 0.58);
+  clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 6px) 100%, 0 100%, 0 5px);
+  font-size: 0.58rem;
+  font-style: italic;
+  font-weight: 900;
+}
+
+.team-slot img,
+.sprite-fallback,
+.store-icon,
+.cut-in-card img {
+  filter: contrast(1.3) saturate(1.5) hue-rotate(-10deg);
+}
+
+.crt-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.05) 0,
+    rgba(255, 255, 255, 0.05) 1px,
+    rgba(0, 0, 0, 0.14) 2px,
+    rgba(0, 0, 0, 0.14) 4px
+  );
+  opacity: 0.16;
+  mix-blend-mode: screen;
+  animation: crt-flicker 0.16s steps(2, end) infinite;
+}
+
+.crt-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.42) 100%);
+}
+
+@keyframes crt-flicker {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.2; }
+}
+
+@media (max-width: 560px) {
+  .combat-hud {
+    grid-template-columns: 1fr;
+  }
+
+  .hp-panel-enemy {
+    border-left: 0;
+    border-top: 1px solid #ff2a2a;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt-overlay {
+    animation: none;
+    opacity: 0.12;
+  }
+}
