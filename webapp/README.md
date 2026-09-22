@@ -52,7 +52,7 @@ Rutas implementadas:
 - `POST /api/combat/action` — acción de combate validada por el servidor y delegada al motor Java.
 - `POST /api/store/invoice` — genera una invoice de producto digital en Telegram Stars (XTR).
 
-La URL del backend se puede fijar en el meta `waifumon-api-base-url`, en `window.WAIFUMON_API_BASE_URL` o mediante el parámetro `?api=`. No se guarda ningún token en el frontend.
+La URL del backend se puede fijar en el meta `waifumon-api-base-url` o, para entornos controlados, en `window.WAIFUMON_API_BASE_URL`. No existe un override por query-string para impedir que un enlace arbitrario redirija `initData` a un tercero. No se guarda ningún token en el frontend.
 
 ### Bot Manager
 
