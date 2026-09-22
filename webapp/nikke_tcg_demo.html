@@ -357,6 +357,15 @@
     let waifuModel = null;
     let modelLoadedFromGLTF = false;
     let modelBaseY = 0;
+    let cannonEquipped = false;
+    const cannonConfig = {
+      cardId: "eq_cannon_01",
+      modelUrl: "assets/production/models/weapons/shoulder_cannon.gltf",
+      targetBone: "spine",
+      offsetPos: [0.3, 0.4, -0.2],
+      offsetRot: [0, Math.PI, 0],
+      scale: [0.5, 0.5, 0.5]
+    };
 
     function createWaifuPlaceholder() {
       const group = new THREE_NS.Group();
@@ -424,6 +433,14 @@
 
         equipmentManager.initCharacterBones(waifuModel);
         modelLoadedFromGLTF = true;
+        if (cannonEquipped) {
+          equipmentManager.detachEquipment(cannonConfig.cardId);
+          equipmentManager.attachEquipment(cannonConfig).catch((error) => {
+            cannonEquipped = false;
+            cannonCard.classList.remove("equipped");
+            console.warn("No se pudo reubicar el cañón en el modelo GLTF:", error);
+          });
+        }
         statusOverlay.textContent =
           "MODELO GLTF ACTIVO // ESQUELETO INDEXADO // EQUIPAMIENTO LISTO";
       },
@@ -463,32 +480,31 @@
       pulseModel();
 
       if (cardName === "Cañón Neón") {
-        const alreadyEquipped = cannonCard.classList.contains("equipped");
+        const alreadyEquipped = cannonEquipped;
 
         if (alreadyEquipped) {
-          equipmentManager.detachEquipment("eq_cannon_01");
+          cannonEquipped = false;
+          equipmentManager.detachEquipment(cannonConfig.cardId);
           cannonCard.classList.remove("equipped");
           statusOverlay.textContent =
             "CAÑÓN NEÓN DESEQUIPADO // CONFIGURACIÓN ORIGINAL RESTAURADA";
           return;
         }
 
+        cannonEquipped = true;
         equipmentManager
-          .attachEquipment({
-            cardId: "eq_cannon_01",
-            modelUrl:
-              "assets/production/models/weapons/shoulder_cannon.gltf",
-            targetBone: "spine",
-            offsetPos: [0.3, 0.4, -0.2],
-            offsetRot: [0, Math.PI, 0],
-            scale: [0.5, 0.5, 0.5]
-          })
+          .attachEquipment(cannonConfig)
           .then(() => {
+            if (!cannonEquipped) {
+              return;
+            }
             cannonCard.classList.add("equipped");
             statusOverlay.textContent =
               "CAÑÓN NEÓN ACOPLADO // SOCKET: SPINE // ATK +40";
           })
           .catch((error) => {
+            cannonEquipped = false;
+            cannonCard.classList.remove("equipped");
             console.warn("No se pudo cargar el arma 3D:", error);
             statusOverlay.textContent =
               "NO SE ENCONTRÓ EL ASSET DEL CAÑÓN // la demo sigue operativa";
