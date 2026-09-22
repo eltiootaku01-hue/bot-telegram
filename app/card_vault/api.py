@@ -79,12 +79,8 @@ class VaultApiServer:
 
     async def _transfer(self, request: web.Request) -> web.Response:
         body: dict[str, Any] = await request.json()
-        from_type = __import__("app.db.card_vault_models", fromlist=["CardHolderType"]).CardHolderType(
-            str(body["from_type"])
-        )
-        to_type = __import__("app.db.card_vault_models", fromlist=["CardHolderType"]).CardHolderType(
-            str(body["to_type"])
-        )
+        from_type = CardHolderType(str(body["from_type"]))
+        to_type = CardHolderType(str(body["to_type"]))
         async with self.database.session() as session:
             result = await self.service.transfer(
                 session,
