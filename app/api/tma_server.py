@@ -4,8 +4,8 @@ import asyncio
 import logging
 import threading
 import uuid
-from urllib.parse import urljoin
 from collections.abc import Callable
+from urllib.parse import urljoin
 
 
 from aiohttp import web
@@ -342,8 +342,9 @@ class TmaApiServer:
 def create_tma_app(
     settings: Settings,
     database: Database,
-    engine: WaifuMonJavaEngine,
+    engine: WaifuMonJavaEngine | None,
     *,
+    invoice_bot_factory: Callable[[str], Bot] | None = None,
 ) -> web.Application:
     combat_service = TmaCombatService(database, settings, engine)
     app = web.Application(middlewares=[_tma_middleware(settings)])
@@ -362,6 +363,8 @@ def _tma_middleware(settings: Settings):
     async def middleware(request: web.Request, handler):
         origin = request.headers.get("Origin")
         allowed_origins = _origins(settings)
+        if origin and origin.rstrip("/") not in allowed_origins:
+            return _json_error(403, "ORIGIN_NOT_ALLOWED", "Origen no autorizado.")
         if request.method == "OPTIONS":
             response = web.Response(status=204)
         else:
@@ -378,8 +381,6 @@ def _tma_middleware(settings: Settings):
             response = await handler(request)
 
         if origin:
-            if not allowed_origins or origin.rstrip("/") not in allowed_origins:
-                return _json_error(403, "ORIGIN_NOT_ALLOWED", "Origen no autorizado.")
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Vary"] = "Origin"
             response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Telegram-Init-Data, Authorization"
