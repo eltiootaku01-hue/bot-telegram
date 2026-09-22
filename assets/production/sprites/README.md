@@ -50,3 +50,8 @@ python tools/prepare_magenta_png.py INPUT.png OUTPUT.png
 
 El procesador solo convierte `#FF00FF` a transparencia; no modifica la licencia del
 archivo de entrada.
+
+Para aplicar además el tratamiento visual bōsōzoku (tinte violeta, contraste y saturación)
+usa `tools/process_bosozoku_sprite.py`. Requiere declarar `original` o `licensed` y,
+para material licenciado, exige URL y licencia. El tratamiento no elimina firmas, marcas
+de agua ni restricciones de redistribución.
