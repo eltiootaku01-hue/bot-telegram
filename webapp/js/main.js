@@ -3,13 +3,6 @@ import { WaifuMonApi } from "./api.js";
 
 const tg = window.Telegram?.WebApp;
 
-const DEFAULT_TEAM = [
-  { id: "cari", name: "Cari", team: "player", x: 0.18, y: 0.70, size: 116 },
-  { id: "cami", name: "Cami", team: "player", x: 0.38, y: 0.70, size: 116 },
-  { id: "sunna", name: "Sunna", team: "player", x: 0.58, y: 0.70, size: 116 },
-  { id: "training-dummy", name: "Dummy", team: "enemy", x: 0.82, y: 0.70, size: 132 },
-];
-
 function playerDisplayName() {
   return tg?.initDataUnsafe?.user?.first_name
     || tg?.initDataUnsafe?.user?.username
@@ -38,10 +31,6 @@ function setupPlayerHeader() {
   // This value is informational only. The server must validate Telegram initData
   // before associating a referral with the authenticated user.
   document.body.dataset.referral = tg?.initDataUnsafe?.start_param || "";
-}
-
-function spriteUrl(characterId) {
-  return new URL(`../../assets/production/sprites/${characterId}_idle.png`, import.meta.url).href;
 }
 
 function setupTeam(combat, init) {
