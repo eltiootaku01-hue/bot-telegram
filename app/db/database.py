@@ -10,7 +10,7 @@ from app.db.models import Base
 from app.db import community_models  # noqa: F401 - registers forum topic tables
 from app.db import social_models  # noqa: F401 - registers social wake tables
 from app.db import trivia_models  # noqa: F401 - registers trivia tables
-from app.db import world_models
+from app.db import world_models  # noqa: F401 - registers world observation tables
 from app.db import card_vault_models  # noqa: F401 - registers Ciudad Animals world tables
 
 
