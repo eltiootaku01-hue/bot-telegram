@@ -208,7 +208,7 @@ final class WaifuMonRuleEngineTest {
         ObjectNode character = mapper.createObjectNode()
             .put("id", "test-waifu")
             .put("name", "Test Waifu")
-            .put("element", "aire")
+            .put("element_type", "aire")
             .put("power_score", 50);
         ObjectNode payload = mapper.createObjectNode()
             .set("character", character);
