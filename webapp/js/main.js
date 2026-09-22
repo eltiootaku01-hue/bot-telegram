@@ -87,48 +87,66 @@ function setupTeam(combat, init) {
   combat.setEntities(entities);
   void combat.preload([...init.team, ...init.opponents].map((entry) => entry.id));
 }
-function setupCombatActions(combat) {
+function setupCombatActions(combat, api, init) {
   const status = document.getElementById("combat-status");
   const actions = document.getElementById("combat-actions");
   if (!actions) return;
+
+  const attacker = init.team[0];
+  const defender = init.opponents[0];
+  if (!attacker || !defender) {
+    actions.querySelectorAll("button").forEach((node) => { node.disabled = true; });
+    if (status) status.textContent = "Sin combatientes";
+    return;
+  }
 
   actions.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button || button.disabled) return;
 
     const action = button.dataset.action;
-    actions.querySelectorAll("button").forEach((node) => {
-      node.disabled = true;
-    });
+    actions.querySelectorAll("button").forEach((node) => { node.disabled = true; });
+    const turnId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : turnId;
 
     try {
       if (status) status.textContent = action === "special" ? "Especial..." : "Acción...";
+      combat.setPose(attacker.id, action === "defend" ? "hit" : "attack");
 
       if (action === "special") {
-        combat.setPose("sunna", "attack");
-        await playCutIn("sunna", {
-          duration: 1500,
-          name: "Sunna",
+        await playCutIn(attacker.id, {
+          duration: init.asset_contract.cut_in_duration_ms || 1500,
+          name: attacker.name,
           subtitle: "Habilidad especial",
         });
-        combat.setPose("sunna", "idle");
       } else {
-        combat.setPose("sunna", action === "attack" ? "attack" : "hit");
-        await new Promise((resolve) => window.setTimeout(resolve, 260));
-        combat.setPose("sunna", "idle");
+        await new Promise((resolve) => window.setTimeout(resolve, 180));
       }
 
-      // Visual-only path: no damage, HP or multiplier is calculated here.
-      if (status) status.textContent = `Acción: ${action}`;
-      tg?.HapticFeedback?.impactOccurred?.("light");
-    } finally {
-      actions.querySelectorAll("button").forEach((node) => {
-        node.disabled = false;
+      const result = await api.combatAction({
+        action,
+        attacker_id: attacker.id,
+        defender_id: defender.id,
+        turn_id: turnId,
+        idempotency_key: idempotencyKey,
       });
+
+      combat.setPose(attacker.id, "idle");
+      if (result.defender_hp === 0) combat.setPose(defender.id, "hit");
+      if (status) {
+        const critical = result.critical ? " · CRÍTICO" : "";
+        status.textContent = "-" + result.damage + " HP · " + result.defender_hp + "/" + result.defender_max_hp + critical;
+      }
+      tg?.HapticFeedback?.impactOccurred?.(result.critical ? "medium" : "light");
+    } catch (error) {
+      combat.setPose(attacker.id, "idle");
+      if (status) status.textContent = "Error de combate";
+      tg?.showAlert?.(error instanceof Error ? error.message : "No se pudo ejecutar el turno.");
+    } finally {
+      actions.querySelectorAll("button").forEach((node) => { node.disabled = false; });
     }
   });
 }
-
 function setupStore() {
   document.querySelectorAll("[data-purchase]").forEach((button) => {
     button.addEventListener("click", () => {
