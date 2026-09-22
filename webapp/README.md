@@ -69,3 +69,35 @@ El preflight CORS `OPTIONS` es una operación de navegador, no una llamada de ne
 ### Telegram Stars
 
 La API usa `createInvoiceLink` con `currency="XTR"` y precio entero en Stars. Para productos digitales Telegram exige XTR y no requiere un `provider_token`. El endpoint devuelve únicamente el enlace de pago; la entrega de Tickets Premium todavía debe ocurrir después de procesar `pre_checkout_query` y `successful_payment` en el bot y persistir el identificador de la transacción antes de acreditar el producto.
+
+## Demo TCG 3D — perspectiva NIKKE
+
+`nikke_tcg_demo.html` es una demo independiente para probar la mano de cartas TCG con una escena Three.js en tercera persona.
+
+No reemplaza `index.html`. Se abre directamente como:
+
+`webapp/nikke_tcg_demo.html`
+
+La página carga desde CDN:
+
+- Three.js r128
+- GLTFLoader r128
+- OrbitControls r128
+
+No requiere instalar paquetes JavaScript.
+
+El módulo reutilizable está en:
+
+`webapp/js/equipment_system.js`
+
+El sistema indexa los huesos de un modelo GLTF/GLB y puede montar un arma o accesorio sobre un hueso como `spine`, `hand.r` o `shoulder.l`. También protege contra una carrera en la que el jugador desequipa una carta mientras el asset 3D todavía se está cargando.
+
+Para usar un modelo real, coloca o publica:
+
+`webapp/assets/models/waifu_base.gltf`
+
+y para el cañón:
+
+`webapp/assets/production/models/weapons/shoulder_cannon.gltf`
+
+La demo usa un maniquí local como fallback si el modelo de personaje no existe. Los efectos de cartas son visuales; la autoridad real de inventario, puntos y combate sigue perteneciendo al backend.
