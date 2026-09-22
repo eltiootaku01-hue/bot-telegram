@@ -122,6 +122,14 @@ function setupCombatActions(combat, api, init) {
 
       combat.setPose(attacker.id, "idle");
       if (result.defender_hp === 0) combat.setPose(defender.id, "hit");
+      const enemyHp = Math.max(0, Number(result.defender_hp ?? 0));
+      const enemyMaxHp = Math.max(1, Number(result.defender_max_hp ?? 100));
+      const enemyFill = document.getElementById("enemy-hp-fill");
+      const enemyValue = document.getElementById("enemy-hp-value");
+      const enemyBar = enemyFill?.closest(".hp-bar");
+      if (enemyFill) enemyFill.style.width = `${Math.min(100, (enemyHp / enemyMaxHp) * 100)}%`;
+      if (enemyValue) enemyValue.textContent = `${enemyHp} / ${enemyMaxHp}`;
+      if (enemyBar) enemyBar.setAttribute("aria-valuenow", String(enemyHp));
       if (status) {
         const critical = result.critical ? " · CRÍTICO" : "";
         status.textContent = "-" + result.damage + " HP · " + result.defender_hp + "/" + result.defender_max_hp + critical;
