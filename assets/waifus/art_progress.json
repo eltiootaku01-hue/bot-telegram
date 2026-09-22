@@ -1,12 +1,14 @@
 {
   "total_cards": 78,
-  "completed_cards": 0,
-  "progress_percent": 0,
-  "completed_character_ids": [],
+  "completed_cards": 1,
+  "progress_percent": 1.28,
+  "completed_character_ids": [
+    "alisa-kujo"
+  ],
   "visual_tiers_completed": {
-    "R": 0,
+    "R": 1,
     "S": 0,
-    "SR": 0,
+    "SR": 1,
     "UR": 0
   },
   "next_rule": "Every future production card must be an individually validated JPEG 1024x1536 in assets/production/cards/."
