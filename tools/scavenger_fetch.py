@@ -13,6 +13,8 @@ USER_AGENT = "WaifuMon-Scavenger/1.0"
 CHUNK_SIZE = 1024 * 1024
 DEFAULT_TIMEOUT_SECONDS = 60
 MAX_DOWNLOAD_BYTES = 512 * 1024 * 1024
+MAX_EXTRACTED_BYTES = 1024 * 1024 * 1024
+MAX_EXTRACTED_FILES = 10000
 
 
 class ScavengerError(RuntimeError):
@@ -91,12 +93,17 @@ def _download_to_temp(url: str, destination_dir: Path, *, timeout: int) -> Path:
 
 def _extract_zip(zip_path: Path, target_dir: Path) -> int:
     extracted = 0
+    extracted_bytes = 0
     with zipfile.ZipFile(zip_path, "r") as archive:
         bad_member = archive.testzip()
         if bad_member is not None:
             raise ScavengerError(f"Corrupt ZIP member: {bad_member}")
 
         members = archive.infolist()
+        if len(members) > MAX_EXTRACTED_FILES:
+            raise ScavengerError(
+                f"ZIP contains too many entries: {len(members)} > {MAX_EXTRACTED_FILES}"
+            )
         for info in members:
             if _is_symlink(info):
                 raise ScavengerError(f"Symlink ZIP member is not permitted: {info.filename}")
@@ -107,6 +114,11 @@ def _extract_zip(zip_path: Path, target_dir: Path) -> int:
                 continue
 
             destination.parent.mkdir(parents=True, exist_ok=True)
+            extracted_bytes += info.file_size
+            if extracted_bytes > MAX_EXTRACTED_BYTES:
+                raise ScavengerError(
+                    f"ZIP expands beyond {MAX_EXTRACTED_BYTES} bytes"
+                )
             with archive.open(info, "r") as source, destination.open("wb") as output:
                 while True:
                     chunk = source.read(CHUNK_SIZE)
@@ -137,6 +149,19 @@ def fetch_item(item: dict, *, dry_run: bool = False, timeout: int = DEFAULT_TIME
 
     if dry_run:
         return 0
+
+    kind = item.get("kind", "zip")
+    if kind == "file":
+        filename = Path(str(item.get("filename") or Path(item["url"]).name)).name
+        if not filename or filename in {".", ".."}:
+            raise ScavengerError(f"Invalid output filename for {item['name']}")
+        temporary = _download_to_temp(item["url"], target_dir, timeout=timeout)
+        destination = target_dir / filename
+        temporary.replace(destination)
+        print(f"[OK] {item['name']}: archivo recuperado en {destination}.")
+        return 1
+    if kind != "zip":
+        raise ScavengerError(f"Unsupported manifest kind for {item['name']}: {kind!r}")
 
     temporary_zip = _download_to_temp(item["url"], target_dir, timeout=timeout)
     try:
