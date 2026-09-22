@@ -194,18 +194,27 @@ class TmaCombatService:
                     GameProfile.chat_id == community_id,
                 )
             )
-            owned = False
+            owned_row = None
+            has_any_collection = False
             if profile_id is not None:
-                owned = (
+                owned_row = await session.scalar(
+                    select(GameCollection)
+                    .where(
+                        GameCollection.profile_id == profile_id,
+                        GameCollection.character_id == dto.attacker_id,
+                    )
+                    .limit(1)
+                )
+                has_any_collection = (
                     await session.scalar(
-                        select(GameCollection.id).where(
-                            GameCollection.profile_id == profile_id,
-                            GameCollection.character_id == dto.attacker_id,
-                        )
+                        select(GameCollection.id)
+                        .where(GameCollection.profile_id == profile_id)
+                        .limit(1)
                     )
                 ) is not None
 
-        if not owned and not (profile_id is None and dto.attacker_id == "taiga"):
+        tutorial_allowed = dto.attacker_id == "taiga" and not has_any_collection
+        if owned_row is None and not tutorial_allowed:
             raise web.HTTPForbidden(
                 text='{"error":"ATTACKER_NOT_OWNED","message":"El atacante no pertenece al equipo del jugador."}',
                 content_type="application/json",
@@ -216,7 +225,12 @@ class TmaCombatService:
                 content_type="application/json",
             )
 
-        attacker = _fighter(self.settings, dto.attacker_id, team="player")
+        attacker = _fighter(
+            self.settings,
+            dto.attacker_id,
+            team="player",
+            level=int(owned_row.level) if owned_row is not None else 1,
+        )
         defender = _fighter(self.settings, dto.defender_id, team="enemy")
         server_key = f"tma:{context.user.id}:{community_id}:{dto.idempotency_key}"
         result = self._engine_client().combat(
