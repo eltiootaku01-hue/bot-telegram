@@ -141,6 +141,9 @@ async def test_tma_action_offloads_blocking_java_call() -> None:
             time.sleep(0.15)
             return super().combat(**kwargs)
 
+        async def combat_async(self, **kwargs):
+            return await asyncio.to_thread(self.combat, **kwargs)
+
     settings = Settings(
         bot_token_sunna=BOT_TOKEN,
         authorized_chat_ids="-100123",
