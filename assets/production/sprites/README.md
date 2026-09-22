@@ -24,11 +24,29 @@ La ilustración HD de perfil/colección permanece separada en:
 
 con contrato **JPEG 1024 × 1536**.
 
-La futura Mini App de combate debe:
+La Mini App de combate usa además un sistema de efectos Canvas generado por código en
+`webapp/js/effects.js`. No necesita sprites de partículas externos y mantiene un
+límite duro de 96 partículas.
 
-1. usar las cartas HD solo en selección de equipo e interfaces de inspección;
-2. usar exclusivamente sprites 128 × 128 durante la escena de batalla;
-3. mostrar la carta HD como *cut-in* temporal durante **1.5 s** al activar una habilidad especial;
-4. volver después al canvas 2D de sprites.
+El frontend no calcula daño, multiplicadores, precisión ni vida restante. Esos datos
+llegan del contrato del engine Java/Python backend.
 
-El frontend no calcula daño, multiplicadores, precisión ni vida restante. Esos datos llegan del contrato del engine Java.
+## Provenance
+
+Un sprite externo solo puede entrar aquí cuando su licencia permite modificarlo y
+redistribuir el resultado. Un asset que permita uso comercial pero prohíba
+redistribución permanece fuera de producción.
+
+Para PNGs heredados con fondo magenta, el proyecto incluye:
+
+`tools/prepare_magenta_png.py`
+
+Instala el extra de herramientas antes de usarlo:
+
+```text
+python -m pip install -e ".[assets]"
+python tools/prepare_magenta_png.py INPUT.png OUTPUT.png
+```
+
+El procesador solo convierte `#FF00FF` a transparencia; no modifica la licencia del
+archivo de entrada.
