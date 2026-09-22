@@ -527,3 +527,107 @@ async def test_tma_action_reaches_real_java_engine() -> None:
 
     engine.close()
     await database.close()
+
+
+
+@pytest.mark.asyncio
+async def test_admin_card_upload_creates_definition_and_persists_image(tmp_path) -> None:
+    from aiohttp import FormData
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    settings = Settings(
+        bot_token_sunna=BOT_TOKEN,
+        admin_user_id=USER_ID,
+        authorized_chat_ids="-100123",
+        tma_bot_identity="sunna",
+        card_assets_dir=str(tmp_path / "card-assets"),
+    )
+    app = create_tma_app(settings, database, FakeEngine())
+
+    form = FormData()
+    form.add_field("character-name", "Asuna (Verano)")
+    form.add_field("character-id", "asuna")
+    form.add_field("anime-origin", "Sword Art Online")
+    form.add_field("rarity", "SSR")
+    form.add_field("source-provider", "IA (PixAI/Midjourney)")
+    form.add_field("collection-points", "150")
+    form.add_field(
+        "image",
+        b"\xff\xd8\xff\xe0fake-jpeg",
+        filename="asuna_summer_ssr.jpg",
+        content_type="image/jpeg",
+    )
+
+    async with TestServer(app) as server:
+        client = TestClient(server)
+        await client.start_server()
+        try:
+            response = await client.post(
+                "/api/admin/cards",
+                headers={"X-Telegram-Init-Data": make_init_data(user_id=USER_ID)},
+                data=form,
+            )
+            assert response.status == 201
+            payload = await response.json()
+            assert payload["character_id"] == "asuna"
+            assert payload["character_name"] == "Asuna (Verano)"
+            assert payload["anime_origin"] == "Sword Art Online"
+            assert payload["rarity"] == "SSR"
+            assert payload["image_url"].startswith("assets/cards/")
+            assert payload["source_provider"] == "IA (PixAI/Midjourney)"
+            assert payload["collection_points"] == 150
+            filename = payload["image_url"].rsplit("/", 1)[-1]
+
+            asset_response = await client.get(f"/api/cards/assets/{filename}")
+            assert asset_response.status == 200
+            assert await asset_response.read() == b"\xff\xd8\xff\xe0fake-jpeg"
+
+            listing = await client.get(
+                "/api/admin/cards",
+                headers={"X-Telegram-Init-Data": make_init_data(user_id=USER_ID)},
+            )
+            assert listing.status == 200
+            cards = (await listing.json())["cards"]
+            assert any(card["id"] == payload["id"] for card in cards)
+        finally:
+            await client.close()
+
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_admin_card_endpoint_rejects_non_admin(tmp_path) -> None:
+    from aiohttp import FormData
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    settings = Settings(
+        bot_token_sunna=BOT_TOKEN,
+        admin_user_id=USER_ID,
+        card_assets_dir=str(tmp_path / "card-assets"),
+    )
+    app = create_tma_app(settings, database, FakeEngine())
+
+    form = FormData()
+    form.add_field("character-name", "Intruso")
+    form.add_field("anime-origin", "Test")
+    form.add_field("rarity", "C")
+    form.add_field("image", b"\xff\xd8\xff", filename="x.jpg", content_type="image/jpeg")
+
+    async with TestServer(app) as server:
+        client = TestClient(server)
+        await client.start_server()
+        try:
+            response = await client.post(
+                "/api/admin/cards",
+                headers={"X-Telegram-Init-Data": make_init_data(user_id=USER_ID + 1)},
+                data=form,
+            )
+            assert response.status == 403
+            payload = await response.json()
+            assert payload["error"] == "ADMIN_REQUIRED"
+        finally:
+            await client.close()
+
+    await database.close()
