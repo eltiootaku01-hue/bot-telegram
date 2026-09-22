@@ -100,6 +100,11 @@ class BotLauncher(tk.Tk):
         self._runtime_poll_id: str | None = None
         self._closing = False
         self._reported_unexpected_exits: set[str] = set()
+        self.tma_api: TmaApiServer | None = None
+        self.tma_enabled_var = tk.BooleanVar(value=True)
+        self.tma_host_var = tk.StringVar(value="0.0.0.0")
+        self.tma_port_var = tk.StringVar(value="8765")
+        self.tma_origins_var = tk.StringVar(value="")
         self._build_setup()
 
     @property
