@@ -28,8 +28,8 @@ async def test_roll_command_claims_uploaded_card_and_sends_image(tmp_path) -> No
                 CardDefinition(
                     id="rem-sleeping-sr-01",
                     character_id="rem",
-                    character_name="Rem (Dormida)",
-                    anime_origin="Re:Zero",
+                    character_name="<Rem> & Dormida",
+                    anime_origin="Re:Zero <test>",
                     rarity="SR",
                     image_url="assets/cards/rem_sleeping_sr.jpg",
                     source_provider="IA (PixAI/Midjourney)",
@@ -66,7 +66,8 @@ async def test_roll_command_claims_uploaded_card_and_sends_image(tmp_path) -> No
     assert len(answers) == 1
     sent_file, caption = answers[0]
     assert sent_file is not None
-    assert "Rem (Dormida)" in caption
+    assert "&lt;Rem&gt; &amp; Dormida" in caption
+    assert "Re:Zero &lt;test&gt;" in caption
     assert "SR" in caption
     assert "×1" in caption
 
