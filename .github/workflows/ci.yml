@@ -50,10 +50,16 @@ jobs:
           test -f webapp/js/main.js
           test -f webapp/js/combat.js
           test -f webapp/js/api.js
+          test -f webapp/js/equipment_system.js
+          test -f webapp/js/equipment_catalog.js
+          test -f webapp/data/cards_equipment.json
           grep -q 'telegram-web-app.js' webapp/index.html
+          python -m pytest tests/test_webapp_equipment_catalog.py -q
           node --check webapp/js/main.js
           node --check webapp/js/combat.js
           node --check webapp/js/api.js
+          node --check webapp/js/equipment_system.js
+          node --check webapp/js/equipment_catalog.js
       - name: Export card art prompts
         run: python tools/export_card_art_prompts.py --output /tmp/WAIFUMON_CARD_ART_PROMPTS.md
       - name: Export sticker prompts
