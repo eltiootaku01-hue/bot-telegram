@@ -17,7 +17,7 @@ from app.db.database import Database
         ),
         (
             BotIdentity.SUNNA,
-            {"system", "world-catalog", "world-runtime", "social_runtime", "chat", "game", "media", "admin", "brain_chat"},
+            {"system", "world-catalog", "world-runtime", "social_runtime", "chat", "game", "media", "admin", "tma-payments", "brain_chat"},
         ),
         (
             BotIdentity.CAMI,
