@@ -438,3 +438,64 @@ strong,
     transition: none;
   }
 }
+
+
+.card-admin-form {
+  display: grid;
+  gap: 0.65rem;
+  max-width: 760px;
+}
+
+.card-admin-form label {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.card-admin-form input,
+.card-admin-form select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.24);
+  color: inherit;
+}
+
+.admin-card-list {
+  margin-top: 1.5rem;
+}
+
+.admin-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.8rem;
+}
+
+.admin-card-item {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.admin-card-item img {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 0.55rem;
+}
+
+.admin-card-item small {
+  opacity: 0.75;
+}
+
+.admin-card-item code {
+  overflow-wrap: anywhere;
+  font-size: 0.72rem;
+  opacity: 0.65;
+}
