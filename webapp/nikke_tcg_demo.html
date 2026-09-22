@@ -356,6 +356,7 @@
 
     let waifuModel = null;
     let modelLoadedFromGLTF = false;
+    let modelBaseY = 0;
 
     function createWaifuPlaceholder() {
       const group = new THREE_NS.Group();
@@ -417,6 +418,7 @@
         scene.remove(waifuModel);
         waifuModel = gltf.scene;
         waifuModel.position.set(0, 0, 0);
+        modelBaseY = waifuModel.position.y;
         waifuModel.rotation.y = Math.PI;
         scene.add(waifuModel);
 
@@ -513,10 +515,7 @@
       const time = clock.getElapsedTime();
 
       if (waifuModel) {
-        const baseY = waifuModel.position.y > 0.001
-          ? waifuModel.position.y
-          : 0;
-        waifuModel.position.y = baseY + Math.sin(time * 2) * 0.0005;
+        waifuModel.position.y = modelBaseY + Math.sin(time * 2) * 0.02;
       }
 
       backNeonLight.intensity = 2.5 + Math.sin(time * 5) * 0.5;
