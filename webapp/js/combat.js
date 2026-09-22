@@ -1,11 +1,11 @@
+import { LightweightCombatEffects, deterministicScrapBurst } from "./effects.js";
+
 const SPRITE_SIZE = 128;
 const CUT_IN_DURATION_MS = 1500;
 const IMPACT_SHAKE_MS = 200;
 const HIT_FLASH_FRAMES = 3;
 const POSES = ["idle", "attack", "hit"];
 const ASSET_FILTER = "contrast(1.3) saturate(1.5) hue-rotate(-10deg)";
-
-import { LightweightCombatEffects, deterministicScrapBurst } from "./effects.js";
 
 function spriteUrl(characterId, pose = "idle") {
   return new URL(`../../assets/production/sprites/${characterId}_${pose}.png`, import.meta.url).href;
