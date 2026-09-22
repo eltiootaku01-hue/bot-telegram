@@ -33,6 +33,7 @@ class CardRegistration:
     asset_path: Path
     source_provider: str = "local"
     collection_points: int = 0
+    custom_emoji_id: str | None = None
 
     @property
     def coin_value(self) -> int:
