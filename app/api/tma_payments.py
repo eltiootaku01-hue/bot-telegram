@@ -79,18 +79,3 @@ class TmaStarsService:
 
         return token_hex(16)
 
-    async def handle_pre_checkout(self, update) -> bool:
-        """Skeleton for future pre-checkout verification.
-
-        The final implementation should validate the invoice payload/product and
-        answer the Telegram pre-checkout query within Telegram's deadline.
-        """
-        raise NotImplementedError("pre_checkout handling is intentionally not enabled yet")
-
-    async def handle_successful_payment(self, update) -> None:
-        """Skeleton for idempotent digital-product fulfillment.
-
-        The final implementation must persist Telegram's charge identifier
-        before granting Tickets Premium or other digital inventory.
-        """
-        raise NotImplementedError("successful payment fulfillment is not enabled yet")
