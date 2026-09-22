@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     admin_user_id: int = 0
     media_storage_chat_id: int = 0
     publish_page_chat_id: int = 0
+    card_assets_dir: str = "data/card_assets"
+    card_upload_max_bytes: int = 10 * 1024 * 1024
     base_group_chat_id: int = 0
 
     # Telegram access is fail-closed: group/supergroup ids must be explicitly authorized.
