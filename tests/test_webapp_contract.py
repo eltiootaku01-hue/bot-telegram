@@ -33,3 +33,21 @@ def test_magenta_processor_is_present_and_isolated_from_runtime() -> None:
     assert "MAGENTA = (255, 0, 255)" in source
     assert "alpha" in source
     assert "assets/production" not in source or "destination" in source
+
+
+def test_holographic_tcg_card_contract_is_present() -> None:
+    index = (WEBAPP / "index.html").read_text(encoding="utf-8")
+    main = (WEBAPP / "js" / "main.js").read_text(encoding="utf-8")
+    style = (WEBAPP / "css" / "style.css").read_text(encoding="utf-8")
+
+    assert 'class="tcg-card" id="sujetoCero"' in index
+    assert 'class="foil-glare" id="hologram"' in index
+    assert 'id="tcg-card-art"' in index
+    assert "setupHolographicCard" in main
+    assert "deviceorientation" in main
+    assert "requestPermission" in main
+    assert ".tcg-card" in style
+    assert ".foil-glare" in style
+    assert "color-dodge" in style
+    assert "--card-tilt-x" in style
+    assert "--glare-x" in style
