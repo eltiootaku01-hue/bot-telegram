@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import re
 import shutil
-import uuid
 from pathlib import Path
 
 from PIL import Image, UnidentifiedImageError
@@ -61,7 +60,8 @@ class CardVaultService:
         extension = source.suffix.lower()
         if extension not in {".jpg", ".jpeg", ".png", ".webp"}:
             raise ValueError("card assets must be JPG, PNG or WEBP")
-        safe_name = f"{card.card_code[1:]}_{card.card_id.replace('/', '_')}{extension}"
+        safe_card_id = re.sub(r"[^A-Za-z0-9._-]+", "_", card.card_id)
+        safe_name = f"{card.card_code[1:]}_{safe_card_id}{extension}"
         target = self.asset_root / safe_name
         shutil.copy2(source, target)
 
@@ -80,6 +80,14 @@ class CardVaultService:
         telegram_protected: bool = True,
     ) -> CardDefinition:
         self._validate_registration(card)
+        existing = await session.scalar(
+            select(CardDefinition).where(
+                (CardDefinition.id == card.card_id)
+                | (CardDefinition.card_code == card.card_code)
+            )
+        )
+        if existing is not None:
+            raise ValueError(f"card_id or card_code already exists: {card.card_id}")
         target, thumbnail, digest = self._store_asset(card)
 
         definition = CardDefinition(
