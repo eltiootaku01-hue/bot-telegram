@@ -33,3 +33,21 @@ def test_card_art_manifest_matches_v2_matrix_contract() -> None:
     assert data["completed_items"] == sum(
         1 for item in data["items"] if item["asset_status"] == "production_approved"
     )
+
+
+def test_production_card_files_have_exact_provenance_records() -> None:
+    import json
+    from pathlib import Path
+
+    provenance = json.loads(
+        Path("assets/waifus/provenance_manifest.json").read_text(encoding="utf-8")
+    )
+    records = {record["asset"] for record in provenance["records"]}
+    production = {
+        path.as_posix()
+        for path in Path("assets/production/cards").rglob("*")
+        if path.is_file()
+    }
+
+    assert production
+    assert production <= records
