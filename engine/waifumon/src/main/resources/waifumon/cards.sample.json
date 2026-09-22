@@ -2,8 +2,10 @@
   {
     "card_id": "sample-neko",
     "name": "Sample Neko",
+    "base_hp": 120,
     "base_atk": 52,
     "base_def": 40,
+    "cost": 3,
     "element_type": "rayo",
     "skills": [
       {
@@ -14,7 +16,13 @@
         "crit_rate": 8,
         "crit_multiplier": 1.5,
         "element_multiplier": 1.0,
-        "status_effect": "stun"
+        "status_effect": "stun",
+        "skill_effect": {
+          "effect_type": "damage",
+          "value": 55,
+          "target": "enemy",
+          "formula_id": "waifumon-v1"
+        }
       },
       {
         "skill_id": "guard",
@@ -24,7 +32,13 @@
         "crit_rate": 0,
         "crit_multiplier": 1.0,
         "element_multiplier": 1.0,
-        "status_effect": "shield"
+        "status_effect": "shield",
+        "skill_effect": {
+          "effect_type": "shield",
+          "value": 20,
+          "target": "self",
+          "formula_id": null
+        }
       }
     ],
     "status_effects": [
