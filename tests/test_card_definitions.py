@@ -101,9 +101,12 @@ async def test_replayed_roll_message_is_idempotent(database):
     service = CardDefinitionService(Settings(), rng=FixedRng())
 
     async with database.session(write=True) as session:
-        session.add(
-            CardDefinition(
-                id="asuna-summer-ssr-02",
+        session.add_all(
+            [
+                User(id=7, first_name="Player"),
+                Chat(id=-100, type="supergroup", title="Community"),
+                CardDefinition(
+                    id="asuna-summer-ssr-02",
                 character_id="asuna",
                 character_name="Asuna (Verano)",
                 anime_origin="Sword Art Online",
@@ -111,8 +114,9 @@ async def test_replayed_roll_message_is_idempotent(database):
                 image_url="assets/cards/asuna_summer_ssr.jpg",
                 source_provider="IA (PixAI/Midjourney)",
                 collection_points=150,
-                active=True,
-            )
+                    active=True,
+                ),
+            ]
         )
 
     async with database.session(write=True) as session:
@@ -172,3 +176,22 @@ def test_image_validation_rejects_wrong_magic_bytes():
 
     with pytest.raises(ValueError, match="coincide"):
         validate_image_bytes(b"not-an-image", "image/jpeg")
+
+
+
+@pytest.mark.asyncio
+async def test_create_definition_rejects_path_traversal_filename(database):
+    service = CardDefinitionService(Settings())
+
+    async with database.session(write=True) as session:
+        with pytest.raises(ValueError, match="asset"):
+            await service.create_definition(
+                session,
+                character_name="Unsafe",
+                character_id="unsafe",
+                anime_origin="Test",
+                rarity="C",
+                source_provider="test",
+                collection_points=0,
+                image_filename="../unsafe.jpg",
+            )
