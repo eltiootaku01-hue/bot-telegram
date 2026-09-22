@@ -138,7 +138,7 @@ async def test_tma_action_offloads_blocking_java_call() -> None:
 
     class SlowEngine(FakeEngine):
         def combat(self, **kwargs):
-            time.sleep(0.08)
+            time.sleep(0.15)
             return super().combat(**kwargs)
 
     settings = Settings(
@@ -155,7 +155,7 @@ async def test_tma_action_offloads_blocking_java_call() -> None:
 
         async def ticker():
             nonlocal ticks
-            deadline = asyncio.get_running_loop().time() + 0.05
+            deadline = asyncio.get_running_loop().time() + 0.10
             while asyncio.get_running_loop().time() < deadline:
                 ticks += 1
                 await asyncio.sleep(0.005)
@@ -176,7 +176,7 @@ async def test_tma_action_offloads_blocking_java_call() -> None:
         ticker_task = asyncio.create_task(ticker())
         response, _ = await asyncio.gather(request_task, ticker_task)
         assert response.status == 200
-        assert ticks >= 3
+        assert ticks >= 5
         await client.close()
 
     await database.close()
@@ -419,6 +419,7 @@ async def test_tma_tutorial_allows_empty_existing_profile() -> None:
     async with database.session() as session:
         session.add(User(id=USER_ID, first_name="Johan"))
         session.add(Chat(id=-100123, type="supergroup", title="Test"))
+        await session.flush()
         session.add(
             SetupSession(
                 user_id=USER_ID,
