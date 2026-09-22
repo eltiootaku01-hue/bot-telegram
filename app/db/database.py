@@ -10,7 +10,8 @@ from app.db.models import Base
 from app.db import community_models  # noqa: F401 - registers forum topic tables
 from app.db import social_models  # noqa: F401 - registers social wake tables
 from app.db import trivia_models  # noqa: F401 - registers trivia tables
-from app.db import world_models  # noqa: F401 - registers Ciudad Animals world tables
+from app.db import world_models
+from app.db import card_vault_models  # noqa: F401 - registers Ciudad Animals world tables
 
 
 def _add_column_if_missing(connection, table: str, column: str, definition: str, existing: set[str]) -> None:
@@ -70,6 +71,14 @@ def _migrate_game_collection_remove_evolution_stage(connection) -> None:
 def _ensure_compatibility(connection) -> None:
     """Apply small additive migrations that create_all cannot perform."""
     inspector = inspect(connection)
+    card_columns = {column["name"] for column in inspector.get_columns("card_definitions")}
+    _add_column_if_missing(connection, "card_definitions", "card_code", "VARCHAR(32)", card_columns)
+    _add_column_if_missing(connection, "card_definitions", "asset_path", "VARCHAR(1024)", card_columns)
+    _add_column_if_missing(connection, "card_definitions", "thumbnail_path", "VARCHAR(1024)", card_columns)
+    _add_column_if_missing(connection, "card_definitions", "asset_sha256", "VARCHAR(64)", card_columns)
+    _add_column_if_missing(connection, "card_definitions", "coin_value", "INTEGER DEFAULT 0", card_columns)
+    _add_column_if_missing(connection, "card_definitions", "telegram_protected", "BOOLEAN DEFAULT 1", card_columns)
+
     media_columns = {column["name"] for column in inspector.get_columns("media_assets")}
     _add_column_if_missing(connection, "media_assets", "request_id", "BIGINT REFERENCES fan_requests(id) ON DELETE SET NULL", media_columns)
     _add_column_if_missing(connection, "media_assets", "published_group_message_id", "BIGINT", media_columns)
@@ -133,6 +142,10 @@ def _ensure_compatibility(connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_media_asset_group "
         "ON media_assets(source_chat_id, media_group_id) "
         "WHERE media_group_id IS NOT NULL"
+    ))
+    connection.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_card_definition_code "
+        "ON card_definitions(card_code) WHERE card_code IS NOT NULL"
     ))
     connection.execute(text(
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_fan_request_source "
