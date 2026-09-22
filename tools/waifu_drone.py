@@ -29,6 +29,7 @@ SEARCH_TAGS = (
 )
 
 ALLOWED_LICENSES = {
+    "CC0-1.0",
     "cc0",
     "cc0-1.0",
     "creative commons zero",
@@ -806,3 +807,7 @@ if __name__ == "__main__":
     parser.add_argument("--target-amount", type=int, default=10)
     args = parser.parse_args()
     raise SystemExit(0 if fetch_cc0_waifus(args.target_amount) >= args.target_amount else 1)
+
+
+# Backward-compatible test/automation hook; the canonical implementation is _github_candidates.
+_github_cc0_candidates = _github_candidates
