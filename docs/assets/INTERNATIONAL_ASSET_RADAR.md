@@ -99,6 +99,46 @@ game assets freely redistributable.
 Decision: REFERENCE ONLY unless a component is intentionally incorporated under
 compatible GPL terms.
 
+
+## Additional historical references
+
+### freem.jp / ふりーむ！
+
+FreeM pages can expose the exact plugins, pixel-art packs and effect sources used
+by individual freeware authors. That makes them useful provenance leads, but the
+mere presence of a credit or a downloadable game does not by itself grant the
+repository redistribution rights. For example, one page credits several
+third-party pixel/effect sources without publishing a blanket license for those
+source files.
+
+Decision: **REFERENCE / MANUAL LICENSE REVIEW ONLY**.
+
+### RPG-Atelier / Velsarbor
+
+The official Velsarbor site states that its game resources are freely available
+with attribution, while asking users not to copy the main characters exactly.
+This is a useful lead for studying older RPG Maker resource workflows, but any
+candidate file should still be recorded at asset level before promotion.
+
+Decision: **CANDIDATE / PROVENANCE REQUIRED**.
+
+### SourceForge JGame
+
+JGame is a small 2D engine that explicitly supports Java ME and is distributed
+under a BSD license. It is a good reference for tiny state/render loops suitable
+for memory-constrained interfaces.
+
+Decision: **CODE REFERENCE — BSD**.
+
+### SourceForge Fire-j2me
+
+Fire-j2me is a lightweight, themable MIDP2 GUI library released under the LGPL.
+Its historical UI architecture is relevant to low-weight mobile menus and
+skin systems.
+
+Decision: **CODE REFERENCE — LGPL**.
+
+
 ## Lightweight Canvas implementation chosen for this project
 
 Rather than importing a historical minified library, this repository now contains
