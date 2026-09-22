@@ -13,9 +13,9 @@ from app.db.models import Chat, GameItemInventory, GameProfile, TmaStarPurchase,
 
 
 PAYLOAD_PREFIX = "tma"
-PRODUCT_REWARDS: dict[str, dict[str, int]] = {
-    "premium_ticket": {"premium_ticket": 1},
-    "starter_pack": {"premium_ticket": 3, "coins": 250},
+PRODUCT_REWARDS: dict[str, tuple[dict[str, int], int]] = {
+    "premium_ticket": ({"premium_ticket": 1}, 0),
+    "starter_pack": ({"premium_ticket": 3}, 250),
 }
 
 
@@ -216,7 +216,8 @@ class TmaPaymentService:
                 raise TmaPaymentError("Payment purchase disappeared")
             return stored
 
-        for item_key, quantity in PRODUCT_REWARDS[parsed.product].items():
+        item_rewards, coin_reward = PRODUCT_REWARDS[parsed.product]
+        for item_key, quantity in item_rewards.items():
             current = await session.scalar(
                 select(GameItemInventory).where(
                     GameItemInventory.profile_id == profile.id,
@@ -252,6 +253,13 @@ class TmaPaymentService:
                     quantity=GameItemInventory.quantity + quantity,
                     updated_at=utc_now(),
                 )
+            )
+
+        if coin_reward:
+            await session.execute(
+                update(GameProfile)
+                .where(GameProfile.id == profile.id)
+                .values(coins=GameProfile.coins + coin_reward, updated_at=utc_now())
             )
 
         return purchase
