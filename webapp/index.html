@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111318">
-  <meta name="description" content="WaifuMon — interfaz ligera de combate para Telegram Mini Apps">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="description" content="WaifuMon — interfaz cyberpunk bōsōzoku para Telegram Mini Apps">
   <meta name="waifumon-api-base-url" content="">
-  <title>WaifuMon</title>
+  <title>WAIFUMON // BŌSŌZOKU</title>
   <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   <link rel="stylesheet" href="./css/style.css">
 </head>
@@ -25,8 +25,8 @@
 
     <section class="hero-card" aria-labelledby="hero-title">
       <div>
-        <p class="eyebrow">CAFÉ OTAKU · COMBATE</p>
-        <h2 id="hero-title">Elegí tu equipo</h2>
+        <p class="eyebrow">BŌSŌZOKU // CAFÉ OTAKU // COMBATE</p>
+        <h2 id="hero-title">ELEGÍ TU EQUIPO</h2>
         <p class="muted">Tres WaifuMons. La autoridad real del combate continúa en el backend.</p>
       </div>
       <div class="resource-row" aria-label="Recursos">
@@ -45,11 +45,34 @@
 
     <section class="section" aria-labelledby="combat-title">
       <div class="section-heading">
-        <h2 id="combat-title">Arena</h2>
+        <h2 id="combat-title">ARENA // RUIDO DE MOTOR</h2>
         <span class="section-meta" id="combat-status">Listo</span>
       </div>
       <div class="combat-panel">
-        <canvas id="combat-canvas" width="768" height="432" role="img" aria-label="Canvas de combate WaifuMon"></canvas>
+        <div class="combat-hud" aria-label="Estado de combate">
+          <div class="hp-panel">
+            <div class="hp-label">
+              <span>ALLY // HP</span>
+              <strong id="player-hp-value">100 / 100</strong>
+            </div>
+            <div class="hp-bar" role="progressbar" aria-label="Vida del aliado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+              <div class="hp-fill hp-fill-ally" id="player-hp-fill"></div>
+            </div>
+          </div>
+          <div class="hp-panel hp-panel-enemy">
+            <div class="hp-label">
+              <span>ENEMY // HP</span>
+              <strong id="enemy-hp-value">100 / 100</strong>
+            </div>
+            <div class="hp-bar" role="progressbar" aria-label="Vida del enemigo" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+              <div class="hp-fill hp-fill-enemy" id="enemy-hp-fill"></div>
+            </div>
+          </div>
+        </div>
+        <div class="canvas-frame">
+          <canvas id="combat-canvas" width="768" height="432" role="img" aria-label="Canvas de combate WaifuMon"></canvas>
+          <div class="canvas-tag">CRT // SCRAP MODE</div>
+        </div>
         <div class="combat-actions" id="combat-actions">
           <button class="action-btn" type="button" data-action="attack">⚔️ Atacar</button>
           <button class="action-btn" type="button" data-action="special">✨ Especial</button>
@@ -114,6 +137,8 @@
       </div>
     </div>
   </div>
+
+  <div class="crt-overlay" aria-hidden="true"></div>
 
   <script type="module" src="./js/main.js"></script>
 </body>
