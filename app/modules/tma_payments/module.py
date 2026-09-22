@@ -41,7 +41,7 @@ class TmaPaymentsModule(BotModule):
                 chat_id = await self.service.community_id(session)
                 if not is_authorized_community(self.settings, chat_id):
                     raise TmaPaymentError("La comunidad configurada no está autorizada.")
-        except TmaPaymentError:
+        except TmaPaymentError as exc:
             await query.answer(ok=False, error_message=str(exc)[:200])
             return
         await query.answer(ok=True)
@@ -71,7 +71,7 @@ class TmaPaymentsModule(BotModule):
                     provider_payment_charge_id=payment.provider_payment_charge_id,
                     chat_id=chat_id,
                 )
-        except TmaPaymentError as exc:
+        except TmaPaymentError:
             logger.exception(
                 "Stars payment requires review user=%s charge=%s",
                 user.id,
