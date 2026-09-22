@@ -157,3 +157,47 @@ async def test_transaction_history_is_append_only(database: Database) -> None:
 
     assert stored is not None
     assert stored.source == "test"
+
+
+@pytest.mark.asyncio
+async def test_inventory_adjustment_cannot_overspend(database: Database, tmp_path: Path) -> None:
+    source = tmp_path / "sailor.png"
+    make_png(source)
+    service = CardVaultService(tmp_path / "assets-2", tmp_path / "thumbs-2")
+
+    async with database.session() as session:
+        await service.register_card(
+            session,
+            CardRegistration(
+                card_id="sailor-001",
+                card_code="#003",
+                character_id="sailor",
+                character_name="Sailor",
+                anime_origin="Original",
+                rarity=CardRarity.C,
+                asset_path=source,
+            ),
+        )
+        await service.adjust_inventory(
+            session,
+            card_id="sailor-001",
+            holder_type=CardHolderType.BANK,
+            holder_key="main-bank",
+            delta=1,
+        )
+        await service.adjust_inventory(
+            session,
+            card_id="sailor-001",
+            holder_type=CardHolderType.BANK,
+            holder_key="main-bank",
+            delta=-1,
+        )
+
+        with pytest.raises(ValueError, match="negative|over-locked"):
+            await service.adjust_inventory(
+                session,
+                card_id="sailor-001",
+                holder_type=CardHolderType.BANK,
+                holder_key="main-bank",
+                delta=-1,
+            )
