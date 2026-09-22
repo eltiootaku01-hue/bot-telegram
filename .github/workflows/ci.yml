@@ -32,6 +32,8 @@ jobs:
         run: mvn --batch-mode --no-transfer-progress -f engine/waifumon/pom.xml clean verify
       - name: Install Python
         run: python -m pip install --upgrade pip && pip install -e '.[dev]'
+      - name: Build and test Java engine
+        run: mvn -q -f engine/waifumon/pom.xml test package
       - name: Ruff
         run: ruff check app tests
       - name: Pytest
