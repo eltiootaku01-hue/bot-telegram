@@ -4,7 +4,9 @@ import asyncio
 import logging
 import threading
 import uuid
+import re
 from collections.abc import Callable
+from pathlib import Path
 from urllib.parse import urljoin
 
 from aiohttp import web
@@ -30,6 +32,11 @@ from app.db.database import Database
 from app.db.community_models import SetupSession
 from app.db.models import GameCollection, GameItemInventory, GameProfile
 from app.game.catalog import CHARACTERS, get_character
+from app.game.card_definitions import (
+    CardDefinitionService,
+    safe_card_filename,
+    validate_image_bytes,
+)
 from app.game.java_engine import WaifuMonJavaEngine
 
 logger = logging.getLogger(__name__)
@@ -291,6 +298,7 @@ SETTINGS_KEY = web.AppKey("settings", Settings)
 DATABASE_KEY = web.AppKey("database", Database)
 STARS_SERVICE_KEY = web.AppKey("stars_service", TmaStarsService)
 TMA_CONTEXT_KEY = web.RequestKey("tma_context", TmaAuthContext)
+CARD_SERVICE_KEY = web.AppKey("card_service", CardDefinitionService)
 
 
 class TmaApiServer:
@@ -386,20 +394,32 @@ def create_tma_app(
     invoice_bot_factory: Callable[[str], Bot] | None = None,
 ) -> web.Application:
     combat_service = TmaCombatService(database, settings, engine)
-    app = web.Application(middlewares=[_tma_middleware(settings)])
+    app = web.Application(
+        middlewares=[_tma_middleware(settings)],
+        client_max_size=max(1_048_576, settings.card_upload_max_bytes + 1_048_576),
+    )
     app[SETTINGS_KEY] = settings
     app[DATABASE_KEY] = database
     app[COMBAT_SERVICE_KEY] = combat_service
     app[STARS_SERVICE_KEY] = TmaStarsService(settings, bot_factory=invoice_bot_factory)
+    app[CARD_SERVICE_KEY] = CardDefinitionService(settings)
     app.router.add_get("/api/combat/init", _combat_init)
     app.router.add_post("/api/combat/action", _combat_action)
     app.router.add_post("/api/store/invoice", _create_invoice)
+    app.router.add_get("/api/admin/cards", _admin_cards)
+    app.router.add_post("/api/admin/cards", _create_card)
+    app.router.add_get("/api/cards/assets/{filename}", _card_asset)
     return app
 
 
 def _tma_middleware(settings: Settings):
     @web.middleware
     async def middleware(request: web.Request, handler):
+        if request.path.startswith("/api/cards/assets/"):
+            response = await handler(request)
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            return response
         origin = request.headers.get("Origin")
         allowed_origins = _origins(settings)
         if origin and origin.rstrip("/") not in allowed_origins:
@@ -471,3 +491,157 @@ async def _create_invoice(request: web.Request) -> web.Response:
     except ValueError as exc:
         return _json_error(400, "INVALID_PRODUCT", str(exc))
     return web.json_response(response.model_dump(mode="json"))
+
+
+def _require_admin(request: web.Request) -> TmaAuthContext:
+    context = request[TMA_CONTEXT_KEY]
+    settings = request.app[SETTINGS_KEY]
+    if not settings.admin_user_id or context.user.id != settings.admin_user_id:
+        raise web.HTTPForbidden(
+            text='{"error":"ADMIN_REQUIRED","message":"Solo el administrador configurado puede gestionar cartas."}',
+            content_type="application/json",
+        )
+    return context
+
+
+async def _admin_cards(request: web.Request) -> web.Response:
+    _require_admin(request)
+    service = request.app[CARD_SERVICE_KEY]
+    async with request.app[DATABASE_KEY].session() as session:
+        cards = await service.active_definitions(session)
+    base = _asset_base(request.app[SETTINGS_KEY])
+    return web.json_response(
+        {
+            "cards": [
+                {
+                    "id": card.id,
+                    "character_id": card.character_id,
+                    "character_name": card.character_name,
+                    "anime_origin": card.anime_origin,
+                    "rarity": card.rarity,
+                    "image_url": card.image_url,
+                    "image_endpoint": urljoin(
+                        base,
+                        card.image_url.replace("assets/", "api/cards/assets/", 1),
+                    ),
+                    "source_provider": card.source_provider,
+                    "collection_points": card.collection_points,
+                    "active": card.active,
+                }
+                for card in cards
+            ]
+        }
+    )
+
+
+async def _create_card(request: web.Request) -> web.Response:
+    _require_admin(request)
+    settings = request.app[SETTINGS_KEY]
+    character_name = ""
+    character_id = ""
+    anime_origin = ""
+    rarity = ""
+    source_provider = "IA (PixAI/Midjourney)"
+    collection_points_raw = "150"
+    image_data: bytes | None = None
+    image_filename = "card"
+    image_content_type = ""
+
+    try:
+        reader = await request.multipart()
+        async for part in reader:
+            if part.name in {"image", "card-image"} and part.filename:
+                image_filename = part.filename
+                image_content_type = part.headers.get("Content-Type", "").split(";")[0].lower()
+                image_data = await part.read(decode=False)
+                continue
+            value = (await part.text()).strip()
+            if part.name == "character-name":
+                character_name = value
+            elif part.name == "character-id":
+                character_id = value
+            elif part.name == "anime-origin":
+                anime_origin = value
+            elif part.name == "rarity":
+                rarity = value.upper()
+            elif part.name == "source-provider":
+                source_provider = value or source_provider
+            elif part.name == "collection-points":
+                collection_points_raw = value or "0"
+    except (ValueError, web.HTTPBadRequest) as exc:
+        return _json_error(400, "INVALID_MULTIPART", f"Formulario inválido: {exc}")
+
+    if image_data is None:
+        return _json_error(400, "IMAGE_REQUIRED", "La imagen de la carta es obligatoria.")
+    if len(image_data) > settings.card_upload_max_bytes:
+        return _json_error(413, "IMAGE_TOO_LARGE", "La imagen supera el tamaño máximo permitido.")
+    try:
+        validate_image_bytes(image_data, image_content_type)
+        collection_points = int(collection_points_raw)
+    except ValueError as exc:
+        return _json_error(400, "INVALID_CARD", str(exc))
+
+    filename = safe_card_filename(image_filename, image_content_type)
+    asset_dir = Path(settings.card_assets_dir).resolve()
+    asset_dir.mkdir(parents=True, exist_ok=True)
+    target = (asset_dir / filename).resolve()
+    if target.parent != asset_dir:
+        return _json_error(400, "INVALID_IMAGE_NAME", "Nombre de archivo inválido.")
+
+    await asyncio.to_thread(target.write_bytes, image_data)
+    service = request.app[CARD_SERVICE_KEY]
+    try:
+        async with request.app[DATABASE_KEY].session(write=True) as session:
+            card = await service.create_definition(
+                session,
+                character_name=character_name,
+                character_id=character_id or None,
+                anime_origin=anime_origin,
+                rarity=rarity,
+                source_provider=source_provider,
+                collection_points=collection_points,
+                image_filename=filename,
+            )
+    except (ValueError, RuntimeError) as exc:
+        try:
+            target.unlink(missing_ok=True)
+        except OSError:
+            logger.exception("Could not remove rejected card asset %s", target)
+        return _json_error(400, "CARD_CREATE_FAILED", str(exc))
+
+    return web.json_response(
+        {
+            "id": card.id,
+            "character_id": card.character_id,
+            "character_name": card.character_name,
+            "anime_origin": card.anime_origin,
+            "rarity": card.rarity,
+            "image_url": card.image_url,
+            "source_provider": card.source_provider,
+            "collection_points": card.collection_points,
+            "active": card.active,
+        },
+        status=201,
+    )
+
+
+async def _card_asset(request: web.Request) -> web.Response:
+    filename = request.match_info["filename"]
+    if (
+        "/" in filename
+        or "\\" in filename
+        or filename in {"", ".", ".."}
+        or not re.fullmatch(r"[A-Za-z0-9_-]+\.(?:jpg|png|webp)", filename, re.IGNORECASE)
+    ):
+        return _json_error(400, "INVALID_ASSET", "Asset inválido.")
+    root = Path(request.app[SETTINGS_KEY].card_assets_dir).resolve()
+    target = (root / filename).resolve()
+    if target.parent != root or not target.is_file():
+        raise web.HTTPNotFound()
+    content_type = {
+        ".jpg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }[target.suffix.lower()]
+    data = await asyncio.to_thread(target.read_bytes)
+    return web.Response(body=data, content_type=content_type)
