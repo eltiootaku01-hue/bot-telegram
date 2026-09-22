@@ -84,6 +84,11 @@ class CardDefinitionService:
             source_provider=source_provider,
             collection_points=collection_points,
         )
+        if (
+            Path(image_filename).name != image_filename
+            or not re.fullmatch(r"[A-Za-z0-9_-]+\\.(?:jpg|png|webp)", image_filename, re.IGNORECASE)
+        ):
+            raise ValueError("El nombre del asset de carta es inválido.")
         stem = self._slug(character_id or character_name) or "card"
         name_slug = self._slug(character_name)
         if name_slug and stem != name_slug and len(stem) < 32:
