@@ -2,18 +2,25 @@
   "schema_version": "1.0",
   "formula_id": "waifumon-v1",
   "damage": {
-    "base": "floor((2 * level / 5 + 2) * skill_power * attack / max(1, defense) / 10)",
+    "base": "floor(floor(floor((2 * level / 5 + 2) * skill_power * attack / max(1, defense)) / 10))",
     "modified": "floor(base * element_multiplier * status_multiplier * move_multiplier)",
     "critical": "floor(modified * crit_multiplier)",
     "minimum": 1
   },
   "critical": {
     "rate_source": "skill.crit_rate",
-    "roll_source": "sha256(turn_id + ':' + attacker_id + ':' + defender_id)",
+    "roll_source": "sha256(turn_id + ':' + attacker_id + ':' + defender_id + ':' + skill_id)",
     "default_multiplier": 1.5
+  },
+  "elements": {
+    "strong": 1.25,
+    "neutral": 1.0,
+    "resist": 0.75,
+    "override_allowed": true
   },
   "randomness": {
     "mode": "seeded",
-    "forbidden": ["wall_clock", "Math.random"]
+    "forbidden": ["wall_clock", "Math.random"],
+    "note": "The current formula resolver is deterministic; future variance must derive from the turn seed."
   }
 }
