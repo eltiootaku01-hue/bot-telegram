@@ -15,7 +15,7 @@ from app.api.tma_server import create_tma_app
 from app.core.config import Settings
 from app.db.database import Database
 from app.db.community_models import SetupSession
-from app.db.models import GameProfile
+from app.db.models import Chat, GameProfile, User
 from app.game.models import CombatAction, CombatResult
 
 
@@ -234,6 +234,8 @@ async def test_tma_tutorial_allows_empty_existing_profile() -> None:
     database = Database("sqlite+aiosqlite:///:memory:")
     await database.create_schema()
     async with database.session() as session:
+        session.add(User(id=USER_ID, first_name="Johan"))
+        session.add(Chat(id=-100123, type="supergroup", title="Test"))
         session.add(
             SetupSession(
                 user_id=USER_ID,
