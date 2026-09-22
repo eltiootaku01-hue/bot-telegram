@@ -66,6 +66,55 @@
       </div>
     </section>
 
+    <section class="section admin-card-section" id="deck-builder-tab" aria-labelledby="deck-builder-title" hidden>
+      <div class="section-heading">
+        <h2 id="deck-builder-title">🎴 CREADOR DE BARAJAS & CARTAS IA</h2>
+        <span class="section-meta">ADMIN</span>
+      </div>
+
+      <form id="create-card-form" class="card-admin-form" enctype="multipart/form-data">
+        <label for="card-image">Imagen generada por IA</label>
+        <input type="file" id="card-image" name="image" accept="image/jpeg,image/png,image/webp" required>
+
+        <label for="character-name">Nombre del Personaje</label>
+        <input type="text" id="character-name" name="character-name" maxlength="255" placeholder="Ej: Rem (Dormida)" required>
+
+        <label for="character-id">ID del Personaje <span class="muted">(opcional)</span></label>
+        <input type="text" id="character-id" name="character-id" maxlength="100" placeholder="Ej: rem">
+
+        <label for="anime-origin">Anime / Serie de Origen</label>
+        <input type="text" id="anime-origin" name="anime-origin" maxlength="255" placeholder="Ej: Re:Zero" required>
+
+        <label for="rarity">Rareza</label>
+        <select id="rarity" name="rarity">
+          <option value="C">Común (C)</option>
+          <option value="R">Rara (R)</option>
+          <option value="SR">Super Rara (SR)</option>
+          <option value="SSR">Super Super Rara (SSR)</option>
+          <option value="UR">Ultra Rara (UR)</option>
+        </select>
+
+        <label for="source-provider">Proveedor</label>
+        <input type="text" id="source-provider" name="source-provider" value="IA (PixAI/Midjourney)" maxlength="128">
+
+        <label for="collection-points">Puntos de colección</label>
+        <input type="number" id="collection-points" name="collection-points" min="0" max="1000000" value="150" required>
+
+        <button type="submit" class="btn-primary" id="create-card-submit">➕ Guardar e incluir en Pool de Gacha</button>
+        <p class="legal-note" id="card-admin-status" aria-live="polite">
+          Solo el administrador configurado puede ver y utilizar este formulario.
+        </p>
+      </form>
+
+      <div class="admin-card-list">
+        <div class="section-heading">
+          <h3>Pool activo</h3>
+          <span class="section-meta" id="card-pool-count">0 cartas</span>
+        </div>
+        <div id="card-pool-grid" class="admin-card-grid"></div>
+      </div>
+    </section>
+
     <section class="section" aria-labelledby="combat-title">
       <div class="section-heading">
         <h2 id="combat-title">ARENA // RUIDO DE MOTOR</h2>
