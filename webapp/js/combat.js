@@ -83,9 +83,22 @@ export class WaifuMonCombatCanvas {
   }
 
   setPose(characterId, pose, { impact = pose === "hit" } = {}) {
-    for (const entity of this.entities) {
-      if (entity.id === characterId) entity.pose = pose;
+    const entity = this.entities.find((candidate) => candidate.id === characterId);
+    if (!entity) return;
+
+    entity.pose = pose;
+    const x = this.width * entity.x;
+    const y = this.height * entity.y - entity.size * 0.55;
+
+    if (pose === "attack") {
+      this.effects.slash(x + entity.size * 0.35, y, { direction: entity.team === "enemy" ? -1 : 1 });
+      this._ensureEffectsFrame();
     }
+    if (pose === "hit") {
+      this.effects.burst(x, y, { count: 12, power: 0.72, size: 2.1 });
+      this._ensureEffectsFrame();
+    }
+
     if (pose === "hit" && impact) {
       this.triggerImpact();
       return;
