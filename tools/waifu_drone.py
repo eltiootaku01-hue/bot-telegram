@@ -29,9 +29,8 @@ SEARCH_TAGS = (
 )
 
 ALLOWED_LICENSES = {
-    "CC0-1.0",
-    "cc0",
     "cc0-1.0",
+    "cc0",
     "creative commons zero",
     "creative commons zero 1.0",
     "public domain",
