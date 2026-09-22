@@ -276,6 +276,9 @@ class FakeEngine:
             defender_hp=77,
         )
 
+    async def combat_async(self, **kwargs):
+        return self.combat(**kwargs)
+
 
 class FakeBot:
     def __init__(self) -> None:
