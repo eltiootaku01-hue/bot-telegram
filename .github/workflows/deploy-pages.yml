@@ -32,9 +32,14 @@ jobs:
           test -f webapp/css/style.css
           test -f webapp/js/main.js
           test -f webapp/js/combat.js
+          test -f webapp/js/api.js
           grep -q 'telegram-web-app.js' webapp/index.html
           node --check webapp/js/main.js
           node --check webapp/js/combat.js
+          node --check webapp/js/api.js
+          rm -rf webapp/assets/production
+          mkdir -p webapp/assets
+          cp -R assets/production webapp/assets/production
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
