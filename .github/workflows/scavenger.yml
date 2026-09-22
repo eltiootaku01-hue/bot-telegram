@@ -1,0 +1,32 @@
+name: WaifuMon Scavenger
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-approved-assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validate manifest
+        run: python -m json.tool scavenger_manifest.json > /dev/null
+
+      - name: Fetch approved CC0 packs
+        run: python tools/scavenger_fetch.py --manifest scavenger_manifest.json --timeout 60
+
+      - name: Package raw scavenger assets
+        run: |
+          tar -czf waifumon-scavenger-raw.tar.gz assets/raw
+
+      - name: Upload recovered asset bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: waifumon-scavenger-raw
+          path: waifumon-scavenger-raw.tar.gz
+          if-no-files-found: error
+          retention-days: 14
