@@ -48,11 +48,21 @@ def test_sample_cards_follow_the_normalized_contract() -> None:
 def test_combat_resource_matches_current_engine_contract() -> None:
     formula = _load("combat-formula.json")
     assert formula["formula_id"] == "waifumon-v1"
-    assert formula["elements"] == {
-        "strong": 1.25,
-        "neutral": 1.0,
-        "resist": 0.75,
-        "override_allowed": True,
+    assert formula["elements"]["strong"] == 1.25
+    assert formula["elements"]["neutral"] == 1.0
+    assert formula["elements"]["resist"] == 0.75
+    assert formula["elements"]["override_allowed"] is False
+    assert formula["elements"]["strong_against"] == {
+        "fuego": "hielo",
+        "hielo": "aire",
+        "aire": "tierra",
+        "tierra": "rayo",
+        "rayo": "agua",
+        "agua": "fuego",
+        "luz": "oscuridad",
+        "oscuridad": "mente",
+        "mente": "arcano",
+        "arcano": "luz",
     }
     assert formula["critical"]["default_multiplier"] == 1.5
     assert "Math.random" in formula["randomness"]["forbidden"]
