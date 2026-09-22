@@ -381,6 +381,36 @@ class GameGachaRoll(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+class TmaStarPurchase(Base):
+    """Auditable Telegram Stars purchase with exactly-once fulfillment semantics."""
+
+    __tablename__ = "tma_star_purchases"
+    __table_args__ = (
+        UniqueConstraint(
+            "telegram_payment_charge_id",
+            name="uq_tma_star_purchase_charge",
+        ),
+        UniqueConstraint(
+            "invoice_payload",
+            name="uq_tma_star_purchase_payload",
+        ),
+        CheckConstraint("amount > 0", name="ck_tma_star_purchase_amount_positive"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    product: Mapped[str] = mapped_column(String(64))
+    currency: Mapped[str] = mapped_column(String(8))
+    amount: Mapped[int] = mapped_column(Integer)
+    invoice_payload: Mapped[str] = mapped_column(String(512))
+    telegram_payment_charge_id: Mapped[str] = mapped_column(String(255))
+    provider_payment_charge_id: Mapped[str | None] = mapped_column(String(255))
+    fulfilled: Mapped[bool] = mapped_column(default=False)
+    fulfilled_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+    
 class GameDailyMissionProgress(Base):
     """Durable progress for one player's daily mission in one community."""
 
