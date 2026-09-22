@@ -143,8 +143,8 @@ class WaifuMonJavaEngine:
             if response.get("request_id") not in {request_id, "unknown"}:
                 raise RuntimeError("WaifuMon engine returned an unrelated request id")
             if not response.get("success", False):
-                code = response.get("errorCode") or "ENGINE_ERROR"
-                message = response.get("errorMessage") or "Java engine request failed"
+                code = response.get("error_code") or response.get("errorCode") or "ENGINE_ERROR"
+                message = response.get("error_message") or response.get("errorMessage") or "Java engine request failed"
                 raise ValueError(f"{code}: {message}")
             return response
 
