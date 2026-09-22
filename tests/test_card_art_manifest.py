@@ -18,6 +18,8 @@ def test_card_art_manifest_matches_v2_matrix_contract() -> None:
     assert data["execution_rules"]["ur_alt_holo"]["supported"] is True
     assert data["execution_rules"]["ur_alt_holo"]["requires_tier"] == "UR"
     assert data["execution_rules"]["ur_alt_holo"]["requires_adult_eligible"] is True
+    assert data["provenance_manifest"] == "assets/waifus/provenance_manifest.json"
+    assert data["provenance_policy"]["new_assets"] == "original or explicit rights to modify and redistribute"
 
     assert len(data["items"]) == 78
     valid_tiers = {tier.value for tier in CardArtTier}
