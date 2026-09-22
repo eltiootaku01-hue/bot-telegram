@@ -1,6 +1,6 @@
 {
   "project": "WaifuMon Scavenger Protocol",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "policy": {
     "only_direct_downloads_in_downloads": true,
     "license_gate": "CC0-or-equivalent-redistribution-rights-required",
@@ -10,39 +10,43 @@
   "downloads": [
     {
       "category": "vfx",
-      "name": "particle_pack",
-      "url": "https://kenney.nl/content/3-assets/43-particle-pack/particle-pack.zip",
-      "source_url": "https://kenney.nl/assets/particle-pack",
+      "name": "kenney_particle_pack_oga_mirror",
+      "url": "https://opengameart.org/sites/default/files/kenney_particlePack.zip",
+      "source_url": "https://opengameart.org/content/particle-pack-80-sprites",
       "license": "CC0-1.0",
       "license_verified": true,
-      "target_dir": "assets/raw/vfx"
+      "target_dir": "assets/raw/vfx",
+      "mirror_of": "https://kenney.nl/assets/particle-pack"
     },
     {
       "category": "ui",
-      "name": "crosshair_pack",
-      "url": "https://kenney.nl/content/3-assets/231-crosshair-pack/crosshair-pack.zip",
-      "source_url": "https://kenney.nl/assets/crosshair-pack",
+      "name": "kenney_crosshair_pack_oga_mirror",
+      "url": "https://opengameart.org/sites/default/files/kenney_crosshair-pack.zip",
+      "source_url": "https://opengameart.org/content/crosshair-pack-200%C3%97",
       "license": "CC0-1.0",
       "license_verified": true,
-      "target_dir": "assets/raw/ui"
+      "target_dir": "assets/raw/ui",
+      "mirror_of": "https://kenney.nl/assets/crosshair-pack"
     },
     {
       "category": "sfx",
-      "name": "digital_audio_pack",
-      "url": "https://kenney.nl/content/3-assets/302-digital-audio/digital-audio.zip",
-      "source_url": "https://kenney.nl/assets/digital-audio",
+      "name": "kenney_digital_sfx_63",
+      "url": "https://opengameart.org/sites/default/files/Digital_SFX_Set.zip",
+      "source_url": "https://opengameart.org/content/63-digital-sound-effects-lasers-phasers-space-etc",
       "license": "CC0-1.0",
       "license_verified": true,
-      "target_dir": "assets/raw/audio"
+      "target_dir": "assets/raw/audio",
+      "mirror_of": "https://kenney.nl/assets/digital-audio"
     },
     {
       "category": "ui",
-      "name": "game_icons",
-      "url": "https://kenney.nl/content/3-assets/523-game-icons/game-icons.zip",
-      "source_url": "https://kenney.nl/assets/game-icons",
+      "name": "kenney_game_icons_oga_mirror",
+      "url": "https://lpc.opengameart.org/sites/default/files/Kenney_gameIcons.zip",
+      "source_url": "https://lpc.opengameart.org/content/game-icons",
       "license": "CC0-1.0",
       "license_verified": true,
-      "target_dir": "assets/raw/icons"
+      "target_dir": "assets/raw/icons",
+      "mirror_of": "https://kenney.nl/assets/game-icons"
     },
     {
       "category": "vfx",
@@ -129,6 +133,39 @@
       "license": "CC0-1.0",
       "license_verified": true,
       "target_dir": "assets/raw/audio"
+    },
+    {
+      "category": "ui",
+      "name": "cc0_game_user_interface_1",
+      "kind": "zip",
+      "url": "https://opengameart.org/sites/default/files/UI%201.zip",
+      "source_url": "https://opengameart.org/content/game-user-interface-1",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/ui",
+      "notes": "100+ icons, number sets, star ratings and button text graphics."
+    },
+    {
+      "category": "ui",
+      "name": "cc0_ui_pack",
+      "kind": "zip",
+      "url": "https://opengameart.org/sites/default/files/UI%20Pack.zip",
+      "source_url": "https://opengameart.org/content/ui-pack-1",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/ui",
+      "notes": "Compact button/UI pack built using Kenney Game Icons."
+    },
+    {
+      "category": "vfx",
+      "name": "cc0_ultimate_particle_pack",
+      "kind": "zip",
+      "url": "https://opengameart.org/sites/default/files/ultimate_particle_pack_for_casual_fight_game.zip",
+      "source_url": "https://opengameart.org/content/ultimate-particle-pack-for-casual-fight-game",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/vfx",
+      "notes": "Small particle pack suitable for lightweight battle effects."
     }
   ],
   "research_only": [
