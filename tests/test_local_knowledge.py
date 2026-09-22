@@ -73,7 +73,7 @@ async def test_chat_module_answers_known_cari_question_without_brain(database) -
     module = ChatModule(
         database,
         identity=BotIdentity.CARI,
-        settings=Settings(ai_enabled=False),
+        settings=Settings(ai_enabled=False, authorized_chat_ids="99"),
     )
     answers: list[str] = []
 
@@ -99,7 +99,7 @@ async def test_chat_module_responds_to_unknown_question_with_authored_fallback(d
     module = ChatModule(
         database,
         identity=BotIdentity.CARI,
-        settings=Settings(ai_enabled=False),
+        settings=Settings(ai_enabled=False, authorized_chat_ids="99"),
     )
     answers: list[str] = []
 
@@ -140,7 +140,7 @@ async def test_unknown_cari_question_creates_aggregate_knowledge_gap(database) -
     module = ChatModule(
         database,
         identity=BotIdentity.CARI,
-        settings=Settings(ai_enabled=False),
+        settings=Settings(ai_enabled=False, authorized_chat_ids="100"),
     )
     answers: list[str] = []
 
