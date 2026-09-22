@@ -249,6 +249,9 @@ class TmaCombatService:
             critical=result.critical,
             defender_hp=result.defender_hp,
             defender_max_hp=100,
+            state_version=result.state_version,
+            event_ids=list(result.event_ids),
+            reward_ids=list(result.reward_ids),
         )
 
 
