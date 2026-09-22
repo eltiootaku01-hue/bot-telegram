@@ -147,19 +147,28 @@ function setupCombatActions(combat, api, init) {
     }
   });
 }
-function setupStore() {
+function setupStore(api) {
   document.querySelectorAll("[data-purchase]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const product = button.dataset.purchase || "unknown";
-      tg?.showPopup?.({
-        title: "Telegram Stars",
-        message: `${product}: la factura debe ser creada y validada por el bot.`,
-        buttons: [{ type: "close" }],
-      });
+    button.addEventListener("click", async () => {
+      const product = button.dataset.purchase || "";
+      button.disabled = true;
+      try {
+        const invoice = await api.createInvoice(product);
+        if (tg?.openInvoice) {
+          tg.openInvoice(invoice.invoice_link);
+        } else if (tg?.openTelegramLink) {
+          tg.openTelegramLink(invoice.invoice_link);
+        } else {
+          window.open(invoice.invoice_link, "_blank", "noopener,noreferrer");
+        }
+      } catch (error) {
+        tg?.showAlert?.(error instanceof Error ? error.message : "No se pudo crear la factura.");
+      } finally {
+        button.disabled = false;
+      }
     });
   });
 }
-
 function setupReferralShare() {
   const button = document.getElementById("share-referral");
   if (!button) return;
