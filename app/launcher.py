@@ -237,6 +237,25 @@ class BotLauncher(tk.Tk):
         self.ai_global_var.set(values.get("AI_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"})
         self._sync_ai_controls()
 
+        tma_box = ttk.LabelFrame(outer, text="Telegram Mini App · API", padding=14)
+        tma_box.pack(fill="x", pady=(16, 0))
+        tma_box.columnconfigure(1, weight=1)
+        ttk.Checkbutton(
+            tma_box,
+            text="Activar API TMA al iniciar Bot Manager",
+            variable=self.tma_enabled_var,
+        ).grid(row=0, column=0, columnspan=4, sticky="w", padx=5, pady=(0, 8))
+        ttk.Label(tma_box, text="Host").grid(row=1, column=0, sticky="w", padx=5, pady=4)
+        ttk.Entry(tma_box, textvariable=self.tma_host_var, width=18).grid(row=1, column=1, sticky="w", padx=5, pady=4)
+        ttk.Label(tma_box, text="Puerto").grid(row=1, column=2, sticky="w", padx=(18, 5), pady=4)
+        ttk.Entry(tma_box, textvariable=self.tma_port_var, width=10).grid(row=1, column=3, sticky="w", padx=5, pady=4)
+        ttk.Label(tma_box, text="Orígenes CORS autorizados").grid(row=2, column=0, sticky="w", padx=5, pady=4)
+        ttk.Entry(tma_box, textvariable=self.tma_origins_var).grid(row=2, column=1, columnspan=3, sticky="ew", padx=5, pady=4)
+        ttk.Label(
+            tma_box,
+            text="Separá varios orígenes por coma. initData se valida en el servidor en cada GET/POST.",
+        ).grid(row=3, column=0, columnspan=4, sticky="w", padx=5, pady=(4, 0))
+
         options = ttk.Frame(outer)
         options.pack(fill="x", pady=(16, 0))
         ttk.Label(options, text="Proveedor preferido (opcional)").grid(row=0, column=0, sticky="w")
