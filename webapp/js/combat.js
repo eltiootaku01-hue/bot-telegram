@@ -5,6 +5,8 @@ const HIT_FLASH_FRAMES = 3;
 const POSES = ["idle", "attack", "hit"];
 const ASSET_FILTER = "contrast(1.3) saturate(1.5) hue-rotate(-10deg)";
 
+import { LightweightCombatEffects, deterministicScrapBurst } from "./effects.js";
+
 function spriteUrl(characterId, pose = "idle") {
   return new URL(`../../assets/production/sprites/${characterId}_${pose}.png`, import.meta.url).href;
 }
@@ -48,6 +50,7 @@ export class WaifuMonCombatCanvas {
     this.shakeUntil = 0;
     this.shakeFrameId = 0;
     this.hitFlashFrames = 0;
+    this.effects = new LightweightCombatEffects();
   }
 
   setEntities(entities) {
@@ -90,6 +93,32 @@ export class WaifuMonCombatCanvas {
     this.render();
   }
 
+  triggerAction(characterId, action, targetId = null) {
+    const actor = this.entities.find((entity) => entity.id === characterId);
+    const target = targetId
+      ? this.entities.find((entity) => entity.id === targetId)
+      : null;
+    if (!actor) return;
+
+    const actorX = this.width * actor.x;
+    const actorY = this.height * actor.y - actor.size * 0.55;
+    const targetX = target ? this.width * target.x : actorX + 80;
+    const targetY = target
+      ? this.height * target.y - target.size * 0.55
+      : actorY;
+
+    if (action === "special") {
+      const burst = deterministicScrapBurst(characterId.length + action.length);
+      this.effects.burst(targetX, targetY, burst);
+    } else if (action === "attack") {
+      this.effects.slash(actorX + actor.size * 0.35, actorY, { direction: 1 });
+    } else if (action === "defend") {
+      this.effects.burst(actorX, actorY, { count: 8, power: 0.5, size: 1.8, flash: 0.05 });
+    }
+    this._ensureEffectsFrame();
+    this.render();
+  }
+
   triggerImpact() {
     this.hitFlashFrames = HIT_FLASH_FRAMES;
     if (!this.reducedMotion) {
@@ -103,12 +132,18 @@ export class WaifuMonCombatCanvas {
 
   _impactFrame() {
     this.shakeFrameId = 0;
+    this.effects.step(1 / 60);
     this.render();
-    if (performance.now() < this.shakeUntil || this.hitFlashFrames > 0) {
+    if (performance.now() < this.shakeUntil || this.hitFlashFrames > 0 || this.effects.active) {
       this.shakeFrameId = requestAnimationFrame(() => this._impactFrame());
     } else {
       this.shakeUntil = 0;
     }
+  }
+
+  _ensureEffectsFrame() {
+    if (this.shakeFrameId) return;
+    this.shakeFrameId = requestAnimationFrame(() => this._impactFrame());
   }
 
   render() {
@@ -154,6 +189,8 @@ export class WaifuMonCombatCanvas {
       ctx.textBaseline = "middle";
       ctx.fillText(entity.name.toUpperCase(), px, py + 18);
     }
+
+    this.effects.draw(ctx);
 
     if (this.hitFlashFrames > 0) {
       ctx.fillStyle = "#ff2a2a";
