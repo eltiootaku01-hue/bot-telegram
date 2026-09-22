@@ -249,9 +249,9 @@ def _png_dimensions_and_alpha(data: bytes) -> tuple[int, int, bool]:
     return width, height, alpha
 
 
-def _valid_png(data: bytes) -> tuple[int, int]:
+def _valid_png(data: bytes, *, enforce_min_size: bool = True) -> tuple[int, int]:
     width, height, alpha = _png_dimensions_and_alpha(data)
-    if len(data) < MIN_PNG_BYTES:
+    if enforce_min_size and len(data) < MIN_PNG_BYTES:
         raise ValueError("PNG is too small")
     if not alpha:
         raise ValueError("PNG has no transparency channel")
@@ -763,7 +763,7 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
             asset_id = f"spr_local_cc0_{seed + 1:02d}"
             destination = RAW_SPRITE_DIR / f"{asset_id}_raw.png"
             destination.write_bytes(data)
-            width, height = _valid_png(data)
+            width, height = _valid_png(data, enforce_min_size=False)
             source_page = "local://waifu-drone/offline-original"
             source_url = f"local://waifu-drone/offline-original/{asset_id}"
             records.append(
