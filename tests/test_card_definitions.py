@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from app.core.config import Settings
 from app.db.database import Database
-from app.db.models import CardDefinition, CardRollClaim, GameCardCollection, GameProfile
+from app.db.models import CardDefinition, CardRollClaim, Chat, GameCardCollection, GameProfile, User
 from app.game.card_definitions import CardDefinitionService
 
 
@@ -52,8 +52,11 @@ async def test_new_active_definition_enters_roll_pool_immediately(database):
     service = CardDefinitionService(Settings(), rng=FixedRng())
 
     async with database.session(write=True) as session:
-        session.add(
-            CardDefinition(
+        session.add_all(
+            [
+                User(id=7, first_name="Player"),
+                Chat(id=-100, type="supergroup", title="Community"),
+                CardDefinition(
                 id="rem-sleeping-sr-01",
                 character_id="rem",
                 character_name="Rem (Dormida)",
@@ -62,8 +65,9 @@ async def test_new_active_definition_enters_roll_pool_immediately(database):
                 image_url="assets/cards/rem_sleeping_sr.jpg",
                 source_provider="IA (PixAI/Midjourney)",
                 collection_points=150,
-                active=True,
-            )
+                    active=True,
+                ),
+            ]
         )
 
     async with database.session(write=True) as session:
