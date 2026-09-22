@@ -4,7 +4,7 @@ import json
 
 from sqlalchemy import select
 
-from app.command_center.models import BotAvatar, CafeTable, ManualMessageCommand, MoveCommand, OperationMode
+from app.command_center.models import BotAvatar, ManualMessageCommand, MoveCommand, OperationMode
 from app.command_center.telegram_gateway import TelegramGateway
 from app.command_center.vault_client import CardVaultClient
 from app.core.time import utc_now
