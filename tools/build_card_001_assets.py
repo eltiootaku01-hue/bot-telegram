@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -12,6 +13,7 @@ QUAR = ROOT / "assets/quarantine/card_stages"
 ART = ROOT / "assets/waifus/art_manifest.json"
 PROMPTS = ROOT / "assets/waifus/card_art_prompt_manifest.json"
 QA = ROOT / "assets/waifus/card_art_qa_manifest.json"
+PROVENANCE = ROOT / "assets/waifus/provenance_manifest.json"
 REPORT = ROOT / "docs/generated/WAIFUMON_CARD_001_ALISA_STAGES.md"
 
 PALETTE = {"navy":"#102743","blue":"#284c78","ice":"#eef4fb","skin":"#f4cec1","red":"#8c2b46","gold":"#d8b876","line":"#223954","eye":"#4e8bd0"}
@@ -96,6 +98,45 @@ def update_manifests() -> None:
     for path, data in ((QA,qa),(ART,art),(PROMPTS,prompts)):
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def update_provenance() -> None:
+    data = json.loads(PROVENANCE.read_text(encoding="utf-8"))
+    production_assets = {
+        "assets/production/cards/alisa-kujo--normal.jpg",
+        "assets/production/cards/alisa-kujo--r.jpg",
+    }
+    records = [record for record in data.get("records", []) if record.get("asset") not in production_assets]
+    for target in (
+        PROD / "alisa-kujo--normal.jpg",
+        PROD / "alisa-kujo--r.jpg",
+    ):
+        records.append(
+            {
+                "asset": target.relative_to(ROOT).as_posix(),
+                "status": "original",
+                "rights_status": "cleared",
+                "source_url": "",
+                "creator": "Project original SVG card pipeline",
+                "license": "Original project asset generated from repository-owned vector source",
+                "sha256": sha256_file(target),
+                "notes": "Generated deterministically by tools/build_card_001_assets.py; no third-party artwork is imported.",
+            }
+        )
+    records.sort(key=lambda record: record["asset"])
+    data["records"] = records
+    PROVENANCE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
 def write_report() -> None:
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text(
@@ -116,4 +157,5 @@ if __name__ == "__main__":
     save_image("SR", PROD / "alisa-kujo--normal.jpg")
     save_image("UR", QUAR / "alisa-kujo--ur.jpg")
     update_manifests()
+    update_provenance()
     write_report()
