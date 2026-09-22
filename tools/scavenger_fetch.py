@@ -23,7 +23,7 @@ class ScavengerError(RuntimeError):
 
 def _safe_member_path(target_dir: Path, member_name: str) -> Path:
     """Reject absolute paths and path traversal inside ZIP archives."""
-    normalized = PurePosixPath(member_name.replace("\", "/"))
+    normalized = PurePosixPath(member_name.replace("\\", "/"))
     if normalized.is_absolute() or ".." in normalized.parts:
         raise ScavengerError(f"Unsafe ZIP member path: {member_name!r}")
 
