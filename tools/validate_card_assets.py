@@ -6,12 +6,49 @@ import shutil
 import sys
 from pathlib import Path
 
-from app.game.art_provenance import ALLOWED_PROVENANCE_STATUSES, validate_provenance
+from app.game.art_provenance import validate_provenance
 from app.game.card_art_assets import CARD_ART_EXTENSIONS, validate_card_asset
 
 PRODUCTION_ROOT = Path("assets/production/cards")
 QUARANTINE_ROOT = Path("assets/quarantine")
 PROVENANCE_MANIFEST = Path("assets/waifus/provenance_manifest.json")
+
+
+def _quarantine(path: Path) -> Path:
+    QUARANTINE_ROOT.mkdir(parents=True, exist_ok=True)
+    destination = QUARANTINE_ROOT / path.name
+    if destination.exists():
+        stem = destination.stem
+        suffix = destination.suffix
+        index = 2
+        while destination.exists():
+            destination = QUARANTINE_ROOT / f"{stem}--quarantine-{index}{suffix}"
+            index += 1
+    shutil.move(str(path), str(destination))
+    return destination
+
+
+def _load_provenance() -> dict[str, dict]:
+    if not PROVENANCE_MANIFEST.is_file():
+        return {}
+    try:
+        data = json.loads(PROVENANCE_MANIFEST.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Invalid provenance manifest JSON: {exc}") from exc
+    records = data.get("records")
+    if not isinstance(records, list):
+        raise SystemExit("Invalid provenance manifest: records must be a list")
+
+    by_asset: dict[str, dict] = {}
+    for record in records:
+        if not isinstance(record, dict) or not record.get("asset"):
+            raise SystemExit("Invalid provenance manifest: every record needs asset")
+        asset = str(record["asset"]).replace("\\", "/")
+        if asset in by_asset:
+            raise SystemExit(f"Duplicate provenance record: {asset}")
+        by_asset[asset] = record
+    return by_asset
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -56,7 +93,11 @@ def main() -> int:
         if not result.valid:
             failures.append(path)
 
-        validate_provenance(path, provenance.get(path.as_posix()), failures=provenance_failures)
+        validate_provenance(
+            path,
+            provenance.get(path.as_posix()),
+            failures=provenance_failures,
+        )
 
     production_paths = {
         path.as_posix()
