@@ -252,6 +252,59 @@ class WaifuMonJavaEngine:
             reward_ids=tuple(response.get("reward_ids") or ()),
         )
 
+
+    def combat_formula(
+        self,
+        *,
+        attacker: dict[str, Any],
+        defender: dict[str, Any],
+        skill: dict[str, Any],
+        turn_id: str,
+        status_multiplier: float = 1.0,
+        move_multiplier: float = 1.0,
+        element_multiplier: float | None = None,
+        player_id: int = 0,
+        community_id: int = 0,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "attacker": attacker,
+            "defender": defender,
+            "skill": skill,
+            "turn_id": turn_id,
+            "status_multiplier": status_multiplier,
+            "move_multiplier": move_multiplier,
+            "target_max_hp": int(defender.get("max_hp", 100)),
+        }
+        if element_multiplier is not None:
+            payload["element_multiplier"] = element_multiplier
+        response = self._call(
+            player_id=player_id,
+            community_id=community_id,
+            command="combat.resolve_formula",
+            payload=payload,
+            idempotency_key=(
+                idempotency_key
+                or f"formula:{turn_id}:{attacker['id']}:{defender['id']}:{skill['skill_id']}"
+            ),
+        )
+        return dict(response["payload"])
+
+    def status_resolve(
+        self,
+        *,
+        payload: dict[str, Any],
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        response = self._call(
+            player_id=0,
+            community_id=0,
+            command="status.resolve",
+            payload=payload,
+            idempotency_key=idempotency_key,
+        )
+        return dict(response["payload"])
+
     def evolution(self, *, level: int) -> dict[str, Any]:
         response = self._call(
             player_id=0,
