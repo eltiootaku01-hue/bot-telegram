@@ -6,7 +6,7 @@ pytest.importorskip("PIL")
 
 from PIL import Image
 
-from tools.process_bosozoku_sprite import MUGEN_MAGENTA, TINT_COLOR, process_sprite
+from app.game.bosozoku_sprite import MUGEN_MAGENTA, TINT_COLOR, process_sprite
 
 
 def test_bosozoku_sprite_processor_clears_magenta_and_preserves_alpha(tmp_path: Path) -> None:
