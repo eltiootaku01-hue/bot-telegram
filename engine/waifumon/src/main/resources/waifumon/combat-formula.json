@@ -16,7 +16,42 @@
     "strong": 1.25,
     "neutral": 1.0,
     "resist": 0.75,
-    "override_allowed": true
+    "override_allowed": false,
+    "strong_against": {
+      "fuego": "hielo",
+      "hielo": "aire",
+      "aire": "tierra",
+      "tierra": "rayo",
+      "rayo": "agua",
+      "agua": "fuego",
+      "luz": "oscuridad",
+      "oscuridad": "mente",
+      "mente": "arcano",
+      "arcano": "luz"
+    }
+  },
+  "skills": {
+    "attack": {
+      "skill_id": "attack",
+      "power": 60,
+      "crit_rate": 8,
+      "crit_multiplier": 1.5,
+      "damage_floor": 1
+    },
+    "special": {
+      "skill_id": "special",
+      "power": 115,
+      "crit_rate": 12,
+      "crit_multiplier": 1.5,
+      "damage_floor": 1
+    },
+    "defend": {
+      "skill_id": "defend",
+      "power": 0,
+      "crit_rate": 0,
+      "crit_multiplier": 1.0,
+      "damage_floor": 0
+    }
   },
   "randomness": {
     "mode": "seeded",
