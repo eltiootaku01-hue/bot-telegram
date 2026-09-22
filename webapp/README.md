@@ -101,3 +101,33 @@ y para el cañón:
 `webapp/assets/production/models/weapons/shoulder_cannon.gltf`
 
 La demo usa un maniquí local como fallback si el modelo de personaje no existe. Los efectos de cartas son visuales; la autoridad real de inventario, puntos y combate sigue perteneciendo al backend.
+
+### Catálogo de equipamiento TCG
+
+El catálogo oficial de cartas de equipamiento de la demo 3D está en:
+
+`webapp/data/cards_equipment.json`
+
+Cada entrada contiene dos contratos en paralelo:
+
+- **Gameplay:** `rarity`, `cost` y `gameplay_effects`.
+- **3D:** `model_url`, `target_bone`, `socket_name`, `offset_position`, `offset_rotation` y `scale`.
+
+El loader reutilizable está en `webapp/js/equipment_catalog.js`. Valida el esquema, evita `card_id` duplicados y convierte la entrada `3d_attachment` al formato esperado por `EquipmentSystem.attachEquipment()`.
+
+La demo `nikke_tcg_demo.html` genera la mano de equipamiento desde ese JSON. Al seleccionar una carta, el navegador usa su `card_id` para montar o desmontar el modelo correspondiente; no existe una segunda configuración hardcodeada del arma.
+
+Los cuatro modelos y cuatro artes indicados por el catálogo todavía deben incorporarse al repositorio/LFS para que los montajes sean visibles con assets reales:
+
+`webapp/assets/production/models/equipment/shoulder_cannon.gltf`
+`webapp/assets/production/models/equipment/cyber_wings.gltf`
+`webapp/assets/production/models/equipment/vibro_katana.gltf`
+`webapp/assets/production/models/equipment/cyber_visor.gltf`
+
+`webapp/assets/production/cards/eq_cannon.jpg`
+`webapp/assets/production/cards/eq_wings.jpg`
+`webapp/assets/production/cards/eq_katana.jpg`
+`webapp/assets/production/cards/eq_visor.jpg`
+
+La ausencia de esos archivos no rompe la demo: `EquipmentSystem` rechaza la carga del asset y la interfaz conserva el estado seguro en lugar de dejar equipamiento fantasma. La lógica de juego autoritativa sigue en backend.
+
