@@ -1248,7 +1248,7 @@ class GameModule(BotModule):
             await callback.answer("Acción inválida.", show_alert=True)
             return
         taiga = get_character("taiga")
-        result = self.engine.combat(taiga, taiga, action_key, callback.id)
+        result = await self.engine.combat_async(taiga, taiga, action_key, callback.id)
         critical = " 💥 CRÍTICO" if result.critical else ""
         await self._observe_action("combat_action", callback.from_user.id)
         await callback.answer(f"{result.action.label}: {result.damage} daño{critical}", show_alert=True)
