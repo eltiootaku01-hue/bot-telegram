@@ -7,7 +7,6 @@ import uuid
 from collections.abc import Callable
 from urllib.parse import urljoin
 
-
 from aiohttp import web
 from aiogram import Bot
 from aiogram.types import LabeledPrice
@@ -451,7 +450,6 @@ async def _create_invoice(request: web.Request) -> web.Response:
             title=title,
             description=description,
             payload=payload,
-            provider_token="",
             currency="XTR",
             prices=[LabeledPrice(label=title, amount=amount)],
         )
