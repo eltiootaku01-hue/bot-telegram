@@ -113,6 +113,8 @@ source files.
 
 Decision: **REFERENCE / MANUAL LICENSE REVIEW ONLY**.
 
+Do not treat cropping, hue changes, recoloring, compositing, or covering a signature with UI geometry as a substitute for permission to modify and redistribute artwork.
+
 ### RPG-Atelier / Velsarbor
 
 The official Velsarbor site states that its game resources are freely available
