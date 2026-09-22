@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "policy": "Production art requires asset-level provenance. New assets must be original or accompanied by explicit rights to modify and redistribute. Legacy production files may be grandfathered only when their historical source is not recoverable; they must not be treated as newly cleared.",
+  "records": [
+    {
+      "asset": "assets/production/cards/alisa-kujo--normal.jpg",
+      "status": "grandfathered_legacy",
+      "rights_status": "unverified",
+      "source_url": "",
+      "creator": "unknown",
+      "license": "",
+      "sha256": "",
+      "notes": "Pre-existing production asset. No source/licensing record is currently available; do not copy this status to new assets."
+    },
+    {
+      "asset": "assets/production/cards/alisa-kujo--r.jpg",
+      "status": "grandfathered_legacy",
+      "rights_status": "unverified",
+      "source_url": "",
+      "creator": "unknown",
+      "license": "",
+      "sha256": "",
+      "notes": "Pre-existing production asset. No source/licensing record is currently available; do not copy this status to new assets."
+    }
+  ]
+}
