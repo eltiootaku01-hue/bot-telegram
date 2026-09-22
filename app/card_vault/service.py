@@ -162,13 +162,12 @@ class CardVaultService:
     ) -> CardInventory:
         if delta == 0 and lock_delta == 0:
             raise ValueError("inventory adjustment cannot be zero")
-        existing = await session.scalar(
-            select(CardInventory).where(
-                CardInventory.holder_type == holder_type.value,
-                CardInventory.holder_key == holder_key,
-                CardInventory.card_id == card_id,
-            )
+        filters = (
+            CardInventory.holder_type == holder_type.value,
+            CardInventory.holder_key == holder_key,
+            CardInventory.card_id == card_id,
         )
+        existing = await session.scalar(select(CardInventory).where(*filters))
         if existing is None:
             if delta < 0 or lock_delta < 0:
                 raise ValueError("cannot remove an absent card")
@@ -180,18 +179,34 @@ class CardVaultService:
                 quantity=delta,
                 locked_quantity=lock_delta,
             )
-            session.add(existing)
-            await session.flush()
-            return existing
+            try:
+                async with session.begin_nested():
+                    session.add(existing)
+                    await session.flush()
+            except IntegrityError:
+                existing = await session.scalar(select(CardInventory).where(*filters))
+                if existing is None:
+                    raise
+            else:
+                return existing
 
-        new_quantity = existing.quantity + delta
-        new_locked = existing.locked_quantity + lock_delta
-        if new_quantity < 0 or new_locked < 0 or new_locked > new_quantity:
+        result = await session.execute(
+            update(CardInventory)
+            .where(
+                *filters,
+                CardInventory.quantity + delta >= 0,
+                CardInventory.locked_quantity + lock_delta >= 0,
+                CardInventory.locked_quantity + lock_delta <= CardInventory.quantity + delta,
+            )
+            .values(
+                quantity=CardInventory.quantity + delta,
+                locked_quantity=CardInventory.locked_quantity + lock_delta,
+                updated_at=utc_now(),
+            )
+        )
+        if result.rowcount != 1:
             raise ValueError("card inventory would become negative or over-locked")
-        existing.quantity = new_quantity
-        existing.locked_quantity = new_locked
-        existing.updated_at = utc_now()
-        await session.flush()
+        await session.refresh(existing)
         return existing
 
     async def transfer(
