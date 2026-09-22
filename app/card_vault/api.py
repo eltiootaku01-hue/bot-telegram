@@ -77,6 +77,28 @@ class VaultApiServer:
             "telegram_protected": row.telegram_protected,
         })
 
+    async def _transfer(self, request: web.Request) -> web.Response:
+        body: dict[str, Any] = await request.json()
+        from_type = __import__("app.db.card_vault_models", fromlist=["CardHolderType"]).CardHolderType(
+            str(body["from_type"])
+        )
+        to_type = __import__("app.db.card_vault_models", fromlist=["CardHolderType"]).CardHolderType(
+            str(body["to_type"])
+        )
+        async with self.database.session() as session:
+            result = await self.service.transfer(
+                session,
+                card_id=str(body["card_id"]),
+                from_type=from_type,
+                from_key=str(body["from_key"]),
+                to_type=to_type,
+                to_key=str(body["to_key"]),
+                quantity=int(body["quantity"]),
+                actor_user_id=int(body["actor_user_id"]) if body.get("actor_user_id") is not None else None,
+                reference_id=str(body["reference_id"]),
+            )
+        return web.json_response(asdict(result))
+
     async def _inventory(self, request: web.Request) -> web.Response:
         holder_type = CardHolderType(request.query["holder_type"])
         holder_key = request.query["holder_key"]
@@ -92,6 +114,7 @@ class VaultApiServer:
         app = web.Application(middlewares=[self._auth])
         app.router.add_get("/healthz", self._health)
         app.router.add_post("/v1/cards", self._register_card)
+        app.router.add_post("/v1/transfer", self._transfer)
         app.router.add_get("/v1/inventory", self._inventory)
         self._runner = web.AppRunner(app)
         await self._runner.setup()
