@@ -50,6 +50,10 @@ def test_save_config_persists_chat_access_policy(monkeypatch, tmp_path: Path) ->
             self.media_var = FakeVar("0")
             self.publish_page_var = FakeVar("-100333")
             self.ai_global_var = FakeVar(False)
+            self.tma_enabled_var = FakeVar(True)
+            self.tma_host_var = FakeVar("0.0.0.0")
+            self.tma_port_var = FakeVar("8765")
+            self.tma_origins_var = FakeVar("https://eltiootaku01-hue.github.io")
             self.ai_bot_vars = {name: FakeVar(False) for name in launcher.BOTS}
             self.ai_vars = {name: FakeVar("") for name, _ in launcher.AI_FIELDS}
             self.bot_vars = {
