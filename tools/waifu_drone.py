@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -25,7 +26,7 @@ BLOCKED_TERMS = {
     "erotic", "fetish", "watermark", "logo", "preview",
 }
 API_URL = "https://commons.wikimedia.org/w/api.php"
-USER_AGENT = "WaifuMon-WaifuDrone/1.0"
+USER_AGENT = "WaifuMon-WaifuDrone/1.2"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -37,45 +38,44 @@ def _plain(value: object) -> str:
     return re.sub(r"<[^>]+>", " ", str(value or ""))
 
 
-def _metadata_text(page: dict, info: dict) -> str:
-    ext = info.get("extmetadata") or {}
-    values = [
-        page.get("title", ""),
-        ext.get("ImageDescription", {}),
-        ext.get("Categories", {}),
-    ]
-    return " ".join(_plain(v.get("value", "") if isinstance(v, dict) else v) for v in values).casefold()
-
-
 def _license(page: dict) -> str:
-    ext = page.get("_imageinfo", {}).get("extmetadata", {}) if page.get("_imageinfo") else {}
-    return str(
-        next(
-            (
-                value.get("value", "") if isinstance(value, dict) else value
-                for key in ("LicenseShortName", "UsageTerms", "License")
-                if (value := ext.get(key))
-                and str(value.get("value", "") if isinstance(value, dict) else value).strip()
-                in ALLOWED_LICENSES
-            ),
-            "",
-        )
-    ).strip()
+    ext = ((page.get("imageinfo") or [{}])[0]).get("extmetadata") or {}
+    for key in ("LicenseShortName", "UsageTerms", "License"):
+        value = ext.get(key)
+        if isinstance(value, dict):
+            value = value.get("value", "")
+        value = str(value or "").strip()
+        if value in ALLOWED_LICENSES:
+            return value
+    return ""
+
+
+def _blocked(page: dict) -> bool:
+    info = (page.get("imageinfo") or [{}])[0]
+    ext = info.get("extmetadata") or {}
+    haystack = " ".join(
+        [
+            _plain(page.get("title")),
+            _plain(ext.get("ImageDescription", {})),
+            _plain(ext.get("Categories", {})),
+        ]
+    ).casefold()
+    return any(term in haystack for term in BLOCKED_TERMS)
 
 
 def _api_get(params: dict[str, str]) -> dict:
     query = urllib.parse.urlencode(params)
     request = urllib.request.Request(
-        f"{API_URL}?{query}",
+        API_URL + "?" + query,
         headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
     )
     with urllib.request.urlopen(request, timeout=20) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
-def search_candidates() -> list[dict]:
-    seen: set[str] = set()
-    candidates: list[dict] = []
+def search_candidates(target_amount: int) -> list[dict]:
+    candidates = []
+    seen = set()
 
     for tag in SEARCH_TAGS:
         data = _api_get(
@@ -89,46 +89,78 @@ def search_candidates() -> list[dict]:
                 "gsrlimit": "50",
                 "prop": "imageinfo",
                 "iiprop": "url|mime|size|extmetadata",
+                "iiurlwidth": "256",
             }
         )
         for page in data.get("query", {}).get("pages", []):
-            imageinfo = page.get("imageinfo") or []
-            if not imageinfo:
+            info_list = page.get("imageinfo") or []
+            if not info_list:
                 continue
-            info = imageinfo[0]
-            url = str(info.get("url", "")).strip()
-            mime = str(info.get("mime", "")).lower()
-            page["_imageinfo"] = info
-
+            info = info_list[0]
+            url = str(info.get("thumburl") or info.get("url") or "").strip()
+            mime = str(info.get("thumbmime") or info.get("mime") or "").casefold()
             if not url or url in seen:
                 continue
             seen.add(url)
-            if mime != "image/png" or not urllib.parse.urlparse(url).path.lower().endswith(".png"):
+            if mime != "image/png":
+                continue
+            if not urllib.parse.urlparse(url).path.casefold().endswith(".png"):
+                continue
+            if _license(page) not in ALLOWED_LICENSES:
+                continue
+            if _blocked(page):
                 continue
 
-            license_name = _license(page)
-            if license_name not in ALLOWED_LICENSES:
-                continue
-
-            if any(term in _metadata_text(page, info) for term in BLOCKED_TERMS):
-                continue
-
+            title = str(page.get("title", "")).strip()
             candidates.append(
                 {
-                    "title": str(page.get("title", "")),
+                    "title": title,
                     "source_page": "https://commons.wikimedia.org/wiki/"
-                    + str(page.get("title", "")).replace(" ", "_"),
+                    + urllib.parse.quote(title.replace(" ", "_"), safe=":/()_,.-"),
                     "source_url": url,
-                    "license": license_name,
-                    "mime": mime,
-                    "size": int(info.get("size") or 0),
+                    "license": _license(page),
                 }
             )
+            if len(candidates) >= target_amount * 3:
+                return candidates
+
     return candidates
 
 
 def _valid_png(data: bytes) -> bool:
-    return len(data) >= 33 and data.startswith(PNG_SIGNATURE) and data[12:16] == b"IHDR"
+    return (
+        len(data) >= 33
+        and data.startswith(PNG_SIGNATURE)
+        and data[12:16] == b"IHDR"
+    )
+
+
+def _download_png(url: str) -> bytes:
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": USER_AGENT, "Accept": "image/png"},
+    )
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                data = response.read()
+                content_type = response.headers.get("Content-Type", "").split(";", 1)[0].casefold()
+                if content_type not in {"image/png", "application/octet-stream"}:
+                    raise ValueError("unexpected content type: " + repr(content_type))
+                if not _valid_png(data):
+                    raise ValueError("download is not a valid PNG")
+                return data
+        except urllib.error.HTTPError as exc:
+            if exc.code != 429 or attempt == 3:
+                raise
+            retry_after = exc.headers.get("Retry-After", "")
+            try:
+                delay = max(3.0, float(retry_after))
+            except ValueError:
+                delay = 3.0 * (2**attempt)
+            print(f"[RADAR] Wikimedia rate limit; retrying in {delay:.1f}s")
+            time.sleep(delay)
+    raise RuntimeError("unreachable download state")
 
 
 def fetch_cc0_waifus(target_amount: int = 10) -> int:
@@ -138,7 +170,7 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
     RAW_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
     PROD_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
 
-    candidates = search_candidates()
+    candidates = search_candidates(target_amount)
     downloaded = 0
     records = []
 
@@ -151,20 +183,9 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
         if destination.exists():
             continue
 
-        request = urllib.request.Request(
-            item["source_url"],
-            headers={"User-Agent": USER_AGENT, "Accept": "image/png"},
-        )
-
+        print("[INTERCEPTANDO] " + item["title"])
         try:
-            with urllib.request.urlopen(request, timeout=20) as response:
-                data = response.read()
-            content_type = response.headers.get("Content-Type", "").split(";", 1)[0].lower()
-            if content_type not in {"image/png", "application/octet-stream"}:
-                continue
-            if not _valid_png(data):
-                continue
-
+            data = _download_png(item["source_url"])
             destination.write_bytes(data)
             records.append(
                 {
@@ -180,21 +201,24 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
                 }
             )
             downloaded += 1
-            print(f"[OK] {destination}")
-            time.sleep(1.5)
+            print("[OK] " + destination.as_posix())
+            time.sleep(2.5)
         except Exception as exc:
-            print(f"[SKIP] {item['source_url']}: {exc}")
+            print("[SKIP] " + item["source_url"] + ": " + str(exc))
+            destination.unlink(missing_ok=True)
 
     MANIFEST_FILE.write_text(
         json.dumps(records, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    print(f"=== {downloaded}/{target_amount} NUEVOS ASSETS ===")
+
+    total = sum(1 for path in RAW_SPRITE_DIR.glob("*.png") if path.is_file())
+    print(f"=== {downloaded}/{target_amount} NUEVOS; {total} PNG EN CUARENTENA ===")
     return downloaded
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="WaifuMon CC0/public-domain sprite drone")
     parser.add_argument("--target-amount", type=int, default=10)
     args = parser.parse_args()
     raise SystemExit(0 if fetch_cc0_waifus(args.target_amount) >= args.target_amount else 1)
