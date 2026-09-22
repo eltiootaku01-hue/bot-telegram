@@ -1,0 +1,36 @@
+name: Waifu Drone
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "tools/waifu_drone.py"
+      - ".github/workflows/waifu-drone.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run CC0/public-domain PNG drone
+        run: python tools/waifu_drone.py --target-amount 10
+
+      - name: Require ten quarantined sprites
+        run: |
+          count="$(find assets/raw/sprites/quarantine -maxdepth 1 -type f -name '*.png' | wc -l)"
+          echo "Quarantine PNG count: ${count}"
+          test "${count}" -ge 10
+
+      - name: Commit quarantined sprites
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/raw/sprites/quarantine
+          git commit -m "assets: materialize CC0 sprite quarantine" || echo "No new sprites"
+          git push
