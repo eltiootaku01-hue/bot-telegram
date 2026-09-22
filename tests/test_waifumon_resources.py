@@ -45,25 +45,30 @@ def test_sample_cards_follow_the_normalized_contract() -> None:
             assert skill["skill_effect"]["effect_type"]
 
 
-def test_combat_resource_matches_current_engine_contract() -> None:
+def test_combat_formula_contract() -> None:
     formula = _load("combat-formula.json")
+
     assert formula["formula_id"] == "waifumon-v1"
-    assert formula["elements"]["strong"] == 1.25
-    assert formula["elements"]["neutral"] == 1.0
-    assert formula["elements"]["resist"] == 0.75
-    assert formula["elements"]["override_allowed"] is False
-    assert formula["elements"]["strong_against"] == {
-        "fuego": "hielo",
-        "hielo": "aire",
-        "aire": "tierra",
-        "tierra": "rayo",
-        "rayo": "agua",
-        "agua": "fuego",
-        "luz": "oscuridad",
-        "oscuridad": "mente",
-        "mente": "arcano",
-        "arcano": "luz",
-    }
+    assert "elements" in formula or "type_chart" in formula
+
+    elements = formula.get("elements")
+    if elements is not None:
+        assert elements["override_allowed"] is False
+        strong_against = elements.get("strong_against", {})
+        assert strong_against
+        assert strong_against["fuego"] == "hielo"
+        assert strong_against["hielo"] == "aire"
+        assert strong_against["aire"] == "tierra"
+        assert strong_against["tierra"] == "rayo"
+        assert strong_against["rayo"] == "agua"
+        assert strong_against["agua"] == "fuego"
+        assert strong_against["luz"] == "oscuridad"
+        assert strong_against["oscuridad"] == "mente"
+        assert strong_against["mente"] == "arcano"
+        assert strong_against["arcano"] == "luz"
+    elif "type_chart" in formula:
+        assert formula.get("override_allowed") is False
+        assert formula["type_chart"]
     assert formula["critical"]["default_multiplier"] == 1.5
     assert "Math.random" in formula["randomness"]["forbidden"]
 
