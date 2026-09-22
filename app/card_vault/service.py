@@ -97,6 +97,7 @@ class CardVaultService:
             collection_points=card.collection_points,
             coin_value=card.coin_value,
             telegram_protected=telegram_protected,
+            custom_emoji_id=card.custom_emoji_id,
             active=True,
             updated_at=utc_now(),
         )
