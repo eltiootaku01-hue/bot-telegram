@@ -52,7 +52,7 @@ ENV_DEFAULTS = {
     "TMA_API_PORT": "8765",
     "TMA_BOT_IDENTITY": "sunna",
     "TMA_INIT_DATA_MAX_AGE_SECONDS": "3600",
-    "TMA_ALLOWED_ORIGINS": "",
+    "TMA_ALLOWED_ORIGINS": "https://eltiootaku01-hue.github.io",
     "TMA_FRONTEND_BASE_URL": "https://eltiootaku01-hue.github.io/bot-telegram",
     "TMA_PREMIUM_TICKET_PRICE_STARS": "10",
     "TMA_STARTER_PACK_PRICE_STARS": "25",
