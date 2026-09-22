@@ -13,7 +13,6 @@ from app.api.dtos import TurnResultDTO
 from app.api.tma_auth import validate_init_data
 from app.api.tma_server import create_tma_app
 from app.core.config import Settings
-from app.core.time import utc_now
 from app.db.database import Database
 from app.db.community_models import SetupSession
 from app.game.models import CombatAction, CombatResult
@@ -214,7 +213,9 @@ async def test_invoice_endpoint_uses_xtr_and_backend_identity() -> None:
             assert payload["invoice_link"] == "https://t.me/invoice/test"
             assert fake_bot.calls[0]["currency"] == "XTR"
             assert fake_bot.calls[0]["provider_token"] == ""
-            assert fake_bot.calls[0]["prices"] == [{"label": "Ticket Premium", "amount": 10}]
+            assert len(fake_bot.calls[0]["prices"]) == 1
+            assert fake_bot.calls[0]["prices"][0].label == "Ticket Premium"
+            assert fake_bot.calls[0]["prices"][0].amount == 10
         finally:
             await client.close()
 
