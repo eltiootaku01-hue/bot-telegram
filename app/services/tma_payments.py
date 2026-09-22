@@ -132,21 +132,22 @@ class TmaPaymentService:
                 raise TmaPaymentError("Telegram charge id was reused with conflicting data")
             return existing
 
-        session.add(
-            User(
+        user = await session.get(User, user_id)
+        if user is None:
+            user = User(
                 id=user_id,
                 first_name=first_name,
                 last_name=last_name,
                 username=username,
             )
-        )
-        try:
-            async with session.begin_nested():
-                await session.flush()
-        except IntegrityError:
-            pass
-
-        user = await session.get(User, user_id)
+            try:
+                async with session.begin_nested():
+                    session.add(user)
+                    await session.flush()
+            except IntegrityError:
+                user = await session.get(User, user_id)
+                if user is None:
+                    raise
         if user is not None:
             user.first_name = first_name
             user.last_name = last_name
@@ -154,7 +155,14 @@ class TmaPaymentService:
 
         community = await session.get(Chat, chat_id)
         if community is None:
-            session.add(Chat(id=chat_id, type="supergroup"))
+            try:
+                async with session.begin_nested():
+                    session.add(Chat(id=chat_id, type="supergroup"))
+                    await session.flush()
+            except IntegrityError:
+                community = await session.get(Chat, chat_id)
+                if community is None:
+                    raise
 
         profile = await session.scalar(
             select(GameProfile).where(
