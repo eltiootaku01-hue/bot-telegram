@@ -2,6 +2,11 @@ name: WaifuMon Scavenger
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "scavenger_manifest.json"
+      - "tools/scavenger_fetch.py"
+      - ".github/workflows/scavenger.yml"
 
 permissions:
   contents: read
