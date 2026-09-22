@@ -40,7 +40,6 @@ def register(
     if not asset.is_file():
         raise SystemExit(f"Asset does not exist: {asset}")
 
-    normalized = asset.as_posix()
     repo_root = Path.cwd().resolve()
     try:
         relative = asset.relative_to(repo_root).as_posix()
