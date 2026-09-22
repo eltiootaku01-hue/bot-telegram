@@ -81,6 +81,21 @@
       pointer-events: none;
     }
 
+    .equipment-card-list {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    @media (max-width: 600px) {
+      .equipment-card-list {
+        transform: scale(0.9);
+        transform-origin: bottom center;
+      }
+    }
+
     #hand-container {
       position: absolute;
       bottom: -42px;
