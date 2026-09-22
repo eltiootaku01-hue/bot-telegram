@@ -64,7 +64,7 @@ def _load_provenance() -> dict[str, dict]:
 
 
 def _validate_provenance(path: Path, record: dict | None, *, root: Path, failures: list[str]) -> None:
-    relative = path.relative_to(root.parent.parent).as_posix()
+    relative = path.as_posix()
     if record is None:
         failures.append(f"{relative}: missing asset-level provenance record")
         return
@@ -141,7 +141,7 @@ def main() -> int:
         _validate_provenance(path, provenance.get(path.as_posix()), root=PRODUCTION_ROOT, failures=provenance_failures)
 
     production_paths = {
-        path.relative_to(PRODUCTION_ROOT.parent.parent).as_posix()
+        path.as_posix()
         for path in PRODUCTION_ROOT.rglob("*")
         if path.is_file()
     }
