@@ -50,7 +50,7 @@ jobs:
       - name: Targeted art tests
         run: |
           pytest -q tests/test_card_art_assets.py tests/test_card_art_manifest.py tests/test_card_art_matrix.py tests/test_card_art_prompts.py tests/test_asset_provenance.py tests/test_bosozoku_sprite_processor.py
-          ruff check app/game/card_art_assets.py app/game/card_art_matrix.py app/art/prompt_policy.py tests/test_card_art_assets.py tests/test_card_art_manifest.py tests/test_card_art_matrix.py tests/test_card_art_prompts.py tests/test_asset_provenance.py tools/validate_card_assets.py tools/validate_card_qa.py tools/export_card_art_prompts.py tools/build_card_001_assets.py tools/register_card_asset_provenance.py tools/process_bosozoku_sprite.py tests/test_bosozoku_sprite_processor.py
+          ruff check app/game/art_provenance.py app/game/bosozoku_sprite.py app/game/card_art_assets.py app/game/card_art_matrix.py app/art/prompt_policy.py tests/test_card_art_assets.py tests/test_card_art_manifest.py tests/test_card_art_matrix.py tests/test_card_art_prompts.py tests/test_asset_provenance.py tools/validate_card_assets.py tools/validate_card_qa.py tools/export_card_art_prompts.py tools/build_card_001_assets.py tools/register_card_asset_provenance.py tools/process_bosozoku_sprite.py tests/test_bosozoku_sprite_processor.py
       - name: Commit production outputs
         shell: bash
         run: |
