@@ -48,7 +48,7 @@ def test_manifest_contains_only_license_verified_automatic_downloads() -> None:
     path = Path("scavenger_manifest.json")
     data = load_manifest(path)
 
-    assert data["version"] == "1.1.0"
+    assert data["version"] == "1.4.0"
     assert data["downloads"]
     assert all(item["license_verified"] is True for item in data["downloads"])
     assert all(item["url"].startswith(("https://", "http://")) for item in data["downloads"])
