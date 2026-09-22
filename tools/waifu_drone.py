@@ -627,6 +627,25 @@ def _load_records(path: Path) -> list[dict]:
     return data if isinstance(data, list) else []
 
 
+def get_existing_valid_sprites() -> list[Path]:
+    """Return valid local PNG sprites without touching any remote source."""
+    existing: list[Path] = []
+    seen: set[Path] = set()
+    for directory in (PROD_SPRITE_DIR, RAW_SPRITE_DIR):
+        if not directory.exists():
+            continue
+        for path in sorted(directory.glob("*.png")):
+            if path in seen:
+                continue
+            try:
+                _valid_png(path.read_bytes())
+            except (OSError, ValueError):
+                continue
+            seen.add(path)
+            existing.append(path)
+    return existing
+
+
 def _sanitize_existing() -> tuple[list[Path], list[dict]]:
     accepted = []
     rejected = _load_records(MANIFEST_FILE)
@@ -667,11 +686,12 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
     RAW_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
     PROD_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
 
-    existing_files, rejected_records = _sanitize_existing()
-    if len(existing_files) >= target_amount:
-        print(f"=== CUOTA YA CUMPLIDA: {len(existing_files)}/{target_amount} PNG VÁLIDOS ===")
-        return len(existing_files)
+    existing_sprites = get_existing_valid_sprites()
+    if len(existing_sprites) >= target_amount:
+        print(f"=== CUOTA YA CUMPLIDA: {len(existing_sprites)}/{target_amount} PNG VÁLIDOS ===")
+        return min(len(existing_sprites), target_amount)
 
+    existing_files, rejected_records = _sanitize_existing()
     candidates = _github_candidates()
     try:
         candidates.extend(_oga_candidates())
