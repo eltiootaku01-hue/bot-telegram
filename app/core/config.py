@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     tma_api_port: int = 8765
     tma_bot_identity: BotIdentity = BotIdentity.SUNNA
     tma_init_data_max_age_seconds: int = 3600
-    tma_allowed_origins: str = ""
+    tma_allowed_origins: str = "https://eltiootaku01-hue.github.io"
     tma_frontend_base_url: str = ""
     tma_premium_ticket_price_stars: int = 10
     tma_starter_pack_price_stars: int = 25
