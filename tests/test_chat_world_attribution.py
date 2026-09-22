@@ -184,7 +184,10 @@ async def test_chat_uses_authored_pair_scene_without_generating_a_second_indepen
     module = ChatModule(
         database,
         identity=BotIdentity.CAMI,
-        settings=Settings(bot_token_sunna='sunna-test-token'),
+        settings=Settings(
+            bot_token_sunna="sunna-test-token",
+            authorized_chat_ids="99",
+        ),
         bot_factory=lambda token: FakeTargetBot(),
     )
     answers: list[str] = []
@@ -220,7 +223,10 @@ async def test_interaction_usage_is_recorded_as_relationship(database: Database)
 
     module = ChatModule(
         database,
-        settings=Settings(bot_token_cami='cami-test-token'),
+        settings=Settings(
+            bot_token_cami="cami-test-token",
+            authorized_chat_ids="-100",
+        ),
         bot_factory=factory,
     )
 
@@ -263,7 +269,10 @@ async def test_directed_interaction_uses_persisted_relationship_count_to_rotate_
     module = ChatModule(
         database,
         identity=BotIdentity.CAMI,
-        settings=Settings(bot_token_sunna="sunna-test-token"),
+        settings=Settings(
+            bot_token_sunna="sunna-test-token",
+            authorized_chat_ids="11",
+        ),
         bot_factory=factory,
     )
     answers: list[str] = []
@@ -329,7 +338,10 @@ async def test_interaction_follow_up_uses_target_identity_transport_and_forum_th
     module = ChatModule(
         database,
         identity=BotIdentity.CAMI,
-        settings=Settings(bot_token_sunna="sunna-test-token"),
+        settings=Settings(
+            bot_token_sunna="sunna-test-token",
+            authorized_chat_ids="-100",
+        ),
         bot_factory=lambda token: FakeTargetBot(),
     )
 
@@ -367,7 +379,11 @@ async def test_missing_partner_token_does_not_fake_a_second_speaker_message(data
     async def answer(text: str) -> None:
         source_answers.append(text)
 
-    module = ChatModule(database, identity=BotIdentity.CAMI)
+    module = ChatModule(
+        database,
+        identity=BotIdentity.CAMI,
+        settings=Settings(authorized_chat_ids="-100"),
+    )
 
     message = SimpleNamespace(
         from_user=SimpleNamespace(id=42),
