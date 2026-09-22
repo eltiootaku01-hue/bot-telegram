@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from pathlib import Path
 
 from aiogram import Bot, F
 from aiogram.filters import Command
@@ -16,6 +17,7 @@ from app.core.processing_feedback import ProcessingFeedback, ProcessingResultDTO
 from app.db.database import Database
 from app.db.models import GameCardCollection, GameCollection, GameItemInventory, GameProfile
 from app.db.repositories import MemberRepository
+from app.game.card_definitions import CardDefinitionService
 from app.game.card_service import CardCollectionService
 from app.game.catalog import get_character
 from app.game.encounter_store import EncounterAttemptResult, EncounterStore
@@ -79,6 +81,7 @@ class GameModule(BotModule):
         self.community = CommunityResolver(self.settings)
         self.characters = CharacterDirector()
         self.card_service = CardCollectionService()
+        self.card_definition_service = CardDefinitionService(self.settings)
         self._card_selection: dict[int, int] = {}
 
     def setup(self) -> None:
@@ -91,6 +94,7 @@ class GameModule(BotModule):
         self.router.message.register(self.detector, Command("detector"))
         self.router.message.register(self.items, Command("objetos"))
         self.router.message.register(self.cards, Command("cartas"))
+        self.router.message.register(self.roll_card, Command("roll"))
         self.router.callback_query.register(self.gacha_open, F.data == "game:gacha:open")
         self.router.callback_query.register(self.inventory_callback, F.data == "game:inventory:open")
         self.router.callback_query.register(self.combat_open, F.data == "game:combat:open")
@@ -186,6 +190,57 @@ class GameModule(BotModule):
             mission_key=mission_key,
         )
         return claimed, balance, progress.progress, progress.target
+
+    async def roll_card(self, message: Message) -> None:
+        """Public group /roll: choose an active admin card and claim one copy."""
+        if message.chat.type not in {"group", "supergroup"} or message.from_user is None:
+            return
+
+        async with self.database.session(write=True) as session:
+            result = await self.card_definition_service.roll(
+                session,
+                user_id=message.from_user.id,
+                chat_id=message.chat.id,
+                source_message_id=message.message_id,
+            )
+
+        if result is None:
+            await message.answer(
+                "🎴 No hay cartas activas en el pool todavía. "
+                "El administrador puede agregarlas desde la Mini App."
+            )
+            return
+
+        definition = result.definition
+        filename = definition.image_url.rsplit("/", 1)[-1]
+        asset_path = Path(self.settings.card_assets_dir) / filename
+        caption = (
+            f"🎴 <b>¡CARTA OBTENIDA!</b>\n"
+            f"👤 <b>{definition.character_name}</b>\n"
+            f"📺 {definition.anime_origin}\n"
+            f"💎 Rareza: <b>{definition.rarity}</b>\n"
+            f"⭐ Valor de colección: <b>{definition.collection_points}</b>\n"
+            f"🎨 Origen: {definition.source_provider}\n"
+            f"📦 Copias: <b>×{result.copies}</b>"
+        )
+        if result.already_claimed:
+            caption += "\n\n↩️ Esta tirada ya había sido procesada; no se duplicó la carta."
+
+        if asset_path.is_file():
+            await message.answer_photo(
+                FSInputFile(asset_path),
+                caption=caption,
+            )
+        else:
+            logger.error(
+                "Card asset missing for definition=%s path=%s",
+                definition.id,
+                asset_path,
+            )
+            await message.answer(
+                caption + "\n\n⚠️ El arte local no está disponible en este servidor."
+            )
+        await self._observe_action("card_roll", message.from_user.id, message.chat.id)
 
     async def cards(self, message: Message) -> None:
         if message.chat.type != "private" or message.from_user is None:
