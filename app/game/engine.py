@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from app.game.java_engine import default_java_engine
 from app.game.models import Character, CombatAction, CombatResult, Rarity
 
@@ -19,6 +21,30 @@ class GameEngine:
     def roll_gacha(self, seed: str | None = None) -> Rarity:
         return self._java.roll_gacha(seed=seed or "gacha:anonymous")
 
+    async def roll_gacha_async(self, seed: str | None = None) -> Rarity:
+        return await asyncio.to_thread(self.roll_gacha, seed)
+
+
+    async def resolve_gacha_async(
+        self,
+        *,
+        seed: str,
+        d_streak: int,
+        candidates: list[dict[str, str]],
+        owned_character_ids: set[str] | frozenset[str],
+        player_id: int,
+        community_id: int,
+    ) -> dict[str, object]:
+        return await asyncio.to_thread(
+            self.resolve_gacha,
+            seed=seed,
+            d_streak=d_streak,
+            candidates=candidates,
+            owned_character_ids=owned_character_ids,
+            player_id=player_id,
+            community_id=community_id,
+        )
+
     def resolve_gacha(
         self,
         *,
@@ -36,6 +62,21 @@ class GameEngine:
             owned_character_ids=owned_character_ids,
             player_id=player_id,
             community_id=community_id,
+        )
+
+    async def combat_async(
+        self,
+        attacker: Character,
+        defender: Character,
+        action_key: str,
+        turn_id: str,
+    ) -> CombatResult:
+        return await asyncio.to_thread(
+            self.combat,
+            attacker,
+            defender,
+            action_key,
+            turn_id,
         )
 
     def combat(
