@@ -64,6 +64,7 @@ class VaultApiServer:
             asset_path=Path(str(body["asset_path"])),
             source_provider=str(body.get("source_provider") or "local"),
             collection_points=int(body.get("collection_points") or 0),
+            custom_emoji_id=str(body.get("custom_emoji_id") or "") or None,
         )
         async with self.database.session() as session:
             row = await self.service.register_card(session, card)
