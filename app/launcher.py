@@ -447,6 +447,15 @@ class BotLauncher(tk.Tk):
             "HUMAN_VERIFICATION_RAID_TIMEOUT_SECONDS": self.verification_raid_timeout_var.get().strip() or "45",
             "BOT_IDENTITY": "cari",
             "AI_ENABLED": "true" if self.ai_global_var.get() else "false",
+            "TMA_API_ENABLED": "true" if self.tma_enabled_var.get() else "false",
+            "TMA_API_HOST": self.tma_host_var.get().strip() or "0.0.0.0",
+            "TMA_API_PORT": self.tma_port_var.get().strip() or "8765",
+            "TMA_BOT_IDENTITY": "sunna",
+            "TMA_INIT_DATA_MAX_AGE_SECONDS": "3600",
+            "TMA_ALLOWED_ORIGINS": self.tma_origins_var.get().strip(),
+            "TMA_FRONTEND_BASE_URL": "https://eltiootaku01-hue.github.io/bot-telegram",
+            "TMA_PREMIUM_TICKET_PRICE_STARS": "10",
+            "TMA_STARTER_PACK_PRICE_STARS": "25",
         })
         for key, variable in self.ai_bot_vars.items():
             values[f"AI_ENABLED_{key.upper()}"] = "true" if variable.get() else "false"
