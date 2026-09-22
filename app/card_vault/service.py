@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.card_vault.contracts import CardRegistration, CardRarity, CardInventoryView, TransactionResult
+from app.card_vault.contracts import CardRegistration, CardInventoryView, TransactionResult
 from app.core.time import utc_now
 from app.db.card_vault_models import CardInventory, CardHolderType, TransactionHistory
 from app.db.models import CardDefinition
