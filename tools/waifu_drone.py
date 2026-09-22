@@ -77,7 +77,15 @@ ALLOWED_LICENSES = {"CC0-1.0", "CC0", "Public domain", "Public Domain"}
 BLOCKED_TERMS = {
     "nsfw", "porn", "hentai", "explicit", "nude", "nudity",
     "erotic", "fetish", "watermark", "logo", "preview",
+    "lantern", "lamp", "icon", "font", "alphabet", "hexadecimal",
+    "character set", "charset", "unicode", "symbol", "typeface",
+    "item", "object",
 }
+REQUIRED_TERMS = {
+    "sprite", "character", "player", "npc", "hero", "ranger",
+    "wizard", "knight", "archer", "rogue", "animation", "walk",
+}
+MIN_PNG_BYTES = 1_024
 API_URL = "https://commons.wikimedia.org/w/api.php"
 OGA_PAGES = (
     "https://opengameart.org/content/simple-character-sprite",
@@ -127,6 +135,19 @@ def _blocked(page: dict) -> bool:
         ]
     ).casefold()
     return any(term in haystack for term in BLOCKED_TERMS)
+
+
+def _relevant(page: dict) -> bool:
+    info = (page.get("imageinfo") or [{}])[0]
+    ext = info.get("extmetadata") or {}
+    haystack = " ".join(
+        [
+            _plain(page.get("title")),
+            _plain(ext.get("ImageDescription", {})),
+            _plain(ext.get("Categories", {})),
+        ]
+    ).casefold()
+    return any(term in haystack for term in REQUIRED_TERMS)
 
 
 def _fetch_text(url: str) -> str:
@@ -244,7 +265,9 @@ def search_candidates(target_amount: int) -> list[dict]:
                 continue
             if _license(page) not in ALLOWED_LICENSES:
                 continue
-            if _blocked(page):
+            if _blocked(page) or not _relevant(page):
+                continue
+            if int(info.get("size") or 0) < MIN_PNG_BYTES:
                 continue
 
             title = str(page.get("title", "")).strip()
@@ -283,6 +306,8 @@ def _download_png(url: str) -> bytes:
                 content_type = response.headers.get("Content-Type", "").split(";", 1)[0].casefold()
                 if content_type not in {"image/png", "application/octet-stream"}:
                     raise ValueError("unexpected content type: " + repr(content_type))
+                if len(data) < MIN_PNG_BYTES:
+                    raise ValueError("PNG is too small for a useful character sprite")
                 if not _valid_png(data):
                     raise ValueError("download is not a valid PNG")
                 return data
