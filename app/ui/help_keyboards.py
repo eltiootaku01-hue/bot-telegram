@@ -20,6 +20,7 @@ def help_keyboard(identity: BotIdentity, section: str = "home") -> InlineKeyboar
             BotIdentity.SUNNA: (
                 ("🎮 Juegos", "games"),
                 ("🎰 Gacha", "gacha"),
+                ("🎴 Roll de cartas", "card_roll"),
                 ("🎒 Inventario", "inventory"),
                 ("💰 Puntos", "points"),
             ),
