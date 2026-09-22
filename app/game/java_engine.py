@@ -222,6 +222,9 @@ class WaifuMonJavaEngine:
             action=CombatAction(action_key, *action_meta),
             critical=bool(result["critical"]),
             defender_hp=int(result["defender_hp"]),
+            state_version=int(response.get("state_version", 0)),
+            event_ids=tuple(response.get("event_ids") or ()),
+            reward_ids=tuple(response.get("reward_ids") or ()),
         )
 
     def evolution(self, *, level: int) -> dict[str, Any]:
