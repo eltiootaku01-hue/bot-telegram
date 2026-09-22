@@ -35,6 +35,28 @@ Configura esta URL como Main Mini App o como botón/menu del bot cuando el sitio
 
 El cliente puede leer `initDataUnsafe` para presentación, pero no debe usarlo como autoridad de autenticación.
 
+## Creador de cartas IA
+
+La sección `CREADOR DE BARAJAS & CARTAS IA` de `index.html` se muestra únicamente después de que el backend confirme que el usuario autenticado coincide con `ADMIN_USER_ID`. El formulario envía una imagen JPG/PNG/WEBP y metadatos; el backend genera el ID de la carta, guarda el arte en `CARD_ASSETS_DIR` y crea una fila en `card_definitions` con `active=true`. El comando Telegram `/roll` consulta ese catálogo activo en cada ejecución, por lo que una carta nueva queda disponible sin reiniciar el bot ni editar un JSON paralelo.
+
+El registro persistido conserva el contrato equivalente a:
+
+```json
+{
+  "id": "asuna-summer-ssr-02",
+  "character_id": "asuna",
+  "character_name": "Asuna (Verano)",
+  "anime_origin": "Sword Art Online",
+  "rarity": "SSR",
+  "image_url": "assets/cards/asuna_summer_ssr.jpg",
+  "source_provider": "IA (PixAI/Midjourney)",
+  "collection_points": 150,
+  "active": true
+}
+```
+
+El endpoint administra únicamente el catálogo; la carta obtenida por `/roll` también se registra en `game_card_collections` y la misma tirada se enlaza con `card_roll_claims` para evitar duplicados cuando Telegram reintenta el mismo mensaje.
+
 ## Monetización
 
 La UI de tienda está preparada para productos digitales. Las compras reales deben ser creadas y verificadas por el backend mediante Telegram Stars (XTR).
@@ -51,6 +73,9 @@ El cliente usa `js/api.js` y envía el valor crudo de `Telegram.WebApp.initData`
 Rutas implementadas:
 
 - `GET /api/combat/init` — identidad autenticada, comunidad autorizada, roster y contrato de assets.
+- `GET /api/admin/cards` — lista el pool activo de cartas; requiere `ADMIN_USER_ID` autenticado por Telegram `initData`.
+- `POST /api/admin/cards` — recibe multipart con imagen, personaje, anime, rareza, proveedor y puntos de colección; persiste la definición en SQLite y activa la carta inmediatamente para `/roll`.
+- `GET /api/cards/assets/<filename>` — sirve los artes de cartas cargados desde `CARD_ASSETS_DIR`.
 - `POST /api/combat/action` — acción de combate validada por el servidor y delegada al motor Java.
 - `POST /api/store/invoice` — genera una invoice de producto digital en Telegram Stars (XTR).
 
