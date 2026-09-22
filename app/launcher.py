@@ -50,7 +50,7 @@ ENV_DEFAULTS = {
     "ALLOW_ADMIN_PRIVATE_CHAT": "true",
     "ALLOW_USER_PRIVATE_CHAT": "true",
     "TMA_API_ENABLED": "true",
-    "TMA_API_HOST": "0.0.0.0",
+    "TMA_API_HOST": "127.0.0.1",
     "TMA_API_PORT": "8765",
     "TMA_BOT_IDENTITY": "sunna",
     "TMA_INIT_DATA_MAX_AGE_SECONDS": "3600",
@@ -104,7 +104,7 @@ class BotLauncher(tk.Tk):
         self._reported_unexpected_exits: set[str] = set()
         self.tma_api: TmaApiServer | None = None
         self.tma_enabled_var = tk.BooleanVar(value=True)
-        self.tma_host_var = tk.StringVar(value="0.0.0.0")
+        self.tma_host_var = tk.StringVar(value="127.0.0.1")
         self.tma_port_var = tk.StringVar(value="8765")
         self.tma_origins_var = tk.StringVar(value="")
         self._build_setup()
