@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 import pytest
-from aiogram.types import CallbackQuery, Chat, Message, Update, User
+from aiogram.types import CallbackQuery, Chat, Message, PreCheckoutQuery, Update, User
 
 from app.core.config import Settings
 from app.core.identity import BotIdentity
@@ -286,3 +286,27 @@ def test_unauthorized_media_channel_post_is_blocked() -> None:
     update = Update(update_id=121, channel_post=channel_post)
 
     assert middleware._is_allowed(update) is False
+
+
+@pytest.mark.asyncio
+async def test_pre_checkout_query_reaches_payment_handler_without_message() -> None:
+    settings = Settings(
+        admin_user_id=77,
+        allow_admin_private_chat=True,
+        allow_user_private_chat=False,
+    )
+    middleware = ChatAccessMiddleware(settings)
+
+    async def handler(event, data):
+        return "payment-handler"
+
+    query = PreCheckoutQuery(
+        id="checkout-1",
+        from_user=User(id=77, is_bot=False, first_name="Admin"),
+        currency="XTR",
+        total_amount=10,
+        invoice_payload="tma:77:premium_ticket:0123456789abcdef0123456789abcdef",
+    )
+    update = Update(update_id=140, pre_checkout_query=query)
+
+    assert await middleware(handler, update, {"event_update": update}) == "payment-handler"
