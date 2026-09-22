@@ -36,6 +36,11 @@ class ChatAccessMiddleware(BaseMiddleware):
         return None
 
     def _is_allowed(self, update: Update) -> bool:
+        if update.pre_checkout_query is not None:
+            return True
+        if update.message is not None and update.message.successful_payment is not None:
+            return True
+
         membership = update.chat_member or update.chat_join_request or update.my_chat_member
         if membership is not None:
             return self.settings.is_chat_allowed(
