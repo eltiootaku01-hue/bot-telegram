@@ -164,8 +164,7 @@ function setupReferralShare() {
 
   button.addEventListener("click", async () => {
     const referralUrl = new URL(window.location.href);
-    const userId = tg?.initDataUnsafe?.user?.id;
-    if (userId) referralUrl.searchParams.set("ref", String(userId));
+    referralUrl.hash = "#referral";
 
     const shareText = "Vení a jugar WaifuMon conmigo.";
     const telegramShare = `https://t.me/share/url?url=${encodeURIComponent(referralUrl.href)}&text=${encodeURIComponent(shareText)}`;
