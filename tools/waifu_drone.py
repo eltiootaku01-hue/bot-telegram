@@ -24,52 +24,52 @@ SEARCH_TAGS = (
 GITHUB_CC0_SOURCES = (
     (
         "https://github.com/SpriteCook/spritecook-free-game-assets",
-        "master",
+        "cd0db67d6f849c8d84e406a436aac76b733a7dba",
         "detailed-characters-anime/battleworn_knight.png",
     ),
     (
         "https://github.com/SpriteCook/spritecook-free-game-assets",
-        "master",
+        "cd0db67d6f849c8d84e406a436aac76b733a7dba",
         "detailed-characters-anime/clockwork_owl.png",
     ),
     (
         "https://github.com/SpriteCook/spritecook-free-game-assets",
-        "master",
+        "cd0db67d6f849c8d84e406a436aac76b733a7dba",
         "detailed-characters-anime/deepsea_knight.png",
     ),
     (
         "https://github.com/SpriteCook/spritecook-free-game-assets",
-        "master",
+        "cd0db67d6f849c8d84e406a436aac76b733a7dba",
         "detailed-characters-anime/forest_archer.png",
     ),
     (
         "https://github.com/SpriteCook/spritecook-free-game-assets",
-        "master",
+        "cd0db67d6f849c8d84e406a436aac76b733a7dba",
         "detailed-characters-anime/frog_paladin.png",
     ),
     (
         "https://github.com/SpriteCook/spritecook-free-game-assets",
-        "master",
+        "cd0db67d6f849c8d84e406a436aac76b733a7dba",
         "detailed-characters-anime/gnome_merchant.png",
     ),
     (
         "https://github.com/SpriteCook/spritecook-free-game-assets",
-        "master",
+        "cd0db67d6f849c8d84e406a436aac76b733a7dba",
         "detailed-characters-anime/monster_hunter.png",
     ),
     (
         "https://github.com/SpriteCook/spritecook-free-game-assets",
-        "master",
+        "cd0db67d6f849c8d84e406a436aac76b733a7dba",
         "detailed-characters-anime/mouse_knight.png",
     ),
     (
         "https://github.com/SpriteCook/spritecook-free-game-assets",
-        "master",
+        "cd0db67d6f849c8d84e406a436aac76b733a7dba",
         "detailed-characters-anime/mushroom_druid.png",
     ),
     (
         "https://github.com/SpriteCook/spritecook-free-game-assets",
-        "master",
+        "cd0db67d6f849c8d84e406a436aac76b733a7dba",
         "detailed-characters-anime/noble_vampire.png",
     ),
 )
@@ -335,7 +335,6 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
         path for path in RAW_SPRITE_DIR.glob("*.png") if path.is_file()
     )
     candidates = _github_cc0_candidates()
-    candidates.extend(_oga_direct_candidates())
     if len(candidates) < target_amount:
         candidates.extend(
             item for item in _oga_candidates()
