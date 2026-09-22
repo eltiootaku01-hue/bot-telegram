@@ -800,6 +800,9 @@ class BotLauncher(tk.Tk):
 
     def stop_all(self, *, silent: bool = False) -> None:
         self.supervisor.stop_all()
+        if self.tma_api is not None:
+            self.tma_api.stop()
+            self.tma_api = None
         if not silent:
             self.status.set("Todos los bots están detenidos")
 
