@@ -98,7 +98,7 @@ Para usar un modelo real, coloca o publica:
 
 y para el cañón:
 
-`webapp/assets/production/models/weapons/shoulder_cannon.gltf`
+`webapp/assets/production/models/equipment/shoulder_cannon.gltf`
 
 La demo usa un maniquí local como fallback si el modelo de personaje no existe. Los efectos de cartas son visuales; la autoridad real de inventario, puntos y combate sigue perteneciendo al backend.
 
