@@ -4,23 +4,23 @@
   "records": [
     {
       "asset": "assets/production/cards/alisa-kujo--normal.jpg",
-      "status": "grandfathered_legacy",
-      "rights_status": "unverified",
+      "status": "original",
+      "rights_status": "cleared",
       "source_url": "",
-      "creator": "unknown",
-      "license": "",
-      "sha256": "",
-      "notes": "Pre-existing production asset. No source/licensing record is currently available; do not copy this status to new assets."
+      "creator": "Project original SVG card pipeline",
+      "license": "Original project asset generated from repository-owned vector source",
+      "sha256": "12357e97c991c4c2963ca299b026b158800f0f3c94f3b399ed307b995018d88a",
+      "notes": "Generated deterministically by tools/build_card_001_assets.py; no third-party artwork is imported."
     },
     {
       "asset": "assets/production/cards/alisa-kujo--r.jpg",
-      "status": "grandfathered_legacy",
-      "rights_status": "unverified",
+      "status": "original",
+      "rights_status": "cleared",
       "source_url": "",
-      "creator": "unknown",
-      "license": "",
-      "sha256": "",
-      "notes": "Pre-existing production asset. No source/licensing record is currently available; do not copy this status to new assets."
+      "creator": "Project original SVG card pipeline",
+      "license": "Original project asset generated from repository-owned vector source",
+      "sha256": "14b19b14dc28eb6cb61a02c3f4f1f11102c9a9b5c6cfc28f6978b11af9a8ab74",
+      "notes": "Generated deterministically by tools/build_card_001_assets.py; no third-party artwork is imported."
     }
   ]
 }
