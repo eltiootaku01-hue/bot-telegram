@@ -47,6 +47,8 @@ public final class WaifuMonRuleEngine {
                 case "gacha.roll" -> gachaRoll(request);
                 case "gacha.resolve" -> gachaResolve(request);
                 case "combat.resolve" -> combatResolve(request);
+                case "combat.resolve_formula" -> combatFormulaResolve(request);
+                case "status.resolve" -> statusResolve(request);
                 case "progression.resolve" -> progressionResolve(request);
                 case "evolution.resolve" -> evolutionResolve(request);
                 case "stats.resolve" -> statsResolve(request);
@@ -272,6 +274,178 @@ public final class WaifuMonRuleEngine {
         );
     }
 
+    private EngineResponse combatFormulaResolve(EngineRequest request) {
+        JsonNode payload = request.payload();
+        JsonNode attacker = requiredObject(payload, "attacker");
+        JsonNode defender = requiredObject(payload, "defender");
+        JsonNode skill = requiredObject(payload, "skill");
+
+        String attackerId = requiredText(attacker, "id");
+        String defenderId = requiredText(defender, "id");
+        String attackerName = requiredText(attacker, "name");
+        String defenderName = requiredText(defender, "name");
+        String attackerElement = requiredText(attacker, "element_type");
+        String defenderElement = requiredText(defender, "element_type");
+        int level = boundedInt(attacker, "level", 1, MAX_LEVEL);
+        int baseAttack = boundedInt(attacker, "base_atk", 1, 10_000);
+        int baseDefense = boundedInt(defender, "base_def", 1, 10_000);
+        int skillPower = boundedInt(skill, "power", 1, 1_000);
+
+        double elementMultiplier = payload.has("element_multiplier")
+            ? boundedDouble(payload, "element_multiplier", 0.0, 4.0)
+            : elementMultiplier(attackerElement, defenderElement);
+        double statusMultiplier = payload.has("status_multiplier")
+            ? boundedDouble(payload, "status_multiplier", 0.0, 4.0)
+            : 1.0;
+        double moveMultiplier = payload.has("move_multiplier")
+            ? boundedDouble(payload, "move_multiplier", 0.0, 4.0)
+            : 1.0;
+        int critRate = payload.has("crit_rate")
+            ? boundedInt(payload, "crit_rate", 0, 100)
+            : boundedInt(skill, "crit_rate", 0, 100);
+        double critMultiplier = payload.has("crit_multiplier")
+            ? boundedDouble(payload, "crit_multiplier", 1.0, 4.0)
+            : skill.path("crit_multiplier").isNumber()
+                ? skill.path("crit_multiplier").asDouble()
+                : 1.5;
+        int damageFloor = payload.has("damage_floor")
+            ? boundedInt(payload, "damage_floor", 0, 10_000)
+            : 1;
+        String turnId = requiredText(payload, "turn_id");
+        String skillId = requiredText(skill, "skill_id");
+
+        long stage = (2L * level) / 5L + 2L;
+        long raw = stage * skillPower * baseAttack;
+        long base = Math.floorDiv(raw, Math.max(1, baseDefense));
+        base = Math.floorDiv(base, 10L);
+
+        int modified = Math.max(
+            0,
+            (int) Math.floor(base * elementMultiplier * statusMultiplier * moveMultiplier)
+        );
+        byte[] digest = sha256(
+            turnId + ":" + attackerId + ":" + defenderId + ":" + skillId
+        );
+        double critRoll = Byte.toUnsignedInt(digest[4]) / 256.0;
+        boolean critical = critRoll < (critRate / 100.0);
+        int finalDamage = Math.max(
+            damageFloor,
+            (int) Math.floor(modified * (critical ? critMultiplier : 1.0))
+        );
+
+        int targetMaxHp = boundedInt(payload, "target_max_hp", 1, 100_000);
+        int defenderHp = Math.max(0, targetMaxHp - finalDamage);
+
+        ObjectNode result = mapper.createObjectNode();
+        result.put("formula_id", "waifumon-v1");
+        result.put("attacker", attackerName);
+        result.put("defender", defenderName);
+        result.put("damage", finalDamage);
+        result.put("base_damage", base);
+        result.put("modified_damage", modified);
+        result.put("critical", critical);
+        result.put("element_multiplier", elementMultiplier);
+        result.put("status_multiplier", statusMultiplier);
+        result.put("move_multiplier", moveMultiplier);
+        result.put("crit_rate", critRate);
+        result.put("crit_multiplier", critMultiplier);
+        result.put("defender_hp", defenderHp);
+
+        return EngineResponse.success(
+            request.requestId(), "combat_formula_result", result, 0L, List.of(), List.of()
+        );
+    }
+
+    private EngineResponse statusResolve(EngineRequest request) {
+        JsonNode payload = request.payload();
+        String statusId = requiredText(payload, "status_id");
+        String operation = requiredText(payload, "operation");
+
+        ObjectNode result = mapper.createObjectNode();
+        result.put("status_id", statusId);
+        result.put("operation", operation);
+
+        switch (statusId) {
+            case "poison" -> {
+                if (!"tick".equals(operation)) {
+                    throw new IllegalArgumentException("poison supports only tick");
+                }
+                int maxHp = boundedInt(payload, "max_hp", 1, 100_000);
+                int stacks = boundedInt(payload, "stacks", 1, 2);
+                int damage = Math.max(1, (int) Math.floor(maxHp * 0.05 * stacks));
+                result.put("damage", damage);
+                result.put("remaining_turns", boundedInt(payload, "remaining_turns", 0, 10));
+            }
+            case "bleed" -> {
+                if (!"tick".equals(operation)) {
+                    throw new IllegalArgumentException("bleed supports only tick");
+                }
+                int power = boundedInt(payload, "power", 0, 1_000);
+                int defense = boundedInt(payload, "defense", 0, 100);
+                int damage = Math.max(1, (int) Math.floor(power * (100 - defense) / 100.0));
+                result.put("damage", damage);
+                result.put("remaining_turns", boundedInt(payload, "remaining_turns", 0, 10));
+            }
+            case "stun" -> {
+                if (!"apply".equals(operation)) {
+                    throw new IllegalArgumentException("stun supports only apply");
+                }
+                int duration = boundedInt(payload, "duration_turns", 1, 10);
+                result.put("skip_actions", 1);
+                result.put("duration_turns", duration);
+                result.put("max_stacks", 1);
+            }
+            case "shield" -> {
+                if ("apply".equals(operation)) {
+                    int absorb = boundedInt(payload, "power", 0, 100_000);
+                    int duration = boundedInt(payload, "duration_turns", 1, 10);
+                    result.put("absorb", absorb);
+                    result.put("duration_turns", duration);
+                    result.put("max_stacks", 2);
+                } else if ("absorb".equals(operation)) {
+                    int shield = boundedInt(payload, "shield", 0, 100_000);
+                    int incoming = boundedInt(payload, "incoming_damage", 0, 100_000);
+                    int absorbed = Math.min(shield, incoming);
+                    result.put("absorbed", absorbed);
+                    result.put("damage_after_shield", incoming - absorbed);
+                    result.put("remaining_shield", shield - absorbed);
+                } else {
+                    throw new IllegalArgumentException("shield supports apply or absorb");
+                }
+            }
+            default -> throw new IllegalArgumentException("Unknown status: " + statusId);
+        }
+
+        return EngineResponse.success(
+            request.requestId(), "status_result", result, 0L, List.of(), List.of()
+        );
+    }
+
+    private static double elementMultiplier(String attacker, String defender) {
+        if ("neutro".equals(attacker) || "neutro".equals(defender)) {
+            return 1.0;
+        }
+        java.util.Map<String, String> strengths = java.util.Map.of(
+            "fuego", "hielo",
+            "hielo", "aire",
+            "aire", "tierra",
+            "tierra", "rayo",
+            "rayo", "agua",
+            "agua", "fuego",
+            "luz", "oscuridad",
+            "oscuridad", "mente",
+            "mente", "arcano",
+            "arcano", "luz"
+        );
+        if (attacker.equals(strengths.get(defender))) {
+            return 0.75;
+        }
+        if (defender.equals(strengths.get(attacker))) {
+            return 1.25;
+        }
+        return 1.0;
+    }
+
     private EngineResponse progressionResolve(EngineRequest request) {
         JsonNode payload = request.payload();
         int level = boundedInt(payload, "level", 1, MAX_LEVEL);
@@ -463,6 +637,18 @@ public final class WaifuMonRuleEngine {
         return EngineResponse.success(
             request.requestId(), "potential_result", result, 0L, List.of(), List.of()
         );
+    }
+
+    private static double boundedDouble(JsonNode object, String field, double min, double max) {
+        JsonNode value = object.get(field);
+        if (value == null || !value.isNumber()) {
+            throw new IllegalArgumentException(field + " must be numeric");
+        }
+        double number = value.asDouble();
+        if (number < min || number > max) {
+            throw new IllegalArgumentException(field + " must be between " + min + " and " + max);
+        }
+        return number;
     }
 
     private static int pyRound(double value) {
