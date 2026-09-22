@@ -149,6 +149,16 @@ def _ensure_compatibility(connection) -> None:
         "ON card_definitions(card_code) WHERE card_code IS NOT NULL"
     ))
     connection.execute(text(
+        "CREATE TRIGGER IF NOT EXISTS trg_transaction_history_no_update "
+        "BEFORE UPDATE ON transaction_history "
+        "BEGIN SELECT RAISE(ABORT, 'transaction_history is immutable'); END"
+    ))
+    connection.execute(text(
+        "CREATE TRIGGER IF NOT EXISTS trg_transaction_history_no_delete "
+        "BEFORE DELETE ON transaction_history "
+        "BEGIN SELECT RAISE(ABORT, 'transaction_history is immutable'); END"
+    ))
+    connection.execute(text(
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_fan_request_source "
         "ON fan_requests(user_id, chat_id, source_message_id) "
         "WHERE source_message_id IS NOT NULL"
