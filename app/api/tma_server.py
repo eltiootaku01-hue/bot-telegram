@@ -15,6 +15,7 @@ from sqlalchemy import select
 
 from app.api.dtos import (
     CombatActionDTO,
+    CombatAssetContractDTO,
     CombatFighterDTO,
     CombatInitDTO,
     InvoiceRequestDTO,
@@ -173,15 +174,15 @@ class TmaCombatService:
             contract_version=TMA_API_VERSION,
             player_id=context.user.id,
             community_id=community_id,
-            asset_contract={
-                "card_directory": f"{_asset_base(self.settings)}assets/production/cards/",
-                "sprite_directory": f"{_asset_base(self.settings)}assets/production/sprites/",
-                "sprite_size": SPRITE_SIZE,
-                "sprite_poses": list(SPRITE_POSES),
-                "card_pattern": "<character-id>--normal.jpg",
-                "sprite_pattern": "<character-id>_<idle|attack|hit>.png",
-                "cut_in_duration_ms": 1500,
-            },
+            asset_contract=CombatAssetContractDTO(
+                card_directory=f"{_asset_base(self.settings)}assets/production/cards/",
+                sprite_directory=f"{_asset_base(self.settings)}assets/production/sprites/",
+                sprite_size=SPRITE_SIZE,
+                sprite_poses=list(SPRITE_POSES),
+                card_pattern="<character-id>--normal.jpg",
+                sprite_pattern="<character-id>_<idle|attack|hit>.png",
+                cut_in_duration_ms=1500,
+            ),
             team=team,
             opponents=opponents,
         )
@@ -234,7 +235,8 @@ class TmaCombatService:
         )
         defender = _fighter(self.settings, dto.defender_id, team="enemy")
         server_key = f"tma:{context.user.id}:{community_id}:{dto.idempotency_key}"
-        result = self._engine_client().combat(
+        result = await asyncio.to_thread(
+            self._engine_client().combat,
             attacker={
                 "id": attacker.id,
                 "name": attacker.name,
