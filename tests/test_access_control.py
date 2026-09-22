@@ -310,3 +310,30 @@ async def test_pre_checkout_query_reaches_payment_handler_without_message() -> N
     update = Update(update_id=140, pre_checkout_query=query)
 
     assert await middleware(handler, update, {"event_update": update}) == "payment-handler"
+
+
+@pytest.mark.asyncio
+async def test_successful_payment_update_reaches_handler_when_private_chat_is_restricted() -> None:
+    from types import SimpleNamespace
+
+    settings = Settings(
+        allow_admin_private_chat=False,
+        allow_user_private_chat=False,
+    )
+    middleware = ChatAccessMiddleware(settings)
+
+    async def handler(event, data):
+        return "payment-handler"
+
+    update = Update.model_construct(
+        update_id=141,
+        message=SimpleNamespace(
+            chat=Chat(id=777, type="private"),
+            from_user=User(id=777, is_bot=False, first_name="Buyer"),
+            successful_payment=SimpleNamespace(
+                telegram_payment_charge_id="charge-141",
+            ),
+        ),
+    )
+
+    assert await middleware(handler, update, {"event_update": update}) == "payment-handler"
