@@ -341,11 +341,28 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
     if len(candidates) < target_amount:
         print("[RADAR] OpenGameArt no aportó suficientes candidatos; usando Wikimedia Commons como respaldo.")
         candidates.extend(search_candidates(target_amount))
+
+    existing_files = sorted(
+        path for path in RAW_SPRITE_DIR.glob("*.png") if path.is_file()
+    )
     downloaded = 0
     records = []
+    if MANIFEST_FILE.exists():
+        try:
+            existing_records = json.loads(MANIFEST_FILE.read_text(encoding="utf-8"))
+            if isinstance(existing_records, list):
+                records.extend(existing_records)
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    if len(existing_files) >= target_amount:
+        print(
+            f"=== CUOTA YA CUMPLIDA: {len(existing_files)}/{target_amount} PNG EN CUARENTENA ==="
+        )
+        return len(existing_files)
 
     for item in candidates:
-        if downloaded >= target_amount:
+        if len(existing_files) + downloaded >= target_amount:
             break
 
         asset_id = generate_asset_id(item["source_url"])
@@ -383,8 +400,8 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
     )
 
     total = sum(1 for path in RAW_SPRITE_DIR.glob("*.png") if path.is_file())
-    print(f"=== {downloaded}/{target_amount} NUEVOS; {total} PNG EN CUARENTENA ===")
-    return downloaded
+    print(f"=== {downloaded} NUEVOS; {total}/{target_amount} PNG EN CUARENTENA ===")
+    return total
 
 
 if __name__ == "__main__":
