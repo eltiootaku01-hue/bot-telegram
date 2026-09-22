@@ -52,7 +52,7 @@ Rutas implementadas:
 - `POST /api/combat/action` — acción de combate validada por el servidor y delegada al motor Java.
 - `POST /api/store/invoice` — genera una invoice de producto digital en Telegram Stars (XTR).
 
-La URL del backend se puede fijar en el meta `waifumon-api-base-url` o, para entornos controlados, en `window.WAIFUMON_API_BASE_URL`. No existe un override por query-string para impedir que un enlace arbitrario redirija `initData` a un tercero. No se guarda ningún token en el frontend.
+La URL del backend puede fijarse mediante la variable de repositorio `TMA_API_BASE_URL`. El workflow de GitHub Pages la inyecta durante el build; solamente se aceptan URLs absolutas HTTPS. No existe un override por query-string para impedir que un enlace arbitrario redirija `initData` a un tercero. No se guarda ningún token en el frontend.
 
 ### Bot Manager
 
@@ -62,7 +62,8 @@ Bot Manager levanta el servicio aiohttp cuando `TMA_API_ENABLED=true`. El host y
 
 No uses `initDataUnsafe` como credencial. El servidor recalcula el HMAC-SHA-256 de `initData`, comprueba `auth_date` y extrae el `user.id` validado. Ese ID es el que se propaga al motor Java para el contexto del turno.
 
+El preflight CORS `OPTIONS` es una operación de navegador, no una llamada de negocio: se responde sin HMAC para que el navegador pueda negociar el header personalizado. Todas las rutas de negocio GET/POST siguen obligatoriamente el middleware HMAC.
+
 ### Telegram Stars
 
-La API usa `createInvoiceLink` con `currency="XTR"` y precio entero en Stars. Para productos digitales Telegram exige XTR; el flujo de pago completo aún requiere manejar `pre_checkout_query` y `successful_payment` en el bot antes de entregar el producto.
-
+La API usa `createInvoiceLink` con `currency="XTR"` y precio entero en Stars. Para productos digitales Telegram exige XTR y no requiere un `provider_token`. El endpoint devuelve únicamente el enlace de pago; la entrega de Tickets Premium todavía debe ocurrir después de procesar `pre_checkout_query` y `successful_payment` en el bot y persistir el identificador de la transacción antes de acreditar el producto.
