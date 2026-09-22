@@ -15,6 +15,7 @@ from app.api.tma_server import create_tma_app
 from app.core.config import Settings
 from app.db.database import Database
 from app.db.community_models import SetupSession
+from app.db.models import GameProfile
 from app.game.models import CombatAction, CombatResult
 
 
