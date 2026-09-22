@@ -1,0 +1,121 @@
+/* ==========================================================================
+   WAIFUMON: PROTOCOLO BŌSŌZOKU (CRT + NEON + RUGGED)
+   ========================================================================== */
+
+:root {
+  --boso-red: #ff003c;
+  --boso-dark: #0a0a0a;
+  --boso-gray: #1a1a1a;
+  --boso-glow: 0 0 10px rgba(255, 0, 60, 0.8), 0 0 20px rgba(255, 0, 60, 0.4);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--boso-dark);
+  color: var(--boso-red);
+  font-family: 'Courier New', Courier, monospace;
+  overflow-x: hidden;
+}
+
+/* 1. EFECTO CRT SCANLINES GLOBALES */
+body::before {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 4px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* 2. CONTENEDOR DE CARTAS (BORDES CORTADOS / CHATARRA) */
+.waifu-card {
+  background-color: var(--boso-gray);
+  border: 2px solid var(--boso-red);
+  padding: 15px;
+  margin: 10px;
+  width: 250px;
+  display: inline-block;
+  box-shadow: var(--boso-glow);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 20px) 0,
+    100% 20px,
+    100% 100%,
+    20px 100%,
+    0 calc(100% - 20px)
+  );
+  transition: all 0.1s ease-in-out;
+}
+
+.waifu-card:hover {
+  transform: scale(1.05);
+  background-color: #1f0007;
+  border-color: #ff3366;
+}
+
+/* 3. TIPOGRAFÍA NEÓN Y TITULARES */
+h1, h2, .card-title {
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 0px #000, var(--boso-glow);
+  margin-top: 0;
+}
+
+/* 4. BOTONES DE COMBATE / ACCIÓN */
+.btn-boso {
+  background: transparent;
+  color: var(--boso-red);
+  border: 2px solid var(--boso-red);
+  padding: 10px 20px;
+  font-family: inherit;
+  font-weight: bold;
+  text-transform: uppercase;
+  cursor: pointer;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+
+.btn-boso:active {
+  background: var(--boso-red);
+  color: var(--boso-dark);
+  box-shadow: none;
+}
+
+/* 5. ANIMACIÓN GLITCH LIGERO (Opcional para barras de HP) */
+@keyframes glitch {
+  0% { transform: translate(0) }
+  20% { transform: translate(-2px, 1px) }
+  40% { transform: translate(-1px, -1px) }
+  60% { transform: translate(2px, 1px) }
+  80% { transform: translate(1px, -1px) }
+  100% { transform: translate(0) }
+}
+
+.hp-bar-container {
+  border: 1px solid var(--boso-red);
+  height: 15px;
+  background: #000;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.hp-bar-fill {
+  height: 100%;
+  background: var(--boso-red);
+  box-shadow: var(--boso-glow);
+  width: 100%;
+}
+
+.danger-glitch {
+  animation: glitch 0.3s infinite;
+}
