@@ -20,6 +20,9 @@ dev = [
   "pytest-asyncio>=1.2,<2.0",
   "ruff>=0.13,<1.0",
 ]
+assets = [
+  "Pillow>=11,<13",
+]
 
 [tool.setuptools.packages.find]
 include = ["app*"]
