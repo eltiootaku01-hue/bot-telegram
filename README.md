@@ -237,6 +237,12 @@ Archivos principales: `app/integrations/meta/messaging.py` y
 La recepción de mensajes externos requiere posteriormente webhooks públicos de Meta; el
 adaptador actual cubre el envío saliente.
 
+## Custom card pool and `/roll`
+
+El catálogo de cartas administrables vive en la tabla SQLite `card_definitions`. Cada alta guarda `id`, `character_id`, `character_name`, `anime_origin`, `rarity`, `image_url`, `source_provider`, `collection_points` y `active=true`. El comando público `/roll` consulta solamente las filas activas en cada ejecución y reclama una copia para el jugador, por lo que una carta nueva queda disponible inmediatamente sin editar `cards.json` ni reiniciar el bot. El mismo mensaje de Telegram se registra en `card_roll_claims` para que una repetición del update no otorgue una segunda copia.
+
+La Mini App incorpora el panel administrativo `CREADOR DE BARAJAS & CARTAS IA`. Solo `ADMIN_USER_ID` puede verlo y cargar JPG/PNG/WEBP. Las imágenes se persisten en `CARD_ASSETS_DIR`; la definición almacenada mantiene rutas relativas como `assets/cards/asuna_summer_ssr.jpg`.
+
 ## Shared points
 
 Every successful waifu capture can award community points. Points belong to the player + community and use an auditable transaction ledger. Fan requests and Gacha spend those same points.
