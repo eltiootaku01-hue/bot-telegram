@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import secrets
+from dataclasses import asdict
+from pathlib import Path
 from typing import Any
 
 from aiohttp import web
 
 from app.card_vault.contracts import CardRegistration, CardRarity
 from app.card_vault.service import CardVaultService
-from app.core.database import Database
+from app.db.database import Database
 from app.db.card_vault_models import CardHolderType
 
 
@@ -59,7 +61,7 @@ class VaultApiServer:
             character_name=str(body["character_name"]),
             anime_origin=str(body["anime_origin"]),
             rarity=CardRarity(str(body["rarity"])),
-            asset_path=__import__("pathlib").Path(str(body["asset_path"])),
+            asset_path=Path(str(body["asset_path"])),
             source_provider=str(body.get("source_provider") or "local"),
             collection_points=int(body.get("collection_points") or 0),
         )
@@ -83,7 +85,7 @@ class VaultApiServer:
                 holder_type=holder_type,
                 holder_key=holder_key,
             )
-        return web.json_response({"items": [row.__dict__ for row in rows]})
+        return web.json_response({"items": [asdict(row) for row in rows]})
 
     async def start(self) -> None:
         app = web.Application(middlewares=[self._auth])
