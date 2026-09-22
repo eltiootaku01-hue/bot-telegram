@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 
 from app.core.config import Settings
 from app.db.database import Database
@@ -96,10 +97,10 @@ async def test_fulfill_is_idempotent_by_telegram_charge_id() -> None:
     assert second.fulfilled is True
 
     async with database.session() as session:
-        purchases = list(await session.scalars(TmaStarPurchase.__table__.select()))
+        purchases = list(await session.scalars(select(TmaStarPurchase)))
         items = list(
             await session.scalars(
-                GameItemInventory.__table__.select().where(
+                select(GameItemInventory).where(
                     GameItemInventory.item_key == "premium_ticket"
                 )
             )
@@ -153,4 +154,68 @@ async def test_same_invoice_payload_can_be_paid_again_with_new_charge_id() -> No
     assert len(items) == 1
     assert items[0].quantity == 2
 
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_payment_updates_validate_then_fulfill_once() -> None:
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from app.modules.tma_payments.module import TmaPaymentsModule
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    async with database.session() as session:
+        session.add(Chat(id=-100123, type="supergroup", title="Test"))
+
+    settings = Settings(
+        authorized_chat_ids="-100123",
+        tma_premium_ticket_price_stars=10,
+    )
+    module = TmaPaymentsModule(database, settings)
+
+    checkout = SimpleNamespace(
+        invoice_payload="tma:777:premium_ticket:0123456789abcdef0123456789abcdef",
+        from_user=SimpleNamespace(id=777),
+        currency="XTR",
+        total_amount=10,
+        answer=AsyncMock(),
+    )
+    await module.pre_checkout(checkout)
+    checkout.answer.assert_awaited_once_with(ok=True)
+
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(
+            id=777,
+            first_name="Johan",
+            last_name=None,
+            username="tester",
+        ),
+        successful_payment=SimpleNamespace(
+            invoice_payload=checkout.invoice_payload,
+            currency="XTR",
+            total_amount=10,
+            telegram_payment_charge_id="charge-module-1",
+            provider_payment_charge_id=None,
+        ),
+        answer=AsyncMock(),
+    )
+    await module.successful_payment(message)
+    assert "Compra confirmada" in message.answer.await_args.args[0]
+
+    await module.successful_payment(message)
+
+    async with database.session() as session:
+        purchases = list(await session.scalars(select(TmaStarPurchase)))
+        items = list(
+            await session.scalars(
+                select(GameItemInventory).where(
+                    GameItemInventory.item_key == "premium_ticket"
+                )
+            )
+        )
+
+    assert len(purchases) == 1
+    assert items[0].quantity == 1
     await database.close()
