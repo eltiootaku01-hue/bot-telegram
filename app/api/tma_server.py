@@ -270,6 +270,13 @@ class TmaCombatService:
         )
 
 
+COMBAT_SERVICE_KEY = web.AppKey("combat_service", TmaCombatService)
+SETTINGS_KEY = web.AppKey("settings", Settings)
+DATABASE_KEY = web.AppKey("database", Database)
+INVOICE_BOT_FACTORY_KEY = web.AppKey("invoice_bot_factory", object)
+TMA_CONTEXT_KEY = web.RequestKey("tma_context", TmaAuthContext)
+
+
 class TmaApiServer:
     """Non-blocking aiohttp server owned by Bot Manager."""
 
@@ -350,7 +357,7 @@ class TmaApiServer:
             await self._stop_event.wait()
         finally:
             await runner.cleanup()
-            app["combat_service"].close()
+            app[COMBAT_SERVICE_KEY].close()
             if self.database is None:
                 await database.close()
 
@@ -364,10 +371,10 @@ def create_tma_app(
 ) -> web.Application:
     combat_service = TmaCombatService(database, settings, engine)
     app = web.Application(middlewares=[_tma_middleware(settings)])
-    app["settings"] = settings
-    app["database"] = database
-    app["combat_service"] = combat_service
-    app["invoice_bot_factory"] = invoice_bot_factory
+    app[SETTINGS_KEY] = settings
+    app[DATABASE_KEY] = database
+    app[COMBAT_SERVICE_KEY] = combat_service
+    app[INVOICE_BOT_FACTORY_KEY] = invoice_bot_factory
     app.router.add_get("/api/combat/init", _combat_init)
     app.router.add_post("/api/combat/action", _combat_action)
     app.router.add_post("/api/store/invoice", _create_invoice)
@@ -393,7 +400,7 @@ def _tma_middleware(settings: Settings):
                 )
             except (TmaAuthError, ValueError):
                 return _json_error(401, "INVALID_TMA_AUTH", "Telegram initData no es válida.")
-            request["tma_context"] = context
+            request[TMA_CONTEXT_KEY] = context
             response = await handler(request)
 
         if origin:
@@ -410,7 +417,7 @@ def _tma_middleware(settings: Settings):
 
 
 async def _combat_init(request: web.Request) -> web.Response:
-    result = await request.app["combat_service"].init(request["tma_context"])
+    result = await request.app[COMBAT_SERVICE_KEY].init(request[TMA_CONTEXT_KEY])
     return web.json_response(result.model_dump(mode="json"))
 
 
@@ -421,7 +428,7 @@ async def _combat_action(request: web.Request) -> web.Response:
     except (ValueError, ValidationError):
         return _json_error(400, "INVALID_BODY", "Cuerpo JSON de combate inválido.")
     try:
-        result = await request.app["combat_service"].action(request["tma_context"], dto)
+        result = await request.app[COMBAT_SERVICE_KEY].action(request[TMA_CONTEXT_KEY], dto)
     except web.HTTPException as exc:
         return exc
     except ValueError as exc:
@@ -438,7 +445,7 @@ async def _create_invoice(request: web.Request) -> web.Response:
     except (ValueError, ValidationError):
         return _json_error(400, "INVALID_BODY", "Producto inválido.")
 
-    settings: Settings = request.app["settings"]
+    settings: Settings = request.app[SETTINGS_KEY]
     token = settings.token_for(settings.tma_bot_identity.value)
     if not token:
         return _json_error(503, "PAYMENTS_UNAVAILABLE", "El bot de pagos no está configurado.")
@@ -459,9 +466,9 @@ async def _create_invoice(request: web.Request) -> web.Response:
     if amount <= 0:
         return _json_error(503, "INVALID_PRICE", "El precio del producto no está configurado.")
 
-    context: TmaAuthContext = request["tma_context"]
+    context: TmaAuthContext = request[TMA_CONTEXT_KEY]
     payload = f"tma:{context.user.id}:{dto.product}:{uuid.uuid4().hex}"
-    bot_factory = request.app.get("invoice_bot_factory")
+    bot_factory = request.app.get(INVOICE_BOT_FACTORY_KEY)
     bot = bot_factory(token) if bot_factory is not None else Bot(token=token)
     try:
         invoice_link = await bot.create_invoice_link(
