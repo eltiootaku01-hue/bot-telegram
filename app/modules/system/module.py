@@ -78,6 +78,7 @@ class SystemModule(BotModule):
                 BotCommand(command="id", description="Mostrar tu ID y el ID del chat"),
                 BotCommand(command="juego", description="Abrir los juegos"),
                 BotCommand(command="gacha", description="Abrir el gacha"),
+                BotCommand(command="roll", description="Reclamar una carta del pool activo"),
                 BotCommand(command="inventario", description="Ver tu inventario"),
                 BotCommand(command="combate", description="Abrir combate"),
                 BotCommand(command="misiones", description="Ver tus misiones diarias"),
@@ -170,6 +171,7 @@ class SystemModule(BotModule):
                 "🎮 <b>Ayuda de Sunna</b>\n\n"
                 "🎲 <code>/juego</code> — abre la zona de juegos.\n"
                 "🎰 <code>/gacha</code> — abre el gacha.\n"
+                "🎴 <code>/roll</code> — reclama una carta del pool activo en la comunidad.\n"
                 "🎒 <code>/inventario</code> — muestra tu colección.\n"
                 "⚔️ <code>/combate</code> — abre combate.\n"
                 "📋 <code>/misiones</code> — ver tus misiones diarias.\n"
@@ -233,11 +235,16 @@ class SystemModule(BotModule):
             BotIdentity.SUNNA: {
                 "games": (
                     "🎮 <b>WaifuMon</b>\n\n"
-                    "Abrí <code>/juego</code> para entrar al panel de Sunna. Desde ahí tenés gacha, inventario, combate y evolución."
+                    "Abrí <code>/juego</code> para entrar al panel de Sunna. Desde ahí tenés gacha, inventario, combate y evolución.\n"
+                    "En la comunidad, <code>/roll</code> reclama una carta del pool activo."
                 ),
                 "gacha": (
                     "🎰 <b>Gacha</b>\n\n"
                     "Usá <code>/gacha</code> para abrirlo. La tirada se resuelve localmente."
+                ),
+                "card_roll": (
+                    "🎴 <b>Roll de cartas</b>\n\n"
+                    "Usá <code>/roll</code> dentro de la comunidad para sacar una carta activa. Las cartas creadas por el administrador entran al pool inmediatamente."
                 ),
                 "inventory": (
                     "🎒 <b>Inventario</b>\n\n"
