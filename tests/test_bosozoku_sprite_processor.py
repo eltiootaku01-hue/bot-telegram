@@ -1,5 +1,9 @@
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip("PIL")
+
 from PIL import Image
 
 from tools.process_bosozoku_sprite import MUGEN_MAGENTA, TINT_COLOR, process_sprite
