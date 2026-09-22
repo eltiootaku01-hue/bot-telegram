@@ -32,6 +32,7 @@ jobs:
           test -f webapp/css/style.css
           test -f webapp/js/main.js
           test -f webapp/js/combat.js
+          test -f webapp/js/effects.js
           test -f webapp/js/api.js
           grep -q 'telegram-web-app.js' webapp/index.html
           grep -q 'class="crt-overlay"' webapp/index.html
@@ -43,8 +44,11 @@ jobs:
           grep -q 'ctx.filter = ASSET_FILTER' webapp/js/combat.js
           grep -q 'Math.random() \* 10' webapp/js/combat.js
           grep -q 'HIT_FLASH_FRAMES = 3' webapp/js/combat.js
+          grep -q 'LightweightCombatEffects' webapp/js/combat.js
+          grep -q 'MAX_PARTICLES = 96' webapp/js/effects.js
           node --check webapp/js/main.js
           node --check webapp/js/combat.js
+          node --check webapp/js/effects.js
           node --check webapp/js/api.js
 
       - name: Configure WebApp API endpoint
