@@ -331,6 +331,9 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
     RAW_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
     PROD_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
 
+    existing_files = sorted(
+        path for path in RAW_SPRITE_DIR.glob("*.png") if path.is_file()
+    )
     candidates = _github_cc0_candidates()
     candidates.extend(_oga_direct_candidates())
     if len(candidates) < target_amount:
@@ -342,9 +345,6 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
         print("[RADAR] OpenGameArt no aportó suficientes candidatos; usando Wikimedia Commons como respaldo.")
         candidates.extend(search_candidates(target_amount))
 
-    existing_files = sorted(
-        path for path in RAW_SPRITE_DIR.glob("*.png") if path.is_file()
-    )
     downloaded = 0
     records = []
     if MANIFEST_FILE.exists():
