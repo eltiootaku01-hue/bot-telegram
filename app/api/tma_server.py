@@ -27,7 +27,6 @@ from app.api.tma_auth import TmaAuthContext, TmaAuthError, init_data_from_reques
 from app.core.access import is_authorized_community
 from app.core.config import Settings
 from app.core.identity import BotIdentity
-from app.core.time import utc_now
 from app.db.database import Database
 from app.db.models import GameCollection, GameProfile, SetupSession
 from app.game.catalog import CHARACTERS, get_character
