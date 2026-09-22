@@ -33,7 +33,7 @@ def test_cleared_provenance_rejects_changed_file_bytes(tmp_path: Path) -> None:
     asset.write_bytes(b"approved-art")
     failures: list[str] = []
 
-    _validate_provenance(
+    validate_provenance(
         asset,
         {
             "asset": str(asset).replace("\\", "/"),
@@ -56,7 +56,7 @@ def test_grandfathered_legacy_is_explicitly_unverified(tmp_path: Path, capsys) -
     asset.write_bytes(b"legacy")
     failures: list[str] = []
 
-    _validate_provenance(
+    validate_provenance(
         asset,
         {
             "asset": str(asset).replace("\\", "/"),
@@ -76,7 +76,7 @@ def test_missing_provenance_record_is_a_hard_failure(tmp_path: Path) -> None:
     asset.write_bytes(b"new-art")
     failures: list[str] = []
 
-    _validate_provenance(
+    validate_provenance(
         asset,
         None,
         root=tmp_path / "production" / "cards",
