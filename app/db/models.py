@@ -338,6 +338,57 @@ class WaifuDetectorRound(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+class CardDefinition(Base):
+    """Admin-managed collectible card that participates in the public /roll pool."""
+
+    __tablename__ = "card_definitions"
+    __table_args__ = (
+        CheckConstraint(
+            "rarity IN ('C', 'R', 'SR', 'SSR', 'UR')",
+            name="ck_card_definition_rarity",
+        ),
+        CheckConstraint(
+            "collection_points >= 0",
+            name="ck_card_definition_collection_points_nonnegative",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    character_id: Mapped[str] = mapped_column(String(100))
+    character_name: Mapped[str] = mapped_column(String(255))
+    anime_origin: Mapped[str] = mapped_column(String(255))
+    rarity: Mapped[str] = mapped_column(String(8))
+    image_url: Mapped[str] = mapped_column(String(512))
+    source_provider: Mapped[str] = mapped_column(String(128), default="IA")
+    collection_points: Mapped[int] = mapped_column(Integer, default=0)
+    active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class CardRollClaim(Base):
+    """Exactly-once result binding for one Telegram /roll source message."""
+
+    __tablename__ = "card_roll_claims"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "chat_id",
+            "source_message_id",
+            name="uq_card_roll_claim_source",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    card_definition_id: Mapped[str] = mapped_column(
+        ForeignKey("card_definitions.id", ondelete="CASCADE")
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    source_message_id: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class GameCardCollection(Base):
     """Collectible card inventory; separate from character progression."""
     __tablename__ = "game_card_collections"
