@@ -26,7 +26,20 @@ BLOCKED_TERMS = {
     "erotic", "fetish", "watermark", "logo", "preview",
 }
 API_URL = "https://commons.wikimedia.org/w/api.php"
-USER_AGENT = "WaifuMon-WaifuDrone/1.2"
+OGA_PAGES = (
+    "https://opengameart.org/content/simple-character-sprite",
+    "https://opengameart.org/content/hero-character-sprite-sheet",
+    "https://opengameart.org/content/character-sprite-walk-animation",
+    "https://opengameart.org/content/rpg-character-sprites",
+    "https://opengameart.org/content/character-3",
+    "https://opengameart.org/content/character-images",
+    "https://opengameart.org/content/simple-character-1",
+    "https://opengameart.org/content/hero-character",
+    "https://opengameart.org/content/pixel-character",
+    "https://opengameart.org/content/8-bit-character",
+    "https://opengameart.org/content/bird-like-rpg-character",
+)
+USER_AGENT = "WaifuMon-WaifuDrone/1.3"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -61,6 +74,57 @@ def _blocked(page: dict) -> bool:
         ]
     ).casefold()
     return any(term in haystack for term in BLOCKED_TERMS)
+
+
+def _fetch_text(url: str) -> str:
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"},
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        return response.read().decode("utf-8", "replace")
+
+
+def _oga_candidates() -> list[dict]:
+    candidates = []
+    seen = set()
+
+    for page_url in OGA_PAGES:
+        try:
+            html = _fetch_text(page_url)
+        except Exception as exc:
+            print("[OGA] " + page_url + ": " + str(exc))
+            continue
+
+        lowered = re.sub(r"\\s+", " ", html).casefold()
+        if "cc0" not in lowered:
+            continue
+        if any(term in lowered for term in BLOCKED_TERMS):
+            continue
+
+        links = re.findall(r'href=["\']([^"\']+\.png(?:\?[^"\']*)?)["\']', html, re.IGNORECASE)
+        for link in links:
+            url = urllib.parse.urljoin(page_url, link)
+            parsed = urllib.parse.urlparse(url)
+            if parsed.netloc != "opengameart.org":
+                continue
+            if "/modules/file/icons/" in parsed.path:
+                continue
+            if not parsed.path.casefold().endswith(".png"):
+                continue
+            if url in seen:
+                continue
+            seen.add(url)
+            title = Path(parsed.path).name
+            candidates.append(
+                {
+                    "title": title,
+                    "source_page": page_url,
+                    "source_url": url,
+                    "license": "CC0",
+                }
+            )
+    return candidates
 
 
 def _api_get(params: dict[str, str]) -> dict:
@@ -170,7 +234,10 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
     RAW_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
     PROD_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
 
-    candidates = search_candidates(target_amount)
+    candidates = _oga_candidates()
+    if len(candidates) < target_amount:
+        print("[RADAR] OpenGameArt no aportó suficientes candidatos; usando Wikimedia Commons como respaldo.")
+        candidates.extend(search_candidates(target_amount))
     downloaded = 0
     records = []
 
