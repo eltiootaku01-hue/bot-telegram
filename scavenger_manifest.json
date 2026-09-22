@@ -1,6 +1,6 @@
 {
   "project": "WaifuMon Scavenger Protocol",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "policy": {
     "only_direct_downloads_in_downloads": true,
     "license_gate": "CC0-or-equivalent-redistribution-rights-required",
@@ -240,6 +240,66 @@
       "license_verified": true,
       "status": "reference_or_manual_use",
       "reason": "Free commercial-use sample, but raw asset redistribution is prohibited by the source license, so it is not downloaded into the repository automatically."
+    },
+    {
+      "category": "vfx",
+      "name": "colorosse_bitrush_hit_effects",
+      "source_url": "https://www.colorosse.com/ja/assets/2d/vfx",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "status": "research_only_direct_url_not_verified",
+      "target_dir": "assets/raw/vfx",
+      "reason": "CC0 Y2K-style hit effects with transparent PNG/SVG are documented, but no stable direct file URL was verified."
+    },
+    {
+      "category": "ui",
+      "name": "colrosse_hologrid_hit_effects",
+      "source_url": "https://www.colorosse.com/ja/assets/2d/vfx",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "status": "research_only_direct_url_not_verified",
+      "target_dir": "assets/raw/ui",
+      "reason": "The page documents holographic/cyberpunk-oriented effects, but direct file retrieval was not verified."
+    },
+    {
+      "category": "code",
+      "name": "terminal_ui_components",
+      "source_url": "https://github.com/wesellis/terminal-ui-components",
+      "license": "MIT",
+      "license_verified": true,
+      "status": "code_reference_only",
+      "target_dir": "webapp",
+      "reason": "Dependency-light CSS terminal UI patterns, CRT and glitch utilities; inspect upstream before vendoring."
+    },
+    {
+      "category": "code",
+      "name": "crtfilter_webgl",
+      "source_url": "https://github.com/Ichiaka/CRTFilter",
+      "license": "MIT",
+      "license_verified": true,
+      "status": "code_reference_only",
+      "target_dir": "webapp",
+      "reason": "Standalone WebGL CRT filter reference with scanlines, static, tearing and glow."
+    },
+    {
+      "category": "vfx",
+      "name": "japanese_hit_effect_colorosse",
+      "source_url": "https://www.colorosse.com/ja/assets/2d/vfx",
+      "license": "CC-BY-4.0",
+      "license_verified": true,
+      "status": "research_only",
+      "target_dir": "assets/raw/vfx",
+      "reason": "Japanese-language hit-effect collection matching ヒットエフェクト terminology; license requires attribution and direct download was not verified."
+    },
+    {
+      "category": "vfx",
+      "name": "japanese_slash_search_reference",
+      "source_url": "https://opengameart.org/content/slash-effect",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "status": "captured_via_related_collection",
+      "target_dir": "assets/raw/vfx",
+      "reason": "CC0 slash effect reference retained as provenance target; current automatic downloads already include the larger Slash Effect Collection."
     }
   ]
 }
