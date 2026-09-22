@@ -367,6 +367,7 @@ class CardDefinition(Base):
     collection_points: Mapped[int] = mapped_column(Integer, default=0)
     coin_value: Mapped[int] = mapped_column(Integer, default=0)
     telegram_protected: Mapped[bool] = mapped_column(default=True)
+    custom_emoji_id: Mapped[str | None] = mapped_column(String(255))
     active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
