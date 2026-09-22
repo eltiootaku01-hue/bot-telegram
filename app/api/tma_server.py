@@ -235,8 +235,7 @@ class TmaCombatService:
         )
         defender = _fighter(self.settings, dto.defender_id, team="enemy")
         server_key = f"tma:{context.user.id}:{community_id}:{dto.idempotency_key}"
-        result = await asyncio.to_thread(
-            self._engine_client().combat,
+        result = await self._engine_client().combat_async(
             attacker={
                 "id": attacker.id,
                 "name": attacker.name,
