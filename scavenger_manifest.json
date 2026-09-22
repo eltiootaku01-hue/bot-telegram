@@ -1,0 +1,104 @@
+{
+  "project": "WaifuMon Scavenger Protocol",
+  "version": "1.1.0",
+  "policy": {
+    "only_direct_downloads_in_downloads": true,
+    "license_gate": "CC0-or-equivalent-redistribution-rights-required",
+    "production_promotion": "separate-provenance-validation-required",
+    "raw_assets_are_not_loaded_by_runtime": true
+  },
+  "downloads": [
+    {
+      "category": "vfx",
+      "name": "particle_pack",
+      "url": "https://kenney.nl/content/3-assets/43-particle-pack/particle-pack.zip",
+      "source_url": "https://kenney.nl/assets/particle-pack",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/vfx"
+    },
+    {
+      "category": "ui",
+      "name": "crosshair_pack",
+      "url": "https://kenney.nl/content/3-assets/231-crosshair-pack/crosshair-pack.zip",
+      "source_url": "https://kenney.nl/assets/crosshair-pack",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/ui"
+    },
+    {
+      "category": "sfx",
+      "name": "digital_audio_pack",
+      "url": "https://kenney.nl/content/3-assets/302-digital-audio/digital-audio.zip",
+      "source_url": "https://kenney.nl/assets/digital-audio",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/audio"
+    },
+    {
+      "category": "ui",
+      "name": "game_icons",
+      "url": "https://kenney.nl/content/3-assets/523-game-icons/game-icons.zip",
+      "source_url": "https://kenney.nl/assets/game-icons",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "target_dir": "assets/raw/icons"
+    }
+  ],
+  "research_only": [
+    {
+      "category": "vfx",
+      "name": "extraordinary_pixelvania_free_asset_pack",
+      "source_url": "https://kijo-dev.itch.io/extraordinary-pixelvania",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "status": "review_only_no_direct_url_verified",
+      "reason": "The page exposes the downloadable pack and CC0 terms, but the public page cache did not expose a stable direct file URL."
+    },
+    {
+      "category": "ui",
+      "name": "cyber_inventory_mega_pack",
+      "source_url": "https://opengameart.org/content/cyber-inventory-mega-pack-%E2%80%94-158-free-lootui-icons-4-neon-styles-%E2%80%94-cc0",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "status": "excluded_from_automatic_download",
+      "reason": "OpenGameArt currently reports the files as unavailable due to potential licensing issues."
+    },
+    {
+      "category": "ui",
+      "name": "cyberpunk_tactical_ui_icons_sampler",
+      "source_url": "https://opengameart.org/node/187066",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "status": "research_only",
+      "reason": "CC0 is documented, but no stable direct-download URL was verified in the current search."
+    },
+    {
+      "category": "sfx",
+      "name": "metallic_hit_anthousai_406562",
+      "source_url": "https://freesound.org/people/Anthousai/sounds/406562/",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "status": "manual_download_required",
+      "reason": "The public page states CC0 and 381.1 KB WAV, but Freesound requires login to download."
+    },
+    {
+      "category": "sfx",
+      "name": "metallic_hit_jack_240213",
+      "source_url": "https://freesound.org/people/_jack/sounds/240213/",
+      "license": "CC0-1.0",
+      "license_verified": true,
+      "status": "manual_download_required",
+      "reason": "The public page states CC0 and an 85.1 KB WAV, but Freesound requires login to download."
+    },
+    {
+      "category": "code",
+      "name": "screen_shake_sajmoni",
+      "source_url": "https://github.com/sajmoni/screen-shake",
+      "license": "MIT",
+      "license_verified": true,
+      "status": "code_reference_only",
+      "reason": "Useful for lightweight screen-shake behavior, but not an asset bundle for assets/raw."
+    }
+  ]
+}
