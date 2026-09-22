@@ -33,6 +33,104 @@ function setupPlayerHeader() {
   document.body.dataset.referral = tg?.initDataUnsafe?.start_param || "";
 }
 
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function setupHolographicCard(member) {
+  const card = document.getElementById("sujetoCero");
+  const glare = document.getElementById("hologram");
+  const art = document.getElementById("tcg-card-art");
+  const nameNode = document.getElementById("tcg-card-name");
+  const status = document.getElementById("card-showcase-status");
+  if (!card || !glare || !art || !member) return;
+
+  const safeId = String(member.id || "").trim();
+  if (!/^[a-z0-9_-]+$/i.test(safeId)) return;
+
+  const cardUrl = new URL(
+    `../assets/production/cards/${safeId}--normal.jpg`,
+    import.meta.url,
+  ).href;
+
+  art.alt = `Carta de ${member.name || safeId}`;
+  art.src = cardUrl;
+  art.onerror = () => {
+    art.removeAttribute("src");
+    if (status) status.textContent = "Arte no disponible";
+  };
+  if (nameNode) nameNode.textContent = String(member.name || safeId).toUpperCase();
+  if (status) status.textContent = "Foil activo";
+
+  card.classList.add("is-interactive");
+
+  const applyTilt = (x, y) => {
+    const tiltX = clamp(x, -1, 1) * 11;
+    const tiltY = clamp(y, -1, 1) * 11;
+    const glareX = clamp(x, -1, 1) * 42;
+    const glareY = clamp(y, -1, 1) * 42;
+
+    card.style.setProperty("--card-tilt-x", `${tiltX}deg`);
+    card.style.setProperty("--card-tilt-y", `${-tiltY}deg`);
+    glare.style.setProperty("--glare-x", `${glareX}%`);
+    glare.style.setProperty("--glare-y", `${glareY}%`);
+  };
+
+  const resetTilt = () => applyTilt(0, 0);
+
+  card.addEventListener("pointermove", (event) => {
+    const rect = card.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
+    applyTilt(x, y);
+  });
+
+  card.addEventListener("pointerleave", resetTilt);
+
+  let orientationAttached = false;
+  const attachOrientation = () => {
+    if (orientationAttached) return true;
+    if (!("DeviceOrientationEvent" in window)) return false;
+
+    window.addEventListener("deviceorientation", (event) => {
+      const beta = Number.isFinite(event.beta) ? event.beta : 0;
+      const gamma = Number.isFinite(event.gamma) ? event.gamma : 0;
+      applyTilt(
+        clamp(gamma / 45, -1, 1),
+        clamp(beta / 45, -1, 1),
+      );
+    }, { passive: true });
+
+    orientationAttached = true;
+    return true;
+  };
+
+  card.addEventListener("click", async () => {
+    try {
+      const Orientation = window.DeviceOrientationEvent;
+      if (
+        Orientation
+        && typeof Orientation.requestPermission === "function"
+        && !orientationAttached
+      ) {
+        const permission = await Orientation.requestPermission();
+        if (permission !== "granted") {
+          if (status) status.textContent = "Foil táctil activo";
+          return;
+        }
+      }
+      if (attachOrientation()) {
+        if (status) status.textContent = "Foil giroscópico activo";
+      }
+    } catch {
+      if (status) status.textContent = "Foil táctil activo";
+    }
+  });
+
+  attachOrientation();
+}
+
 function setupTeam(combat, init) {
   const grid = document.getElementById("team-grid");
   const count = document.getElementById("team-count");
@@ -215,6 +313,7 @@ async function boot() {
     const stars = document.getElementById("stars-balance");
     if (stars) stars.textContent = "—";
     setupTeam(combat, init);
+    setupHolographicCard(init.team[0] || init.opponents[0]);
     setupCombatActions(combat, api, init);
     setupStore(api);
     setupReferralShare();
