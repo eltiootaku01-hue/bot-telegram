@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "effects": [
+    {
+      "status_id": "poison",
+      "resolution": "end_of_turn",
+      "damage_percent_max_hp": 0.05,
+      "duration_turns": 3,
+      "max_stacks": 2
+    },
+    {
+      "status_id": "bleed",
+      "resolution": "end_of_turn",
+      "damage_formula": "max(1, floor(power * (100 - defense) / 100))",
+      "duration_turns": 2,
+      "max_stacks": 2
+    },
+    {
+      "status_id": "stun",
+      "resolution": "before_action",
+      "skip_actions": 1,
+      "duration_turns": 1,
+      "max_stacks": 1
+    },
+    {
+      "status_id": "shield",
+      "resolution": "on_damage",
+      "absorb_formula": "remaining_absorb = max(0, absorb - incoming_damage)",
+      "duration_turns": 1,
+      "max_stacks": 2
+    }
+  ]
+}
