@@ -182,6 +182,31 @@ class WaifuMonJavaEngine:
         )
         return Rarity(response["payload"]["rarity"])
 
+    async def combat_async(
+        self,
+        *,
+        attacker: dict[str, Any],
+        defender: dict[str, Any],
+        action: str,
+        turn_id: str,
+        player_id: int = 0,
+        community_id: int = 0,
+        idempotency_key: str | None = None,
+    ) -> CombatResult:
+        """Run the blocking Java bridge off the asyncio event loop."""
+        import asyncio
+
+        return await asyncio.to_thread(
+            self.combat,
+            attacker=attacker,
+            defender=defender,
+            action=action,
+            turn_id=turn_id,
+            player_id=player_id,
+            community_id=community_id,
+            idempotency_key=idempotency_key,
+        )
+
     def combat(
         self,
         *,
