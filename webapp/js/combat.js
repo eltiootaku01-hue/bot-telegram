@@ -79,11 +79,11 @@ export class WaifuMonCombatCanvas {
     this.render();
   }
 
-  setPose(characterId, pose) {
+  setPose(characterId, pose, { impact = pose === "hit" } = {}) {
     for (const entity of this.entities) {
       if (entity.id === characterId) entity.pose = pose;
     }
-    if (pose === "hit") {
+    if (pose === "hit" && impact) {
       this.triggerImpact();
       return;
     }
