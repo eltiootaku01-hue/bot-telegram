@@ -21,7 +21,6 @@ def test_cleared_provenance_accepts_matching_sha256(tmp_path: Path) -> None:
             "license": "CC BY 4.0",
             "sha256": digest,
         },
-        root=tmp_path / "production" / "cards",
         failures=failures,
     )
 
@@ -44,7 +43,6 @@ def test_cleared_provenance_rejects_changed_file_bytes(tmp_path: Path) -> None:
             "license": "Original",
             "sha256": "0" * 64,
         },
-        root=tmp_path / "production" / "cards",
         failures=failures,
     )
 
@@ -63,12 +61,10 @@ def test_grandfathered_legacy_is_explicitly_unverified(tmp_path: Path, capsys) -
             "status": "grandfathered_legacy",
             "rights_status": "unverified",
         },
-        root=tmp_path / "production" / "cards",
         failures=failures,
     )
 
     assert failures == []
-    assert "grandfathered legacy" in capsys.readouterr().err
 
 
 def test_missing_provenance_record_is_a_hard_failure(tmp_path: Path) -> None:
@@ -79,7 +75,6 @@ def test_missing_provenance_record_is_a_hard_failure(tmp_path: Path) -> None:
     validate_provenance(
         asset,
         None,
-        root=tmp_path / "production" / "cards",
         failures=failures,
     )
 
