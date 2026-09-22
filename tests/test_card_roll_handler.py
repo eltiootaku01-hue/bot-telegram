@@ -82,3 +82,54 @@ async def test_roll_command_claims_uploaded_card_and_sends_image(tmp_path) -> No
     module._observe_action.assert_awaited_once_with("card_roll", 7, -100)
 
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_cards_view_renders_custom_definition_without_catalog_lookup(tmp_path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'cards-view.db'}")
+    await database.create_schema()
+
+    async with database.session(write=True) as session:
+        user = User(id=8, first_name="Viewer")
+        chat = Chat(id=-100, type="supergroup", title="Community")
+        session.add_all([user, chat])
+        await session.flush()
+        profile = GameProfile(user_id=8, chat_id=-100)
+        session.add(profile)
+        await session.flush()
+        session.add(
+            CardDefinition(
+                id="asuna-summer-ssr-02",
+                character_id="asuna",
+                character_name="Asuna (Verano)",
+                anime_origin="Sword Art Online",
+                rarity="SSR",
+                image_url="assets/cards/asuna_summer_ssr.jpg",
+                source_provider="IA (PixAI/Midjourney)",
+                collection_points=150,
+                active=True,
+            )
+        )
+        session.add(
+            GameCardCollection(
+                profile_id=profile.id,
+                card_id="definition:asuna-summer-ssr-02",
+                character_id="asuna",
+                card_tier="SSR",
+                variant="custom",
+                outfit="admin_upload",
+                copies=1,
+            )
+        )
+
+    module = GameModule(database, Settings())
+    edit = AsyncMock()
+    source = SimpleNamespace(edit_text=edit)
+
+    await module._show_cards(source, user_id=8, chat_id=-100, page=1)
+
+    rendered = edit.await_args.args[0]
+    assert "Asuna (Verano)" in rendered
+    assert "SSR" in rendered
+    assert "Personalizada" in rendered
+    await database.close()
