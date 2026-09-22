@@ -44,15 +44,13 @@ function spriteUrl(characterId) {
   return new URL(`../../assets/production/sprites/${characterId}_idle.png`, import.meta.url).href;
 }
 
-function setupTeam(combat) {
+function setupTeam(combat, init) {
   const grid = document.getElementById("team-grid");
   const count = document.getElementById("team-count");
   if (!grid) return;
 
-  const team = DEFAULT_TEAM.filter((entry) => entry.team === "player");
   grid.replaceChildren();
-
-  for (const member of team) {
+  for (const member of init.team) {
     const slot = document.createElement("article");
     slot.className = "team-slot";
 
@@ -60,7 +58,7 @@ function setupTeam(combat) {
     image.alt = member.name;
     image.loading = "lazy";
     image.decoding = "async";
-    image.src = spriteUrl(member.id);
+    image.src = member.sprites?.idle || "";
     image.onerror = () => {
       image.remove();
       const fallback = document.createElement("div");
@@ -71,16 +69,24 @@ function setupTeam(combat) {
 
     const label = document.createElement("strong");
     label.textContent = member.name;
-
     slot.append(image, label);
     grid.append(slot);
   }
 
-  if (count) count.textContent = `${team.length}/3`;
-  combat.setEntities(DEFAULT_TEAM);
-  void combat.preload(DEFAULT_TEAM.map((entry) => entry.id));
+  if (count) count.textContent = init.team.length + "/3";
+  const entities = [
+    ...init.team.map((fighter, index) => ({
+      id: fighter.id, name: fighter.name, team: "player",
+      x: 0.22 + index * 0.12, y: 0.70, size: 116,
+    })),
+    ...init.opponents.map((fighter, index) => ({
+      id: fighter.id, name: fighter.name, team: "enemy",
+      x: 0.78 - index * 0.10, y: 0.70, size: 116,
+    })),
+  ];
+  combat.setEntities(entities);
+  void combat.preload([...init.team, ...init.opponents].map((entry) => entry.id));
 }
-
 function setupCombatActions(combat) {
   const status = document.getElementById("combat-status");
   const actions = document.getElementById("combat-actions");
