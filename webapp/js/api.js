@@ -4,8 +4,7 @@ function configuredApiBaseUrl() {
   const meta = document.querySelector('meta[name="waifumon-api-base-url"]');
   const fromMeta = meta?.content?.trim() || "";
   const fromGlobal = window.WAIFUMON_API_BASE_URL?.trim?.() || "";
-  const fromQuery = new URLSearchParams(window.location.search).get("api")?.trim() || "";
-  return (fromQuery || fromGlobal || fromMeta || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
+  return (fromGlobal || fromMeta || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 }
 
 export class WaifuMonApi {
