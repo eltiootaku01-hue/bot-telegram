@@ -132,7 +132,6 @@ La construcción Windows debe comprobar también el JAR y el JRE bundled.
 ## Riesgos pendientes
 
 - la autoridad Java todavía no cubre todas las reglas de WaifuMon;
-- stats/potential siguen calculándose en Python;
 - fusiones, encuentros, misiones, Detector, regalos y cartas no están todavía migrados;
 - `state_version` es todavía un placeholder semántico de contrato (valor actual 0) y debe convertirse en versión durable del estado;
 - la persistencia sigue siendo responsabilidad Python;
