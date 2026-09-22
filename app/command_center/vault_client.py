@@ -5,7 +5,7 @@ from pathlib import Path
 
 import aiohttp
 
-from app.card_vault.contracts import CardRegistration, CardRarity
+from app.card_vault.contracts import CardRegistration
 
 
 class CardVaultClient:
