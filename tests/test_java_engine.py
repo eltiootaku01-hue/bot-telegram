@@ -91,7 +91,7 @@ def test_java_engine_resolves_evolution_and_stats_contracts() -> None:
             character={
                 "id": "test-waifu",
                 "name": "Test Waifu",
-                "element": "aire",
+                "element_type": "aire",
                 "power_score": 50,
             },
             level=12,
