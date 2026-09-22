@@ -226,3 +226,66 @@ async def test_invoice_endpoint_uses_xtr_and_backend_identity() -> None:
             await client.close()
 
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_tma_action_reaches_real_java_engine() -> None:
+    from pathlib import Path
+
+    from app.game.java_engine import EngineClientConfig, WaifuMonJavaEngine
+
+    root = Path(__file__).resolve().parents[1]
+    jar = root / "engine" / "waifumon" / "target" / "waifumon-engine.jar"
+    if not jar.exists():
+        pytest.skip("Java engine must be built before TMA integration test")
+
+    database = Database("sqlite+aiosqlite:///:memory:")
+    await database.create_schema()
+    async with database.session() as session:
+        session.add(
+            SetupSession(
+                user_id=USER_ID,
+                chat_id=-100123,
+                bot_identity="chie",
+                status="configured",
+            )
+        )
+
+    settings = Settings(
+        bot_token_sunna=BOT_TOKEN,
+        authorized_chat_ids="-100123",
+        tma_bot_identity="sunna",
+        tma_frontend_base_url="https://example.github.io/bot-telegram",
+    )
+    engine = WaifuMonJavaEngine(
+        config=EngineClientConfig(jar_path=jar, java_command="java")
+    )
+    app = create_tma_app(settings, database, engine)
+
+    async with TestServer(app) as server:
+        client = TestClient(server)
+        await client.start_server()
+        try:
+            response = await client.post(
+                "/api/combat/action",
+                headers={"X-Telegram-Init-Data": make_init_data()},
+                json={
+                    "action": "attack",
+                    "attacker_id": "taiga",
+                    "defender_id": "anya",
+                    "turn_id": "real-java-turn",
+                    "idempotency_key": "real-java-idem",
+                },
+            )
+            assert response.status == 200
+            payload = await response.json()
+            result = TurnResultDTO.model_validate(payload)
+            assert result.contract_version == "1.0"
+            assert result.turn_id == "real-java-turn"
+            assert result.damage >= 1
+            assert result.defender_hp >= 0
+        finally:
+            await client.close()
+
+    engine.close()
+    await database.close()
