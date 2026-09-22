@@ -20,6 +20,21 @@ SEARCH_TAGS = (
     "pixel character CC0",
     "game character sprite CC0",
 )
+
+OGA_DIRECT_SOURCES = (
+    ("https://opengameart.org/content/rpg-character-sprites", "https://opengameart.org/sites/default/files/RPG_assets.png"),
+    ("https://opengameart.org/content/hero-character-sprite-sheet", "https://opengameart.org/sites/default/files/player_41.png"),
+    ("https://opengameart.org/content/hero-character-sprite-sheet", "https://opengameart.org/sites/default/files/player_44.png"),
+    ("https://opengameart.org/content/simple-character-1", "https://opengameart.org/sites/default/files/Character%20Front_0.png"),
+    ("https://opengameart.org/content/simple-character-1", "https://opengameart.org/sites/default/files/Character%20Left%201.png"),
+    ("https://opengameart.org/content/free-2d-game-characters", "https://opengameart.org/sites/default/files/character1_0.png"),
+    ("https://opengameart.org/content/free-2d-game-characters", "https://opengameart.org/sites/default/files/character2_0.png"),
+    ("https://opengameart.org/content/free-2d-game-characters", "https://opengameart.org/sites/default/files/walk_animation_frame1_2.png"),
+    ("https://opengameart.org/content/pixel-character", "https://opengameart.org/sites/default/files/AloneSPRhh.png"),
+    ("https://opengameart.org/content/character-1616", "https://opengameart.org/sites/default/files/human_0.png"),
+    ("https://opengameart.org/content/8-bit-character", "https://opengameart.org/sites/default/files/back-sheet.png"),
+    ("https://opengameart.org/content/hero-character", "https://opengameart.org/sites/default/files/HeroCharacter%20Final.png"),
+)
 ALLOWED_LICENSES = {"CC0-1.0", "CC0", "Public domain", "Public Domain"}
 BLOCKED_TERMS = {
     "nsfw", "porn", "hentai", "explicit", "nude", "nudity",
@@ -124,6 +139,32 @@ def _oga_candidates() -> list[dict]:
                     "license": "CC0",
                 }
             )
+    return candidates
+
+
+def _oga_direct_candidates() -> list[dict]:
+    candidates = []
+    seen = set()
+
+    for page_url, source_url in OGA_DIRECT_SOURCES:
+        try:
+            html = _fetch_text(page_url)
+        except Exception:
+            continue
+        lowered = re.sub(r"\\s+", " ", html).casefold()
+        if "cc0" not in lowered or any(term in lowered for term in BLOCKED_TERMS):
+            continue
+        if source_url in seen:
+            continue
+        seen.add(source_url)
+        candidates.append(
+            {
+                "title": Path(urllib.parse.urlparse(source_url).path).name,
+                "source_page": page_url,
+                "source_url": source_url,
+                "license": "CC0",
+            }
+        )
     return candidates
 
 
@@ -234,7 +275,12 @@ def fetch_cc0_waifus(target_amount: int = 10) -> int:
     RAW_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
     PROD_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
 
-    candidates = _oga_candidates()
+    candidates = _oga_direct_candidates()
+    if len(candidates) < target_amount:
+        candidates.extend(
+            item for item in _oga_candidates()
+            if item["source_url"] not in {candidate["source_url"] for candidate in candidates}
+        )
     if len(candidates) < target_amount:
         print("[RADAR] OpenGameArt no aportó suficientes candidatos; usando Wikimedia Commons como respaldo.")
         candidates.extend(search_candidates(target_amount))
