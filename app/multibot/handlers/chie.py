@@ -3,24 +3,56 @@ from __future__ import annotations
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
+from sqlalchemy import select
 
 from app.core.identity import BotIdentity
+from app.db.card_vault_models import BotState
+from app.db.database import Database
 from app.dialogues.models import DialogueEvent
 from app.multibot.filters import BotIdentityFilter
 
 
-def build_router(*, identity_filter: BotIdentityFilter, vault, dialogues, master_user_id: int = 0) -> Router:
+def build_router(
+    *,
+    identity_filter: BotIdentityFilter,
+    vault,
+    dialogues,
+    database: Database,
+    master_user_id: int = 0,
+) -> Router:
     router = Router(name="multibot_chie")
 
     @router.message(Command("campana"), identity_filter)
     async def campana(message: Message) -> None:
-        await message.answer(
-            dialogues.render(
-                DialogueEvent.ON_CAMPANA_RUNG,
-                "chie",
-                {"table_name": "Centro del Café"},
+        table_name = "Centro del Café"
+        statuses: list[str] = []
+        async with database.session() as session:
+            rows = list(
+                await session.scalars(
+                    select(BotState).order_by(BotState.bot_identity)
+                )
             )
+        for row in rows:
+            if row.bot_identity == BotIdentity.CHIE.value:
+                continue
+            location = row.table_key or row.zone_key or "fuera de escena"
+            state = row.status or "idle"
+            statuses.append(f"• {row.bot_identity.title()}: {state} · {location}")
+
+        if statuses:
+            table_name = ", ".join(
+                row.table_key for row in rows if row.table_key
+            ) or table_name
+
+        dialogue = dialogues.render(
+            DialogueEvent.ON_CAMPANA_RUNG,
+            "chie",
+            {"table_name": table_name},
         )
+        text = dialogue
+        if statuses:
+            text += "\n\n<b>Estado actual</b>\n" + "\n".join(statuses[:4])
+        await message.answer(text)
 
     @router.message(Command("saldo"), identity_filter)
     async def balance(message: Message) -> None:
@@ -38,8 +70,9 @@ def build_router(*, identity_filter: BotIdentityFilter, vault, dialogues, master
             return
         rows = await vault.lock_status(holder_type="bank", holder_key="main-bank")
         total = sum(int(row.get("available_quantity", 0)) for row in rows)
+        locked = sum(int(row.get("locked_quantity", 0)) for row in rows)
         await message.answer(
-            f"🏦 Banca: {total} cartas disponibles en el pozo."
+            f"🏦 <b>Banca</b> · disponibles: {total} · bloqueadas: {locked}"
         )
 
     return router
