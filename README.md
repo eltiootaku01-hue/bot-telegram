@@ -262,6 +262,14 @@ python -m app.card_vault.server
 
 La API queda ligada a loopback; usa `VAULT_API_TOKEN` para autenticación explícita entre procesos cuando se configure.
 
+## Offline authored dialogues
+
+Casa de Comando usa `config/dialogues.json` como catálogo local de frases para eventos como `ON_CAMPANA_RUNG`, `ON_CARD_ROLL`, `ON_WAIFU_ENCOUNTER` y `ON_WAIFU_POKER`.
+
+Las frases se cargan sin red y pueden contener variables como `{table_name}`, `{card_name}` y `{user_name}`. El editor local del Bot Manager permite agregarlas, modificarlas o eliminarlas y guarda el archivo mediante reemplazo atómico.
+
+La selección de estas frases no necesita Ollama ni ningún proveedor cloud. La IA continúa siendo opcional y queda fuera de esta ruta authored.
+
 ## Shared points
 
 Every successful waifu capture can award community points. Points belong to the player + community and use an auditable transaction ledger. Fan requests and Gacha spend those same points.
