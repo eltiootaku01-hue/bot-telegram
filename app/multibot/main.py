@@ -8,8 +8,11 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from app.core.identity import BotIdentity
 from app.core.config import get_settings
+from app.core.identity import BotIdentity
+from app.db.database import Database
+from app.middleware.access_control import ChatAccessMiddleware
+from app.middleware.member_sync import MemberSyncMiddleware
 from app.multibot.config import MultiBotConfig
 from app.multibot.dialogues.manager import DialogueManager
 from app.multibot.filters import BotIdentityFilter
@@ -21,12 +24,17 @@ logger = logging.getLogger(__name__)
 
 def build_bots(config: MultiBotConfig) -> dict[BotIdentity, Bot]:
     return {
-        identity: Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+        identity: Bot(
+            token=token,
+            default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        )
         for identity, token in config.tokens().items()
     }
 
 
-async def build_dispatcher(config: MultiBotConfig) -> tuple[Dispatcher, dict[BotIdentity, Bot]]:
+async def build_dispatcher(
+    config: MultiBotConfig,
+) -> tuple[Dispatcher, dict[BotIdentity, Bot], Database]:
     bots = build_bots(config)
     bot_ids: dict[BotIdentity, int] = {}
     for identity, bot in bots.items():
@@ -37,10 +45,15 @@ async def build_dispatcher(config: MultiBotConfig) -> tuple[Dispatcher, dict[Bot
     dialogues_path = Path(settings.dialogues_path)
     if not dialogues_path.is_absolute():
         dialogues_path = Path.cwd() / dialogues_path
-
-    vault = VaultClient(config.vault_api_url, config.vault_api_token)
     dialogues = DialogueManager(str(dialogues_path))
+    vault = VaultClient(config.vault_api_url, config.vault_api_token)
+
+    database = Database(settings.database_url)
+    await database.create_schema()
+
     dp = Dispatcher()
+    dp.update.middleware(ChatAccessMiddleware(settings))
+    dp.update.middleware(MemberSyncMiddleware(database))
 
     for identity, builder in (
         (BotIdentity.SUNNA, sunna.build_router),
@@ -57,33 +70,43 @@ async def build_dispatcher(config: MultiBotConfig) -> tuple[Dispatcher, dict[Bot
                 bank_key=config.default_bank_key,
             )
         elif identity is BotIdentity.CARI:
-            router = builder(identity_filter=identity_filter, dialogues=dialogues)
+            router = builder(
+                identity_filter=identity_filter,
+                dialogues=dialogues,
+            )
         elif identity is BotIdentity.CAMI:
-            router = builder(identity_filter=identity_filter, vault=vault)
+            router = builder(
+                identity_filter=identity_filter,
+                vault=vault,
+            )
         else:
             router = builder(
                 identity_filter=identity_filter,
                 vault=vault,
                 dialogues=dialogues,
+                database=database,
                 master_user_id=settings.master_user_id,
             )
         dp.include_router(router)
 
-    return dp, bots
+    return dp, bots, database
 
 
 async def run() -> None:
     config = MultiBotConfig.from_env()
-    dp, bots = await build_dispatcher(config)
+    dp, bots, database = await build_dispatcher(config)
     logger.info(
         "Starting multibot polling for %s",
         ", ".join(identity.value for identity in bots),
     )
-    await dp.start_polling(
-        *bots.values(),
-        allowed_updates=dp.resolve_used_update_types(),
-        handle_as_tasks=True,
-    )
+    try:
+        await dp.start_polling(
+            *bots.values(),
+            allowed_updates=dp.resolve_used_update_types(),
+            handle_as_tasks=True,
+        )
+    finally:
+        await database.close()
 
 
 def main() -> None:
