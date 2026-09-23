@@ -48,3 +48,6 @@ Las transferencias continúan delegadas al ledger autoritativo de la Bóveda y n
 El modo multibot y el modo actual de cuatro procesos no deben ejecutarse simultáneamente con los mismos tokens: Telegram no permite múltiples procesos de polling concurrentes para un mismo token.
 
 El build Windows existente continúa empaquetando el modo operativo principal y la Casa de Comando; el runner multibot queda disponible como entrada Python para despliegues alternativos.
+
+## Branch validation
+Implemented against the protected mainline through a feature branch and PR.
