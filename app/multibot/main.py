@@ -22,6 +22,18 @@ from app.multibot.vault_client import VaultClient
 logger = logging.getLogger(__name__)
 
 
+def validate_bot_ids(bot_ids: dict[BotIdentity, int]) -> None:
+    inverse: dict[int, BotIdentity] = {}
+    duplicates: list[str] = []
+    for identity, bot_id in bot_ids.items():
+        previous = inverse.get(bot_id)
+        if previous is not None:
+            duplicates.append(f"{previous.value}={identity.value}")
+        inverse[bot_id] = identity
+    if duplicates:
+        raise ValueError("Multiple identities resolve to the same Telegram bot: " + ", ".join(duplicates))
+
+
 def build_bots(config: MultiBotConfig) -> dict[BotIdentity, Bot]:
     return {
         identity: Bot(
@@ -40,6 +52,7 @@ async def build_dispatcher(
     for identity, bot in bots.items():
         me = await bot.get_me()
         bot_ids[identity] = me.id
+    validate_bot_ids(bot_ids)
 
     settings = get_settings()
     dialogues_path = Path(settings.dialogues_path)
@@ -47,6 +60,7 @@ async def build_dispatcher(
         dialogues_path = Path.cwd() / dialogues_path
     dialogues = DialogueManager(str(dialogues_path))
     vault = VaultClient(config.vault_api_url, config.vault_api_token)
+    await vault.health()
 
     database = Database(settings.database_url)
     await database.create_schema()
