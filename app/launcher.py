@@ -18,6 +18,7 @@ except ImportError:  # pragma: no cover - packaged build installs python-dotenv
 
 from app.api.tma_server import TmaApiServer
 from app.core.config import Settings
+from app.gui.dialogue_editor import open_dialogue_editor
 from app.gui.telegram_setup import TelegramSetupAssistant
 from app.services.setup_checklist import build_setup_checklist
 from app.services.telegram_setup import build_start_link
@@ -323,6 +324,7 @@ class BotLauncher(tk.Tk):
         actions = ttk.Frame(outer)
         actions.pack(fill="x", pady=(4, 0))
         ttk.Button(actions, text="Asistente Telegram", command=self.open_telegram_assistant).pack(side="left")
+        ttk.Button(actions, text="Editor de diálogos", command=self.open_dialogue_editor).pack(side="left", padx=8)
         ttk.Button(actions, text="Guía BotFather / Telegram", command=self.show_telegram_manual).pack(side="left", padx=8)
         ttk.Button(actions, text="Guardar configuración", command=self.save_config).pack(side="left", padx=8)
         ttk.Button(actions, text="Comenzar", command=self.start_all).pack(side="right")
@@ -468,6 +470,21 @@ class BotLauncher(tk.Tk):
             set_key(str(ENV_PATH), key, value, quote_mode="auto")
         self.status.set("Configuración guardada en .env")
         return True
+
+    def open_dialogue_editor(self) -> None:
+        values = self._load_env()
+        raw_path = (values.get("DIALOGUES_PATH") or "config/dialogues.json").strip()
+        path = Path(raw_path)
+        if not path.is_absolute():
+            path = ROOT / path
+        if not path.exists():
+            messagebox.showerror(
+                "Editor de diálogos",
+                f"No existe el catálogo local:\n{path}",
+                parent=self,
+            )
+            return
+        open_dialogue_editor(self, path)
 
     def open_telegram_assistant(self) -> None:
         TelegramSetupAssistant(
