@@ -32,16 +32,34 @@ def build_router(
         import secrets
 
         chosen = secrets.choice(available)
-        result = await vault.transfer(
-            card_id=str(chosen["card_id"]),
-            from_type="bank",
-            from_key=bank_key,
-            to_type="user",
-            to_key=str(user.id),
-            quantity=1,
-            actor_user_id=user.id,
-            idempotency_key=f"multibot-roll:{message.chat.id}:{message.message_id}",
-        )
+        idempotency_key = f"multibot-roll:{message.chat.id}:{message.message_id}"
+        result = None
+        for _attempt in range(3):
+            try:
+                result = await vault.transfer(
+                    card_id=str(chosen["card_id"]),
+                    from_type="bank",
+                    from_key=bank_key,
+                    to_type="user",
+                    to_key=str(user.id),
+                    quantity=1,
+                    actor_user_id=user.id,
+                    idempotency_key=idempotency_key,
+                )
+                break
+            except RuntimeError:
+                refreshed = await vault.bank_inventory(bank_key)
+                available = [
+                    item for item in refreshed
+                    if int(item.get("available_quantity", 0)) > 0
+                ]
+                if not available:
+                    await message.answer("( ಠ_ಠ ) La Banca se quedó sin cartas disponibles.")
+                    return
+                chosen = secrets.choice(available)
+        if result is None:
+            await message.answer("( ಠ_ಠ ) La Banca cambió mientras intentaba entregar tu carta.")
+            return
         card_code = next(
             (str(item.get("card_code", "")) for item in available if item["card_id"] == chosen["card_id"]),
             "",
@@ -54,7 +72,6 @@ def build_router(
         )
         await message.answer(text)
         await message.answer(f"🎴 {card_label} · +1 carta")
-        _ = result
 
     @router.callback_query(F.data.startswith("claim:"), identity_filter)
     async def claim(callback: CallbackQuery) -> None:
