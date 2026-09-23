@@ -56,18 +56,18 @@ def test_multibot_dialogue_manager_uses_shared_offline_catalog(tmp_path: Path) -
     )
 
 
-def test_required_handlers_expose_identity_filter_contract() -> None:
+def test_required_handlers_accept_identity_filter_contract() -> None:
+    import inspect
+
     from app.multibot.handlers import cami, cari, chie, sunna
 
-    assert all(
-        "identity_filter" in str(builder)
-        for builder in (
-            sunna.build_router,
-            cari.build_router,
-            cami.build_router,
-            chie.build_router,
-        )
+    builders = (
+        sunna.build_router,
+        cari.build_router,
+        cami.build_router,
+        chie.build_router,
     )
+    assert all("identity_filter" in inspect.signature(builder).parameters for builder in builders)
 
 
 def test_validate_bot_ids_rejects_shared_telegram_identity() -> None:
