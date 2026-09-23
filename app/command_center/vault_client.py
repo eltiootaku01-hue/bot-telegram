@@ -13,7 +13,7 @@ class CardVaultClient:
 
     def __init__(
         self,
-        base_url: str = "http://127.0.0.1:8765",
+        base_url: str = "http://127.0.0.1:8766",
         token: str = "",
     ) -> None:
         self.base_url = base_url.rstrip("/")
