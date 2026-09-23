@@ -21,7 +21,7 @@ async def run() -> None:
         service,
         token=settings.vault_api_token,
         host="127.0.0.1",
-        port=8765,
+        port=8766,
     )
     await api.start()
     try:
