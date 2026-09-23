@@ -214,7 +214,7 @@ class VaultApiServer:
             )
         return web.json_response(asdict(result))
 
-    async def start(self) -> None:
+    def create_app(self) -> web.Application:
         app = web.Application(middlewares=[self._auth])
         app.router.add_get("/healthz", self._health)
         app.router.add_post("/v1/cards", self._register_card)
@@ -227,6 +227,10 @@ class VaultApiServer:
         app.router.add_get("/api/cards/lock-status", self._lock_status)
         app.router.add_post("/api/cards/transfer", self._transfer_compat)
         app.router.add_get("/api/balance/{user_id}", self._balance)
+        return app
+
+    async def start(self) -> None:
+        app = self.create_app()
         self._runner = web.AppRunner(app)
         await self._runner.setup()
         self._site = web.TCPSite(self._runner, self.host, self.port)
