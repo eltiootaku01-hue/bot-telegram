@@ -1,21 +1,31 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, Mapping
 
 from aiogram import Bot
 from aiogram.enums import ChatAction
 from aiogram.types import FSInputFile, Message
 
 from app.command_center.models import ManualMessageCommand, TemporaryMessagePolicy
+from app.dialogues.models import DialogueEvent
+from app.dialogues.renderer import DialogueRenderer
+from app.dialogues.store import DialogueStore
 
 
 class TelegramGateway:
     """Small, testable Telegram Bot API adapter used by Casa de Comando."""
 
-    def __init__(self, bots: dict[str, Bot]) -> None:
+    def __init__(
+        self,
+        bots: dict[str, Bot],
+        *,
+        dialogues: DialogueStore | None = None,
+    ) -> None:
         self._bots = bots
         self._temporary_policy = TemporaryMessagePolicy()
+        self._dialogues = dialogues
+        self._dialogue_renderer = DialogueRenderer(dialogues) if dialogues is not None else None
 
     def bot_for(self, identity: str) -> Bot:
         try:
@@ -41,6 +51,30 @@ class TelegramGateway:
             command.text,
             **kwargs,
         )
+
+    async def send_dialogue(
+        self,
+        *,
+        event: DialogueEvent | str,
+        identity: str,
+        chat_id: int,
+        message_thread_id: int | None = None,
+        variables: Mapping[str, object] | None = None,
+        temporary: bool = True,
+    ) -> Message:
+        if self._dialogue_renderer is None:
+            raise RuntimeError("TelegramGateway has no DialogueStore configured")
+        text = self._dialogue_renderer.render(event, identity, variables)
+        command = ManualMessageCommand(
+            identity=identity,
+            chat_id=chat_id,
+            message_thread_id=message_thread_id,
+            text=text,
+        )
+        await self.typing(identity, chat_id)
+        if temporary:
+            return await self.send_temporary(command)
+        return await self.send_text(command)
 
     async def send_card(
         self,
