@@ -15,6 +15,11 @@ dependencies = [
   "tzdata>=2026.1,<2027.0",
 ]
 
+[project.scripts]
+community-telegram-multibot = "app.multibot.main:main"
+card-vault = "app.card_vault.server:main"
+bot-manager = "app.launcher:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.4,<9.0",
