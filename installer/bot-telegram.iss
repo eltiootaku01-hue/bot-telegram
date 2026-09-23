@@ -23,6 +23,7 @@ Uninstallable=yes
 
 [Files]
 Source: "..\dist\BotManager.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\MultiBot.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\dist\bots\Cari.exe"; DestDir: "{app}\bots"; Flags: ignoreversion
 Source: "..\dist\bots\Sunna.exe"; DestDir: "{app}\bots"; Flags: ignoreversion
 Source: "..\dist\bots\Cami.exe"; DestDir: "{app}\bots"; Flags: ignoreversion
