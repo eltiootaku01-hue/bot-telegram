@@ -1,0 +1,91 @@
+{
+  "ON_CAMPANA_RUNG": {
+    "chie": [
+      "( ಠ_ಠ ) ¿Dónde está Cari? Cari está jugando Waifu Poker en la Mesa {table_name}...",
+      "( ಠ_ಠ ) Escuché la campana. Recuerden mantener el orden en el Café."
+    ],
+    "cari": [
+      "!(°Д°)! ¡Escuché la campana! ¡Problema de capibara en camino! ＼( ≧ ∇ ≦ )／",
+      "!(°Д°)! ¡Ya voy! ¿Alguien dijo desafío de póker?"
+    ],
+    "sunna": [
+      "(*/ω＼*) E-esto... ¿sonó la campana? Estoy en la Mesa {table_name}...",
+      "Hm... escuché la campana. Ya voy."
+    ],
+    "cami": [
+      "( ಠ_ಠ ) Registrando la campana. ¿Qué ocurrió en la Mesa {table_name}?",
+      "Campana registrada. Primero comprobaré si alguien necesita ayuda."
+    ]
+  },
+  "ON_CARD_ROLL": {
+    "sunna": [
+      "(*/ω＼*) E-esto... se acaba de caer una carta en la mesa... {card_name}...",
+      "(*/ω＼*) ¡Atención! Una nueva carta apareció... {card_name}."
+    ],
+    "cami": [
+      "( ಠ_ಠ ) Carta registrada: {card_name}. Verificaré el catálogo."
+    ],
+    "chie": [
+      "( ಠ_ಠ ) Carta detectada. Recuerden respetar las reglas de la Banca."
+    ]
+  },
+  "ON_WAIFU_ENCOUNTER": {
+    "sunna": [
+      "(*/ω＼*) Encontré una waifu... {character_name}. Está en {table_name}.",
+      "Hm... apareció {character_name}. Antes de tocar nada, mirá las opciones."
+    ],
+    "cari": [
+      "!(°Д°)! ¡Waifu suelta! ¡Problema de capibara en {table_name}!",
+      "¡Atención! Apareció {character_name}. ＼( ≧ ∇ ≦ )／"
+    ],
+    "chie": [
+      "( ಠ_ಠ ) Encuentro activo en {table_name}. No rompan el orden."
+    ]
+  },
+  "ON_WAIFU_POKER": {
+    "sunna": [
+      "(*/ω＼*) La partida empieza... apostá con cuidado.",
+      "Hm... las cartas están listas. Buena suerte."
+    ],
+    "cari": [
+      "!(°Д°)! ¡A jugar! ¡Yo no pienso retirarme!",
+      "＼( ≧ ∇ ≦ )／ ¡Poker! A ver quién se anima."
+    ],
+    "cami": [
+      "( ಠ_ಠ ) Baraja comprobada. Pueden empezar.",
+      "La mesa está lista. No cambies las reglas a mitad de la partida."
+    ],
+    "chie": [
+      "( ಠ_ಠ ) Recuerden que las apuestas usan cartas bloqueadas hasta cerrar la mano."
+    ]
+  },
+  "ON_WELCOME": {
+    "cari": [
+      "¡Bienvenido al Café Otaku! ☕ {user_name} acaba de llegar."
+    ],
+    "chie": [
+      "( -u-)/ Bienvenido. La recepción ya está lista, {user_name}."
+    ],
+    "cami": [
+      "Ingreso registrado. Bienvenido, {user_name}."
+    ],
+    "sunna": [
+      "...Hola, {user_name}."
+    ]
+  },
+  "ON_COOLDOWN": {
+    "chie": [
+      "( ಠ_ಠ ) Todavía hay cooldown. Esperá {seconds} segundos.",
+      "El Café sigue enfriando la acción. Quedan {seconds} segundos."
+    ],
+    "sunna": [
+      "Hm... todavía no. Faltan {seconds} segundos."
+    ],
+    "cari": [
+      "¡Espera! ¡Todavía no terminó el cooldown! {seconds}s~"
+    ],
+    "cami": [
+      "Cooldown activo. Restan {seconds} segundos."
+    ]
+  }
+}
