@@ -12,14 +12,18 @@ def build_router(*, identity_filter: BotIdentityFilter, dialogues) -> Router:
     router = Router(name="multibot_cari")
 
     @router.message(Command("poker"), identity_filter)
-    async def poker(message: Message) -> None:
+    async def poker(message: Message, vault) -> None:
+        if message.from_user is None:
+            return
+        locked = await vault.lock_status(holder_key=str(message.from_user.id))
         text = dialogues.render(
             DialogueEvent.ON_WAIFU_POKER,
             "cari",
         )
         await message.answer(
             f"{text}\n\n♠️ <b>Waifu Poker</b>\n"
-            "Las cartas bloqueadas durante una mano no pueden apostarse dos veces. "
+            f"Tenés {sum(int(row.get('available_quantity', 0)) for row in locked)} cartas disponibles y "
+            f"{sum(int(row.get('locked_quantity', 0)) for row in locked)} bloqueadas.\n"
             "El motor de manos se mantiene separado de Telegram."
         )
 
