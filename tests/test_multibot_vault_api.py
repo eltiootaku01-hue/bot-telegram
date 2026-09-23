@@ -8,6 +8,7 @@ from app.card_vault.contracts import CardRegistration, CardRarity
 from app.card_vault.service import CardVaultService
 from app.db.card_vault_models import CardHolderType
 from app.db.database import Database
+from app.db.models import User
 
 
 @pytest.mark.asyncio
@@ -22,6 +23,8 @@ async def test_multibot_vault_compatibility_routes(tmp_path: Path) -> None:
     Image.new("RGB", (64, 64), "white").save(source)
 
     async with database.session() as session:
+        session.add(User(id=42, first_name="Test"))
+        await session.flush()
         card = await service.register_card(
             session,
             CardRegistration(
