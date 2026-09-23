@@ -8,7 +8,7 @@ from app.dialogues.models import DialogueEvent
 from app.multibot.filters import BotIdentityFilter
 
 
-def build_router(*, identity_filter: BotIdentityFilter, dialogues) -> Router:
+def build_router(*, identity_filter: BotIdentityFilter, dialogues, vault) -> Router:
     router = Router(name="multibot_cari")
 
     @router.message(Command("poker"), identity_filter)
