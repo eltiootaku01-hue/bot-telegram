@@ -73,6 +73,7 @@ async def build_dispatcher(
             router = builder(
                 identity_filter=identity_filter,
                 dialogues=dialogues,
+                vault=vault,
             )
         elif identity is BotIdentity.CAMI:
             router = builder(
@@ -86,6 +87,7 @@ async def build_dispatcher(
                 dialogues=dialogues,
                 database=database,
                 master_user_id=settings.master_user_id,
+                bank_key=config.default_bank_key,
             )
         dp.include_router(router)
 
