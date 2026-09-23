@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://127.0.0.1:11434"
 
     # Local card vault / command-center boundary.
-    vault_api_url: str = "http://127.0.0.1:8765"
+    vault_api_url: str = "http://127.0.0.1:8766"
     vault_api_token: str = ""
     card_asset_root: str = "data/card_assets"
     card_thumbnail_root: str = "data/card_thumbnails"
