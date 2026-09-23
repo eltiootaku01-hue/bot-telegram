@@ -22,12 +22,7 @@ def build_router(
         user = message.from_user
         if user is None:
             return
-        inventory = await vault._request(
-            "GET",
-            "/v1/inventory",
-            params={"holder_type": "bank", "holder_key": bank_key},
-        )
-        items = list(inventory.get("items", []))
+        items = await vault.bank_inventory(bank_key)
         available = [item for item in items if int(item.get("available_quantity", 0)) > 0]
         if not available:
             await message.answer("*(ಠ_ಠ)* La Banca no tiene cartas disponibles ahora.")
