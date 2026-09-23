@@ -9,6 +9,7 @@ from app.card_vault.contracts import CardRegistration, CardRarity
 from app.card_vault.service import CardVaultService
 from app.db.card_vault_models import CardHolderType, CardInventory, TransactionHistory
 from app.db.database import Database
+from app.db.models import User
 
 
 @pytest.fixture
@@ -62,6 +63,8 @@ async def test_inventory_transfer_is_idempotent(database: Database, tmp_path: Pa
     service = CardVaultService(tmp_path / "assets", tmp_path / "thumbs")
 
     async with database.session() as session:
+        session.add(User(id=42, first_name="Test"))
+        await session.flush()
         await service.register_card(
             session,
             CardRegistration(
