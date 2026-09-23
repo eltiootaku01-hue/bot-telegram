@@ -166,8 +166,7 @@ class DialogueEditor(ttk.Frame):
 
 
 def open_dialogue_editor(parent, path: str | Path) -> None:
-    window = parent.__class__.__new__(parent.__class__)
-    # Tkinter's Toplevel is intentionally imported lazily to keep the module lightweight.
+    # Tkinter's Toplevel is imported lazily to keep the module lightweight.
     import tkinter as tk
 
     window = tk.Toplevel(parent)
