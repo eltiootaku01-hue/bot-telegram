@@ -1,4 +1,4 @@
-from pathlib import Path\n\nfrom app.dialogues.store import DialogueStore
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -6,6 +6,7 @@ import pytest
 
 from app.command_center.models import CafeTable, ManualMessageCommand, TemporaryMessagePolicy
 from app.command_center.telegram_gateway import TelegramGateway
+from app.dialogues.store import DialogueStore
 
 
 def test_temporary_message_policy_is_bounded() -> None:
@@ -70,7 +71,9 @@ async def test_gateway_passes_forum_topic_and_typing() -> None:
 
 
 @pytest.mark.asyncio
-async def test_gateway_sends_local_authored_dialogue_and_keeps_it_temporary(tmp_path: Path) -> None:
+async def test_gateway_sends_local_authored_dialogue_without_forcing_temporary_mode(
+    tmp_path: Path,
+) -> None:
     dialogue_path = tmp_path / "dialogues.json"
     dialogue_path.write_text(
         '{"ON_CARD_ROLL":{"sunna":["Carta {card_name}"]}}',
@@ -78,7 +81,10 @@ async def test_gateway_sends_local_authored_dialogue_and_keeps_it_temporary(tmp_
     )
 
     bot = AsyncMock()
-    bot.send_message.return_value = SimpleNamespace(chat=SimpleNamespace(id=-100), message_id=12)
+    bot.send_message.return_value = SimpleNamespace(
+        chat=SimpleNamespace(id=-100),
+        message_id=12,
+    )
     gateway = TelegramGateway(
         {"sunna": bot},
         dialogues=DialogueStore(dialogue_path),
