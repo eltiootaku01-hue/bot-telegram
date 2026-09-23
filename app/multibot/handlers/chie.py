@@ -19,6 +19,7 @@ def build_router(
     dialogues,
     database: Database,
     master_user_id: int = 0,
+    bank_key: str = "main-bank",
 ) -> Router:
     router = Router(name="multibot_chie")
 
@@ -68,7 +69,7 @@ def build_router(
         if message.from_user is None or message.from_user.id != master_user_id:
             await message.answer("( ಠ_ಠ ) Acceso restringido.")
             return
-        rows = await vault.lock_status(holder_type="bank", holder_key="main-bank")
+        rows = await vault.lock_status(holder_type="bank", holder_key=bank_key)
         total = sum(int(row.get("available_quantity", 0)) for row in rows)
         locked = sum(int(row.get("locked_quantity", 0)) for row in rows)
         await message.answer(
