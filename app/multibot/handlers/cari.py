@@ -12,7 +12,7 @@ def build_router(*, identity_filter: BotIdentityFilter, dialogues) -> Router:
     router = Router(name="multibot_cari")
 
     @router.message(Command("poker"), identity_filter)
-    async def poker(message: Message, vault) -> None:
+    async def poker(message: Message) -> None:
         if message.from_user is None:
             return
         locked = await vault.lock_status(holder_key=str(message.from_user.id))
