@@ -34,6 +34,14 @@ class VaultClient:
         payload = await self._request("GET", f"/api/inventory/{user_id}")
         return list(payload.get("items", []))
 
+    async def bank_inventory(self, bank_key: str = "main-bank") -> list[dict[str, Any]]:
+        payload = await self._request(
+            "GET",
+            "/v1/inventory",
+            params={"holder_type": "bank", "holder_key": bank_key},
+        )
+        return list(payload.get("items", []))
+
     async def catalog(self) -> list[dict[str, Any]]:
         payload = await self._request("GET", "/v1/cards")
         return list(payload.get("cards", []))
