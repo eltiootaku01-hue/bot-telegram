@@ -35,3 +35,16 @@ Para publicar una carta protegida el adapter debe enviar protect_content=True. T
 
 ## Waifu Poker
 locked_quantity reserva cartas durante una mano. Si una carta se pierde contra una bot, el destino lógico puede ser holder_type=bank para su recirculación.
+## API local para el runner Multi-Bot
+
+La Bóveda expone, además de sus rutas /v1, compatibilidad para el runner multibot:
+
+- GET /api/inventory/{user_id} — inventario de un jugador.
+- POST /api/cards/transfer — movimiento de cartas; acepta idempotency_key y lo convierte en la referencia durable del ledger.
+- GET /api/cards/lock-status — cantidad total, bloqueada y disponible por holding.
+- GET /api/balance/{user_id} — saldo derivado del ledger de Café Coins.
+- GET /v1/cards — catálogo activo de definiciones.
+
+En la configuración actual, Telegram Mini App usa 127.0.0.1:8765 y la Bóveda usa 127.0.0.1:8766. El puerto de Bóveda es configurable mediante VAULT_API_URL.
+
+El runner multibot no accede directamente a SQLite para entregar cartas: consulta a la Bóveda y utiliza transferencias idempotentes.
