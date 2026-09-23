@@ -4,6 +4,8 @@ import os
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+from dotenv import load_dotenv
+
 from app.core.identity import BotIdentity
 
 
@@ -27,6 +29,7 @@ class MultiBotConfig:
 
     @classmethod
     def from_env(cls) -> "MultiBotConfig":
+        load_dotenv()
         values = cls(
             cari_token=_first_env("CARI_BOT_TOKEN", "BOT_TOKEN_CARI"),
             sunna_token=_first_env("SUNNA_BOT_TOKEN", "BOT_TOKEN_SUNNA"),
