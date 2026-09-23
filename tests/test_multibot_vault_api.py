@@ -4,11 +4,10 @@ import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
 from app.card_vault.api import VaultApiServer
-from app.card_vault.contracts import CardRarity
+from app.card_vault.contracts import CardRegistration, CardRarity
 from app.card_vault.service import CardVaultService
 from app.db.card_vault_models import CardHolderType
 from app.db.database import Database
-from app.db.models import CardDefinition
 
 
 @pytest.mark.asyncio
@@ -25,7 +24,7 @@ async def test_multibot_vault_compatibility_routes(tmp_path: Path) -> None:
     async with database.session() as session:
         card = await service.register_card(
             session,
-            __import__("app.card_vault.contracts", fromlist=["CardRegistration"]).CardRegistration(
+            CardRegistration(
                 card_id="rei-compat",
                 card_code="#901",
                 character_id="rei",
