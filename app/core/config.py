@@ -93,6 +93,8 @@ class Settings(BaseSettings):
     vault_api_token: str = ""
     card_asset_root: str = "data/card_assets"
     card_thumbnail_root: str = "data/card_thumbnails"
+    # Local authored dialogue catalog editable by Casa de Comando.
+    dialogues_path: str = "config/dialogues.json"
 
     # Optional outbound Meta messaging adapters.
     meta_graph_api_version: str = "v26.0"
