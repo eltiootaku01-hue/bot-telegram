@@ -29,6 +29,8 @@ pyinstaller --noconfirm --clean --console --onefile --name WorldBot --distpath d
 if errorlevel 1 exit /b %errorlevel%
 pyinstaller --noconfirm --clean --windowed --onefile --name BotManager --distpath dist --workpath build\BotManager app\launcher.py
 if errorlevel 1 exit /b %errorlevel%
+pyinstaller --noconfirm --clean --console --onefile --name MultiBot --distpath dist --workpath build\MultiBot app\multibot\main.py
+if errorlevel 1 exit /b %errorlevel%
 
 call tools\build_waifumon.bat
 if errorlevel 1 exit /b %errorlevel%
@@ -47,6 +49,7 @@ echo           dist\bots\Sunna.exe
 echo           dist\bots\Cami.exe
 echo           dist\bots\Chie.exe
 echo           dist\bots\WorldBot.exe
+echo MultiBot:  dist\MultiBot.exe
 echo ============================================
 echo.
 exit /b 0
