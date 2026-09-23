@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path\n\nfrom app.dialogues.store import DialogueStore
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -67,3 +67,30 @@ async def test_gateway_passes_forum_topic_and_typing() -> None:
     bot.send_chat_action.assert_awaited_once()
     kwargs = bot.send_message.await_args.kwargs
     assert kwargs["message_thread_id"] == 77
+
+
+@pytest.mark.asyncio
+async def test_gateway_sends_local_authored_dialogue_and_keeps_it_temporary(tmp_path: Path) -> None:
+    dialogue_path = tmp_path / "dialogues.json"
+    dialogue_path.write_text(
+        '{"ON_CARD_ROLL":{"sunna":["Carta {card_name}"]}}',
+        encoding="utf-8",
+    )
+
+    bot = AsyncMock()
+    bot.send_message.return_value = SimpleNamespace(chat=SimpleNamespace(id=-100), message_id=12)
+    gateway = TelegramGateway(
+        {"sunna": bot},
+        dialogues=DialogueStore(dialogue_path),
+    )
+
+    await gateway.send_dialogue(
+        event="ON_CARD_ROLL",
+        identity="sunna",
+        chat_id=-100,
+        variables={"card_name": "#001 Rei"},
+        temporary=False,
+    )
+
+    bot.send_chat_action.assert_awaited_once()
+    assert bot.send_message.await_args.args == (-100, "Carta #001 Rei")
