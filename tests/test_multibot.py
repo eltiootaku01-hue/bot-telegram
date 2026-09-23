@@ -66,3 +66,17 @@ def test_required_handlers_expose_identity_filter_contract() -> None:
             chie.build_router,
         )
     )
+
+
+def test_validate_bot_ids_rejects_shared_telegram_identity() -> None:
+    from app.multibot.main import validate_bot_ids
+
+    with pytest.raises(ValueError, match="same Telegram bot"):
+        validate_bot_ids(
+            {
+                BotIdentity.CARI: 10,
+                BotIdentity.SUNNA: 10,
+                BotIdentity.CAMI: 30,
+                BotIdentity.CHIE: 40,
+            }
+        )
