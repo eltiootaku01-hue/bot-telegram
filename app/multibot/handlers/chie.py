@@ -57,7 +57,7 @@ def build_router(
 
     @router.message(Command("saldo"), identity_filter)
     async def balance(message: Message) -> None:
-        if message.from_user is None:
+        if message.chat.type != "private" or message.from_user is None:
             return
         balance_value = await vault.balance(message.from_user.id)
         await message.answer(
@@ -66,6 +66,8 @@ def build_router(
 
     @router.message(Command("banco"), identity_filter)
     async def bank_admin(message: Message) -> None:
+        if message.chat.type != "private":
+            return
         if message.from_user is None or message.from_user.id != master_user_id:
             await message.answer("( ಠ_ಠ ) Acceso restringido.")
             return
