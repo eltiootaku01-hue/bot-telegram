@@ -9,6 +9,13 @@ python -m pip install pyinstaller==6.22.2 pyinstaller-hooks-contrib==2026.7
 if errorlevel 1 exit /b %errorlevel%
 
 if exist assets xcopy assets dist\assets /E /I /Y >nul
+if not exist config\dialogues.json (
+  echo Falta config\dialogues.json
+  exit /b 1
+)
+if not exist dist\config mkdir dist\config
+copy /Y config\dialogues.json dist\config\dialogues.json >nul
+if errorlevel 1 exit /b %errorlevel%
 
 pyinstaller --noconfirm --clean --console --onefile --name Cari --distpath dist\bots --workpath build\Cari app\bots\cari.py
 if errorlevel 1 exit /b %errorlevel%
