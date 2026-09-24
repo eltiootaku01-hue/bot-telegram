@@ -497,7 +497,7 @@ class CafeOtakuWindow(QMainWindow):
             self._web_queue = None
             self._log_error("WebQueue initialization", error)
             self._on_web_state(
-                f"WebQueue no disponible: {type(error).__name__}"
+                "WebQueue no disponible. Revisa el estado del servicio."
             )
 
         self._tavern = self.runtime.build_tavern_manager(
@@ -836,7 +836,7 @@ class CafeOtakuWindow(QMainWindow):
         self._pending_tasks = max(0, self._pending_tasks - 1)
         self._append_system(
             "No pude procesar la consulta de forma segura. "
-            f"Detalle registrado: {reason.split(':', 1)[0]}."
+            "El detalle técnico quedó registrado localmente."
         )
         self.send_button.setEnabled(self._pending_tasks == 0)
         self._log_line(f"Application error: {reason}")
