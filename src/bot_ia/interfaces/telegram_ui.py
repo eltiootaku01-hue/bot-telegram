@@ -6,6 +6,7 @@ import re
 from collections import OrderedDict
 
 from bot_ia.core.application import ApplicationRequest, BotApplication
+from bot_ia.core.waitress_session_manager import WaitressSessionManager
 from bot_ia.core.context_selection import available_context_sources, select_context_sources
 from bot_ia.core.context_sharing import build_shared_context
 from bot_ia.core.creative_assist import build_stuck_menu, expand_scene_sketch
@@ -23,6 +24,17 @@ NOVEL_PROFILES = {
 
 
 class TelegramNovelAdapter(TelegramAdapter):
+    def __init__(
+        self,
+        application: BotApplication,
+        *,
+        tavern_manager: WaitressSessionManager | None = None,
+    ) -> None:
+        super().__init__(
+            application,
+            tavern_manager=tavern_manager,
+        )
+
     MAIN_MENU = (
         (("📖 Novela", "menu:novel"), ("📝 Editar", "menu:edit")),
         (("📚 Biblioteca", "menu:library"), ("🧭 Continuidad", "menu:continuity")),
