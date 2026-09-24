@@ -14,9 +14,8 @@ $env:PYTHONPATH = Join-Path $root "src"
 Remove-Item -Recurse -Force "build", "dist", "release" -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path "release" | Out-Null
 
-# The wrapper owns the desktop event loop. It keeps Tk calls on the main thread
-# and starts Telegram as an explicit worker process instead of passing arguments
-# to a GUI-only executable.
+# The wrapper owns the Qt desktop event loop and starts Telegram/WebChat as
+# explicit worker processes so the GUI remains responsive and isolated.
 pyinstaller --noconfirm --clean --onefile --windowed --name BOT-IA-Core --hidden-import=services.web_queue --hidden-import=PySide6.QtWebEngineWidgets --hidden-import=PySide6.QtWebChannel desktop_entry.py
 pyinstaller --noconfirm --clean --onefile --windowed --name BOT-IA launcher.py
 
