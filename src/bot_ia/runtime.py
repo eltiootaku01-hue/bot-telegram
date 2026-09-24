@@ -13,6 +13,8 @@ from bot_ia.core.application import BotApplication
 from bot_ia.core.backup_service import BackupService, BackupSnapshot
 from bot_ia.core.brain import LocalBrain
 from bot_ia.core.local_workflow import LocalWorkflow
+from bot_ia.core.mama_mia_supervisor import MamaMiaSupervisor
+from bot_ia.core.waitress_session_manager import WaitressSessionManager
 from bot_ia.core.project_manager import ProjectManager, ProjectRecord
 from bot_ia.core.router import Router
 from bot_ia.core.session_store import PersistentSessionStore
@@ -64,6 +66,34 @@ class RuntimeComponents:
     def create_backup_snapshot(self, destination_root: Path, *, label: str) -> BackupSnapshot:
         """Create a validated snapshot of persistent memory and session state."""
         return self.backup_service.create_snapshot(destination_root, label=label)
+
+    def build_tavern_manager(
+        self,
+        *,
+        web_queue_manager: object | None = None,
+        message_sender=None,
+        message_deleter=None,
+        timezone_name: str = "America/Argentina/Buenos_Aires",
+    ) -> WaitressSessionManager:
+        return WaitressSessionManager(
+            self.memory_store.path,
+            web_queue_manager=web_queue_manager,
+            message_sender=message_sender,
+            message_deleter=message_deleter,
+            timezone_name=timezone_name,
+        )
+
+    def build_mama_mia_supervisor(
+        self,
+        *,
+        gemini_responder=None,
+        gemini_auditor=None,
+    ) -> MamaMiaSupervisor:
+        return MamaMiaSupervisor(
+            self.memory_store.path,
+            gemini_responder=gemini_responder,
+            gemini_auditor=gemini_auditor,
+        )
 
     def build_application(self, *, default_universe_id: str | None = None, provider_id: str = "openai") -> BotApplication:
         provider_config = self.registry.provider(provider_id)
