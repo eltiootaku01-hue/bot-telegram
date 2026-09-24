@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Adaptador de Coze Open API v3.
 
 Coze no es un endpoint de modelos OpenAI-compatible: inicia un chat y luego
@@ -8,6 +9,7 @@ adaptador independiente aunque participe en el mismo ProviderManager.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -49,6 +51,11 @@ class CozeProvider(BaseProvider):
         if not self.enabled:
             from .errors import ProviderDisabledError
             raise ProviderDisabledError("provider account is disabled")
+        if threading.current_thread() is threading.main_thread():
+            raise ProviderRemoteError(
+                "CozeProvider.generate must run outside the Python main thread"
+            )
+
         if request.provider != self.provider_id:
             raise ProviderProtocolError("request targets another provider")
         if request.account_id is not None and request.account_id != self.account_id:
@@ -114,6 +121,7 @@ class CozeProvider(BaseProvider):
         conversation_id = str(chat["conversation_id"])
         chat_id = str(chat["id"])
         deadline = time.monotonic() + max(1.0, timeout_seconds)
+        poll_waiter = threading.Event()
 
         while time.monotonic() < deadline:
             query = urlencode({"conversation_id": conversation_id, "chat_id": chat_id})
@@ -136,7 +144,7 @@ class CozeProvider(BaseProvider):
                         answers.append(content.strip())
                 if answers:
                     return "\n\n".join(dict.fromkeys(answers)), usage
-            time.sleep(0.25)
+            poll_waiter.wait(0.25)
 
         raise ProviderTimeoutError("Coze chat did not produce an answer before timeout")
 
