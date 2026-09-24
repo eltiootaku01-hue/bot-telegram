@@ -62,6 +62,46 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("start_web_chat", source)
         self.assertIn("--web-chat-worker", source)
 
+    def test_async_qt_entrypoint_and_shutdown_contract_are_present(self):
+        source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+
+        for token in (
+            "async def _async_main(",
+            "from qasync import QEventLoop",
+            "asyncio.run(",
+            "loop_factory=QEventLoop",
+            "app.aboutToQuit.connect(quit_event.set)",
+            "await window.shutdown_async_engine()",
+            "WebQueueManager()",
+            "TaskOrchestrator(",
+            "web_worker_callback=web_queue.process_task",
+            "asyncio.create_task(",
+        ):
+            self.assertIn(token, source)
+
+        self.assertIn(
+            'python_version < "3.14"',
+            (self.ROOT / "pyproject.toml").read_text(
+                encoding="utf-8"
+            ),
+        )
+
+    def test_qt_fallback_is_guarded_for_python_314(self):
+        source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "and sys.version_info < (3, 14)",
+            source,
+        )
+        self.assertIn(
+            "return _qt_main(app)",
+            source,
+        )
+
 
     def test_desktop_core_delegates_to_qt(self):
         source = (
