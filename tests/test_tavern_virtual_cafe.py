@@ -184,6 +184,27 @@ class TavernTests(unittest.TestCase):
             self.assertLessEqual(len(directives), 3)
             supervisor.clear_directives("cari")
 
+    def test_force_rest_persists_for_idle_waitress(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manager = self.manager(directory)
+            manager.force_rest("cari")
+            item = next(
+                row
+                for row in manager.list_turns()
+                if row.waitress_id == "cari"
+            )
+            self.assertTrue(item.is_resting)
+            self.assertFalse(item.is_busy)
+            manager.shutdown()
+
+    def test_force_rest_rejects_active_session(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manager = self.manager(directory, queue=FakeWebQueue())
+            manager.start_standard_session("1", "cari")
+            with self.assertRaises(SessionConflictError):
+                manager.force_rest("cari")
+            manager.shutdown()
+
     def test_auto_delete_is_scheduled_without_blocking(self):
         deleted = []
 
