@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 import re
 import sqlite3
+import threading
+import time
 from uuid import uuid4
 
 from bot_ia.change_management import ChangeManager
@@ -25,6 +27,7 @@ MAX_MEMORY_FIELD_CHARS = 2_048
 MAX_MEMORY_TAGS = 64
 MAX_MEMORY_TAG_CHARS = 128
 MAX_MEMORY_QUERY_CHARS = 24_000
+EXPIRY_SWEEP_INTERVAL_SECONDS = 30.0
 
 
 class MemoryStorageError(RuntimeError):
@@ -48,6 +51,8 @@ class MemoryStore:
         self._path = ChangeManager(workspace_root).resolve_target(database_path)
         self._closed = False
         self._fts_available = False
+        self._lock = threading.RLock()
+        self._last_expiry_sweep = 0.0
         self._initialize()
 
     @property
