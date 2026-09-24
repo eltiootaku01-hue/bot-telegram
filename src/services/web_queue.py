@@ -932,15 +932,24 @@ class WebChatQueueManager(QObject):
         )
 
         self._bridge = _WebQueueBridge()
-        self._channel = QWebChannel(
-            self.web_view.page()
-        )
+
+        # Qt permite un solo QWebChannel por página. Si la GUI ya
+        # tiene uno, lo reutilizamos para no romper otros bridges.
+        existing_channel = self.web_view.page().webChannel()
+
+        if existing_channel is not None:
+            self._channel = existing_channel
+        else:
+            self._channel = QWebChannel(
+                self.web_view.page()
+            )
+            self.web_view.page().setWebChannel(
+                self._channel
+            )
+
         self._channel.registerObject(
             "casaQueueBridge",
             self._bridge,
-        )
-        self.web_view.page().setWebChannel(
-            self._channel
         )
 
         self._bridge.event_received.connect(
