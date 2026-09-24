@@ -633,11 +633,29 @@ class TelegramPoller:
                     continue
 
                 try:
-                    result = self._client.send(outbound)
+                    if self._outbox is not None:
+                        record = self._outbox.create_pending(update_id, outbound)
+                        start_chunk = record.next_chunk
+                    else:
+                        start_chunk = 0
+                    result = self._client.send(
+                        outbound,
+                        start_chunk=start_chunk,
+                        on_chunk_ack=(
+                            lambda acknowledged, _result: self._outbox.ack_chunk(
+                                update_id,
+                                acknowledged,
+                            )
+                            if self._outbox is not None
+                            else None
+                        ),
+                    )
                     self._schedule_auto_delete_if_needed(
                         outbound,
                         result,
                     )
+                    if self._outbox is not None:
+                        self._outbox.mark_delivered(update_id)
                 except TelegramPartialDeliveryError as error:
                     self._pending_delivery = (
                         update_id,
@@ -659,6 +677,11 @@ class TelegramPoller:
                     )
                     break
                 except (TelegramApiError, TelegramInputError):
+                    if self._outbox is not None:
+                        try:
+                            self._outbox.mark_failed(update_id)
+                        except TelegramOutboxError:
+                            self._logger("telegram outbox could not mark update failed")
                     self._offset = update_id + 1
                     skipped += 1
                     self._logger(
