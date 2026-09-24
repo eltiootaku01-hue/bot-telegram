@@ -73,7 +73,7 @@ class TavernTests(unittest.TestCase):
             manager.expire_session(manager.get_active_session("1").session_id)
             snapshot = manager.inventory("1")
             self.assertEqual(0, snapshot.daily_free_uses)
-            self.assertEqual(0, snapshot.cards[0][2])
+            self.assertEqual((), snapshot.cards)
             manager.shutdown()
 
             connection = sqlite3.connect(
