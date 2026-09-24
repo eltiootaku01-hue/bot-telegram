@@ -317,6 +317,16 @@ class CafeOtakuWindow(QMainWindow):
         selected_layout.addWidget(self.selected_role)
         selected_layout.addSpacing(5)
         selected_layout.addWidget(self.selected_status)
+
+        actions = QHBoxLayout()
+        self.start_chat_button = QPushButton("☕ Charla 3 min")
+        self.start_chat_button.clicked.connect(self._start_selected_tavern_session)
+        actions.addWidget(self.start_chat_button)
+        self.force_rest_button = QPushButton("💤 Forzar descanso")
+        self.force_rest_button.clicked.connect(self._force_selected_rest)
+        actions.addWidget(self.force_rest_button)
+        selected_layout.addLayout(actions)
+
         layout.addWidget(selected_card)
 
         return panel
@@ -835,12 +845,7 @@ class CafeOtakuWindow(QMainWindow):
 
     @Slot(str, str)
     def _on_web_ticket_failed(self, ticket_id: str, reason: str) -> None:
-        if ticket_id in self._tavern_ticket_ids:
-            self._append_system(
-                "La charla web de la Taberna tuvo un fallo controlado. "
-                "No se descontó otro coste."
-            )
-        else:
+        if ticket_id not in self._tavern_ticket_ids:
             self._append_system(
                 "El chat web no pudo completar el mensaje. "
                 "La cola lo marcó como fallo controlado."
@@ -922,6 +927,52 @@ class CafeOtakuWindow(QMainWindow):
             return self._tavern.rest_seconds_remaining(waitress_id)
         except Exception:
             return 0
+
+    def _start_selected_tavern_session(self) -> None:
+        if self._tavern is None:
+            self._append_system("La Taberna no está disponible.")
+            return
+        try:
+            session = self._tavern.get_active_session(DESKTOP_USER)
+            if session is None:
+                session = self._tavern.start_standard_session(
+                    DESKTOP_USER,
+                    self._selected_bot_id,
+                )
+                self._append_system(
+                    f"☕ Charla iniciada con "
+                    f"{BOT_MAP[self._selected_bot_id].name}. "
+                    "Puedes escribir en el modo Taberna."
+                )
+            self.chat_mode.setCurrentIndex(1)
+            self.refresh_state()
+        except (
+            WaitressUnavailableError,
+            SessionConflictError,
+            InsufficientBalanceError,
+            TavernConfigurationError,
+            TavernError,
+        ) as error:
+            self._append_system(self._friendly_tavern_error(error))
+
+    def _force_selected_rest(self) -> None:
+        if self._tavern is None:
+            self._append_system("La Taberna no está disponible.")
+            return
+        profile = BOT_MAP[self._selected_bot_id]
+        try:
+            self._tavern.force_rest(profile.bot_id)
+            self._append_system(
+                f"💤 {profile.name} quedó marcada como descansando en SQLite."
+            )
+            self.refresh_state()
+        except (
+            WaitressUnavailableError,
+            SessionConflictError,
+            TavernError,
+            ValueError,
+        ) as error:
+            self._append_system(self._friendly_tavern_error(error))
 
     def _update_selected_status(self) -> None:
         profile = BOT_MAP[self._selected_bot_id]
