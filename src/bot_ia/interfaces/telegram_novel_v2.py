@@ -45,6 +45,7 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
     def handle_callback(self, update: dict[str, object]) -> TelegramOutbound:
         callback = parse_callback_update(update)
         key = (callback.user_id, callback.conversation_id)
+        self._touch_state(key)
         data = callback.data
         if data == "menu:edit":
             self._selected_main.pop(key, None)
@@ -85,6 +86,7 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
         if "callback_query" not in update:
             inbound = parse_update(update)
             key = (inbound.user_id, inbound.conversation_id)
+            self._touch_state(key)
             pending = self._pending.get(key)
             if pending == "research":
                 self._pending.pop(key, None)
