@@ -820,7 +820,7 @@ class CafeOtakuWindow(QMainWindow):
         if "online" in normalized:
             state = "online"
         elif "procesando" in normalized:
-            state = "online"
+            state = "warn"
         elif "fallback" in normalized or "reintentando" in normalized:
             state = "warn"
         else:
@@ -845,7 +845,6 @@ class CafeOtakuWindow(QMainWindow):
         )
         self.refresh_state()
 
-    @Slot(str)
     def _quick_action(self, action_id: str) -> None:
         if (
             action_id in {"chocolatada", "trivia"}
