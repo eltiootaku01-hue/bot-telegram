@@ -235,9 +235,11 @@ def main() -> None:
         raise SystemExit(_run_telegram_worker())
     if "--web-chat-worker" in sys.argv:
         raise SystemExit(_run_web_chat_worker())
-    desktop = _install_threadsafe_desktop()
-    app = desktop.BotIADesktop()
-    app.root.mainloop()
+
+    # El Core de producción usa ahora la UI Qt Dark Cozy.
+    # Los workers legacy se conservan para compatibilidad de mantenimiento.
+    from gui.app import main as qt_main
+    raise SystemExit(qt_main())
 
 
 if __name__ == "__main__":
