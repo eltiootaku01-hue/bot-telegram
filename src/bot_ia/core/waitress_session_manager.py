@@ -156,6 +156,9 @@ class WaitressSessionManager:
             max_workers=1,
             thread_name_prefix="bot-ia-mama-mia",
         )
+        # ThreadPoolExecutor usa una cola interna sin límite. El semáforo
+        # limita la capacidad efectiva a un trabajo ejecutándose y uno pendiente.
+        self._supervision_slots = threading.BoundedSemaphore(2)
         self._timers: dict[str, threading.Timer] = {}
         self._timer_lock = threading.RLock()
         self._ticket_sessions: dict[str, int] = {}
@@ -773,16 +776,19 @@ class WaitressSessionManager:
                 raise TavernError("tavern manager is shut down")
             self._ticket_sessions[ticket_id] = session.session_id
 
-        if self._mama_mia is not None:
+        if self._mama_mia is not None and self._supervision_slots.acquire(blocking=False):
             try:
-                self._supervision_pool.submit(
+                future = self._supervision_pool.submit(
                     self._mama_mia.audit_gemini_and_direct,
                     session.waitress_id,
                     user_message,
                     context=user_context,
                 )
+                future.add_done_callback(
+                    lambda _future: self._supervision_slots.release()
+                )
             except RuntimeError:
-                return ticket_id
+                self._supervision_slots.release()
 
         try:
             self._web_queue.enqueue_bot_message(
