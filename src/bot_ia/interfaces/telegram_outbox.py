@@ -10,9 +10,10 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import sqlite3
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
-from .telegram import TelegramOutbound
+if TYPE_CHECKING:
+    from .telegram import TelegramOutbound
 
 
 class TelegramOutboxError(RuntimeError):
@@ -66,7 +67,7 @@ class TelegramOutboxStore:
             )
 
     @staticmethod
-    def _serialize(outbound: TelegramOutbound) -> str:
+    def _serialize(outbound: "TelegramOutbound") -> str:
         payload: dict[str, Any] = {
             "chat_id": outbound.chat_id,
             "text": outbound.text,
@@ -80,7 +81,8 @@ class TelegramOutboxStore:
         return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
     @staticmethod
-    def _deserialize(payload: str) -> TelegramOutbound:
+    def _deserialize(payload: str) -> "TelegramOutbound":
+        from .telegram import TelegramOutbound
         try:
             raw = json.loads(payload)
         except json.JSONDecodeError as error:
@@ -148,7 +150,7 @@ class TelegramOutboxStore:
             status,
         )
 
-    def create_pending(self, update_id: int, outbound: TelegramOutbound) -> TelegramOutboxRecord:
+    def create_pending(self, update_id: int, outbound: "TelegramOutbound") -> TelegramOutboxRecord:
         if not isinstance(update_id, int) or update_id < 0:
             raise ValueError("update_id must be a non-negative integer")
         serialized = self._serialize(outbound)
