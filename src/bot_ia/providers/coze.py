@@ -9,7 +9,6 @@ adaptador independiente aunque participe en el mismo ProviderManager.
 from __future__ import annotations
 
 import json
-import threading
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -51,11 +50,6 @@ class CozeProvider(BaseProvider):
         if not self.enabled:
             from .errors import ProviderDisabledError
             raise ProviderDisabledError("provider account is disabled")
-        if threading.current_thread() is threading.main_thread():
-            raise ProviderRemoteError(
-                "CozeProvider.generate must run outside the Python main thread"
-            )
-
         if request.provider != self.provider_id:
             raise ProviderProtocolError("request targets another provider")
         if request.account_id is not None and request.account_id != self.account_id:
