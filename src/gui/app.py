@@ -11,10 +11,24 @@ from pathlib import Path
 import sqlite3
 import subprocess
 import sys
+import time
 import traceback
 from contextlib import closing
 
-from PySide6.QtCore import QEvent, QObject, QRunnable, QThreadPool, QTimer, Qt, QUrl, Signal, Slot
+from dotenv import dotenv_values, load_dotenv, set_key
+from playwright.sync_api import sync_playwright
+from PySide6.QtCore import (
+    QEvent,
+    QObject,
+    QRunnable,
+    QThread,
+    QThreadPool,
+    QTimer,
+    Qt,
+    QUrl,
+    Signal,
+    Slot,
+)
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -139,12 +153,147 @@ class ApplicationTask(QRunnable):
             )
 
 
-class CafeOtakuWindow(QMainWindow):
+class GeminiLobbyWorker(QObject):
+    """Ejecuta una sesión persistente y sincrónica de Gemini fuera de la GUI."""
+
+    finished = Signal(str)
+    failed = Signal(str)
+
+    GEMINI_URL = "https://gemini.google.com"
+    USER_DATA_DIR = "./browser_data"
+    INPUT_SELECTOR = "div[contenteditable='true']"
+    RESPONSE_SELECTOR = "model-response"
+    TIMEOUT_MS = 30_000
+    POLL_INTERVAL_MS = 100
+    STABLE_POLLS = 2
+    BROWSER_ARGS = (
+        "--disable-blink-features=AutomationControlled",
+        "--hide-crash-restore-bubble",
+        "--no-sandbox",
+    )
+
+    def __init__(self, prompt: str) -> None:
+        super().__init__()
+        self.prompt = prompt.strip()
+
+    def _wait_for_visible(self, page, selector: str, timeout_ms: int):
+        deadline = time.monotonic() + timeout_ms / 1000
+        locator = page.locator(selector)
+
+        while time.monotonic() < deadline:
+            count = locator.count()
+            for index in range(count):
+                candidate = locator.nth(index)
+                try:
+                    if candidate.is_visible():
+                        return candidate
+                except Exception as error:
+                    _ = error
+            page.wait_for_timeout(self.POLL_INTERVAL_MS)
+
+        raise TimeoutError(f"No apareció el selector visible: {selector}")
+
+    def _read_response(
+        self,
+        page,
+        baseline_count: int,
+        baseline_text: str,
+    ) -> str:
+        deadline = time.monotonic() + self.TIMEOUT_MS / 1000
+        previous_text = baseline_text
+        stable_polls = 0
+
+        while time.monotonic() < deadline:
+            responses = page.locator(self.RESPONSE_SELECTOR)
+            count = responses.count()
+
+            if count:
+                current_text = responses.nth(count - 1).inner_text().strip()
+                is_new = count > baseline_count
+                changed = bool(current_text) and current_text != baseline_text
+
+                if current_text and (is_new or changed):
+                    if current_text == previous_text:
+                        stable_polls += 1
+                    else:
+                        stable_polls = 0
+                    previous_text = current_text
+
+                    if stable_polls >= self.STABLE_POLLS:
+                        return current_text
+
+            page.wait_for_timeout(self.POLL_INTERVAL_MS)
+
+        raise TimeoutError("Gemini no produjo una respuesta estable a tiempo")
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            if not self.prompt:
+                raise ValueError("El prompt del Lobby Gemini no puede estar vacío.")
+
+            with sync_playwright() as playwright:
+                context = playwright.chromium.launch_persistent_context(
+                    self.USER_DATA_DIR,
+                    headless=False,
+                    args=list(self.BROWSER_ARGS),
+                )
+                try:
+                    page = (
+                        context.pages[0]
+                        if context.pages
+                        else context.new_page()
+                    )
+                    page.goto(
+                        self.GEMINI_URL,
+                        wait_until="domcontentloaded",
+                        timeout=self.TIMEOUT_MS,
+                    )
+
+                    input_locator = self._wait_for_visible(
+                        page,
+                        self.INPUT_SELECTOR,
+                        self.TIMEOUT_MS,
+                    )
+
+                    response_locator = page.locator(self.RESPONSE_SELECTOR)
+                    baseline_count = response_locator.count()
+                    baseline_text = ""
+                    if baseline_count:
+                        baseline_text = (
+                            response_locator.nth(baseline_count - 1)
+                            .inner_text()
+                            .strip()
+                        )
+
+                    input_locator.fill(self.prompt)
+                    input_locator.press("Enter")
+
+                    response_text = self._read_response(
+                        page,
+                        baseline_count,
+                        baseline_text,
+                    )
+                finally:
+                    try:
+                        context.close()
+                    except Exception as error:
+                        _ = error
+
+            self.finished.emit(response_text)
+        except Exception as error:
+            self.failed.emit(
+                f"{type(error).__name__}: {error}"
+            )
+
+
+class CommandCenterWindow(QMainWindow):
     """UI principal que conserva el runtime y backend existentes."""
 
     def __init__(self, runtime: RuntimeComponents | None = None) -> None:
+        load_dotenv(ROOT / ".env", override=False)
         super().__init__()
-        self.setWindowTitle("Café Otaku · BOT-IA")
+        self.setWindowTitle("Casa de Comando · BOT-IA")
         self.resize(1440, 900)
         self.setMinimumSize(1120, 720)
 
@@ -217,6 +366,14 @@ class CafeOtakuWindow(QMainWindow):
         self._async_orchestrator: TaskOrchestrator | None = None
         self._async_web_queue: WebQueueManager | None = None
         self._dialogs: list[QWidget] = []
+        self._bot_credentials = {
+            f"BOT_TOKEN_{profile.bot_id.upper()}": os.getenv(
+                f"BOT_TOKEN_{profile.bot_id.upper()}", ""
+            ).strip()
+            for profile in BOT_PROFILES
+        }
+        self._gemini_thread: QThread | None = None
+        self._gemini_worker: GeminiLobbyWorker | None = None
         self._telegram_poll_timer = QTimer(self)
         self._telegram_poll_timer.setInterval(1000)
         self._telegram_poll_timer.timeout.connect(
@@ -441,6 +598,11 @@ class CafeOtakuWindow(QMainWindow):
             self.quick_action_buttons[action_id] = pill
             chips.addWidget(pill)
         chips.addStretch(1)
+
+        self.lobby_gemini = QPushButton("✨ Preguntar a Gemini")
+        self.lobby_gemini.setObjectName("lobby_gemini")
+        self.lobby_gemini.clicked.connect(self._request_lobby_gemini)
+        chips.addWidget(self.lobby_gemini)
 
         self.send_button = QPushButton("Enviar")
         self.send_button.setObjectName("AccentButton")
@@ -903,6 +1065,165 @@ class CafeOtakuWindow(QMainWindow):
             except TavernError as error:
                 self._append_system(self._friendly_tavern_error(error))
 
+    def _request_lobby_gemini(self) -> None:
+        if self._closing:
+            return
+        if (
+            self._gemini_thread is not None
+            and self._gemini_thread.isRunning()
+        ):
+            return
+
+        prompt = self.input.toPlainText().strip()
+        if not prompt:
+            self._append_system(
+                "Escribe una pregunta para Gemini antes de iniciar la automatización."
+            )
+            return
+
+        self.lobby_gemini.setEnabled(False)
+        self.lobby_gemini.setText("⏳ Procesando…")
+
+        thread = QThread(self)
+        worker = GeminiLobbyWorker(prompt)
+        worker.moveToThread(thread)
+
+        thread.started.connect(worker.run)
+        worker.finished.connect(self._gemini_done)
+        worker.failed.connect(self._gemini_failed)
+        worker.finished.connect(thread.quit)
+        worker.failed.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        worker.failed.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(
+            lambda: self._cleanup_gemini_thread(thread, worker)
+        )
+
+        self._gemini_thread = thread
+        self._gemini_worker = worker
+        thread.start()
+
+    @Slot(str)
+    def _gemini_done(self, response: str) -> None:
+        self._append_message("Gemini", response, "bot")
+        self._set_gemini_idle()
+
+    @Slot(str)
+    def _gemini_failed(self, error: str) -> None:
+        self._append_system(
+            f"❌ Gemini Lobby no pudo completar la consulta: {error}"
+        )
+        self._set_gemini_idle()
+
+    def _set_gemini_idle(self) -> None:
+        self.lobby_gemini.setEnabled(True)
+        self.lobby_gemini.setText("✨ Preguntar a Gemini")
+
+    def _cleanup_gemini_thread(
+        self,
+        thread: QThread,
+        worker: GeminiLobbyWorker,
+    ) -> None:
+        if self._gemini_thread is thread:
+            self._gemini_thread = None
+        if self._gemini_worker is worker:
+            self._gemini_worker = None
+
+    def save_and_verify_credentials(
+        self,
+        fields: dict[str, QLineEdit],
+    ) -> bool:
+        """Guarda tokens BOTS en .env y verifica que se hayan persistido."""
+        dotenv_path = ROOT / ".env"
+        dotenv_path.parent.mkdir(parents=True, exist_ok=True)
+
+        for bot_id, field in fields.items():
+            token = field.text().strip()
+            if not token:
+                continue
+            key = f"BOT_TOKEN_{bot_id.upper()}"
+            set_key(
+                str(dotenv_path),
+                key,
+                token,
+                quote_mode="auto",
+            )
+            os.environ[key] = token
+            self._bot_credentials[key] = token
+
+        load_dotenv(dotenv_path, override=False)
+        values = dotenv_values(dotenv_path)
+
+        for bot_id, field in fields.items():
+            token = field.text().strip()
+            if not token:
+                continue
+            key = f"BOT_TOKEN_{bot_id.upper()}"
+            if values.get(key) != token:
+                self._append_system(
+                    f"No se pudo verificar la persistencia de {key}."
+                )
+                return False
+
+        self._append_system(
+            "✅ Credenciales BOTS guardadas en .env y verificadas."
+        )
+        return True
+
+    def _show_bots_credentials_dialog(self) -> None:
+        dialog = QWidget()
+        dialog.setWindowTitle("Café Otaku · BOTS · Credenciales")
+        dialog.setMinimumSize(760, 520)
+        dialog.setAttribute(Qt.WA_DeleteOnClose)
+
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(
+            SectionHeader(
+                "Credenciales de los 6 BOTS",
+                "Los tokens se guardan en .env, que está excluido del repositorio.",
+            )
+        )
+
+        form = QGridLayout()
+        layout.addLayout(form)
+        fields: dict[str, QLineEdit] = {}
+
+        for row, profile in enumerate(BOT_PROFILES):
+            key = f"BOT_TOKEN_{profile.bot_id.upper()}"
+            field = QLineEdit(
+                self._bot_credentials.get(
+                    key,
+                    os.getenv(key, ""),
+                )
+            )
+            field.setEchoMode(QLineEdit.Password)
+            field.setPlaceholderText(key)
+            form.addWidget(
+                QLabel(f"{profile.avatar} {profile.name}"),
+                row,
+                0,
+            )
+            form.addWidget(field, row, 1)
+            fields[profile.bot_id] = field
+
+        save = QPushButton("Guardar y verificar")
+        save.clicked.connect(
+            lambda: self.save_and_verify_credentials(fields)
+        )
+        layout.addWidget(save, 0, Qt.AlignRight)
+
+        close = QPushButton("Cerrar")
+        close.clicked.connect(dialog.close)
+        layout.addWidget(close, 0, Qt.AlignRight)
+
+        self._dialogs.append(dialog)
+        dialog.destroyed.connect(
+            lambda _obj=None: self._discard_dialog(dialog)
+        )
+        dialog.show()
+
+
     def _append_message(self, speaker: str, text: str, role: str) -> None:
         bubble = QLabel(f"<b>{speaker}</b><br>{self._escape(text)}")
         bubble.setWordWrap(True)
@@ -1316,6 +1637,20 @@ class CafeOtakuWindow(QMainWindow):
                 )
         grid.addWidget(provider_card, 1, 0)
 
+        bots_card = CardFrame()
+        bots_layout = QVBoxLayout(bots_card)
+        bots_layout.addWidget(QLabel("🤖 BOTS · credenciales"))
+        bots_layout.addWidget(
+            QLabel(
+                "Administra los tokens de Cari, Cami, Sunna, Chie, Chloe y Scarlet. "
+                "Se cargan desde .env al iniciar la aplicación."
+            )
+        )
+        bots_button = QPushButton("Abrir gestión de BOTS")
+        bots_button.clicked.connect(self._show_bots_credentials_dialog)
+        bots_layout.addWidget(bots_button)
+        grid.addWidget(bots_card, 1, 2)
+
         network_card = CardFrame()
         network_layout = QVBoxLayout(network_card)
         network_layout.addWidget(QLabel("🗺️ Redes y canales"))
@@ -1627,11 +1962,14 @@ class CafeOtakuWindow(QMainWindow):
         event.accept()
 
 
+CafeOtakuWindow = CommandCenterWindow
+
+
 async def _async_main(app: QApplication) -> int:
     quit_event = asyncio.Event()
     app.aboutToQuit.connect(quit_event.set)
 
-    window = CafeOtakuWindow()
+    window = CommandCenterWindow()
     window.select_bot("cari")
     window.show()
 
@@ -1659,13 +1997,14 @@ async def _async_main(app: QApplication) -> int:
 
 
 def _qt_main(app: QApplication) -> int:
-    window = CafeOtakuWindow()
+    window = CommandCenterWindow()
     window.select_bot("cari")
     window.show()
     return app.exec()
 
 
 def main() -> int:
+    load_dotenv(ROOT / ".env", override=False)
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Café Otaku · BOT-IA")
     app.setStyle("Fusion")

@@ -8,7 +8,7 @@ if (-not (Get-Command pyinstaller -ErrorAction SilentlyContinue)) {
 }
 
 # Café Otaku usa Qt y datos de zona horaria en Windows.
-python -m pip install --disable-pip-version-check --upgrade PySide6 tzdata
+python -m pip install --disable-pip-version-check --upgrade PySide6 tzdata playwright python-dotenv
 
 $env:PYTHONPATH = Join-Path $root "src"
 Remove-Item -Recurse -Force "build", "dist", "release" -ErrorAction SilentlyContinue

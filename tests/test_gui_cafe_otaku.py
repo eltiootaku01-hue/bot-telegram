@@ -62,6 +62,80 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("start_web_chat", source)
         self.assertIn("--web-chat-worker", source)
 
+    def test_gemini_lobby_worker_and_credentials_contract(self):
+        source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+        for token in (
+            "class GeminiLobbyWorker(QObject):",
+            "finished = Signal(str)",
+            "failed = Signal(str)",
+            "launch_persistent_context(",
+            '"./browser_data"',
+            '"--disable-blink-features=AutomationControlled"',
+            '"--hide-crash-restore-bubble"',
+            '"--no-sandbox"',
+            "div[contenteditable='true']",
+            '"model-response"',
+            "thread.started.connect(worker.run)",
+            "worker.finished.connect(self._gemini_done)",
+            "worker.failed.connect(self._gemini_failed)",
+            "worker.finished.connect(thread.quit)",
+            "worker.failed.connect(thread.quit)",
+            "thread.finished.connect(thread.deleteLater)",
+            "save_and_verify_credentials",
+            "load_dotenv",
+            "set_key",
+        ):
+            self.assertIn(token, source)
+
+    def test_python_dotenv_dependency_is_declared(self):
+        pyproject = (self.ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn("python-dotenv>=1.1,<2", pyproject)
+
+    def test_command_center_is_runtime_window_and_legacy_free(self):
+        source = (self.ROOT / "src" / "gui" / "app.py").read_text(
+            encoding="utf-8"
+        )
+        for token in (
+            "class CommandCenterWindow(QMainWindow):",
+            "CafeOtakuWindow = CommandCenterWindow",
+            "window = CommandCenterWindow()",
+            "sync_playwright",
+            "launch_persistent_context(",
+            '"./browser_data"',
+            '"model-response"',
+            "thread.started.connect(worker.run)",
+            "worker.finished.connect(self._gemini_done)",
+            "worker.failed.connect(self._gemini_failed)",
+            "worker.finished.connect(thread.quit)",
+            "worker.failed.connect(thread.quit)",
+            "worker.finished.connect(worker.deleteLater)",
+            "worker.failed.connect(worker.deleteLater)",
+            "thread.finished.connect(thread.deleteLater)",
+            "set_key",
+            "load_dotenv",
+            "dotenv_values",
+            "BOT_TOKEN_CARI",
+            "BOT_TOKEN_SCARLET",
+        ):
+            self.assertIn(token, source)
+
+        self.assertNotIn("keyring", source)
+        self.assertNotIn("DynamicLLMPool", source)
+
+    def test_env_example_contains_all_bot_credentials(self):
+        source = (self.ROOT / ".env.example").read_text(encoding="utf-8")
+        for bot_id in (
+            "CARI",
+            "CAMI",
+            "SUNNA",
+            "CHIE",
+            "CHLOE",
+            "SCARLET",
+        ):
+            self.assertIn(f"BOT_TOKEN_{bot_id}=", source)
+
     def test_async_qt_entrypoint_and_shutdown_contract_are_present(self):
         source = (
             self.ROOT / "src" / "gui" / "app.py"
