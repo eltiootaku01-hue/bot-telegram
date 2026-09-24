@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from bot_ia.core.models import RouteDecision
 
 from .adapters import BaseProvider
-from .errors import ProviderError, ProviderDisabledError, ProviderRemoteError
+from .errors import ProviderBudgetExceededError, ProviderError, ProviderDisabledError, ProviderRemoteError
 from .health import ProviderHealthRecord
 from .health_classifier import classify_provider_error
 from .models import FailureClass, ProviderRequest, ProviderResponse, ProviderStatus, ProviderUsage
@@ -42,6 +42,12 @@ class ProviderManager:
         candidates = self._candidate_pairs(request, fallback_provider, fallback_accounts)
         last_error: ProviderError | None = None
         for provider_id, account_id in candidates:
+            remaining_budget = request.remaining_budget()
+            if remaining_budget <= 0.1:
+                last_error = ProviderBudgetExceededError(
+                    "total provider request budget exhausted"
+                )
+                break
             provider = self._resolve(provider_id, account_id)
             if provider is None:
                 error = ProviderDisabledError("provider account is not configured")
@@ -125,7 +131,12 @@ class ProviderManager:
         timeout = getattr(provider, "default_timeout_seconds", None) if provider else None
         if config is not None:
             model, max_tokens, timeout = config.model, config.max_output_tokens, config.timeout_seconds
-        timeout_value = timeout or request.timeout_seconds
+        timeout_value = min(
+            timeout or request.timeout_seconds,
+            request.remaining_budget(),
+        )
+        if timeout_value <= 0.1:
+            timeout_value = 0.1
         return ProviderRequest(
             provider_id,
             model or request.model,
@@ -135,6 +146,8 @@ class ProviderManager:
             request.request_id,
             request.escalation_reason,
             account_id,
+            request.total_budget_seconds,
+            request.started_at,
         )
 
     def _attempt_name(self, provider_id: str, account_id: str | None) -> str:
