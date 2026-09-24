@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QSize, Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import (
     QFrame,
     QGraphicsDropShadowEffect,
@@ -26,7 +26,7 @@ class CardFrame(QFrame):
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(24)
         shadow.setOffset(QPoint(0, 6))
-        shadow.setColor(Qt.black)
+        shadow.setColor(QColor(0, 0, 0, 150))
         self.setGraphicsEffect(shadow)
 
 
