@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import time
 
 from bot_ia.core.models import RouteDecision
 
 from .adapters import BaseProvider
-from .errors import ProviderError, ProviderDisabledError, ProviderRemoteError
+from .errors import ProviderError, ProviderDisabledError, ProviderRemoteError, ProviderTimeoutError
 from .health import ProviderHealthRecord
 from .health_classifier import classify_provider_error
 from .models import FailureClass, ProviderRequest, ProviderResponse, ProviderStatus, ProviderUsage
@@ -41,7 +42,12 @@ class ProviderManager:
         attempts: list[str] = []
         candidates = self._candidate_pairs(request, fallback_provider, fallback_accounts)
         last_error: ProviderError | None = None
+        deadline = time.monotonic() + request.timeout_seconds
         for provider_id, account_id in candidates:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                last_error = ProviderTimeoutError("provider fallback budget exhausted")
+                break
             provider = self._resolve(provider_id, account_id)
             if provider is None:
                 error = ProviderDisabledError("provider account is not configured")
@@ -52,7 +58,13 @@ class ProviderManager:
                 continue
             if not getattr(provider, "enabled", True) or not self._available(provider_id, account_id):
                 continue
-            candidate = self._make_request(request, provider_id, account_id, provider)
+            candidate = self._make_request(
+                request,
+                provider_id,
+                account_id,
+                provider,
+                timeout_override=remaining,
+            )
             try:
                 response = self._call(candidate, attempts, provider)
                 return ProviderOutcome(response, tuple(attempts))
@@ -107,14 +119,34 @@ class ProviderManager:
             return self._account_providers.get((provider_id, account_id))
         return self._providers.get(provider_id)
 
-    def _make_request(self, request: ProviderRequest, provider_id: str, account_id: str | None, provider: BaseProvider | None) -> ProviderRequest:
+    def _make_request(
+        self,
+        request: ProviderRequest,
+        provider_id: str,
+        account_id: str | None,
+        provider: BaseProvider | None,
+        *,
+        timeout_override: float | None = None,
+    ) -> ProviderRequest:
         config = self._provider_configs.get(provider_id)
         model = getattr(provider, "default_model", None) if provider else None
         max_tokens = getattr(provider, "default_max_output_tokens", None) if provider else None
         timeout = getattr(provider, "default_timeout_seconds", None) if provider else None
         if config is not None:
             model, max_tokens, timeout = config.model, config.max_output_tokens, config.timeout_seconds
-        return ProviderRequest(provider_id, model or request.model, request.input_text, max_tokens or request.max_output_tokens, timeout or request.timeout_seconds, request.request_id, request.escalation_reason, account_id)
+        timeout_value = timeout or request.timeout_seconds
+        if timeout_override is not None:
+            timeout_value = min(timeout_value, max(0.05, timeout_override))
+        return ProviderRequest(
+            provider_id,
+            model or request.model,
+            request.input_text,
+            max_tokens or request.max_output_tokens,
+            timeout_value,
+            request.request_id,
+            request.escalation_reason,
+            account_id,
+        )
 
     def _attempt_name(self, provider_id: str, account_id: str | None) -> str:
         return provider_id if account_id in (None, provider_id) else f"{provider_id}:{account_id}"
