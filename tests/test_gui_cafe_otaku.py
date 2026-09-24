@@ -59,6 +59,9 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("web_queue_manager=self._web_queue", source)
         self.assertIn("runtime.create_novel(", source)
         self.assertIn("self._tavern.force_rest(", source)
+        self.assertIn("start_web_chat", source)
+        self.assertIn("--web-chat-worker", source)
+
 
     def test_desktop_core_delegates_to_qt(self):
         source = (
