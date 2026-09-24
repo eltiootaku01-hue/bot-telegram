@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from bot_ia.core.application import ApplicationRequest, BotApplication
@@ -104,8 +105,10 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
             state = self._application._sessions.get(user_id, chat_id)
             if state is not None:
                 universe_id = state.universe_id
-        except Exception:
-            pass
+        except (KeyError, AttributeError, RuntimeError) as error:
+            # El error queda registrado y no permite continuar con una sesión potencialmente corrupta.
+            print(f"[ERROR] Session lookup failed para user={user_id}: {error!r}")
+            return universe_id, ()
         return universe_id, entries.get(universe_id, ())
 
     def _file_menu(self, user_id: str, chat_id: str, *, secondary: bool) -> TelegramOutbound:
