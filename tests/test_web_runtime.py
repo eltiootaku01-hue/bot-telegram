@@ -75,7 +75,7 @@ class WebRuntimeTests(unittest.TestCase):
         server.server_close()
 
     def test_web_server_has_bounded_request_concurrency(self):
-        server = create_web_server(WebApi(_FakeApplication()), port=0)
+        server = create_web_server(WebApi(FakeApplication()), port=0)
         try:
             self.assertIsInstance(server, BoundedThreadingHTTPServer)
             self.assertEqual(8, server.max_workers)
