@@ -6,6 +6,7 @@ Telegram se avanza sólo después de una entrega completa.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 import json
 from pathlib import Path
@@ -46,7 +47,7 @@ class TelegramOutboxStore:
         return connection
 
     def _initialize(self) -> None:
-        with self._connection() as connection:
+        with closing(self._connection()) as connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute(
                 """
@@ -128,7 +129,7 @@ class TelegramOutboxStore:
     def get(self, update_id: int) -> TelegramOutboxRecord | None:
         if not isinstance(update_id, int) or update_id < 0:
             raise ValueError("update_id must be a non-negative integer")
-        with self._connection() as connection:
+        with closing(self._connection()) as connection:
             row = connection.execute(
                 "SELECT update_id, chat_id, payload, next_chunk, status "
                 "FROM telegram_outbox WHERE update_id=?",
@@ -154,7 +155,7 @@ class TelegramOutboxStore:
         if not isinstance(update_id, int) or update_id < 0:
             raise ValueError("update_id must be a non-negative integer")
         serialized = self._serialize(outbound)
-        with self._connection() as connection:
+        with closing(self._connection()) as connection:
             connection.execute(
                 """
                 INSERT INTO telegram_outbox
@@ -177,7 +178,7 @@ class TelegramOutboxStore:
     def ack_chunk(self, update_id: int, next_chunk: int) -> None:
         if not isinstance(next_chunk, int) or next_chunk < 0:
             raise ValueError("next_chunk must be a non-negative integer")
-        with self._connection() as connection:
+        with closing(self._connection()) as connection:
             cursor = connection.execute(
                 """
                 UPDATE telegram_outbox
@@ -190,7 +191,7 @@ class TelegramOutboxStore:
                 raise TelegramOutboxError("telegram outbox chunk ACK was not applied")
 
     def mark_delivered(self, update_id: int) -> None:
-        with self._connection() as connection:
+        with closing(self._connection()) as connection:
             cursor = connection.execute(
                 """
                 UPDATE telegram_outbox
@@ -206,7 +207,7 @@ class TelegramOutboxStore:
                 raise TelegramOutboxError("telegram outbox delivery transition failed")
 
     def mark_failed(self, update_id: int) -> None:
-        with self._connection() as connection:
+        with closing(self._connection()) as connection:
             connection.execute(
                 "UPDATE telegram_outbox SET status='FAILED' WHERE update_id=?",
                 (update_id,),
