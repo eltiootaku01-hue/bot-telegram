@@ -17,7 +17,7 @@ New-Item -ItemType Directory -Force -Path "release" | Out-Null
 # The wrapper owns the desktop event loop. It keeps Tk calls on the main thread
 # and starts Telegram as an explicit worker process instead of passing arguments
 # to a GUI-only executable.
-pyinstaller --noconfirm --clean --onefile --windowed --name BOT-IA-Core desktop_entry.py
+pyinstaller --noconfirm --clean --onefile --windowed --name BOT-IA-Core --hidden-import=services.web_queue --hidden-import=PySide6.QtWebEngineWidgets --hidden-import=PySide6.QtWebChannel desktop_entry.py
 pyinstaller --noconfirm --clean --onefile --windowed --name BOT-IA launcher.py
 
 Copy-Item "dist\BOT-IA-Core.exe" "release\BOT-IA-Core.exe" -Force
