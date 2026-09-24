@@ -194,7 +194,8 @@ class ProjectManager:
         temporary = self._registry_path.with_suffix(".json.restore.tmp")
         try:
             shutil.copy2(backup, temporary)
-            with temporary.open("rb") as handle:
+            with temporary.open("r+b") as handle:
+                handle.flush()
                 os.fsync(handle.fileno())
             temporary.replace(self._registry_path)
         finally:
