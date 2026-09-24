@@ -2,6 +2,7 @@ import json
 import queue
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
 from PySide6.QtWebChannel import QWebChannel
@@ -29,6 +30,9 @@ REGLAS DE PROTOCOLO DE MENSAJES:
 """
 
 
+# Se ejecuta dentro del navegador. No usa polling continuo:
+# MutationObserver reacciona a cambios del DOM y un debounce determina
+# cuándo la respuesta ha dejado de cambiar.
 WEB_MONITOR_JS = r"""
 (() => {
     if (
@@ -48,6 +52,7 @@ WEB_MONITOR_JS = r"""
         settleTimer: null,
         bridge: null,
         sequence: 0,
+        activeTicketId: "",
     };
 
     const sendBridgeEvent = (eventType, payload) => {
@@ -98,6 +103,15 @@ WEB_MONITOR_JS = r"""
             "detener la generación",
             "stop response",
             "cancel response",
+        ]);
+    };
+
+    const findSendButton = () => {
+        return findButtonByLabels([
+            "send",
+            "enviar",
+            "send message",
+            "enviar mensaje",
         ]);
     };
 
@@ -187,6 +201,12 @@ WEB_MONITOR_JS = r"""
             return;
         }
 
+        const payload = JSON.stringify({
+            ticket_id: state.activeTicketId,
+            sequence: state.sequence,
+            text: assistantText || bodyText,
+        });
+
         state.waitingForResponse = false;
         state.stopSeen = false;
         state.firstMutationAt = 0;
@@ -194,7 +214,7 @@ WEB_MONITOR_JS = r"""
 
         sendBridgeEvent(
             "RESPONSE_COMPLETE",
-            assistantText || bodyText
+            payload
         );
     };
 
@@ -223,8 +243,10 @@ WEB_MONITOR_JS = r"""
     window.__casaComandoWebQueue = {
         installed: true,
 
-        beginSend() {
+        beginSend(ticketId) {
             state.sequence += 1;
+            state.activeTicketId =
+                String(ticketId ?? "");
             state.waitingForResponse = true;
             state.stopSeen = Boolean(findStopButton());
             state.baselineText = (
@@ -241,13 +263,24 @@ WEB_MONITOR_JS = r"""
 
         markSendClicked() {
             state.sendClickedAt = Date.now();
-            state.firstMutationAt = state.sendClickedAt;
+            state.firstMutationAt =
+                state.sendClickedAt;
             scheduleCompletionCheck();
+        },
+
+        getState() {
+            return JSON.stringify({
+                sequence: state.sequence,
+                ticket_id: state.activeTicketId,
+                waiting: state.waitingForResponse,
+            });
         },
     };
 
     const installObserver = () => {
-        const root = document.body || document.documentElement;
+        const root =
+            document.body ||
+            document.documentElement;
 
         if (!root) {
             sendBridgeEvent(
@@ -257,26 +290,31 @@ WEB_MONITOR_JS = r"""
             return;
         }
 
-        const observer = new MutationObserver((mutations) => {
-            if (
-                !state.waitingForResponse ||
-                mutations.length === 0
-            ) {
-                return;
+        const observer = new MutationObserver(
+            (mutations) => {
+                if (
+                    !state.waitingForResponse ||
+                    mutations.length === 0
+                ) {
+                    return;
+                }
+
+                if (findStopButton()) {
+                    state.stopSeen = true;
+                }
+
+                scheduleCompletionCheck();
             }
+        );
 
-            if (findStopButton()) {
-                state.stopSeen = true;
+        observer.observe(
+            root,
+            {
+                subtree: true,
+                childList: true,
+                characterData: true,
             }
-
-            scheduleCompletionCheck();
-        });
-
-        observer.observe(root, {
-            subtree: true,
-            childList: true,
-            characterData: true,
-        });
+        );
 
         state.observer = observer;
 
@@ -326,7 +364,8 @@ WEB_MONITOR_JS = r"""
         const script = document.createElement("script");
         script.src =
             "qrc:///qtwebchannel/qwebchannel.js";
-        script.dataset.casaComandoWebchannel = "true";
+        script.dataset.casaComandoWebchannel =
+            "true";
         script.onload = connectQtWebChannel;
         script.onerror = () => {
             sendBridgeEvent(
@@ -373,7 +412,7 @@ class _WebQueueBridge(QObject):
 
 
 class _QueueWorker(QObject):
-    """Estado FIFO y temporización ejecutados en un QThread dedicado."""
+    """Estado FIFO y temporización ejecutados en QThread."""
 
     ticket_started = Signal(object)
     web_action_requested = Signal(str, str, str)
@@ -446,7 +485,8 @@ class _QueueWorker(QObject):
 
         if (
             self.current_ticket is not None and
-            self.current_ticket.ticket_id == ticket.ticket_id
+            self.current_ticket.ticket_id ==
+            ticket.ticket_id
         ):
             self.queue_error.emit(
                 ticket.ticket_id,
@@ -532,7 +572,6 @@ class _QueueWorker(QObject):
             self.current_ticket is not None and
             response_text.strip()
         ):
-            # Una respuesta demuestra actividad del proveedor web.
             self.consecutive_failures = 0
 
     @Slot(str)
@@ -729,11 +768,8 @@ class WebChatQueueManager(QObject):
     """
     Gestor FIFO anti-deadlock para SUPER CHAT.
 
-    - La cola y sus timers viven en QThread.
-    - QWebEngineView solo se toca desde el hilo GUI.
-    - Timeout por ticket: 45 s por defecto.
-    - Circuit breaker: 3 fallos consecutivos por defecto.
-    - Recuperación automática después del cooldown.
+    La cola y sus timers se ejecutan en QThread.
+    QWebEngineView se manipula exclusivamente desde GUI/Qt.
     """
 
     ticket_processed = Signal(str, str)
@@ -785,7 +821,6 @@ class WebChatQueueManager(QObject):
         self.web_view = web_view
         self.current_ticket: BotTicket | None = None
         self.is_busy = False
-
         self.protocol_initialized = False
         self.monitor_initialized = False
 
@@ -828,7 +863,7 @@ class WebChatQueueManager(QObject):
             self._thread
         )
 
-        # La referencia pública apunta a la cola real.
+        # La cola expuesta es la FIFO real del worker.
         self.msg_queue = self._worker.msg_queue
 
         self.enqueue_requested.connect(
@@ -962,7 +997,7 @@ class WebChatQueueManager(QObject):
         self.enqueue_requested.emit(ticket)
 
     def process_next(self) -> None:
-        """Compatibilidad: pide al QThread que reevalúe la FIFO."""
+        """Pide al QThread que reevalúe la cola sin tocarla directamente."""
         if not self.is_busy:
             self.process_requested.emit()
 
@@ -978,7 +1013,7 @@ class WebChatQueueManager(QObject):
         )
 
     def shutdown(self) -> None:
-        """Detiene el worker y su QThread de forma ordenada."""
+        """Detiene worker y QThread sin dejar temporizadores activos."""
         if self._shutdown_started:
             return
 
@@ -1018,7 +1053,7 @@ class WebChatQueueManager(QObject):
 
     def _on_monitor_install_result(
         self,
-        result,
+        result: Any,
     ) -> None:
         if result == "ALREADY_INSTALLED":
             self.monitor_initialized = True
@@ -1057,6 +1092,40 @@ class WebChatQueueManager(QObject):
 
             return
 
+        if event_type == "RESPONSE_COMPLETE":
+            try:
+                event = json.loads(payload)
+            except (TypeError, ValueError):
+                event = {
+                    "ticket_id": "",
+                    "text": payload,
+                }
+
+            ticket_id = str(
+                event.get("ticket_id", "")
+            )
+            text = str(
+                event.get("text", "")
+            )
+
+            if not text.strip():
+                return
+
+            if (
+                self.current_ticket is not None and
+                ticket_id and
+                ticket_id !=
+                self.current_ticket.ticket_id
+            ):
+                # Respuesta tardía de un ticket anterior.
+                return
+
+            self._consume_response(
+                text,
+                expected_ticket_id=ticket_id,
+            )
+            return
+
         if event_type in {
             "MONITOR_ERROR",
             "SEND_ERROR",
@@ -1068,10 +1137,6 @@ class WebChatQueueManager(QObject):
                 payload,
             )
             self.health_failure_requested.emit()
-            return
-
-        if event_type == "RESPONSE_COMPLETE":
-            self._consume_response(payload)
 
     def _send_protocol_directive(self) -> None:
         self._protocol_pending = False
@@ -1094,7 +1159,9 @@ class WebChatQueueManager(QObject):
             action_kind=action_kind,
             ticket_id=ticket_id,
             send=True,
-            mark_send=(action_kind == "ticket"),
+            mark_send=(
+                action_kind == "ticket"
+            ),
         )
 
     def _inject_to_browser(
@@ -1107,6 +1174,10 @@ class WebChatQueueManager(QObject):
     ) -> None:
         js_text = json.dumps(
             text,
+            ensure_ascii=False,
+        )
+        js_ticket_id = json.dumps(
+            ticket_id,
             ensure_ascii=False,
         )
 
@@ -1162,7 +1233,8 @@ class WebChatQueueManager(QObject):
                 if (
                     window.__casaComandoWebQueue &&
                     typeof window.__casaComandoWebQueue
-                        .markSendClicked === "function"
+                        .markSendClicked ===
+                        "function"
                 ) {
                     window.__casaComandoWebQueue
                         .markSendClicked();
@@ -1170,23 +1242,26 @@ class WebChatQueueManager(QObject):
             }, 500);
         """ if send else ""
 
-        begin_send_code = """
+        begin_send_code = f"""
             if (
                 window.__casaComandoWebQueue &&
                 typeof window.__casaComandoWebQueue
                     .beginSend === "function"
-            ) {
-                window.__casaComandoWebQueue.beginSend();
-            }
+            ) {{
+                window.__casaComandoWebQueue
+                    .beginSend({js_ticket_id});
+            }}
         """ if mark_send else ""
 
         js_code = f"""
         (() => {{
             const text = {js_text};
 
-            const inputArea = document.querySelector(
-                "textarea, div[contenteditable=\"true\"]"
-            );
+            const inputArea =
+                document.querySelector(
+                    "textarea, " +
+                    "div[contenteditable=\"true\"]"
+                );
 
             if (!inputArea) {{
                 return "ERROR: NO_DOM_INPUT";
@@ -1194,7 +1269,10 @@ class WebChatQueueManager(QObject):
 
             {begin_send_code}
 
-            if (inputArea.tagName === "TEXTAREA") {{
+            if (
+                inputArea.tagName ===
+                "TEXTAREA"
+            ) {{
                 const setter =
                     Object.getOwnPropertyDescriptor(
                         HTMLTextAreaElement.prototype,
@@ -1207,7 +1285,8 @@ class WebChatQueueManager(QObject):
                         text
                     );
                 }} else {{
-                    inputArea.value = text;
+                    inputArea.value =
+                        text;
                 }}
 
                 inputArea.dispatchEvent(
@@ -1223,10 +1302,10 @@ class WebChatQueueManager(QObject):
                         {{ bubbles: true }}
                     )
                 );
-
             }} else {{
                 inputArea.focus();
-                inputArea.textContent = text;
+                inputArea.textContent =
+                    text;
 
                 inputArea.dispatchEvent(
                     new InputEvent(
@@ -1246,13 +1325,17 @@ class WebChatQueueManager(QObject):
         }})();
         """
 
-        def handle_result(result) -> None:
+        def handle_result(
+            result: Any,
+        ) -> None:
             result_text = str(
                 result or ""
             )
 
             if action_kind == "protocol":
-                if not result_text.startswith("OK"):
+                if not result_text.startswith(
+                    "OK"
+                ):
                     self.queue_error.emit(
                         "__protocol__",
                         result_text,
@@ -1266,7 +1349,9 @@ class WebChatQueueManager(QObject):
             self.injection_result_requested.emit(
                 ticket_id,
                 action_kind,
-                result_text.startswith("OK"),
+                result_text.startswith(
+                    "OK"
+                ),
                 result_text,
             )
 
@@ -1282,10 +1367,18 @@ class WebChatQueueManager(QObject):
     def _consume_response(
         self,
         raw_text: str,
+        expected_ticket_id: str = "",
     ) -> bool:
         ticket = self.current_ticket
 
         if ticket is None:
+            return False
+
+        if (
+            expected_ticket_id and
+            expected_ticket_id !=
+            ticket.ticket_id
+        ):
             return False
 
         text = raw_text.strip()
@@ -1315,8 +1408,8 @@ class WebChatQueueManager(QObject):
         )
 
         if not parsed_text:
-            # Tolerancia al formato roto: entregamos el
-            # contenido observado antes de esperar el timeout.
+            # Si el encabezado fue alterado, se conserva
+            # la evidencia observada antes del timeout.
             parsed_text = text[-12000:]
 
         self.response_observed_requested.emit(
@@ -1333,13 +1426,13 @@ class WebChatQueueManager(QObject):
         raw_text: str,
         ticket: BotTicket,
     ) -> str:
-        if self._response_pattern is None:
+        pattern = self._response_pattern
+
+        if pattern is None:
             return ""
 
         matches = list(
-            self._response_pattern.finditer(
-                raw_text
-            )
+            pattern.finditer(raw_text)
         )
 
         for match in reversed(matches):
@@ -1388,10 +1481,12 @@ class WebChatQueueManager(QObject):
         raw_text: str,
         ticket: BotTicket,
     ) -> bool:
-        if self._terminated_pattern is None:
+        pattern = self._terminated_pattern
+
+        if pattern is None:
             return False
 
-        for match in self._terminated_pattern.finditer(
+        for match in pattern.finditer(
             raw_text
         ):
             bot = match.group(
