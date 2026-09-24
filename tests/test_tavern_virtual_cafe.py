@@ -203,6 +203,56 @@ class TavernTests(unittest.TestCase):
             self.assertTrue(any(key.endswith(":99") for key in manager._timers))
             manager.shutdown()
 
+    def test_persisted_active_session_is_reconciled_after_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "work" / "bot_ia_memory.sqlite3"
+            now = __import__("datetime").datetime(
+                2026, 9, 24, 15, 0, tzinfo=__import__("datetime").timezone.utc
+            )
+            first = self.manager(directory, queue=FakeWebQueue())
+            session = first.start_standard_session("1", "cari")
+            first.shutdown()
+
+            second = WaitressSessionManager(
+                path,
+                timezone_name="America/Argentina/Buenos_Aires",
+                now_provider=lambda: now,
+            )
+            active = second.get_active_session("1")
+            self.assertIsNotNone(active)
+            self.assertEqual(session.session_id, active.session_id)
+            self.assertTrue(
+                any(item.waitress_id == "cari" and item.status == "ocupada" for item in second.list_turns())
+            )
+            second.shutdown()
+
+    def test_expired_persisted_session_is_closed_on_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "work" / "bot_ia_memory.sqlite3"
+            before = __import__("datetime").datetime(
+                2026, 9, 24, 15, 0, tzinfo=__import__("datetime").timezone.utc
+            )
+            first = WaitressSessionManager(
+                path,
+                timezone_name="America/Argentina/Buenos_Aires",
+                now_provider=lambda: before,
+            )
+            session = first.start_standard_session("1", "cari")
+            first.shutdown()
+
+            after = session.end_time + __import__("datetime").timedelta(seconds=1)
+            second = WaitressSessionManager(
+                path,
+                timezone_name="America/Argentina/Buenos_Aires",
+                now_provider=lambda: after,
+            )
+            self.assertIsNone(second.get_active_session("1"))
+            self.assertTrue(
+                any(item.waitress_id == "cari" and item.status == "descansando" for item in second.list_turns())
+            )
+            second.shutdown()
+
+
 
 if __name__ == "__main__":
     unittest.main()
