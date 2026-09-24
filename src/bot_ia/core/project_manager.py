@@ -138,12 +138,26 @@ class ProjectManager:
         return slug or "proyecto"
 
     def _load(self) -> dict[str, ProjectRecord]:
-        if not self._registry_path.is_file():
+        primary = self._registry_path
+        backup = primary.with_suffix(".json.bak")
+
+        if not primary.is_file() and not backup.is_file():
             return {}
+
         try:
-            data = json.loads(self._registry_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-            raise ProjectError("project registry is invalid") from error
+            if primary.is_file():
+                data = json.loads(primary.read_text(encoding="utf-8"))
+            else:
+                data = json.loads(backup.read_text(encoding="utf-8"))
+                self._restore_registry_backup(backup)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as primary_error:
+            if not backup.is_file():
+                raise ProjectError("project registry is invalid") from primary_error
+            try:
+                data = json.loads(backup.read_text(encoding="utf-8"))
+                self._restore_registry_backup(backup)
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as backup_error:
+                raise ProjectError("project registry and backup are invalid") from backup_error
         if not isinstance(data, list):
             raise ProjectError("project registry must contain a list")
         records: dict[str, ProjectRecord] = {}
@@ -171,11 +185,37 @@ class ProjectManager:
             records[project_id] = ProjectRecord(project_id, display_name, root, project_type)
         return records
 
+    def _restore_registry_backup(self, backup: Path) -> None:
+        temporary = self._registry_path.with_suffix(".json.restore.tmp")
+        try:
+            shutil.copy2(backup, temporary)
+            with temporary.open("rb") as handle:
+                os.fsync(handle.fileno())
+            temporary.replace(self._registry_path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def _safe_save_projects(self, data: list[dict[str, str]]) -> None:
+        temporary = self._registry_path.with_suffix(".json.tmp")
+        backup = self._registry_path.with_suffix(".json.bak")
+        encoded = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+
+        try:
+            with temporary.open("w", encoding="utf-8", newline="") as handle:
+                handle.write(encoded)
+                handle.flush()
+                os.fsync(handle.fileno())
+
+            if self._registry_path.exists():
+                shutil.copy2(self._registry_path, backup)
+
+            temporary.replace(self._registry_path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
     def _write(self) -> None:
         payload = [
             {"project_id": record.project_id, "display_name": record.display_name, "root_path": str(record.root_path), "project_type": record.project_type}
             for record in self._records.values()
         ]
-        temporary = self._registry_path.with_suffix(".json.tmp")
-        temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        temporary.replace(self._registry_path)
+        self._safe_save_projects(payload)
