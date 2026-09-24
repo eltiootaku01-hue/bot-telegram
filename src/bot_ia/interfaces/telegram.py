@@ -19,6 +19,10 @@ class TelegramInputError(ValueError):
     pass
 
 
+MAX_INBOUND_TEXT_CHARS = 24_000
+MAX_CALLBACK_DATA_CHARS = 256
+
+
 class TelegramConfigurationError(RuntimeError):
     pass
 
@@ -33,6 +37,12 @@ class TelegramHttpError(TelegramTransportError):
 
 class TelegramApiError(RuntimeError):
     pass
+
+
+class TelegramPartialDeliveryError(TelegramTransportError):
+    def __init__(self, next_chunk_index: int) -> None:
+        super().__init__("Telegram delivery failed after a partial message")
+        self.next_chunk_index = next_chunk_index
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,7 +104,10 @@ def parse_update(update: dict[str, object]) -> TelegramInbound:
         raise TelegramInputError("update must contain message text, sender and chat") from error
     if not isinstance(text, str) or not text.strip():
         raise TelegramInputError("message text cannot be empty")
-    return TelegramInbound(user_id, chat_id, text.strip())
+    text = text.strip()
+    if len(text) > MAX_INBOUND_TEXT_CHARS:
+        raise TelegramInputError("message text is too long")
+    return TelegramInbound(user_id, chat_id, text)
 
 
 def parse_callback_update(update: dict[str, object]) -> TelegramCallback:
@@ -109,7 +122,10 @@ def parse_callback_update(update: dict[str, object]) -> TelegramCallback:
         raise TelegramInputError("callback update is invalid") from error
     if not isinstance(data, str) or not data.strip():
         raise TelegramInputError("callback data cannot be empty")
-    return TelegramCallback(user_id, chat_id, data.strip())
+    data = data.strip()
+    if len(data) > MAX_CALLBACK_DATA_CHARS:
+        raise TelegramInputError("callback data is too long")
+    return TelegramCallback(user_id, chat_id, data)
 
 
 class TelegramAdapter:
@@ -228,15 +244,21 @@ class TelegramApiClient:
             raise TelegramConfigurationError("TELEGRAM_BOT_TOKEN is not configured")
         return cls(token)
 
-    def send(self, outbound: TelegramOutbound) -> dict[str, object]:
+    def send(self, outbound: TelegramOutbound, *, start_chunk: int = 0) -> dict[str, object]:
         chunks = _split_message(outbound.text)
+        if start_chunk < 0 or start_chunk > len(chunks):
+            raise TelegramInputError("invalid Telegram chunk index")
         result: dict[str, object] | None = None
-        for index, chunk in enumerate(chunks):
+        for index in range(start_chunk, len(chunks)):
+            chunk = chunks[index]
             payload = outbound.payload()
             payload["text"] = chunk
             if index < len(chunks) - 1:
                 payload.pop("reply_markup", None)
-            result = self._call("sendMessage", payload)
+            try:
+                result = self._call("sendMessage", payload)
+            except TelegramTransportError as error:
+                raise TelegramPartialDeliveryError(index) from error
         return result or {"ok": True}
 
     def get_updates(self, *, offset: int | None = None, timeout_seconds: int = 25) -> tuple[dict[str, object], ...]:
@@ -300,7 +322,7 @@ class TelegramPoller:
     def __init__(self, client: TelegramApiClient, adapter: TelegramAdapter, *, config: PollingConfig | None = None, sleeper: Callable[[float], None] = time.sleep, logger: Callable[[str], None] | None = None) -> None:
         self._client, self._adapter, self._config = client, adapter, config or PollingConfig()
         self._sleeper, self._logger, self._running, self._offset = sleeper, logger or (lambda _: None), True, None
-        self._pending_delivery: tuple[int, TelegramOutbound] | None = None
+        self._pending_delivery: tuple[int, TelegramOutbound, int] | None = None
 
     @property
     def offset(self) -> int | None:
@@ -317,9 +339,15 @@ class TelegramPoller:
             cycles += 1
 
             if self._pending_delivery is not None:
-                pending_id, pending_outbound = self._pending_delivery
+                pending_id, pending_outbound, next_chunk = self._pending_delivery
                 try:
-                    self._client.send(pending_outbound)
+                    self._client.send(pending_outbound, start_chunk=next_chunk)
+                except TelegramPartialDeliveryError as error:
+                    errors += 1
+                    self._pending_delivery = (pending_id, pending_outbound, error.next_chunk_index)
+                    self._logger("telegram pending response delivery failed after partial send")
+                    self._sleeper(self._config.retry_delay_seconds)
+                    continue
                 except TelegramTransportError:
                     errors += 1
                     self._logger("telegram pending response delivery failed")
@@ -364,10 +392,19 @@ class TelegramPoller:
                     skipped += 1
                     self._logger("telegram update rejected")
                     continue
+                except Exception as error:
+                    self._offset = update_id + 1
+                    skipped += 1
+                    self._logger(f"telegram update processing failed: {type(error).__name__}")
+                    continue
                 try:
                     self._client.send(outbound)
+                except TelegramPartialDeliveryError as error:
+                    self._pending_delivery = (update_id, outbound, error.next_chunk_index)
+                    self._logger("telegram response delivery deferred after partial send")
+                    continue
                 except TelegramTransportError:
-                    self._pending_delivery = (update_id, outbound)
+                    self._pending_delivery = (update_id, outbound, 0)
                     self._logger("telegram response delivery deferred for retry")
                     continue
                 except (TelegramApiError, TelegramInputError):
