@@ -118,7 +118,6 @@ class ProviderManager:
         provider_id: str,
         account_id: str | None,
         provider: BaseProvider | None,
-        *,
     ) -> ProviderRequest:
         config = self._provider_configs.get(provider_id)
         model = getattr(provider, "default_model", None) if provider else None
