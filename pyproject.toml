@@ -3,7 +3,7 @@ name = "bot-ia"
 version = "1.0.0"
 description = "BOT-IA Knowledge Engine and multi-interface personal bot"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = ["tzdata"]
 
 [project.scripts]
 bot-ia = "bot_ia.__main__:main"
