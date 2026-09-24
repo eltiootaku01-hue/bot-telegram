@@ -858,6 +858,12 @@ class WebChatQueueManager(QObject):
             self._on_protocol_send_timeout
         )
 
+        self._shutdown_watchdog = QTimer(self)
+        self._shutdown_watchdog.setSingleShot(True)
+        self._shutdown_watchdog.timeout.connect(
+            self._on_shutdown_watchdog_timeout
+        )
+
         self._response_pattern = self._safe_compile(
             r'respuesta\s+a\s*\(\s*'
             r'(?P<bot>[^()\n]+?)\s+'
@@ -949,6 +955,10 @@ class WebChatQueueManager(QObject):
         )
         self._thread.finished.connect(
             self._worker.deleteLater
+        )
+
+        self._thread.finished.connect(
+            self._on_thread_finished
         )
 
         self._bridge = _WebQueueBridge()
@@ -1053,18 +1063,55 @@ class WebChatQueueManager(QObject):
         )
 
     def shutdown(self) -> None:
-        """Detiene worker y QThread sin dejar temporizadores activos."""
+        """Cierra worker y QThread de forma asíncrona, sin bloquear la GUI."""
         if self._shutdown_started:
             return
 
         self._shutdown_started = True
+
+        # Invalidar callbacks JS pendientes antes de detener el worker.
+        # El incremento local del operation id hace que cualquier callback
+        # Qt/JS que llegue tarde quede obsoleto aunque la página esté viva.
         self._cancel_web_operation()
+
+        # El slot stop() pertenece al worker y se ejecuta dentro de su
+        # QThread. Allí se detienen sus QTimers y se emite stopped, que ya
+        # está conectado a QThread.quit().
         self.stop_requested.emit()
-        self._thread.wait(2000)
+
+        # Watchdog orientado a eventos: no hace wait() ni bloquea la GUI.
+        # Si el hilo no termina en el plazo esperado, se informa del estado
+        # sin recurrir a terminate(), que podría dejar estado inconsistente.
+        if self._thread.isRunning():
+            self._shutdown_watchdog.start(2000)
+        else:
+            self._on_thread_finished()
+
+        self.is_busy = False
+
+    @Slot()
+    def _on_thread_finished(self) -> None:
+        """Finaliza el estado de teardown cuando QThread emite finished."""
+        if self._shutdown_watchdog.isActive():
+            self._shutdown_watchdog.stop()
+
+        self.is_busy = False
+        self.monitor_initialized = False
+        self.protocol_initialized = False
+
+    @Slot()
+    def _on_shutdown_watchdog_timeout(self) -> None:
+        """Detecta un teardown que no terminó sin forzar terminate()."""
+        if not self._shutdown_started:
+            return
 
         if self._thread.isRunning():
-            self._thread.quit()
-            self._thread.wait(2000)
+            self.queue_error.emit(
+                "__shutdown__",
+                "THREAD_SHUTDOWN_TIMEOUT",
+            )
+        else:
+            self._on_thread_finished()
 
     # ------------------------------------------------------------------
     # WEB / DOM / QWEBCHANNEL
