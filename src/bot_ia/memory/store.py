@@ -8,7 +8,6 @@ import json
 from pathlib import Path
 import re
 import sqlite3
-import threading
 from uuid import uuid4
 
 from bot_ia.change_management import ChangeManager
@@ -21,6 +20,11 @@ from .retrieval_policy import candidate_budget
 _TOKENS = re.compile(r"[\wáéíóúüñ]+", re.IGNORECASE)
 _SECRET = re.compile(r"(?:sk-[A-Za-z0-9_-]{12,}|AIza[A-Za-z0-9_-]{12,}|\d{8,12}:[A-Za-z0-9_-]{20,})")
 _CONFIDENCE_RANK = {Confidence.HIGH: 3, Confidence.MEDIUM: 2, Confidence.LOW: 1, Confidence.NONE: 0}
+MAX_MEMORY_CONTENT_CHARS = 50_000
+MAX_MEMORY_FIELD_CHARS = 2_048
+MAX_MEMORY_TAGS = 64
+MAX_MEMORY_TAG_CHARS = 128
+MAX_MEMORY_QUERY_CHARS = 24_000
 
 
 class MemoryStorageError(RuntimeError):
@@ -44,7 +48,6 @@ class MemoryStore:
         self._path = ChangeManager(workspace_root).resolve_target(database_path)
         self._closed = False
         self._fts_available = False
-        self._lock = threading.RLock()
         self._initialize()
 
     @property
@@ -102,8 +105,25 @@ class MemoryStore:
     def propose(self, *, universe_id: str, user_id: str, conversation_id: str | None, memory_type: MemoryType, content: str, source: str, provenance: str, confidence: Confidence = Confidence.MEDIUM, expires_at: datetime | None = None, tags: tuple[str, ...] = (), related_entities: tuple[str, ...] = ()) -> PersistentMemoryRecord:
         if not self._registry.contains(universe_id):
             raise MemoryStorageError("memory universe is not registered")
-        if not user_id or not content.strip() or not source or not provenance:
+        if (
+            not user_id
+            or not content.strip()
+            or not source
+            or not provenance
+        ):
             raise MemoryStorageError("memory contains invalid content")
+        if (
+            len(user_id) > MAX_MEMORY_FIELD_CHARS
+            or (conversation_id is not None and len(conversation_id) > MAX_MEMORY_FIELD_CHARS)
+            or len(content) > MAX_MEMORY_CONTENT_CHARS
+            or len(source) > MAX_MEMORY_FIELD_CHARS
+            or len(provenance) > MAX_MEMORY_FIELD_CHARS
+            or len(tags) > MAX_MEMORY_TAGS
+            or len(related_entities) > MAX_MEMORY_TAGS
+            or any(len(tag) > MAX_MEMORY_TAG_CHARS for tag in tags)
+            or any(len(entity) > MAX_MEMORY_TAG_CHARS for entity in related_entities)
+        ):
+            raise MemoryStorageError("memory fields exceed safety limits")
         if _contains_secret(user_id, conversation_id, content, source, provenance, tags, related_entities):
             raise MemoryStorageError("memory contains sensitive content")
         now = _now()
@@ -178,6 +198,8 @@ class MemoryStore:
             raise MemoryStorageError("invalid memory retrieval scope")
         now = now or _now()
         self.expire_due(now)
+        if len(query) > MAX_MEMORY_QUERY_CHARS:
+            query = query[:MAX_MEMORY_QUERY_CHARS]
         terms = tuple(dict.fromkeys(_TOKENS.findall(query.casefold())))[:64]
         if not terms:
             return ()
