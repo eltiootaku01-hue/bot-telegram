@@ -4,7 +4,7 @@ import unittest
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from bot_ia.interfaces.web import WebApi, WebApiError, create_web_server
+from bot_ia.interfaces.web import BoundedThreadingHTTPServer, WebApi, WebApiError, create_web_server
 
 
 class FakeApplication:
@@ -72,6 +72,14 @@ class WebRuntimeTests(unittest.TestCase):
     def test_non_loopback_binding_is_allowed_with_api_token(self):
         server = create_web_server(WebApi(FakeApplication(), api_token="t" * 32), host="0.0.0.0", port=0)
         server.server_close()
+
+    def test_web_server_has_bounded_request_concurrency(self):
+        server = create_web_server(WebApi(_FakeApplication()), port=0)
+        try:
+            self.assertIsInstance(server, BoundedThreadingHTTPServer)
+            self.assertEqual(8, server.max_workers)
+        finally:
+            server.server_close()
 
 
 if __name__ == "__main__":
