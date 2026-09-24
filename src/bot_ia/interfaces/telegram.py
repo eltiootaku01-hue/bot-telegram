@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Capa de Telegram: conversación natural + menús contextuales sin hoja de comandos."""
 
 from __future__ import annotations
@@ -299,6 +300,7 @@ class TelegramPoller:
     def __init__(self, client: TelegramApiClient, adapter: TelegramAdapter, *, config: PollingConfig | None = None, sleeper: Callable[[float], None] = time.sleep, logger: Callable[[str], None] | None = None) -> None:
         self._client, self._adapter, self._config = client, adapter, config or PollingConfig()
         self._sleeper, self._logger, self._running, self._offset = sleeper, logger or (lambda _: None), True, None
+        self._pending_delivery: tuple[int, TelegramOutbound] | None = None
 
     @property
     def offset(self) -> int | None:
@@ -313,6 +315,28 @@ class TelegramPoller:
         polls = received = processed = skipped = sent = errors = cycles = consecutive_failures = 0
         while self._running and (max_cycles is None or cycles < max_cycles):
             cycles += 1
+
+            if self._pending_delivery is not None:
+                pending_id, pending_outbound = self._pending_delivery
+                try:
+                    self._client.send(pending_outbound)
+                except TelegramTransportError:
+                    errors += 1
+                    self._logger("telegram pending response delivery failed")
+                    self._sleeper(self._config.retry_delay_seconds)
+                    continue
+                except (TelegramApiError, TelegramInputError):
+                    self._pending_delivery = None
+                    self._offset = pending_id + 1
+                    skipped += 1
+                    self._logger("telegram pending response rejected")
+                    continue
+                self._pending_delivery = None
+                self._offset = pending_id + 1
+                processed += 1
+                sent += 1
+                continue
+
             try:
                 updates = self._client.get_updates(offset=self._offset, timeout_seconds=self._config.poll_timeout_seconds)
             except TelegramTransportError:
@@ -342,8 +366,14 @@ class TelegramPoller:
                     continue
                 try:
                     self._client.send(outbound)
-                except (TelegramTransportError, TelegramApiError, TelegramInputError):
-                    self._logger("telegram response delivery failed")
+                except TelegramTransportError:
+                    self._pending_delivery = (update_id, outbound)
+                    self._logger("telegram response delivery deferred for retry")
+                    continue
+                except (TelegramApiError, TelegramInputError):
+                    self._offset = update_id + 1
+                    skipped += 1
+                    self._logger("telegram response delivery rejected")
                     continue
                 self._offset = update_id + 1
                 processed += 1
