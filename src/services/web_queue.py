@@ -1324,7 +1324,6 @@ class WebChatQueueManager(QObject):
                     }}
 
                 const buttons = Array.from(
-                const buttons = Array.from(
                     document.querySelectorAll("button")
                 );
 
@@ -1390,7 +1389,7 @@ class WebChatQueueManager(QObject):
             })();
         """ if send else ""
 
-        set_ticket_code = f"""        set_ticket_code = f"""
+        set_ticket_code = f"""
             if (
                 window.__casaComandoWebQueue &&
                 typeof window.__casaComandoWebQueue
