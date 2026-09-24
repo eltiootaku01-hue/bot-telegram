@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from bot_ia.core.application import BotApplication
@@ -37,6 +38,7 @@ class TelegramProjectsAdapter(TelegramNovelV2Adapter):
     def handle_callback(self, update: dict[str, object]) -> TelegramOutbound:
         callback = parse_callback_update(update)
         key = (callback.user_id, callback.conversation_id)
+        self._touch_state(key)
         data = callback.data
         if data == "menu:novel":
             return self._project_menu(callback.conversation_id)
