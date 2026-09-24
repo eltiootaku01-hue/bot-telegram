@@ -8,6 +8,18 @@ implementación de interfaz.
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+ROOT = (
+    Path(sys.executable).resolve().parent
+    if getattr(sys, "frozen", False)
+    else Path(__file__).resolve().parent
+)
+SRC = ROOT / "src"
+if SRC.is_dir() and str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
 from gui.app import CafeOtakuWindow, main as qt_main
 
 
