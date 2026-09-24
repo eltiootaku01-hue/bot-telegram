@@ -32,6 +32,9 @@ from .models import (
 )
 
 
+MAX_PROVIDER_HTTP_RESPONSE_BYTES = 4 * 1024 * 1024
+
+
 HttpTransport = Callable[
     [str, dict[str, str], dict[str, object], float],
     dict[str, object],
@@ -54,7 +57,12 @@ def _stdlib_transport(
 
     try:
         with urlopen(request, timeout=timeout) as response:
-            body = response.read().decode("utf-8")
+            raw_body = response.read(MAX_PROVIDER_HTTP_RESPONSE_BYTES + 1)
+            if len(raw_body) > MAX_PROVIDER_HTTP_RESPONSE_BYTES:
+                raise ProviderProtocolError(
+                    "provider response body exceeds safety limit"
+                )
+            body = raw_body.decode("utf-8")
             return json.loads(body)
 
     except socket.timeout as error:
