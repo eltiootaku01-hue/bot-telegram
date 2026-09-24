@@ -4,12 +4,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import time
 
 from bot_ia.core.models import RouteDecision
 
 from .adapters import BaseProvider
-from .errors import ProviderError, ProviderDisabledError, ProviderRemoteError, ProviderTimeoutError
+from .errors import ProviderError, ProviderDisabledError, ProviderRemoteError
 from .health import ProviderHealthRecord
 from .health_classifier import classify_provider_error
 from .models import FailureClass, ProviderRequest, ProviderResponse, ProviderStatus, ProviderUsage
@@ -42,12 +41,7 @@ class ProviderManager:
         attempts: list[str] = []
         candidates = self._candidate_pairs(request, fallback_provider, fallback_accounts)
         last_error: ProviderError | None = None
-        deadline = time.monotonic() + request.timeout_seconds
         for provider_id, account_id in candidates:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                last_error = ProviderTimeoutError("provider fallback budget exhausted")
-                break
             provider = self._resolve(provider_id, account_id)
             if provider is None:
                 error = ProviderDisabledError("provider account is not configured")
@@ -63,7 +57,6 @@ class ProviderManager:
                 provider_id,
                 account_id,
                 provider,
-                timeout_override=remaining,
             )
             try:
                 response = self._call(candidate, attempts, provider)
@@ -126,7 +119,6 @@ class ProviderManager:
         account_id: str | None,
         provider: BaseProvider | None,
         *,
-        timeout_override: float | None = None,
     ) -> ProviderRequest:
         config = self._provider_configs.get(provider_id)
         model = getattr(provider, "default_model", None) if provider else None
@@ -135,8 +127,6 @@ class ProviderManager:
         if config is not None:
             model, max_tokens, timeout = config.model, config.max_output_tokens, config.timeout_seconds
         timeout_value = timeout or request.timeout_seconds
-        if timeout_override is not None:
-            timeout_value = min(timeout_value, max(0.05, timeout_override))
         return ProviderRequest(
             provider_id,
             model or request.model,
