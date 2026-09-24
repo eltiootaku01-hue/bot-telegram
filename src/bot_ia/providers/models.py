@@ -88,6 +88,22 @@ class ProviderRequest:
                 "timeout must be positive"
             )
 
+        if self.total_budget_seconds <= 0:
+            raise ValueError(
+                "total budget must be positive"
+            )
+
+        if self.started_at < 0:
+            raise ValueError(
+                "request start time must be non-negative"
+            )
+
+    def remaining_budget(self) -> float:
+        return max(
+            0.0,
+            self.total_budget_seconds - (time.monotonic() - self.started_at),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class ProviderUsage:
