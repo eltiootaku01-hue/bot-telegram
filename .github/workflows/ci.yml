@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -25,7 +27,10 @@ jobs:
       - name: Compile source and tests
         run: python -m compileall -q src tests launcher.py desktop.py desktop_entry.py
       - name: Run code policy checks
-        run: python scripts/check_code_policy.py --git-range "${{ github.event.before }}" "${{ github.sha }}"
+        env:
+          POLICY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          POLICY_HEAD: ${{ github.sha }}
+        run: python scripts/check_code_policy.py --git-range-env
       - name: Import runtime surface
         run: python -c "import bot_ia; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher; import desktop_entry"
       - name: Run test suite
