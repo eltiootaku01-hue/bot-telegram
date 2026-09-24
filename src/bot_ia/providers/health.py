@@ -37,35 +37,35 @@ class ProviderHealthRecord:
 
     def register_success(self, input_tokens: int | None, output_tokens: int | None, total_tokens: int | None) -> None:
         with self._lock:
-            self.total_requests += 1
-        self.successful_requests += 1
-        self.consecutive_failures = 0
-        self.state = ProviderHealth.ACTIVE
-        self.last_error = None
-        self.last_failure_class = FailureClass.NONE
-        self.cooldown_until = 0.0
-        self.last_success_at = datetime.now(timezone.utc).isoformat()
-        if input_tokens is not None:
-            self.total_input_tokens += input_tokens
-        if output_tokens is not None:
-            self.total_output_tokens += output_tokens
-        if total_tokens is not None:
-            self.total_tokens += total_tokens
+                self.total_requests += 1
+                self.successful_requests += 1
+            self.consecutive_failures = 0
+            self.state = ProviderHealth.ACTIVE
+            self.last_error = None
+            self.last_failure_class = FailureClass.NONE
+            self.cooldown_until = 0.0
+            self.last_success_at = datetime.now(timezone.utc).isoformat()
+            if input_tokens is not None:
+                self.total_input_tokens += input_tokens
+            if output_tokens is not None:
+                self.total_output_tokens += output_tokens
+                if total_tokens is not None:
+                    self.total_tokens += total_tokens
 
     def register_failure(self, error_type: str, failure_class: FailureClass, cooldown_seconds: float = 0.0) -> None:
         with self._lock:
-            self.total_requests += 1
-        self.failed_requests += 1
-        self.consecutive_failures += 1
-        self.last_error = error_type
-        self.last_failure_class = failure_class
-        self.last_failure_at = datetime.now(timezone.utc).isoformat()
-        self.cooldown_until = max(self.cooldown_until, time.monotonic() + max(0.0, cooldown_seconds))
-        if failure_class == FailureClass.QUOTA:
-            self.state = ProviderHealth.QUOTA_EXHAUSTED
-        elif failure_class == FailureClass.AUTHENTICATION:
-            self.state = ProviderHealth.AUTH_FAILED
-        elif failure_class == FailureClass.TEMPORARY:
-            self.state = ProviderHealth.TEMPORARILY_DISABLED
+                self.total_requests += 1
+                self.failed_requests += 1
+            self.consecutive_failures += 1
+            self.last_error = error_type
+            self.last_failure_class = failure_class
+            self.last_failure_at = datetime.now(timezone.utc).isoformat()
+            self.cooldown_until = max(self.cooldown_until, time.monotonic() + max(0.0, cooldown_seconds))
+            if failure_class == FailureClass.QUOTA:
+                self.state = ProviderHealth.QUOTA_EXHAUSTED
+            elif failure_class == FailureClass.AUTHENTICATION:
+                self.state = ProviderHealth.AUTH_FAILED
+            elif failure_class == FailureClass.TEMPORARY:
+                self.state = ProviderHealth.TEMPORARILY_DISABLED
         else:
             self.state = ProviderHealth.DEGRADED
