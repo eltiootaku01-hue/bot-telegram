@@ -21,6 +21,7 @@ class TelegramInputError(ValueError):
 
 MAX_INBOUND_TEXT_CHARS = 24_000
 MAX_CALLBACK_DATA_CHARS = 256
+MAX_TELEGRAM_HTTP_RESPONSE_BYTES = 1 * 1024 * 1024
 
 
 class TelegramConfigurationError(RuntimeError):
@@ -194,7 +195,12 @@ def _http_post(url: str, payload: dict[str, object], timeout: float) -> dict[str
     request = Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
     try:
         with urlopen(request, timeout=timeout) as response:
-            decoded = json.loads(response.read().decode("utf-8"))
+            raw_body = response.read(MAX_TELEGRAM_HTTP_RESPONSE_BYTES + 1)
+            if len(raw_body) > MAX_TELEGRAM_HTTP_RESPONSE_BYTES:
+                raise TelegramTransportError(
+                    "Telegram response body exceeds safety limit"
+                )
+            decoded = json.loads(raw_body.decode("utf-8"))
     except HTTPError as error:
         status = error.code
         error.close()
