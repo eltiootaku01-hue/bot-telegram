@@ -72,8 +72,11 @@ class CozeProvider(BaseProvider):
             raise ProviderProtocolError(f"required Coze bot id is unavailable: {self.bot_id_env}")
 
         start = time.monotonic()
-        chat = self._start_chat(token, bot_id, request)
-        text, usage = self._wait_for_answer(token, chat, request.timeout_seconds)
+        deadline = start + max(1.0, request.timeout_seconds)
+        remaining = max(0.1, deadline - time.monotonic())
+        chat = self._start_chat(token, bot_id, request, timeout_seconds=remaining)
+        remaining = max(0.1, deadline - time.monotonic())
+        text, usage = self._wait_for_answer(token, chat, remaining)
         return ProviderResponse(
             provider=self.provider_id,
             model=request.model,
@@ -85,7 +88,14 @@ class CozeProvider(BaseProvider):
             account_id=self.account_id,
         )
 
-    def _start_chat(self, token: str, bot_id: str, request: ProviderRequest) -> dict[str, object]:
+    def _start_chat(
+        self,
+        token: str,
+        bot_id: str,
+        request: ProviderRequest,
+        *,
+        timeout_seconds: float,
+    ) -> dict[str, object]:
         payload = {
             "bot_id": bot_id,
             "user_id": request.request_id[:128],
@@ -103,7 +113,7 @@ class CozeProvider(BaseProvider):
             f"{self.base_url}/v3/chat",
             token,
             payload=payload,
-            timeout=request.timeout_seconds,
+            timeout=timeout_seconds,
         )
         if not isinstance(raw.get("data"), dict):
             raise ProviderProtocolError("Coze chat response has no data object")
