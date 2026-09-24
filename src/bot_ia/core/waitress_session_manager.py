@@ -501,7 +501,7 @@ class WaitressSessionManager:
                 ),
             )
             connection.execute(
-                "UPDATE waitresses SET is_resting=0, is_busy=0 "
+                "UPDATE waitresses SET is_resting=0, is_busy=1 "
                 "WHERE waitress_id=?",
                 (waitress_id,),
             )
@@ -1190,6 +1190,12 @@ class WaitressSessionManager:
             return
         session = self._session_by_id(session_id)
         if session is not None:
+            self._set_waitress_state(
+                session_id,
+                busy=True,
+                resting=False,
+            )
+            self._reset_rest_timer(session.waitress_id)
             self._submit_notification(
                 session.telegram_id,
                 "La mesera tuvo un problema con la charla. No se descontará otro coste por este fallo.",
@@ -1204,13 +1210,13 @@ class WaitressSessionManager:
             session_id = self._ticket_sessions.pop(ticket_id, None)
         if session_id is None:
             return
-        self._set_waitress_state(
-            session_id,
-            busy=False,
-            resting=False,
-        )
         session = self._session_by_id(session_id)
         if session is not None:
+            self._set_waitress_state(
+                session_id,
+                busy=True,
+                resting=False,
+            )
             self._reset_rest_timer(session.waitress_id)
 
     def _session_by_id(
