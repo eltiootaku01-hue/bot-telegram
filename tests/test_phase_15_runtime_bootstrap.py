@@ -1,12 +1,12 @@
+# -*- coding: utf-8 -*-
 from pathlib import Path
 import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-
 from bot_ia.runtime import build_runtime
-from bot_ia.interfaces import telegram as telegram_interface
+import bot_ia.__main__ as main_module
 
 
 class Phase15RuntimeBootstrapTests(unittest.TestCase):
@@ -70,10 +70,10 @@ enabled = false
                         transport_errors=0,
                     )
 
-            with patch.object(telegram_interface, "TelegramApiClient", FakeClient), \
-                 patch.object(telegram_interface, "TelegramPoller", FakePoller), \
-                 patch.object(telegram_interface, "TelegramProjectsAdapter", lambda application, runtime: object()):
-                telegram_interface._run_telegram(object(), runtime)
+            with patch.object(main_module, "TelegramApiClient", FakeClient), \
+                 patch.object(main_module, "TelegramPoller", FakePoller), \
+                 patch.object(main_module, "TelegramProjectsAdapter", lambda application, runtime: object()):
+                main_module._run_telegram(object(), runtime)
 
             self.assertIn("outbox_store", captured)
             self.assertIsNotNone(captured["outbox_store"])
