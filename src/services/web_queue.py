@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import queue
 import re
@@ -52,6 +53,7 @@ WEB_MONITOR_JS = r"""
         settleTimer: null,
         bridge: null,
         sequence: 0,
+        operationId: 0,
         activeTicketId: "",
     };
 
@@ -204,6 +206,7 @@ WEB_MONITOR_JS = r"""
         const payload = JSON.stringify({
             ticket_id: state.activeTicketId,
             sequence: state.sequence,
+            operation_id: state.operationId,
             text: assistantText || bodyText,
         });
 
@@ -243,8 +246,9 @@ WEB_MONITOR_JS = r"""
     window.__casaComandoWebQueue = {
         installed: true,
 
-        beginSend(ticketId) {
+        beginSend(ticketId, operationId) {
             state.sequence += 1;
+            state.operationId = Number(operationId) || (state.operationId + 1);
             state.activeTicketId =
                 String(ticketId ?? "");
             state.waitingForResponse = true;
@@ -273,9 +277,24 @@ WEB_MONITOR_JS = r"""
                 String(ticketId ?? "");
         },
 
+        setOperation(operationId) {
+            state.operationId = Number(operationId) || (state.operationId + 1);
+        },
+
+        cancelOperation() {
+            state.operationId += 1;
+            state.waitingForResponse = false;
+            state.activeTicketId = "";
+            if (state.settleTimer !== null) {
+                clearTimeout(state.settleTimer);
+                state.settleTimer = null;
+            }
+        },
+
         getState() {
             return JSON.stringify({
                 sequence: state.sequence,
+                operation_id: state.operationId,
                 ticket_id: state.activeTicketId,
                 waiting: state.waitingForResponse,
             });
@@ -679,6 +698,8 @@ class _QueueWorker(QObject):
 
         ticket.status = "FAILED"
 
+        self._cancel_web_operation()
+
         if self._timeout_timer is not None:
             self._timeout_timer.stop()
 
@@ -831,6 +852,7 @@ class WebChatQueueManager(QObject):
 
         self._protocol_pending = False
         self._shutdown_started = False
+        self._web_operation_id = 0
 
         self._protocol_send_timer = QTimer(self)
         self._protocol_send_timer.setSingleShot(True)
@@ -1038,6 +1060,7 @@ class WebChatQueueManager(QObject):
             return
 
         self._shutdown_started = True
+        self._cancel_web_operation()
         self.stop_requested.emit()
         self._thread.wait(2000)
 
@@ -1161,9 +1184,18 @@ class WebChatQueueManager(QObject):
             ticket_id = str(
                 event.get("ticket_id", "")
             )
+            operation_id = int(
+                event.get("operation_id", 0) or 0
+            )
             text = str(
                 event.get("text", "")
             )
+
+            if (
+                operation_id and
+                operation_id != self._web_operation_id
+            ):
+                return
 
             if not text.strip():
                 return
@@ -1270,8 +1302,30 @@ class WebChatQueueManager(QObject):
             ensure_ascii=False,
         )
 
-        send_code = """
-            setTimeout(() => {
+        self._web_operation_id += 1
+        operation_id = self._web_operation_id
+        js_operation_id = str(operation_id)
+
+        send_code = f"""
+            (() => {{
+                const operationId = {js_operation_id};
+                setTimeout(() => {{
+                    if (
+                        !window.__casaComandoWebQueue ||
+                        typeof window.__casaComandoWebQueue.getState !== "function"
+                    ) {{
+                        return;
+                    }}
+
+                    const currentState = JSON.parse(
+                        window.__casaComandoWebQueue.getState()
+                    );
+
+                    if (Number(currentState.operation_id) !== operationId) {{
+                        return;
+                    }}
+
+                const buttons = Array.from(
                 const buttons = Array.from(
                     document.querySelectorAll("button")
                 );
@@ -1334,10 +1388,11 @@ class WebChatQueueManager(QObject):
                     window.__casaComandoWebQueue
                         .markSendClicked();
                 }
-            }, 500);
+                }, 500);
+            })();
         """ if send else ""
 
-        set_ticket_code = f"""
+        set_ticket_code = f"""        set_ticket_code = f"""
             if (
                 window.__casaComandoWebQueue &&
                 typeof window.__casaComandoWebQueue
@@ -1345,6 +1400,15 @@ class WebChatQueueManager(QObject):
             ) {{
                 window.__casaComandoWebQueue
                     .setActiveTicket({js_ticket_id});
+            }}
+
+            if (
+                window.__casaComandoWebQueue &&
+                typeof window.__casaComandoWebQueue
+                    .setOperation === "function"
+            ) {{
+                window.__casaComandoWebQueue
+                    .setOperation({js_operation_id});
             }}
         """
 
@@ -1355,7 +1419,7 @@ class WebChatQueueManager(QObject):
                     .beginSend === "function"
             ) {{
                 window.__casaComandoWebQueue
-                    .beginSend({js_ticket_id});
+                    .beginSend({js_ticket_id}, {js_operation_id});
             }}
         """ if mark_send else ""
 
@@ -1468,6 +1532,22 @@ class WebChatQueueManager(QObject):
             handle_result,
         )
 
+    def _cancel_web_operation(self) -> None:
+        self._web_operation_id += 1
+        try:
+            self.web_view.page().runJavaScript(
+                """
+                if (
+                    window.__casaComandoWebQueue &&
+                    typeof window.__casaComandoWebQueue.cancelOperation === "function"
+                ) {
+                    window.__casaComandoWebQueue.cancelOperation();
+                }
+                """
+            )
+        except RuntimeError:
+            pass
+
     # ------------------------------------------------------------------
     # PROTOCOLO
     # ------------------------------------------------------------------
@@ -1490,6 +1570,9 @@ class WebChatQueueManager(QObject):
             return False
 
         text = raw_text.strip()
+
+        if len(text) > self.MAX_RESPONSE_PARSE_CHARS:
+            text = text[-self.MAX_RESPONSE_PARSE_CHARS:]
 
         if not text:
             return False
@@ -1529,11 +1612,20 @@ class WebChatQueueManager(QObject):
         )
         return True
 
+    MAX_RESPONSE_PARSE_CHARS = 20_000
+
     def _extract_response_text(
         self,
         raw_text: str,
         ticket: BotTicket,
     ) -> str:
+        raw_text = raw_text.strip()
+        if not raw_text:
+            return ""
+
+        if len(raw_text) > self.MAX_RESPONSE_PARSE_CHARS:
+            raw_text = raw_text[-self.MAX_RESPONSE_PARSE_CHARS:]
+
         pattern = self._response_pattern
 
         if pattern is None:
@@ -1562,27 +1654,9 @@ class WebChatQueueManager(QObject):
                     "text"
                 ).strip()
 
-        marker = re.search(
-            re.escape(ticket.ticket_id),
-            raw_text,
-            re.IGNORECASE,
-        )
-
-        if marker:
-            tail = raw_text[
-                marker.end():
-            ].strip()
-
-            tail = re.sub(
-                r'^["“:-]+',
-                "",
-                tail,
-            ).strip()
-
-            if tail:
-                return tail[-12000:]
-
         return ""
+
+
 
     def _extract_terminated(
         self,
