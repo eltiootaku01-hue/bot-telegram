@@ -514,8 +514,6 @@ class TelegramPoller:
                                 pending_id,
                                 acknowledged,
                             )
-                            if self._outbox is not None
-                            else None
                         ),
                     )
                     self._schedule_auto_delete_if_needed(
@@ -638,18 +636,19 @@ class TelegramPoller:
                         start_chunk = record.next_chunk
                     else:
                         start_chunk = 0
-                    result = self._client.send(
-                        outbound,
-                        start_chunk=start_chunk,
-                        on_chunk_ack=(
-                            lambda acknowledged, _result: self._outbox.ack_chunk(
-                                update_id,
-                                acknowledged,
-                            )
-                            if self._outbox is not None
-                            else None
-                        ),
-                    )
+                    if self._outbox is None:
+                        result = self._client.send(outbound)
+                    else:
+                        result = self._client.send(
+                            outbound,
+                            start_chunk=start_chunk,
+                            on_chunk_ack=(
+                                lambda acknowledged, _result: self._outbox.ack_chunk(
+                                    update_id,
+                                    acknowledged,
+                                )
+                            ),
+                        )
                     self._schedule_auto_delete_if_needed(
                         outbound,
                         result,
