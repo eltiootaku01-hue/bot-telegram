@@ -3,8 +3,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
+import time
 
 
 class ProviderStatus(str, Enum):
@@ -58,6 +59,8 @@ class ProviderRequest:
     request_id: str
     escalation_reason: str
     account_id: str | None = None
+    total_budget_seconds: float = 15.0
+    started_at: float = field(default_factory=time.monotonic)
 
     def __post_init__(self) -> None:
         if not all(
