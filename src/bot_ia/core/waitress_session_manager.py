@@ -157,6 +157,7 @@ class WaitressSessionManager:
 
         self._initialize_database()
         self._wire_web_queue()
+        self._reconcile_persisted_sessions()
         self._schedule_initial_rest_timers()
 
     def _initialize_database(self) -> None:
@@ -199,6 +200,51 @@ class WaitressSessionManager:
             connector = getattr(signal, "connect", None)
             if callable(connector):
                 connector(getattr(self, callback_name))
+
+    def _reconcile_persisted_sessions(self) -> None:
+        """Reconciles persisted active sessions and their timers after restart."""
+        now = self._now_utc()
+
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                "SELECT session_id, waitress_id, end_time "
+                "FROM active_sessions WHERE is_active=1"
+            ).fetchall()
+
+            for row in rows:
+                end = datetime.fromisoformat(row["end_time"])
+                if end <= now:
+                    connection.execute(
+                        "UPDATE active_sessions SET is_active=0 "
+                        "WHERE session_id=? AND is_active=1",
+                        (int(row["session_id"]),),
+                    )
+                    connection.execute(
+                        "UPDATE waitresses SET is_busy=0, is_resting=1 "
+                        "WHERE waitress_id=?",
+                        (row["waitress_id"],),
+                    )
+                else:
+                    connection.execute(
+                        "UPDATE waitresses SET is_busy=1, is_resting=0 "
+                        "WHERE waitress_id=?",
+                        (row["waitress_id"],)
+                    )
+            connection.commit()
+
+        with closing(self._connect()) as connection:
+            active = connection.execute(
+                "SELECT session_id, end_time "
+                "FROM active_sessions WHERE is_active=1"
+            ).fetchall()
+
+        for row in active:
+            end = datetime.fromisoformat(row["end_time"])
+            delay = max(0.1, (end - now).total_seconds())
+            self._schedule_session_expiry(
+                int(row["session_id"]),
+                delay,
+            )
 
     def _schedule_initial_rest_timers(self) -> None:
         with closing(self._connect()) as connection:
@@ -567,7 +613,7 @@ class WaitressSessionManager:
     def _schedule_session_expiry(
         self,
         session_id: int,
-        delay_seconds: int,
+        delay_seconds: float,
     ) -> None:
         key = f"session:{session_id}"
         with self._timer_lock:
