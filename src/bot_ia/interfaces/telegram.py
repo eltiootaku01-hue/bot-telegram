@@ -509,6 +509,14 @@ class TelegramPoller:
                     result = self._client.send(
                         pending_outbound,
                         start_chunk=next_chunk,
+                        on_chunk_ack=(
+                            lambda acknowledged, _result: self._outbox.ack_chunk(
+                                pending_id,
+                                acknowledged,
+                            )
+                            if self._outbox is not None
+                            else None
+                        ),
                     )
                     self._schedule_auto_delete_if_needed(
                         pending_outbound,
@@ -542,6 +550,14 @@ class TelegramPoller:
                     )
                     continue
 
+                if self._outbox is not None:
+                    try:
+                        self._outbox.mark_delivered(pending_id)
+                    except TelegramOutboxError:
+                        errors += 1
+                        self._logger("telegram outbox could not mark pending update delivered")
+                        self._sleeper(self._config.retry_delay_seconds)
+                        continue
                 self._pending_delivery = None
                 self._offset = pending_id + 1
                 processed += 1
@@ -581,6 +597,25 @@ class TelegramPoller:
                     skipped += 1
                     self._logger("telegram update skipped")
                     continue
+
+                if self._outbox is not None:
+                    try:
+                        existing = self._outbox.get(update_id)
+                    except TelegramOutboxError:
+                        existing = None
+                        self._logger("telegram outbox record is corrupt; update will be reprocessed")
+                    if existing is not None:
+                        if existing.status == "DELIVERED":
+                            self._offset = update_id + 1
+                            skipped += 1
+                            continue
+                        if existing.status == "PENDING":
+                            self._pending_delivery = (
+                                update_id,
+                                existing.outbound,
+                                existing.next_chunk,
+                            )
+                            break
 
                 try:
                     outbound = self._adapter.handle_update(update)
