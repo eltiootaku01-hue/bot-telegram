@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
 """Servicio de aplicación: une estado, Cerebro y Router sin conocer Telegram."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import threading
+import weakref
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
@@ -16,6 +19,12 @@ from .router import Router
 
 CandidateProvider = Callable[[str], tuple[EntityCandidate, ...]]
 Executor = Callable[[BrainResult, RouteDecision], str | None]
+
+
+class _SessionLock:
+    def __init__(self) -> None:
+        self.lock = threading.RLock()
+
 
 @dataclass(frozen=True, slots=True)
 class ApplicationRequest:
@@ -57,6 +66,8 @@ class BotApplication:
         self._default_universe_id = default_universe_id
         self._candidate_provider = candidate_provider or (lambda _universe_id: ())
         self._executor = executor
+        self._session_lock_guard = threading.RLock()
+        self._session_locks: weakref.WeakValueDictionary[tuple[str, str], _SessionLock] = weakref.WeakValueDictionary()
 
     def register_universe(self, definition: UniverseDefinition, entries: tuple[CatalogEntry, ...]) -> None:
         """Registra un proyecto recién creado sin reiniciar BOT-IA."""
@@ -75,6 +86,18 @@ class BotApplication:
         return state
 
     def handle(self, request: ApplicationRequest) -> ApplicationResponse:
+        if not request.user_id or not request.conversation_id:
+            raise ValueError("application request identifiers are required")
+        key = (request.user_id, request.conversation_id)
+        with self._session_lock_guard:
+            session_lock = self._session_locks.get(key)
+            if session_lock is None:
+                session_lock = _SessionLock()
+                self._session_locks[key] = session_lock
+        with session_lock.lock:
+            return self._handle_locked(request)
+
+    def _handle_locked(self, request: ApplicationRequest) -> ApplicationResponse:
         state = self._sessions.get_or_create(request.user_id, request.conversation_id, self._default_universe_id)
         universe_id = state.universe_id if state is not None else None
         candidates = self._candidate_provider(universe_id) if universe_id is not None else ()
