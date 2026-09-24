@@ -32,12 +32,12 @@ class PersistentSessionStore:
         connection = sqlite3.connect(self._path, timeout=10.0)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA busy_timeout=10000")
-        connection.execute("PRAGMA journal_mode=WAL")
         return connection
 
     def _initialize(self) -> None:
         with closing(self._connection()) as connection:
             with connection:
+                connection.execute("PRAGMA journal_mode=WAL")
                 application_id = connection.execute("PRAGMA application_id").fetchone()[0]
                 if application_id not in (0, self.APPLICATION_ID):
                     raise SessionStorageError("database belongs to another application")
@@ -128,6 +128,10 @@ class PersistentSessionStore:
         connection.execute("DELETE FROM sessions WHERE user_id=? AND conversation_id=?", (user_id, conversation_id))
 
     def purge_expired(self, now: datetime | None = None) -> int:
+        with self._lock:
+            return self._purge_expired_locked(now)
+
+    def _purge_expired_locked(self, now: datetime | None = None) -> int:
         now = now or datetime.now(timezone.utc)
         with closing(self._connection()) as connection:
             with connection:
