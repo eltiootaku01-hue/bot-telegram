@@ -2,7 +2,7 @@
 """SQLite local para memoria controlada; no carga la base completa."""
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 import json
 from pathlib import Path
