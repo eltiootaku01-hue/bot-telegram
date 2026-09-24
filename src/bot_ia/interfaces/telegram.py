@@ -434,6 +434,37 @@ class TelegramPoller:
     def stop(self) -> None:
         self._running = False
 
+    def _schedule_auto_delete_if_needed(
+        self,
+        outbound: TelegramOutbound,
+        result: dict[str, object],
+    ) -> None:
+        auto_delete = outbound.auto_delete_seconds
+        schedule = getattr(
+            self._adapter,
+            "schedule_tavern_auto_delete",
+            None,
+        )
+        if not isinstance(auto_delete, int) or auto_delete <= 0:
+            return
+        if not callable(schedule):
+            return
+        message_id = None
+        value = result.get("message_id")
+        if isinstance(value, int):
+            message_id = value
+        nested = result.get("result")
+        if isinstance(nested, dict):
+            value = nested.get("message_id")
+            if isinstance(value, int):
+                message_id = value
+        if message_id is not None:
+            schedule(
+                outbound.chat_id,
+                message_id,
+                auto_delete,
+            )
+
     def run(self, *, max_cycles: int | None = None) -> PollingResult:
         if max_cycles is not None and max_cycles < 0:
             raise ValueError("max_cycles cannot be negative")
@@ -444,24 +475,42 @@ class TelegramPoller:
             if self._pending_delivery is not None:
                 pending_id, pending_outbound, next_chunk = self._pending_delivery
                 try:
-                    self._client.send(pending_outbound, start_chunk=next_chunk)
+                    result = self._client.send(
+                        pending_outbound,
+                        start_chunk=next_chunk,
+                    )
+                    self._schedule_auto_delete_if_needed(
+                        pending_outbound,
+                        result,
+                    )
                 except TelegramPartialDeliveryError as error:
                     errors += 1
-                    self._pending_delivery = (pending_id, pending_outbound, error.next_chunk_index)
-                    self._logger("telegram pending response delivery failed after partial send")
+                    self._pending_delivery = (
+                        pending_id,
+                        pending_outbound,
+                        error.next_chunk_index,
+                    )
+                    self._logger(
+                        "telegram pending response delivery failed after partial send"
+                    )
                     self._sleeper(self._config.retry_delay_seconds)
                     continue
                 except TelegramTransportError:
                     errors += 1
-                    self._logger("telegram pending response delivery failed")
+                    self._logger(
+                        "telegram pending response delivery failed"
+                    )
                     self._sleeper(self._config.retry_delay_seconds)
                     continue
                 except (TelegramApiError, TelegramInputError):
                     self._pending_delivery = None
                     self._offset = pending_id + 1
                     skipped += 1
-                    self._logger("telegram pending response rejected")
+                    self._logger(
+                        "telegram pending response rejected"
+                    )
                     continue
+
                 self._pending_delivery = None
                 self._offset = pending_id + 1
                 processed += 1
@@ -469,25 +518,39 @@ class TelegramPoller:
                 continue
 
             try:
-                updates = self._client.get_updates(offset=self._offset, timeout_seconds=self._config.poll_timeout_seconds)
+                updates = self._client.get_updates(
+                    offset=self._offset,
+                    timeout_seconds=self._config.poll_timeout_seconds,
+                )
             except TelegramTransportError:
                 errors += 1
                 consecutive_failures += 1
-                self._logger("telegram polling transport error")
+                self._logger(
+                    "telegram polling transport error"
+                )
                 if consecutive_failures >= self._config.max_consecutive_failures:
                     self.stop()
                     break
                 self._sleeper(self._config.retry_delay_seconds)
                 continue
+
             polls += 1
             consecutive_failures = 0
             received += len(updates)
+
             for update in updates:
                 update_id = update.get("update_id")
-                if not isinstance(update_id, int) or (self._offset is not None and update_id < self._offset):
+                if (
+                    not isinstance(update_id, int)
+                    or (
+                        self._offset is not None
+                        and update_id < self._offset
+                    )
+                ):
                     skipped += 1
                     self._logger("telegram update skipped")
                     continue
+
                 try:
                     outbound = self._adapter.handle_update(update)
                 except TelegramInputError:
@@ -498,47 +561,58 @@ class TelegramPoller:
                 except Exception as error:
                     self._offset = update_id + 1
                     skipped += 1
-                    self._logger(f"telegram update processing failed: {type(error).__name__}")
+                    self._logger(
+                        f"telegram update processing failed: {type(error).__name__}"
+                    )
                     continue
+
                 try:
                     result = self._client.send(outbound)
-                auto_delete = getattr(outbound, "auto_delete_seconds", None)
-                schedule = getattr(self._adapter, "schedule_tavern_auto_delete", None)
-                if (
-                    isinstance(auto_delete, int)
-                    and auto_delete > 0
-                    and callable(schedule)
-                ):
-                    message_id = None
-                    if isinstance(result, dict):
-                        value = result.get("message_id")
-                        if isinstance(value, int):
-                            message_id = value
-                        nested = result.get("result")
-                        if isinstance(nested, dict) and isinstance(nested.get("message_id"), int):
-                            message_id = nested["message_id"]
-                    if message_id is not None:
-                        schedule(
-                            outbound.chat_id,
-                            message_id,
-                            auto_delete,
-                        )
+                    self._schedule_auto_delete_if_needed(
+                        outbound,
+                        result,
+                    )
                 except TelegramPartialDeliveryError as error:
-                    self._pending_delivery = (update_id, outbound, error.next_chunk_index)
-                    self._logger("telegram response delivery deferred after partial send")
+                    self._pending_delivery = (
+                        update_id,
+                        outbound,
+                        error.next_chunk_index,
+                    )
+                    self._logger(
+                        "telegram response delivery deferred after partial send"
+                    )
                     break
                 except TelegramTransportError:
-                    self._pending_delivery = (update_id, outbound, 0)
-                    self._logger("telegram response delivery deferred for retry")
+                    self._pending_delivery = (
+                        update_id,
+                        outbound,
+                        0,
+                    )
+                    self._logger(
+                        "telegram response delivery deferred for retry"
+                    )
                     break
                 except (TelegramApiError, TelegramInputError):
                     self._offset = update_id + 1
                     skipped += 1
-                    self._logger("telegram response delivery rejected")
+                    self._logger(
+                        "telegram response delivery rejected"
+                    )
                     continue
+
                 self._offset = update_id + 1
                 processed += 1
                 sent += 1
+
             if self._running and not updates:
                 self._sleeper(self._config.idle_delay_seconds)
-        return PollingResult(polls, received, processed, skipped, sent, errors, not self._running)
+
+        return PollingResult(
+            polls,
+            received,
+            processed,
+            skipped,
+            sent,
+            errors,
+            not self._running,
+        )
