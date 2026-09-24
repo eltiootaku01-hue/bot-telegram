@@ -66,6 +66,7 @@ class TelegramOutboxStore:
                 "CREATE INDEX IF NOT EXISTS ix_telegram_outbox_status "
                 "ON telegram_outbox(status, created_at)"
             )
+            connection.commit()
 
     @staticmethod
     def _serialize(outbound: "TelegramOutbound") -> str:
@@ -170,6 +171,7 @@ class TelegramOutboxStore:
                 """,
                 (update_id, int(outbound.chat_id), serialized),
             )
+            connection.commit()
         record = self.get(update_id)
         if record is None:
             raise TelegramOutboxError("telegram outbox record disappeared after insert")
@@ -189,6 +191,7 @@ class TelegramOutboxStore:
             )
             if cursor.rowcount != 1:
                 raise TelegramOutboxError("telegram outbox chunk ACK was not applied")
+            connection.commit()
 
     def mark_delivered(self, update_id: int) -> None:
         with closing(self._connection()) as connection:
@@ -205,6 +208,7 @@ class TelegramOutboxStore:
                 if record is not None and record.status == "DELIVERED":
                     return
                 raise TelegramOutboxError("telegram outbox delivery transition failed")
+            connection.commit()
 
     def mark_failed(self, update_id: int) -> None:
         with closing(self._connection()) as connection:
@@ -212,3 +216,4 @@ class TelegramOutboxStore:
                 "UPDATE telegram_outbox SET status='FAILED' WHERE update_id=?",
                 (update_id,),
             )
+            connection.commit()
