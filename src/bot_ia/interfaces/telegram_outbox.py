@@ -157,9 +157,15 @@ class TelegramOutboxStore:
         with self._connection() as connection:
             connection.execute(
                 """
-                INSERT OR IGNORE INTO telegram_outbox
+                INSERT INTO telegram_outbox
                     (update_id, chat_id, payload, next_chunk, status)
                 VALUES (?, ?, ?, 0, 'PENDING')
+                ON CONFLICT(update_id) DO UPDATE SET
+                    chat_id=excluded.chat_id,
+                    payload=excluded.payload,
+                    next_chunk=0,
+                    status='PENDING'
+                WHERE telegram_outbox.status='FAILED'
                 """,
                 (update_id, int(outbound.chat_id), serialized),
             )
