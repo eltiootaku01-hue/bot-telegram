@@ -36,8 +36,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtWebEngineWidgets import QWebEngineView
-
 from bot_ia.core.application import ApplicationRequest
 from bot_ia.core.waitress_session_manager import (
     InsufficientBalanceError,
@@ -50,8 +48,6 @@ from bot_ia.core.waitress_session_manager import (
 )
 from bot_ia.interfaces.telegram import TelegramOutbound
 from bot_ia.runtime import RuntimeComponents, build_runtime
-from services.web_queue import WebChatQueueManager
-
 from .styles import application_qss
 from .widgets import BotTile, CardFrame, PillButton, SectionHeader
 
@@ -181,7 +177,7 @@ class CafeOtakuWindow(QMainWindow):
         self._web_ticket_ids: dict[str, str] = {}
         self._web_ticket_sequence = 0
         self._selected_bot_id = "cari"
-        self._web_queue: WebChatQueueManager | None = None
+        self._web_queue = None
         self._tavern: WaitressSessionManager | None = None
         self._telegram_process: subprocess.Popen[str] | None = None
         self._dialogs: list[QWidget] = []
@@ -457,6 +453,8 @@ class CafeOtakuWindow(QMainWindow):
         self.web_hint.setWordWrap(True)
         layout.addWidget(self.web_hint)
 
+        from PySide6.QtWebEngineWidgets import QWebEngineView
+
         self.web_view = QWebEngineView()
         self.web_view.setSizePolicy(
             QSizePolicy.Expanding,
@@ -472,6 +470,8 @@ class CafeOtakuWindow(QMainWindow):
 
     def _wire_backend(self) -> None:
         try:
+            from services.web_queue import WebChatQueueManager
+
             self._web_queue = WebChatQueueManager(
                 self.web_view,
                 parent=self,
