@@ -1,42 +1,84 @@
-# BOT-IA Desktop
+# BOT-IA Desktop / Café Otaku
 
-BOT-IA tiene una interfaz gráfica de Windows que utiliza el mismo runtime que la consola, Telegram y la API HTTP.
+BOT-IA usa una interfaz gráfica Qt Dark Cozy llamada **Café Otaku**, construida sobre
+el mismo runtime que la consola, Telegram y la API HTTP.
 
 ## Uso normal
 
-Para el usuario final, el punto de entrada es `BOT-IA.exe`. No hace falta abrir Python, PowerShell ni una terminal.
+Para el usuario final, el punto de entrada sigue siendo `BOT-IA.exe`. En la
+instalación nueva aparece el asistente de configuración y después el lanzador
+abre `BOT-IA-Core.exe`, que ahora presenta la interfaz Qt de Café Otaku.
 
-En una instalación nueva, `BOT-IA.exe` abre un asistente de primera configuración. Desde ahí se elige la biblioteca de ONE NEKO PUNCH y el proveedor IA, se introduce la clave y se guarda la configuración local. Después el mismo acceso directo abre la interfaz normal.
+En desarrollo también puedes ejecutar:
 
-## Qué incluye la interfaz
+```powershell
+$env:PYTHONPATH = "src"
+python -m gui.app
+```
 
-- Ventana de conversación.
-- Menú visual para novela, biblioteca, continuidad, ideas e investigación.
-- Ayuda para destrabar escenas.
-- Selección y exportación controlada de contexto.
-- Estado de API y progreso local.
-- Botón para iniciar Telegram en un proceso separado.
-- Autorización de API externa por consulta, desactivada por defecto.
+## Qué incluye Café Otaku
 
-## Seguridad
+- Sidebar de Cari, Cami, Sunna, Chie, Chloe y Scarlet.
+- Estado de la Taberna consultado desde SQLite cuando el personaje existe en el
+  registro real de meseras.
+- Chat general mediante `BotApplication` fuera del hilo de la GUI.
+- Chat de Taberna mediante `WaitressSessionManager`, persistencia de
+  `last_ticket_at` y `WebChatQueueManager`.
+- Chat individual WebQueue para personajes que no están registrados como meseras.
+- Píldoras para inventario/cartas, estado de descanso, chocolatada y duelo.
+- Panel de operaciones para proyectos, Telegram, providers y estado de WebQueue.
+- Navegador integrado `QWebEngineView` para la superficie controlada por
+  `WebChatQueueManager`.
+- Estado discreto de backend, outbox y WebQueue en el footer.
+- Errores técnicos fuera de la interfaz; los detalles se registran en
+  `work/gui.log`.
 
-La GUI no crea un segundo cerebro ni una segunda base de conocimiento. Utiliza `BotApplication`, por lo que conserva las mismas reglas de evidencia, routing, memoria y providers.
+## Límites explícitos
 
-La autorización externa es explícita por consulta. Los resultados externos no se convierten automáticamente en canon.
+El backend actual no contiene una API para crear grupos de Telegram, nombrar bots
+como administradores ni mapear X/Twitter hacia topics de Telegram. Café Otaku no
+simula esas capacidades: el panel informa de su ausencia en lugar de mostrar
+botones que aparenten hacer algo que el backend no puede ejecutar.
 
-Los porcentajes del panel son indicadores locales de documentación/configuración; no representan cuotas reales del proveedor.
+El backend actual de Taberna tampoco define una economía de gacha/póker separada.
+La píldora correspondiente usa la operación de duelo existente y deja claro que
+no se ha inventado una mecánica adicional.
+
+El registro SQLite actual contiene a Cari, Luna, Scarlet, Chloe y Mama Mia. Cami,
+Sunna y Chie se muestran como personajes WebQueue cuando no existe una fila real
+para ellas; la UI no fabrica estados SQLite.
+
+## Seguridad y ciclo de vida
+
+La GUI no crea un segundo cerebro ni una segunda base de conocimiento. Utiliza
+`BotApplication`, por lo que conserva las mismas reglas de evidencia, routing,
+memoria y providers.
+
+Los mensajes generales se procesan en un pool Qt para que una llamada remota no
+bloquee la interfaz. El WebQueue mantiene su QThread, timeouts, circuit breaker y
+MutationObserver existentes.
+
+Al cerrar la ventana, se detienen Telegram y Taberna, se cancela el WebQueue de
+forma ordenada y se cierran las conexiones persistentes antes de terminar el
+proceso.
 
 ## Paquete Windows
 
-El proyecto genera dos ejecutables:
+El proyecto genera:
 
 - `BOT-IA.exe`: lanzador y asistente de primera configuración.
-- `BOT-IA-Core.exe`: interfaz principal y runtime.
+- `BOT-IA-Core.exe`: interfaz principal Café Otaku y runtime.
+- `BOT-IA-Setup.exe`: instalador de Windows.
 
-También genera `BOT-IA-Setup.exe`, un instalador de Windows sin necesidad de privilegios de administrador. El acceso directo del escritorio apunta al lanzador.
+El build instala PySide6 y `tzdata` y realiza un smoke test del Core antes de
+construir el instalador.
 
-El paquete se construye automáticamente mediante GitHub Actions y se publica como artefacto de Windows. Las claves reales nunca se almacenan en Git.
+## Tests
 
-## Desarrollo
+La CI compila, ejecuta las comprobaciones de política, importa `gui.app` y
+ejecuta la suite de unittest en Ubuntu y Windows con:
 
-`desktop.py`, `launcher.py` y `build_desktop.ps1` siguen disponibles para desarrollo y mantenimiento. Las instrucciones con Python y `PYTHONPATH` del README están destinadas al entorno de desarrollo, no al uso normal del programa.
+```powershell
+$env:PYTHONPATH = "src"
+python -m unittest discover -s tests -v
+```
