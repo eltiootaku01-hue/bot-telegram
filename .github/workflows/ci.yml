@@ -28,17 +28,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libegl1 \
-            libgl1 \
-            libglvnd0 \
-            libx11-xcb1 \
-            libxcb1 \
-            libxcb-cursor0 \
-            libxkbcommon0 \
-            libxkbcommon-x11-0
+          sudo apt-get install -y             libegl1             libgl1             libglvnd0             libx11-xcb1             libxcb1             libxcb-cursor0             libxkbcommon0             libxkbcommon-x11-0
       - name: Install runtime dependencies
-        run: python -m pip install --disable-pip-version-check PySide6 tzdata
+        run: python -m pip install --disable-pip-version-check PySide6 tzdata playwright
       - name: Compile source and tests
         run: python -m compileall -q src tests launcher.py desktop.py desktop_entry.py
       - name: Run code policy checks
@@ -47,7 +39,7 @@ jobs:
           POLICY_HEAD: ${{ github.sha }}
         run: python scripts/check_code_policy.py --git-range-env
       - name: Import runtime surface
-        run: python -c "import bot_ia; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher; import desktop_entry; import gui.app"
+        run: python -c "import bot_ia; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.core.web_queue; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher; import desktop_entry; import gui.app"
       - name: Run test suite
         env:
           PYTHONWARNINGS: error::ResourceWarning
