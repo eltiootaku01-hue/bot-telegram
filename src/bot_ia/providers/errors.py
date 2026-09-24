@@ -17,6 +17,12 @@ class ProviderTimeoutError(ProviderError):
     pass
 
 
+class ProviderBudgetExceededError(ProviderError):
+    """The total request budget is exhausted before another attempt."""
+
+    pass
+
+
 class ProviderRateLimitError(ProviderError):
     pass
 
