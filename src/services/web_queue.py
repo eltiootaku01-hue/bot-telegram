@@ -698,8 +698,6 @@ class _QueueWorker(QObject):
 
         ticket.status = "FAILED"
 
-        self._cancel_web_operation()
-
         if self._timeout_timer is not None:
             self._timeout_timer.stop()
 
@@ -1725,6 +1723,8 @@ class WebChatQueueManager(QObject):
         ticket: BotTicket,
         reason: str,
     ) -> None:
+        self._cancel_web_operation()
+
         if (
             self.current_ticket is not None and
             self.current_ticket.ticket_id ==
