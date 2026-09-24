@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from bot_ia.core.application import ApplicationRequest, BotApplication
+from bot_ia.core.waitress_session_manager import WaitressSessionManager
 from bot_ia.interfaces.telegram import TelegramOutbound, parse_callback_update, parse_update
 from bot_ia.interfaces.telegram_ui import TelegramNovelAdapter
 
@@ -37,8 +38,16 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
         (("❓ Ayuda", "menu:help"),),
     )
 
-    def __init__(self, application: BotApplication) -> None:
-        super().__init__(application)
+    def __init__(
+        self,
+        application: BotApplication,
+        *,
+        tavern_manager: WaitressSessionManager | None = None,
+    ) -> None:
+        super().__init__(
+            application,
+            tavern_manager=tavern_manager,
+        )
         self._selected_main: dict[tuple[str, str], str] = {}
         self._selected_secondary: dict[tuple[str, str], str] = {}
 
