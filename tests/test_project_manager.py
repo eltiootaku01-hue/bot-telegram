@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import json
@@ -10,6 +11,22 @@ from bot_ia.core.project_manager import ProjectError, ProjectManager
 
 
 class ProjectManagerTests(unittest.TestCase):
+    def test_load_acquires_interprocess_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            calls = []
+
+            from contextlib import contextmanager
+
+            @contextmanager
+            def fake_process_lock(_self):
+                calls.append(True)
+                yield
+
+            with patch.object(ProjectManager, "_process_lock", fake_process_lock):
+                ProjectManager(Path(temporary))
+
+            self.assertEqual([True], calls)
+
     def test_create_novel_persists_name_and_isolated_structure(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
