@@ -1304,87 +1304,89 @@ class WebChatQueueManager(QObject):
         operation_id = self._web_operation_id
         js_operation_id = str(operation_id)
 
-        send_code = f"""
-            (() => {{
-                const operationId = {js_operation_id};
-                setTimeout(() => {{
+        send_code = """
+            (() => {
+                const operationId = %OPERATION_ID%;
+                setTimeout(() => {
                     if (
                         !window.__casaComandoWebQueue ||
                         typeof window.__casaComandoWebQueue.getState !== "function"
-                    ) {{
+                    ) {
                         return;
-                    }}
+                    }
 
                     const currentState = JSON.parse(
                         window.__casaComandoWebQueue.getState()
                     );
 
-                    if (Number(currentState.operation_id) !== operationId) {{
+                    if (Number(currentState.operation_id) !== operationId) {
                         return;
-                    }}
-
-                const buttons = Array.from(
-                    document.querySelectorAll("button")
-                );
-
-                const button = buttons.find(
-                    (candidate) => {
-                        const label = (
-                            candidate.getAttribute(
-                                "aria-label"
-                            ) ||
-                            candidate.getAttribute(
-                                "title"
-                            ) ||
-                            candidate.textContent ||
-                            ""
-                        ).trim().toLowerCase();
-
-                        return (
-                            label === "send" ||
-                            label === "enviar" ||
-                            label.includes(
-                                "send message"
-                            ) ||
-                            label.includes(
-                                "enviar mensaje"
-                            )
-                        );
                     }
-                );
 
-                if (!button || button.disabled) {
+                    const buttons = Array.from(
+                        document.querySelectorAll("button")
+                    );
+
+                    const button = buttons.find(
+                        (candidate) => {
+                            const label = (
+                                candidate.getAttribute(
+                                    "aria-label"
+                                ) ||
+                                candidate.getAttribute(
+                                    "title"
+                                ) ||
+                                candidate.textContent ||
+                                ""
+                            ).trim().toLowerCase();
+
+                            return (
+                                label === "send" ||
+                                label === "enviar" ||
+                                label.includes(
+                                    "send message"
+                                ) ||
+                                label.includes(
+                                    "enviar mensaje"
+                                )
+                            );
+                        }
+                    );
+
+                    if (!button || button.disabled) {
+                        sendBridgeEvent(
+                            "SEND_ERROR",
+                            JSON.stringify({
+                                ticket_id:
+                                    state.activeTicketId,
+                                error:
+                                    "SEND_BUTTON_NOT_FOUND"
+                            })
+                        );
+                        return;
+                    }
+
+                    button.click();
+
                     sendBridgeEvent(
-                        "SEND_ERROR",
+                        "SEND_OK",
                         JSON.stringify({
                             ticket_id:
                                 state.activeTicketId,
-                            error:
-                                "SEND_BUTTON_NOT_FOUND"
+                            operation_id:
+                                operationId
                         })
                     );
-                    return;
-                }
 
-                button.click();
-
-                sendBridgeEvent(
-                    "SEND_OK",
-                    JSON.stringify({
-                        ticket_id:
-                            state.activeTicketId
-                    })
-                );
-
-                if (
-                    window.__casaComandoWebQueue &&
-                    typeof window.__casaComandoWebQueue
-                        .markSendClicked ===
-                        "function"
-                ) {
-                    window.__casaComandoWebQueue
-                        .markSendClicked();
-                }
+                    if (
+                        window.__casaComandoWebQueue &&
+                        typeof window.__casaComandoWebQueue
+                            .markSendClicked ===
+                            "function"
+                    ) {
+                        window.__casaComandoWebQueue
+                            .markSendClicked();
+                    }
                 }, 500);
             })();
         """ if send else ""
