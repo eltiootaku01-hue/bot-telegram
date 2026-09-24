@@ -1604,9 +1604,9 @@ class WebChatQueueManager(QObject):
         )
 
         if not parsed_text:
-            # Si el encabezado fue alterado, se conserva
-            # la evidencia observada antes del timeout.
-            parsed_text = text[-12000:]
+            # El protocolo es estricto: una respuesta sin encabezado
+            # válido no puede cerrar ni resolver el ticket.
+            return False
 
         self.response_observed_requested.emit(
             parsed_text
