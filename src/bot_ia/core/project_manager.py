@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 import re
 import threading
@@ -29,6 +31,7 @@ class ProjectManager:
     _ID_RE = re.compile(r"[^a-z0-9]+")
     _VALID_ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     _REQUIRED_DIRECTORIES = ("biblioteca", "memoria", "canon", "historial", "config")
+    MAX_DISPLAY_NAME_CHARS = 200
 
     def __init__(self, workspace_root: Path, *, registry_path: str = "work/projects.json", projects_dir: str = "work/projects") -> None:
         self._workspace_root = workspace_root.resolve()
@@ -38,6 +41,7 @@ class ProjectManager:
             raise ProjectError("project storage must remain inside the workspace")
         self._registry_path.parent.mkdir(parents=True, exist_ok=True)
         self._projects_dir.mkdir(parents=True, exist_ok=True)
+        self._registry_lock_path = self._registry_path.with_suffix(".json.lock")
         self._lock = threading.RLock()
         self._records = self._load()
 
@@ -62,12 +66,46 @@ class ProjectManager:
 
     def create_novel(self, display_name: str) -> ProjectRecord:
         with self._lock:
-            return self._create_novel_locked(display_name)
+            with self._process_lock():
+                # Recargar después de adquirir el lock entre procesos.
+                # Así dos procesos BOT-IA no pisan sus registros entre sí.
+                self._records = self._load()
+                return self._create_novel_locked(display_name)
+
+    @contextmanager
+    def _process_lock(self):
+        handle = self._registry_lock_path.open("a+b")
+        try:
+            handle.seek(0)
+            if handle.tell() == 0:
+                handle.write(b"0")
+                handle.flush()
+            handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            yield
+        finally:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            finally:
+                handle.close()
 
     def _create_novel_locked(self, display_name: str) -> ProjectRecord:
         name = " ".join(display_name.strip().split())
         if not name:
             raise ProjectError("project name cannot be empty")
+        if len(name) > self.MAX_DISPLAY_NAME_CHARS:
+            raise ProjectError("project name is too long")
         project_id = self.slugify(name)
         if project_id in self._records:
             raise ProjectError(f"project already exists: {name}")
