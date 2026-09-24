@@ -51,7 +51,8 @@ class TelegramUiTests(unittest.TestCase):
         app = _FakeApp()
         adapter = TelegramNovelAdapter(app)
         key = ("1", "2")
-        adapter._last_message[key] = "consulta pendiente"
+        adapter._fallback_query[key] = "consulta pendiente"
+        adapter._last_message[key] = "mensaje distinto posterior"
         update = {"callback_query": {"from": {"id": 1}, "message": {"chat": {"id": 2}}, "data": "fallback:api"}}
         adapter.handle_callback(update)
         self.assertEqual(len(app.calls), 1)
@@ -60,7 +61,7 @@ class TelegramUiTests(unittest.TestCase):
     def test_prompt_button_never_calls_application(self):
         app = _FakeApp()
         adapter = TelegramNovelAdapter(app)
-        adapter._last_message[("1", "2")] = "Kuro salva a alguien"
+        adapter._fallback_query[("1", "2")] = "Kuro salva a alguien"
         update = {"callback_query": {"from": {"id": 1}, "message": {"chat": {"id": 2}}, "data": "fallback:prompt"}}
         result = adapter.handle_callback(update)
         self.assertEqual(app.calls, [])
