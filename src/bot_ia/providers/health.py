@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 """Estado y salud de cuentas de proveedores."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import threading
 from datetime import datetime, timezone
 import time
 
@@ -26,13 +28,16 @@ class ProviderHealthRecord:
     total_input_tokens: int = 0
     total_output_tokens: int = 0
     total_tokens: int = 0
+    _lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
 
     @property
     def available(self) -> bool:
-        return time.monotonic() >= self.cooldown_until
+        with self._lock:
+            return time.monotonic() >= self.cooldown_until
 
     def register_success(self, input_tokens: int | None, output_tokens: int | None, total_tokens: int | None) -> None:
-        self.total_requests += 1
+        with self._lock:
+            self.total_requests += 1
         self.successful_requests += 1
         self.consecutive_failures = 0
         self.state = ProviderHealth.ACTIVE
@@ -48,7 +53,8 @@ class ProviderHealthRecord:
             self.total_tokens += total_tokens
 
     def register_failure(self, error_type: str, failure_class: FailureClass, cooldown_seconds: float = 0.0) -> None:
-        self.total_requests += 1
+        with self._lock:
+            self.total_requests += 1
         self.failed_requests += 1
         self.consecutive_failures += 1
         self.last_error = error_type
