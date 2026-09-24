@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
 """Punto de construcción del runtime de BOT-IA."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import threading
 
 from bot_ia.config import RuntimeConfig, RuntimeRegistry, load_default_runtime_config
 from bot_ia.contracts import UniverseDefinition, UniverseRegistry
@@ -38,18 +40,21 @@ class RuntimeComponents:
     project_manager: ProjectManager | None = None
     workspace_root: Path = Path(".")
     _universe_map: dict[str, UniverseRuntime] = field(default_factory=dict, repr=False, compare=False)
+    _runtime_lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "_universe_map", {item.definition.universe_id: item for item in self.universes})
 
     def universe(self, universe_id: str) -> UniverseRuntime:
-        try:
-            return self._universe_map[universe_id]
-        except KeyError as error:
-            raise KeyError(f"universe not configured: {universe_id}") from error
+        with self._runtime_lock:
+            try:
+                return self._universe_map[universe_id]
+            except KeyError as error:
+                raise KeyError(f"universe not configured: {universe_id}") from error
 
     def configured_universe_ids(self) -> tuple[str, ...]:
-        return tuple(self._universe_map)
+        with self._runtime_lock:
+            return tuple(self._universe_map)
 
     @property
     def backup_service(self) -> BackupService:
@@ -73,18 +78,25 @@ class RuntimeComponents:
         return BotApplication(LocalBrain(self.universe_registry), Router(), session_store, default_universe_id=default_universe_id, candidate_provider=candidate_provider, executor=workflow)
 
     def create_novel(self, display_name: str, *, application: BotApplication | None = None) -> ProjectRecord:
-        if self.project_manager is None:
-            raise RuntimeError("dynamic project manager is not configured")
-        record = self.project_manager.create_novel(display_name)
-        definition = UniverseDefinition(universe_id=record.project_id, display_name=record.display_name, root_path=record.root_path / "biblioteca", spoiler_policy="strict", language="es")
-        entries = SourceInventory(definition.root_path).discover(definition.universe_id)
-        runtime = UniverseRuntime(definition, entries, EntityIndex(entries))
-        self.universe_registry.register(definition)
-        self._universe_map[definition.universe_id] = runtime
-        object.__setattr__(self, "universes", (*self.universes, runtime))
-        if application is not None:
-            application.register_universe(definition, entries)
-        return record
+        with self._runtime_lock:
+            if self.project_manager is None:
+                raise RuntimeError("dynamic project manager is not configured")
+            record = self.project_manager.create_novel(display_name)
+            definition = UniverseDefinition(
+                universe_id=record.project_id,
+                display_name=record.display_name,
+                root_path=record.root_path / "biblioteca",
+                spoiler_policy="strict",
+                language="es",
+            )
+            entries = SourceInventory(definition.root_path).discover(definition.universe_id)
+            runtime = UniverseRuntime(definition, entries, EntityIndex(entries))
+            self.universe_registry.register(definition)
+            self._universe_map[definition.universe_id] = runtime
+            object.__setattr__(self, "universes", (*self.universes, runtime))
+            if application is not None:
+                application.register_universe(definition, entries)
+            return record
 
 
 def _build_universe_runtime(config: RuntimeConfig) -> tuple[UniverseRegistry, tuple[UniverseRuntime, ...]]:
