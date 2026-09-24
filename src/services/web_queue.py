@@ -1,8 +1,10 @@
 import json
 import queue
+import re
 from dataclasses import dataclass
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
+from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
 
@@ -27,6 +29,270 @@ REGLAS DE PROTOCOLO DE MENSAJES:
 """
 
 
+# Este bloque vive dentro del navegador. No usa polling continuo:
+# MutationObserver reacciona a cambios reales del DOM y usa un debounce
+# basado en setTimeout para determinar la finalización de la respuesta.
+WEB_MONITOR_JS = r"""
+(() => {
+    if (window.__casaComandoWebQueue && window.__casaComandoWebQueue.installed) {
+        return "ALREADY_INSTALLED";
+    }
+
+    const state = {
+        installed: true,
+        waitingForResponse: false,
+        stopSeen: false,
+        baselineText: "",
+        firstMutationAt: 0,
+        settleTimer: null,
+        bridge: null,
+        sequence: 0
+    };
+
+    const sendBridgeEvent = (eventType, payload) => {
+        try {
+            if (
+                state.bridge &&
+                typeof state.bridge.report === "function"
+            ) {
+                state.bridge.report(eventType, String(payload ?? ""));
+            }
+        } catch (error) {
+            console.debug(
+                "[CASA_COMANDO_WEB_QUEUE]",
+                "bridge error",
+                String(error)
+            );
+        }
+    };
+
+    const findStopButton = () => {
+        const candidates = document.querySelectorAll("button");
+        for (const button of candidates) {
+            const label = (
+                button.getAttribute("aria-label") ||
+                button.getAttribute("title") ||
+                button.textContent ||
+                ""
+            ).trim().toLowerCase();
+
+            if (
+                label === "stop" ||
+                label === "detener" ||
+                label.includes("stop generating") ||
+                label.includes("detener generación") ||
+                label.includes("detener la generación") ||
+                label.includes("stop response") ||
+                label.includes("cancel response")
+            ) {
+                return button;
+            }
+        }
+        return null;
+    };
+
+    const extractLatestAssistantText = () => {
+        const selectors = [
+            '[data-message-author-role="assistant"]',
+            '[data-role="assistant"]',
+            '[data-testid*="assistant"]',
+            '[class*="assistant"]',
+            'message-content',
+            ".markdown",
+            ".prose"
+        ];
+
+        const values = [];
+
+        for (const selector of selectors) {
+            try {
+                const nodes = document.querySelectorAll(selector);
+                for (const node of nodes) {
+                    const text = (node.innerText || node.textContent || "").trim();
+                    if (text) {
+                        values.push(text);
+                    }
+                }
+            } catch (_) {
+                // Un selector incompatible no debe romper el observer.
+            }
+        }
+
+        if (values.length > 0) {
+            return values[values.length - 1];
+        }
+
+        return (document.body?.innerText || "").trim();
+    };
+
+    const completeIfStable = () => {
+        if (!state.waitingForResponse) {
+            return;
+        }
+
+        const stopButton = findStopButton();
+        if (stopButton) {
+            state.stopSeen = true;
+            return;
+        }
+
+        const now = Date.now();
+        const minimumSettleMs = 1200;
+
+        if (
+            !state.stopSeen &&
+            now - state.firstMutationAt < minimumSettleMs
+        ) {
+            state.settleTimer = setTimeout(
+                completeIfStable,
+                minimumSettleMs - (now - state.firstMutationAt)
+            );
+            return;
+        }
+
+        const assistantText = extractLatestAssistantText();
+        const bodyText = (document.body?.innerText || "").trim();
+
+        if (!assistantText && !bodyText) {
+            return;
+        }
+
+        if (
+            state.stopSeen ||
+            bodyText !== state.baselineText ||
+            assistantText
+        ) {
+            state.waitingForResponse = false;
+            state.stopSeen = false;
+            state.firstMutationAt = 0;
+
+            sendBridgeEvent(
+                "RESPONSE_COMPLETE",
+                assistantText || bodyText
+            );
+        }
+    };
+
+    const scheduleCompletionCheck = () => {
+        if (!state.waitingForResponse) {
+            return;
+        }
+
+        if (!state.firstMutationAt) {
+            state.firstMutationAt = Date.now();
+        }
+
+        if (state.settleTimer !== null) {
+            clearTimeout(state.settleTimer);
+        }
+
+        state.settleTimer = setTimeout(
+            completeIfStable,
+            1200
+        );
+    };
+
+    window.__casaComandoWebQueue = {
+        installed: true,
+        beginSend() {
+            state.sequence += 1;
+            state.waitingForResponse = true;
+            state.stopSeen = Boolean(findStopButton());
+            state.baselineText = (
+                document.body?.innerText || ""
+            ).trim();
+            state.firstMutationAt = Date.now();
+
+            if (state.settleTimer !== null) {
+                clearTimeout(state.settleTimer);
+                state.settleTimer = null;
+            }
+        }
+    };
+
+    const installObserver = () => {
+        const root = document.body || document.documentElement;
+
+        if (!root) {
+            sendBridgeEvent("MONITOR_ERROR", "NO_DOM_ROOT");
+            return;
+        }
+
+        const observer = new MutationObserver((mutations) => {
+            if (!state.waitingForResponse || mutations.length === 0) {
+                return;
+            }
+
+            if (findStopButton()) {
+                state.stopSeen = true;
+            }
+
+            scheduleCompletionCheck();
+        });
+
+        observer.observe(root, {
+            subtree: true,
+            childList: true,
+            characterData: true
+        });
+
+        state.observer = observer;
+        sendBridgeEvent("MONITOR_READY", "MutationObserver instalado");
+    };
+
+    const connectQtWebChannel = () => {
+        if (
+            typeof qt === "undefined" ||
+            !qt.webChannelTransport
+        ) {
+            sendBridgeEvent(
+                "MONITOR_ERROR",
+                "QT_WEBCHANNEL_TRANSPORT_UNAVAILABLE"
+            );
+            return;
+        }
+
+        try {
+            new QWebChannel(
+                qt.webChannelTransport,
+                (channel) => {
+                    state.bridge = channel.objects.casaQueueBridge;
+                    installObserver();
+                }
+            );
+        } catch (error) {
+            sendBridgeEvent(
+                "MONITOR_ERROR",
+                String(error)
+            );
+        }
+    };
+
+    const existingScript = document.querySelector(
+        'script[data-casa-comando-webchannel="true"]'
+    );
+
+    if (existingScript) {
+        connectQtWebChannel();
+    } else {
+        const script = document.createElement("script");
+        script.src = "qrc:///qtwebchannel/qwebchannel.js";
+        script.dataset.casaComandoWebchannel = "true";
+        script.onload = connectQtWebChannel;
+        script.onerror = () => {
+            sendBridgeEvent(
+                "MONITOR_ERROR",
+                "QWEBCHANNEL_JS_LOAD_FAILED"
+            );
+        };
+        (document.head || document.documentElement).appendChild(script);
+    }
+
+    return "INSTALL_REQUESTED";
+})();
+"""
+
+
 @dataclass
 class BotTicket:
     ticket_id: str
@@ -38,36 +304,457 @@ class BotTicket:
     status: str = "PENDING"
 
 
+class _WebQueueBridge(QObject):
+    event_received = Signal(str, str)
+
+    @Slot(str, str)
+    def report(self, event_type: str, payload: str) -> None:
+        self.event_received.emit(event_type, payload)
+
+
+class _QueueWorker(QObject):
+    """Estado y temporización de la cola ejecutados dentro de QThread."""
+
+    ticket_started = Signal(object)
+    web_action_requested = Signal(str, str, str)
+    ticket_failed = Signal(object, str)
+    ticket_finished = Signal(object)
+    busy_changed = Signal(bool)
+    queue_error = Signal(str, str)
+
+    def __init__(
+        self,
+        timeout_ms: int,
+        circuit_threshold: int,
+        circuit_cooldown_ms: int,
+    ) -> None:
+        super().__init__()
+        self.timeout_ms = timeout_ms
+        self.circuit_threshold = circuit_threshold
+        self.circuit_cooldown_ms = circuit_cooldown_ms
+
+        self.msg_queue: queue.Queue[BotTicket] = queue.Queue()
+        self.current_ticket: BotTicket | None = None
+        self.is_busy = False
+        self.awaiting_terminated = False
+        self.close_in_flight = False
+
+        self.consecutive_failures = 0
+        self.circuit_open = False
+        self._timeout_timer: QTimer | None = None
+        self._circuit_timer: QTimer | None = None
+        self._running = True
+        self._queued_ids: set[str] = set()
+
+    @Slot()
+    def start(self) -> None:
+        self._timeout_timer = QTimer(self)
+        self._timeout_timer.setSingleShot(True)
+        self._timeout_timer.timeout.connect(self._on_timeout)
+
+        self._circuit_timer = QTimer(self)
+        self._circuit_timer.setSingleShot(True)
+        self._circuit_timer.timeout.connect(self._half_open_circuit)
+
+        self._process_next()
+
+    @Slot(object)
+    def enqueue(self, ticket: BotTicket) -> None:
+        if not self._running:
+            self.queue_error.emit(
+                ticket.ticket_id,
+                "QUEUE_STOPPED",
+            )
+            return
+
+        if ticket.ticket_id in self._queued_ids:
+            self.queue_error.emit(
+                ticket.ticket_id,
+                "DUPLICATE_TICKET_ID",
+            )
+            return
+
+        self.msg_queue.put(ticket)
+        self._queued_ids.add(ticket.ticket_id)
+        self._process_next()
+
+    @Slot()
+    def request_close(self) -> None:
+        ticket = self.current_ticket
+
+        if ticket is None:
+            return
+
+        if self.awaiting_terminated or self.close_in_flight:
+            return
+
+        self.close_in_flight = True
+
+        prompt = (
+            f"({ticket.bot_name}) "
+            f"codigo {ticket.ticket_id} "
+            f"#resuelto"
+        )
+
+        self.web_action_requested.emit(
+            "close",
+            ticket.ticket_id,
+            prompt,
+        )
+
+    @Slot(str, str, bool, str)
+    def injection_result(
+        self,
+        ticket_id: str,
+        action_kind: str,
+        success: bool,
+        detail: str,
+    ) -> None:
+        ticket = self.current_ticket
+
+        if action_kind == "close":
+            if ticket is None or ticket.ticket_id != ticket_id:
+                return
+
+            self.close_in_flight = False
+
+            if not success:
+                self._fail_current(detail or "CLOSE_INJECTION_FAILED")
+                return
+
+            self.awaiting_terminated = True
+            return
+
+        if action_kind != "ticket":
+            return
+
+        if ticket is None or ticket.ticket_id != ticket_id:
+            return
+
+        if not success:
+            self._fail_current(detail or "TICKET_INJECTION_FAILED")
+
+    @Slot(str)
+    def response_observed(self, response_text: str) -> None:
+        if self.current_ticket is None:
+            return
+
+        if response_text.strip():
+            self.consecutive_failures = 0
+
+    @Slot(str)
+    def terminated_received(self, ticket_id: str) -> None:
+        ticket = self.current_ticket
+
+        if (
+            ticket is None
+            or ticket.ticket_id != ticket_id
+            or not self.awaiting_terminated
+        ):
+            return
+
+        self.awaiting_terminated = False
+        self._finish_current()
+
+    @Slot()
+    def external_failure(self) -> None:
+        if self.current_ticket is not None:
+            self._fail_current("WEB_HEALTH_FAILURE")
+        else:
+            self._record_failure("WEB_HEALTH_FAILURE")
+
+    @Slot()
+    def stop(self) -> None:
+        self._running = False
+
+        if self._timeout_timer is not None:
+            self._timeout_timer.stop()
+
+        if self._circuit_timer is not None:
+            self._circuit_timer.stop()
+
+    def _process_next(self) -> None:
+        if (
+            not self._running
+            or self.is_busy
+            or self.circuit_open
+            or self.msg_queue.empty()
+        ):
+            return
+
+        ticket = self.msg_queue.get()
+        self._queued_ids.discard(ticket.ticket_id)
+
+        ticket.status = "PROCESSING"
+        self.current_ticket = ticket
+        self.is_busy = True
+        self.awaiting_terminated = False
+        self.close_in_flight = False
+
+        if self._timeout_timer is not None:
+            self._timeout_timer.start(self.timeout_ms)
+
+        self.busy_changed.emit(True)
+        self.ticket_started.emit(ticket)
+
+        prompt = (
+            f"({ticket.bot_name}) codigo {ticket.ticket_id} "
+            f"#{ticket.action} [{ticket.user}] [{ticket.channel}] "
+            f'"{ticket.message}"'
+        )
+
+        self.web_action_requested.emit(
+            "ticket",
+            ticket.ticket_id,
+            prompt,
+        )
+
+    def _on_timeout(self) -> None:
+        if self.current_ticket is None:
+            return
+
+        self._fail_current(
+            f"TIMEOUT_{self.timeout_ms // 1000}s"
+        )
+
+    def _fail_current(self, reason: str) -> None:
+        ticket = self.current_ticket
+
+        if ticket is None:
+            return
+
+        ticket.status = "FAILED"
+
+        if self._timeout_timer is not None:
+            self._timeout_timer.stop()
+
+        self.current_ticket = None
+        self.is_busy = False
+        self.awaiting_terminated = False
+        self.close_in_flight = False
+
+        self.ticket_failed.emit(ticket, reason)
+        self.busy_changed.emit(False)
+
+        self._record_failure(reason)
+
+        if self._running and not self.circuit_open:
+            self._process_next()
+
+    def _finish_current(self) -> None:
+        ticket = self.current_ticket
+
+        if ticket is None:
+            return
+
+        ticket.status = "RESOLVED"
+
+        if self._timeout_timer is not None:
+            self._timeout_timer.stop()
+
+        self.current_ticket = None
+        self.is_busy = False
+        self.awaiting_terminated = False
+        self.close_in_flight = False
+        self.consecutive_failures = 0
+
+        self.ticket_finished.emit(ticket)
+        self.busy_changed.emit(False)
+
+        QTimer.singleShot(100, self._process_next)
+
+    def _record_failure(self, reason: str) -> None:
+        self.consecutive_failures += 1
+
+        if self.consecutive_failures < self.circuit_threshold:
+            return
+
+        if self.circuit_open:
+            return
+
+        self.circuit_open = True
+
+        self.queue_error.emit(
+            "__circuit__",
+            f"CIRCUIT_OPEN: {reason}",
+        )
+
+        if self._circuit_timer is not None:
+            self._circuit_timer.start(
+                self.circuit_cooldown_ms
+            )
+
+    @Slot()
+    def _half_open_circuit(self) -> None:
+        if not self._running:
+            return
+
+        self.circuit_open = False
+        self.consecutive_failures = 0
+
+        self.queue_error.emit(
+            "__circuit__",
+            "CIRCUIT_HALF_OPEN: reintentando cola",
+        )
+
+        self._process_next()
+
+
 class WebChatQueueManager(QObject):
-    """FIFO serializador de tickets para una QWebEngineView."""
+    """
+    Gestor FIFO anti-deadlock para mensajes de bots hacia SUPER CHAT.
+
+    La cola y sus temporizadores viven en un QThread dedicado.
+    La manipulación del QWebEngineView permanece en el hilo GUI de Qt.
+    """
 
     ticket_processed = Signal(str, str)
     ticket_started = Signal(str, str)
     ticket_finished = Signal(str, str)
+    ticket_failed = Signal(str, str)
     queue_error = Signal(str, str)
+
+    enqueue_requested = Signal(object)
+    close_requested = Signal()
+    stop_requested = Signal()
+    injection_result_requested = Signal(
+        str,
+        str,
+        bool,
+        str,
+    )
+    response_observed_requested = Signal(str)
+    terminated_requested = Signal(str)
+    health_failure_requested = Signal()
 
     def __init__(
         self,
         web_view: QWebEngineView,
         parent: QObject | None = None,
+        timeout_seconds: int = 45,
+        circuit_threshold: int = 3,
+        circuit_cooldown_seconds: int = 10,
     ) -> None:
         super().__init__(parent)
+
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds debe ser > 0")
+
+        if circuit_threshold <= 0:
+            raise ValueError("circuit_threshold debe ser > 0")
+
+        if circuit_cooldown_seconds <= 0:
+            raise ValueError(
+                "circuit_cooldown_seconds debe ser > 0"
+            )
+
         self.web_view = web_view
         self.msg_queue: queue.Queue[BotTicket] = queue.Queue()
-        self.is_busy = False
         self.current_ticket: BotTicket | None = None
+        self.is_busy = False
         self.protocol_initialized = False
+        self.monitor_initialized = False
+        self._protocol_pending = False
+        self._shutdown_started = False
+
+        self._response_pattern = self._safe_compile(
+            r'respuesta\s+a\s*\(\s*(?P<bot>[^()\n]+?)\s+'
+            r'(?P<ticket>[A-Za-z0-9_.:-]+)\s*\)\s*'
+            r'[“"](?P<text>.*?)[”"]',
+            re.IGNORECASE | re.DOTALL,
+        )
+        self._terminated_pattern = self._safe_compile(
+            r'\(\s*(?P<bot>[^()\n]+?)\s+'
+            r'(?P<ticket>[A-Za-z0-9_.:-]+)\s*\)'
+            r'\s+#terminado\b',
+            re.IGNORECASE,
+        )
+        self._ticket_echo_pattern = self._safe_compile(
+            r'\((?P<bot>[^()\n]+?)\s+'
+            r'(?P<ticket>[A-Za-z0-9_.:-]+)\)',
+            re.IGNORECASE,
+        )
+
+        if self._response_pattern is None or self._terminated_pattern is None:
+            raise RuntimeError(
+                "No se pudieron compilar las expresiones del protocolo"
+            )
+
+        # El worker nunca toca QWebEngineView directamente.
+        self._thread = QThread(self)
+        self._worker = _QueueWorker(
+            timeout_ms=timeout_seconds * 1000,
+            circuit_threshold=circuit_threshold,
+            circuit_cooldown_ms=circuit_cooldown_seconds * 1000,
+        )
+        self._worker.moveToThread(self._thread)
+
+        self.enqueue_requested.connect(self._worker.enqueue)
+        self.close_requested.connect(self._worker.request_close)
+        self.stop_requested.connect(self._worker.stop)
+        self.injection_result_requested.connect(
+            self._worker.injection_result
+        )
+        self.response_observed_requested.connect(
+            self._worker.response_observed
+        )
+        self.terminated_requested.connect(
+            self._worker.terminated_received
+        )
+        self.health_failure_requested.connect(
+            self._worker.external_failure
+        )
+
+        self._worker.ticket_started.connect(
+            self._on_worker_ticket_started
+        )
+        self._worker.web_action_requested.connect(
+            self._on_web_action_requested
+        )
+        self._worker.ticket_failed.connect(
+            self._on_worker_ticket_failed
+        )
+        self._worker.ticket_finished.connect(
+            self._on_worker_ticket_finished
+        )
+        self._worker.busy_changed.connect(
+            self._on_worker_busy_changed
+        )
+        self._worker.queue_error.connect(
+            self._on_worker_queue_error
+        )
+
+        self._thread.started.connect(self._worker.start)
+        self._thread.finished.connect(self._worker.deleteLater)
+
+        self._bridge = _WebQueueBridge()
+        self._channel = QWebChannel(self.web_view.page())
+        self._channel.registerObject(
+            "casaQueueBridge",
+            self._bridge,
+        )
+        self.web_view.page().setWebChannel(self._channel)
+
+        self._bridge.event_received.connect(
+            self._on_web_bridge_event
+        )
+        self.web_view.loadFinished.connect(
+            self._on_page_loaded
+        )
+
+        self._thread.start()
+
+    # ------------------------------------------------------------------
+    # API PÚBLICA
+    # ------------------------------------------------------------------
 
     def initialize_protocol(self) -> None:
-        """Inyecta las directrices una sola vez al abrir el SUPER CHAT."""
-        if self.protocol_initialized:
+        """Instala el monitor DOM y envía las directrices una sola vez."""
+        if self.protocol_initialized or self._protocol_pending:
             return
-        self.protocol_initialized = True
-        self._inject_to_browser(
-            PROTOCOL_DIRECTIVE,
-            callback=self._on_protocol_initialized,
-            send=True,
-        )
+
+        self._protocol_pending = True
+        self._install_web_monitor()
 
     def enqueue_bot_message(
         self,
@@ -80,10 +767,13 @@ class WebChatQueueManager(QObject):
     ) -> None:
         if not bot_name.strip():
             raise ValueError("bot_name no puede estar vacío")
+
         if not ticket_id.strip():
             raise ValueError("ticket_id no puede estar vacío")
+
         if not action.strip():
             raise ValueError("action no puede estar vacío")
+
         if not message.strip():
             raise ValueError("message no puede estar vacío")
 
@@ -92,100 +782,209 @@ class WebChatQueueManager(QObject):
                 ticket_id=ticket_id.strip(),
                 bot_name=bot_name.strip(),
                 action=action.strip(),
-                user=user.strip(),
-                channel=channel.strip(),
+                user=user.strip() or "@usuario",
+                channel=channel.strip() or "/general",
                 message=message.strip(),
             )
         )
-        self.process_next()
+
+        self.enqueue_requested.emit(
+            BotTicket(
+                ticket_id=ticket_id.strip(),
+                bot_name=bot_name.strip(),
+                action=action.strip(),
+                user=user.strip() or "@usuario",
+                channel=channel.strip() or "/general",
+                message=message.strip(),
+            )
+        )
 
     def process_next(self) -> None:
-        if self.is_busy or self.msg_queue.empty():
-            return
-
-        self.current_ticket = self.msg_queue.get()
-        self.current_ticket.status = "PROCESSING"
-        self.is_busy = True
-
-        ticket = self.current_ticket
-        self.ticket_started.emit(ticket.ticket_id, ticket.bot_name)
-
-        prompt = (
-            f"({ticket.bot_name}) codigo {ticket.ticket_id} "
-            f"#{ticket.action} [{ticket.user}] [{ticket.channel}] "
-            f'"{ticket.message}"'
-        )
-        self._inject_to_browser(
-            prompt,
-            callback=self._on_ticket_injected,
-            send=True,
-        )
-
-    def register_ticket_response(self, response_text: str) -> None:
-        if self.current_ticket is None:
-            return
-        self.ticket_processed.emit(
-            self.current_ticket.ticket_id,
-            response_text.strip(),
-        )
+        """Solicita al worker que continúe; el FIFO real vive en QThread."""
+        # Mantiene compatibilidad con la API anterior. El worker procesa
+        # inmediatamente cuando recibe enqueue/close.
+        if not self.is_busy:
+            self._worker._process_next()
 
     def close_current_ticket(self) -> None:
-        ticket = self.current_ticket
-        if ticket is None:
+        self.close_requested.emit()
+
+    def register_ticket_response(
+        self,
+        response_text: str,
+    ) -> bool:
+        return self._consume_response(response_text)
+
+    def shutdown(self) -> None:
+        """Detiene de forma ordenada el worker y su QThread."""
+        if self._shutdown_started:
             return
 
-        close_prompt = (
-            f"({ticket.bot_name}) codigo {ticket.ticket_id} #resuelto"
+        self._shutdown_started = True
+        self.stop_requested.emit()
+        self._thread.quit()
+
+    # ------------------------------------------------------------------
+    # WEB / DOM
+    # ------------------------------------------------------------------
+
+    @Slot(bool)
+    def _on_page_loaded(self, ok: bool) -> None:
+        if not ok:
+            self.health_failure_requested.emit()
+            self.queue_error.emit(
+                "__web__",
+                "PAGE_LOAD_FAILED",
+            )
+            return
+
+        self.monitor_initialized = False
+        self._install_web_monitor()
+
+    def _install_web_monitor(self) -> None:
+        if self._shutdown_started:
+            return
+
+        self.web_view.page().runJavaScript(
+            WEB_MONITOR_JS,
+            self._on_monitor_install_result,
         )
+
+    def _on_monitor_install_result(self, result) -> None:
+        if result in {
+            "INSTALL_REQUESTED",
+            "ALREADY_INSTALLED",
+        }:
+            return
+
+        if result in {None, ""}:
+            return
+
+        self.queue_error.emit(
+            "__monitor__",
+            str(result),
+        )
+
+    @Slot(str, str)
+    def _on_web_bridge_event(
+        self,
+        event_type: str,
+        payload: str,
+    ) -> None:
+        if event_type == "MONITOR_READY":
+            self.monitor_initialized = True
+
+            if (
+                self._protocol_pending and
+                not self.protocol_initialized
+            ):
+                self._send_protocol_directive()
+
+            return
+
+        if event_type == "MONITOR_ERROR":
+            self.monitor_initialized = False
+            self.queue_error.emit(
+                "__monitor__",
+                payload,
+            )
+            self.health_failure_requested.emit()
+            return
+
+        if event_type == "RESPONSE_COMPLETE":
+            self._consume_response(payload)
+
+    def _send_protocol_directive(self) -> None:
+        self._protocol_pending = False
+
         self._inject_to_browser(
-            close_prompt,
-            callback=self._on_close_injected,
+            PROTOCOL_DIRECTIVE,
+            action_kind="protocol",
+            ticket_id="__protocol__",
             send=True,
         )
 
-    def _on_protocol_initialized(self, result: str) -> None:
-        if not result.startswith("OK"):
-            self.queue_error.emit("__protocol__", result)
+    def _on_web_action_requested(
+        self,
+        action_kind: str,
+        ticket_id: str,
+        prompt: str,
+    ) -> None:
+        if action_kind == "ticket":
+            self._begin_send_marker()
 
-    def _on_ticket_injected(self, result: str) -> None:
-        if not result.startswith("OK") and self.current_ticket:
-            self.queue_error.emit(self.current_ticket.ticket_id, result)
+        self._inject_to_browser(
+            prompt,
+            action_kind=action_kind,
+            ticket_id=ticket_id,
+            send=True,
+        )
 
-    def _on_close_injected(self, result: str) -> None:
-        ticket = self.current_ticket
-        if ticket is None:
+    def _begin_send_marker(self) -> None:
+        marker_js = r"""
+        (() => {
+            if (
+                window.__casaComandoWebQueue &&
+                typeof window.__casaComandoWebQueue.beginSend === "function"
+            ) {
+                window.__casaComandoWebQueue.beginSend();
+                return "OK: SEND_MARKED";
+            }
+            return "ERROR: WEB_MONITOR_NOT_READY";
+        })();
+        """
+
+        self.web_view.page().runJavaScript(
+            marker_js,
+            self._on_send_marker_result,
+        )
+
+    def _on_send_marker_result(self, result) -> None:
+        if result == "OK: SEND_MARKED":
             return
 
-        if not result.startswith("OK"):
-            self.queue_error.emit(ticket.ticket_id, result)
-            return
-
-        ticket.status = "RESOLVED"
-        ticket_id = ticket.ticket_id
-        bot_name = ticket.bot_name
-        self.current_ticket = None
-        self.is_busy = False
-        self.ticket_finished.emit(ticket_id, bot_name)
-        QTimer.singleShot(1000, self.process_next)
+        if result:
+            self.queue_error.emit(
+                "__monitor__",
+                str(result),
+            )
 
     def _inject_to_browser(
         self,
         text: str,
-        callback=None,
+        action_kind: str,
+        ticket_id: str,
         send: bool = True,
     ) -> None:
-        js_text = json.dumps(text, ensure_ascii=False)
+        js_text = json.dumps(
+            text,
+            ensure_ascii=False,
+        )
+
         send_code = """
             setTimeout(() => {
-                const btn = document.querySelector(
-                    'button[aria-label*="Send"],' +
-                    'button[aria-label*="Enviar"],' +
-                    'button[data-testid*="send"],' +
-                    'button.send-button'
+                const buttons = Array.from(
+                    document.querySelectorAll("button")
                 );
-                if (btn && !btn.disabled) {
-                    btn.click();
-                    return;
+
+                const button = buttons.find((candidate) => {
+                    const label = (
+                        candidate.getAttribute("aria-label") ||
+                        candidate.getAttribute("title") ||
+                        candidate.textContent ||
+                        ""
+                    ).trim().toLowerCase();
+
+                    return (
+                        label === "send" ||
+                        label === "enviar" ||
+                        label.includes("send message") ||
+                        label.includes("enviar mensaje")
+                    );
+                });
+
+                if (button && !button.disabled) {
+                    button.click();
                 }
             }, 500);
         """ if send else ""
@@ -193,26 +992,41 @@ class WebChatQueueManager(QObject):
         js_code = f"""
         (() => {{
             const text = {js_text};
+
             const inputArea = document.querySelector(
-                'textarea, div[contenteditable="true"]'
+                "textarea, div[contenteditable=\"true\"]"
             );
-            if (!inputArea) return "ERROR: NO_DOM_INPUT";
+
+            if (!inputArea) {{
+                return "ERROR: NO_DOM_INPUT";
+            }}
 
             if (inputArea.tagName === "TEXTAREA") {{
-                const setter = Object.getOwnPropertyDescriptor(
-                    HTMLTextAreaElement.prototype, "value"
-                )?.set;
-                if (setter) setter.call(inputArea, text);
-                else inputArea.value = text;
+                const setter =
+                    Object.getOwnPropertyDescriptor(
+                        HTMLTextAreaElement.prototype,
+                        "value"
+                    )?.set;
+
+                if (setter) {{
+                    setter.call(inputArea, text);
+                }} else {{
+                    inputArea.value = text;
+                }}
+
                 inputArea.dispatchEvent(
                     new Event("input", {{ bubbles: true }})
                 );
+
                 inputArea.dispatchEvent(
                     new Event("change", {{ bubbles: true }})
                 );
+
             }} else {{
                 inputArea.focus();
+
                 inputArea.textContent = text;
+
                 inputArea.dispatchEvent(
                     new InputEvent("input", {{
                         bubbles: true,
@@ -223,10 +1037,236 @@ class WebChatQueueManager(QObject):
             }}
 
             {send_code}
+
             return "OK: INJECTED";
         }})();
         """
+
+        def handle_result(result) -> None:
+            result_text = str(result or "")
+
+            if action_kind == "protocol":
+                if not result_text.startswith("OK"):
+                    self.queue_error.emit(
+                        "__protocol__",
+                        result_text,
+                    )
+                    self.health_failure_requested.emit()
+                    return
+
+                self.protocol_initialized = True
+                return
+
+            self.injection_result_requested.emit(
+                ticket_id,
+                action_kind,
+                result_text.startswith("OK"),
+                result_text,
+            )
+
         self.web_view.page().runJavaScript(
             js_code,
-            callback or (lambda result: None),
+            handle_result,
+        )
+
+    # ------------------------------------------------------------------
+    # PROTOCOLO
+    # ------------------------------------------------------------------
+
+    def _consume_response(
+        self,
+        raw_text: str,
+    ) -> bool:
+        ticket = self.current_ticket
+
+        if ticket is None:
+            return False
+
+        text = raw_text.strip()
+        if not text:
+            return False
+
+        terminated = self._extract_terminated(
+            text,
+            ticket,
+        )
+
+        if terminated:
+            self.terminated_requested.emit(ticket.ticket_id)
+            self.response_observed_requested.emit(text)
+            self.ticket_processed.emit(
+                ticket.ticket_id,
+                text,
+            )
+            return True
+
+        parsed_text = self._extract_response_text(
+            text,
+            ticket,
+        )
+
+        if not parsed_text:
+            # Tolerancia: aun sin formato perfecto, entregamos al Lobby
+            # el contenido observado para que el Cerebro Central decida.
+            parsed_text = text[-12000:]
+
+        self.response_observed_requested.emit(parsed_text)
+        self.ticket_processed.emit(
+            ticket.ticket_id,
+            parsed_text,
+        )
+        return True
+
+    def _extract_response_text(
+        self,
+        raw_text: str,
+        ticket: BotTicket,
+    ) -> str:
+        if self._response_pattern is None:
+            return ""
+
+        matches = list(
+            self._response_pattern.finditer(raw_text)
+        )
+
+        for match in reversed(matches):
+            bot = match.group("bot").strip()
+            ticket_id = match.group("ticket").strip()
+
+            if (
+                ticket_id.casefold()
+                == ticket.ticket_id.casefold()
+                and bot.casefold()
+                == ticket.bot_name.casefold()
+            ):
+                return match.group("text").strip()
+
+        # Fallback cuando la IA altera ligeramente el encabezado.
+        marker = re.search(
+            re.escape(ticket.ticket_id),
+            raw_text,
+            re.IGNORECASE,
+        )
+
+        if marker:
+            tail = raw_text[marker.end():].strip()
+            tail = re.sub(
+                r'^["“:\-]+',
+                "",
+                tail,
+            ).strip()
+            if tail:
+                return tail[-12000:]
+
+        return ""
+
+    def _extract_terminated(
+        self,
+        raw_text: str,
+        ticket: BotTicket,
+    ) -> bool:
+        if self._terminated_pattern is None:
+            return False
+
+        matches = self._terminated_pattern.finditer(
+            raw_text
+        )
+
+        for match in matches:
+            bot = match.group("bot").strip()
+            ticket_id = match.group("ticket").strip()
+
+            if (
+                ticket_id.casefold()
+                == ticket.ticket_id.casefold()
+                and bot.casefold()
+                == ticket.bot_name.casefold()
+            ):
+                return True
+
+        return False
+
+    @staticmethod
+    def _safe_compile(
+        pattern: str,
+        flags: int = 0,
+    ):
+        try:
+            return re.compile(pattern, flags)
+        except re.error:
+            return None
+
+    # ------------------------------------------------------------------
+    # SEÑALES DEL WORKER
+    # ------------------------------------------------------------------
+
+    @Slot(object)
+    def _on_worker_ticket_started(
+        self,
+        ticket: BotTicket,
+    ) -> None:
+        self.current_ticket = ticket
+        self.is_busy = True
+        self.ticket_started.emit(
+            ticket.ticket_id,
+            ticket.bot_name,
+        )
+
+    @Slot(object, str)
+    def _on_worker_ticket_failed(
+        self,
+        ticket: BotTicket,
+        reason: str,
+    ) -> None:
+        if (
+            self.current_ticket is not None and
+            self.current_ticket.ticket_id == ticket.ticket_id
+        ):
+            self.current_ticket = None
+
+        self.is_busy = False
+
+        self.ticket_failed.emit(
+            ticket.ticket_id,
+            reason,
+        )
+        self.queue_error.emit(
+            ticket.ticket_id,
+            reason,
+        )
+
+    @Slot(object)
+    def _on_worker_ticket_finished(
+        self,
+        ticket: BotTicket,
+    ) -> None:
+        if (
+            self.current_ticket is not None and
+            self.current_ticket.ticket_id == ticket.ticket_id
+        ):
+            self.current_ticket = None
+
+        self.is_busy = False
+
+        self.ticket_finished.emit(
+            ticket.ticket_id,
+            ticket.bot_name,
+        )
+
+    @Slot(bool)
+    def _on_worker_busy_changed(
+        self,
+        busy: bool,
+    ) -> None:
+        self.is_busy = busy
+
+    @Slot(str, str)
+    def _on_worker_queue_error(
+        self,
+        ticket_id: str,
+        error_text: str,
+    ) -> None:
+        self.queue_error.emit(
+            ticket_id,
+            error_text,
         )
