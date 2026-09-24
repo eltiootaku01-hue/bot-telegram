@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """SQLite local para memoria controlada; no carga la base completa."""
 from __future__ import annotations
 
@@ -7,6 +8,7 @@ import json
 from pathlib import Path
 import re
 import sqlite3
+import threading
 from uuid import uuid4
 
 from bot_ia.change_management import ChangeManager
@@ -42,6 +44,7 @@ class MemoryStore:
         self._path = ChangeManager(workspace_root).resolve_target(database_path)
         self._closed = False
         self._fts_available = False
+        self._lock = threading.RLock()
         self._initialize()
 
     @property
@@ -76,6 +79,7 @@ class MemoryStore:
         connection = sqlite3.connect(self._path, timeout=10.0)
         try:
             connection.execute("PRAGMA busy_timeout=10000")
+            connection.execute("PRAGMA journal_mode=WAL")
             application_id = connection.execute("PRAGMA application_id").fetchone()[0]
             if application_id not in (0, self.APPLICATION_ID):
                 raise MemoryStorageError("database belongs to another application")
@@ -174,7 +178,7 @@ class MemoryStore:
             raise MemoryStorageError("invalid memory retrieval scope")
         now = now or _now()
         self.expire_due(now)
-        terms = tuple(dict.fromkeys(_TOKENS.findall(query.casefold())))
+        terms = tuple(dict.fromkeys(_TOKENS.findall(query.casefold())))[:64]
         if not terms:
             return ()
         with self._transaction() as connection:
@@ -220,7 +224,11 @@ class MemoryStore:
         if _contains_secret(updated.user_id, updated.conversation_id, updated.content, updated.source, updated.provenance, updated.tags, updated.related_entities):
             raise MemoryStorageError("memory contains sensitive content")
         with self._transaction() as connection:
-            cursor = connection.execute("UPDATE memories SET universe_id=?, user_id=?, conversation_id=?, memory_type=?, content=?, source=?, created_at=?, updated_at=?, approved=?, status=?, confidence=?, expires_at=?, revoked_at=?, tags=?, related_entities=?, provenance=?, supersedes=?, conflicts_with=? WHERE memory_id=?", (*self._values(updated)[1:], updated.memory_id))
+            cursor = connection.execute(
+                "UPDATE memories SET universe_id=?, user_id=?, conversation_id=?, memory_type=?, content=?, source=?, created_at=?, updated_at=?, approved=?, status=?, confidence=?, expires_at=?, revoked_at=?, tags=?, related_entities=?, provenance=?, supersedes=?, conflicts_with=? "
+                "WHERE memory_id=? AND updated_at=?",
+                (*self._values(updated)[1:], updated.memory_id, record.updated_at.isoformat()),
+            )
             if cursor.rowcount != 1:
                 raise MemoryStorageError("memory update did not affect exactly one record")
         return updated
