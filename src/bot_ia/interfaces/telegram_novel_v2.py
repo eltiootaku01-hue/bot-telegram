@@ -91,11 +91,21 @@ class TelegramNovelV2Adapter(TelegramNovelAdapter):
             if pending == "research":
                 self._pending.pop(key, None)
                 response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, inbound.text))
+                self._remember_execution(
+                    key,
+                    response,
+                    fallback_query=inbound.text,
+                )
                 return self.from_response(inbound.conversation_id, response)
             if pending in EDITOR_REQUESTS:
                 self._pending.pop(key, None)
                 request = EDITOR_REQUESTS[pending] + "\n\nTEXTO DEL USUARIO:\n" + inbound.text
                 response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, request))
+                self._remember_execution(
+                    key,
+                    response,
+                    fallback_query=inbound.text,
+                )
                 return self.from_response(inbound.conversation_id, response)
         return super().handle_update(update)
 
