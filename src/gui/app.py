@@ -557,7 +557,21 @@ class CafeOtakuWindow(QMainWindow):
             f"{profile.avatar} {profile.name}"
         )
         if self.chat_mode.currentIndex() == 0:
-            self.chat_mode.setCurrentIndex(1)
+            self.chat_mode.setCurrentIndex(
+                1 if self._is_registered_tavern_bot(bot_id) else 2
+            )
+
+    def _is_registered_tavern_bot(self, bot_id: str) -> bool:
+        if self._tavern is None:
+            return False
+        try:
+            return any(
+                item.waitress_id == bot_id
+                for item in self._tavern.list_turns()
+            )
+        except Exception as error:
+            self._log_error("Tavern roster check", error)
+            return False
 
     def _on_chat_mode_changed(self, index: int) -> None:
         titles = (
