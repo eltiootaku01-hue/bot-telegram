@@ -70,7 +70,7 @@ class ProjectManager:
             with self._process_lock():
                 # Recargar después de adquirir el lock entre procesos.
                 # Así dos procesos BOT-IA no pisan sus registros entre sí.
-                self._records = self._load()
+                self._records = self._load_locked()
                 return self._create_novel_locked(display_name)
 
     @contextmanager
@@ -138,6 +138,11 @@ class ProjectManager:
         return slug or "proyecto"
 
     def _load(self) -> dict[str, ProjectRecord]:
+        """Load the registry while holding the same interprocess lock used for writes."""
+        with self._process_lock():
+            return self._load_locked()
+
+    def _load_locked(self) -> dict[str, ProjectRecord]:
         primary = self._registry_path
         backup = primary.with_suffix(".json.bak")
 
