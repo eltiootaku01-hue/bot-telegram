@@ -151,6 +151,20 @@ class MamaMiaSupervisor:
             context=context,
         )
 
+    async def audit_and_direct_async(
+        self,
+        waitress_id: str,
+        user_message: str,
+        *,
+        context: str = "",
+    ) -> MamaMiaAudit:
+        return await asyncio.to_thread(
+            self.audit_and_direct,
+            waitress_id,
+            user_message,
+            context=context,
+        )
+
     def audit_and_direct(
         self,
         waitress_id: str,
