@@ -25,12 +25,12 @@ class CodePolicyTests(unittest.TestCase):
             path = Path(directory) / "bad.py"
             path.write_bytes(
                 bytes.fromhex("efbbbf")
-                + b"# -*- coding: utf-8 -*-\\n"
-                + b"from PySide6.Core import QObject\\n"
-                + b"try:\\n"
-                + b"    pass\\n"
-                + b"except Exception:\\n"
-                + b"    pass\\n"
+                + b"# -*- coding: utf-8 -*-\n"
+                + b"from PySide6.Core import QObject\n"
+                + b"try:\n"
+                + b"    value = 1\n"
+                + b"except Exception:\n"
+                + b"    pass\n"
             )
             script = root / "scripts" / "check_code_policy.py"
             completed = subprocess.run(
