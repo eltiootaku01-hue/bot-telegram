@@ -198,7 +198,11 @@ def _http_post(url: str, payload: dict[str, object], timeout: float) -> dict[str
     except HTTPError as error:
         status = error.code
         error.close()
-        raise TelegramHttpError(f"Telegram HTTP status {status}") from error
+        if status in {401, 403}:
+            raise TelegramApiError("Telegram authentication or authorization failed") from error
+        if status == 429 or status >= 500:
+            raise TelegramTransportError(f"Telegram HTTP status {status}") from error
+        raise TelegramApiError(f"Telegram HTTP status {status}") from error
     except (TimeoutError, URLError, OSError) as error:
         raise TelegramTransportError("Telegram transport failed") from error
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
