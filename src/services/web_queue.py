@@ -1040,6 +1040,13 @@ class WebChatQueueManager(QObject):
             return
 
         self.monitor_initialized = False
+
+        if (
+            not self.protocol_initialized and
+            not self._protocol_pending
+        ):
+            self._protocol_pending = True
+
         self._install_web_monitor()
 
     def _install_web_monitor(self) -> None:
@@ -1132,9 +1139,36 @@ class WebChatQueueManager(QObject):
         }:
             self.monitor_initialized = False
 
+            error_ticket_id = ""
+            error_payload = payload
+
+            if event_type == "SEND_ERROR":
+                try:
+                    error_event = json.loads(payload)
+                except (TypeError, ValueError):
+                    error_event = {}
+
+                error_ticket_id = str(
+                    error_event.get("ticket_id", "")
+                )
+                error_payload = str(
+                    error_event.get(
+                        "error",
+                        payload,
+                    )
+                )
+
+                if (
+                    error_ticket_id and
+                    self.current_ticket is not None and
+                    error_ticket_id !=
+                    self.current_ticket.ticket_id
+                ):
+                    return
+
             self.queue_error.emit(
-                "__monitor__",
-                payload,
+                error_ticket_id or "__monitor__",
+                error_payload,
             )
             self.health_failure_requested.emit()
 
@@ -1160,7 +1194,7 @@ class WebChatQueueManager(QObject):
             ticket_id=ticket_id,
             send=True,
             mark_send=(
-                action_kind == "ticket"
+                action_kind in {"ticket", "close"}
             ),
         )
 
@@ -1214,17 +1248,15 @@ class WebChatQueueManager(QObject):
                 );
 
                 if (!button || button.disabled) {
-                    try {
-                        if (
-                            window.__casaComandoWebQueue &&
-                            window.__casaComandoWebQueue
-                                .installed
-                        ) {
-                            const bridge =
-                                window.__casaComandoWebQueue;
-                        }
-                    } catch (_) {}
-
+                    sendBridgeEvent(
+                        "SEND_ERROR",
+                        JSON.stringify({
+                            ticket_id:
+                                state.activeTicketId,
+                            error:
+                                "SEND_BUTTON_NOT_FOUND"
+                        })
+                    );
                     return;
                 }
 
@@ -1336,6 +1368,7 @@ class WebChatQueueManager(QObject):
                 if not result_text.startswith(
                     "OK"
                 ):
+                    self._protocol_pending = True
                     self.queue_error.emit(
                         "__protocol__",
                         result_text,
