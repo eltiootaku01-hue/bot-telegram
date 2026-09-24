@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 """Flujo local inyectable que une evidencia, contexto, IA-chan y reglas."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import threading
 from typing import Callable, Mapping
 
 from bot_ia.agents import AgentRegistry, AgentRequest, AgentResult, PolicyRule, ResponseType, RuleCheck, RuleHierarchy, RulePriority, RuleResolution
@@ -69,13 +71,15 @@ class LocalWorkflow:
         self._provider_config = provider_config or ProviderConfig(provider_id=provider_id, model=provider_model, fallback_provider=fallback_provider)
         self._response_cache: dict[tuple[str, str, str, str, str, str, str, str], ProviderResponse] = {}
         self._response_cache_limit = 64
+        self._state_lock = threading.RLock()
 
     def register_universe(self, definition: UniverseDefinition, entries: tuple[CatalogEntry, ...]) -> None:
         """Añade una biblioteca nueva sin mezclarla con las existentes."""
-        if definition.universe_id in self._entries:
-            raise ValueError(f"universe already registered in workflow: {definition.universe_id}")
-        self._entries[definition.universe_id] = entries
-        self._entity_indexes[definition.universe_id] = EntityIndex(entries)
+        with self._state_lock:
+            if definition.universe_id in self._entries:
+                raise ValueError(f"universe already registered in workflow: {definition.universe_id}")
+            self._entries[definition.universe_id] = entries
+            self._entity_indexes[definition.universe_id] = EntityIndex(entries)
 
     def execute(self, request: ApplicationRequest, brain: BrainResult, decision: RouteDecision) -> LocalExecution:
         if brain.universe_id is None:
@@ -84,7 +88,9 @@ class LocalWorkflow:
         preferred_source_ids = self._preferred_sources(brain)
         query = RetrievalQuery(brain.normalized.original, brain.universe_id, preferred_source_ids=preferred_source_ids)
         searched = decision.requires_search or decision.requires_agent or decision.requires_llm
-        evidence = self._librarian.retrieve(query, self._entries.get(brain.universe_id, ())) if searched else self._empty_evidence(query)
+        with self._state_lock:
+            entries = self._entries.get(brain.universe_id, ())
+        evidence = self._librarian.retrieve(query, entries) if searched else self._empty_evidence(query)
         rules = self._rule_factory(brain, decision)
         resolution = RuleHierarchy.resolve(rules)
         critical_rules = tuple(f"{rule.rule_id}: {rule.subject} -> {rule.directive}" for rule in rules if rule.priority <= RulePriority.EVIDENCE_UNCERTAINTY_CONFLICTS)
@@ -122,7 +128,9 @@ class LocalWorkflow:
             else:
                 agent = replace(agent, answer=provider_response.output_text)
         else:
-            source_names = tuple(entry.record.path.rsplit("/", 1)[-1] for entry in self._entries.get(brain.universe_id, ()))
+            with self._state_lock:
+                current_entries = self._entries.get(brain.universe_id, ())
+            source_names = tuple(entry.record.path.rsplit("/", 1)[-1] for entry in current_entries)
             local_text = build_local_response(brain.intent, brain.normalized.original, self._universe_display_name(brain.universe_id), source_names)
             if local_text:
                 if contract is not None:
@@ -155,7 +163,8 @@ class LocalWorkflow:
             brain.normalized.normalized,
             f"{context_key}\nPOLICY:{agent_policy_key}",
         )
-        cached = self._response_cache.get(cache_key)
+        with self._state_lock:
+            cached = self._response_cache.get(cache_key)
         if cached is not None:
             return replace(cached, request_id=f"cache:{cached.request_id}")
         external_instructions = ("This is an explicitly authorized external research call. Treat your output as unverified research material, not as project canon or library truth. Do not claim that your answer has been incorporated into the project. Clearly flag uncertainty or disputed facts.\n" if decision.external_api_authorized else "")
@@ -177,9 +186,10 @@ class LocalWorkflow:
         provider_request = ProviderRequest(config.provider_id, config.model, provider_input, config.max_output_tokens, config.timeout_seconds, f"{config.provider_id}:{agent.agent_id}:{brain.normalized.normalized}", decision.reason)
         response = self._provider_manager.execute(decision, provider_request, fallback_provider=config.fallback_provider).response
         if response.status is ProviderStatus.SUCCESS and response.output_text:
-            if len(self._response_cache) >= self._response_cache_limit:
-                self._response_cache.pop(next(iter(self._response_cache)))
-            self._response_cache[cache_key] = response
+            with self._state_lock:
+                if len(self._response_cache) >= self._response_cache_limit:
+                    self._response_cache.pop(next(iter(self._response_cache)))
+                self._response_cache[cache_key] = response
         return response
 
     def _universe_display_name(self, universe_id: str) -> str | None:
@@ -188,7 +198,8 @@ class LocalWorkflow:
     def _preferred_sources(self, brain: BrainResult) -> tuple[str, ...]:
         if brain.universe_id is None:
             return ()
-        index = self._entity_indexes.get(brain.universe_id)
+        with self._state_lock:
+            index = self._entity_indexes.get(brain.universe_id)
         if index is None:
             return ()
         source_ids: list[str] = []
