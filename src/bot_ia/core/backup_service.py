@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Coordinated backups for BOT-IA local SQLite state.
 
 The databases remain the source of truth. Backups are validated derived artifacts
@@ -7,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import shutil
 
 from bot_ia.core.session_store import PersistentSessionStore
 from bot_ia.memory.store import MemoryStore
@@ -77,9 +79,7 @@ class BackupService:
 
             raise SQLiteBackupError("source databases changed during coordinated snapshot")
         except Exception:
-            memory_target.unlink(missing_ok=True)
-            sessions_target.unlink(missing_ok=True)
-            snapshot_root.rmdir()
+            shutil.rmtree(snapshot_root, ignore_errors=True)
             raise
 
     def inspect_snapshot(self, snapshot: BackupSnapshot) -> None:
