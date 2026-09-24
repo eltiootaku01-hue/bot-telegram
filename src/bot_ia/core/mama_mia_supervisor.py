@@ -53,6 +53,12 @@ class MamaMiaSupervisor:
         r"tarada|tarado|tonta|tonto|puta|puto|mierda)\b",
         re.IGNORECASE,
     )
+    _UNSAFE_DIRECTIVE_RE = re.compile(
+        r"(?:api[_ -]?key|token|password|secret|credential|"
+        r"system prompt|developer message|reveal|exfiltrat|"
+        r"dump|ignore.{0,20}security)",
+        re.IGNORECASE | re.DOTALL,
+    )
     _ROLE_OVERRIDE_RE = re.compile(
         r"(?:ignora|olvida|desobedece).{0,100}"
         r"(?:instrucciones|directivas|reglas|rol)|"
@@ -216,7 +222,11 @@ class MamaMiaSupervisor:
                     if not line.startswith("DIRECTIVE:"):
                         continue
                     directive = line.removeprefix("DIRECTIVE:").strip()
-                    if directive and len(directive) <= 1000:
+                    if (
+                        directive
+                        and len(directive) <= 1000
+                        and not self._UNSAFE_DIRECTIVE_RE.search(directive)
+                    ):
                         raw_directives.append(directive)
                     if len(raw_directives) >= MAX_GEMINI_DIRECTIVES:
                         break
