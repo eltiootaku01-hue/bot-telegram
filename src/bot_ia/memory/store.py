@@ -213,7 +213,7 @@ class MemoryStore:
         terms = tuple(dict.fromkeys(_TOKENS.findall(query.casefold())))[:64]
         if not terms:
             return ()
-        with self._connection() as connection:
+        with closing(self._connection()) as connection:
             if self._fts_available:
                 try:
                     candidate_ids = MemoryFTS.query(connection, universe_id=universe_id, user_id=user_id, conversation_id=conversation_id, terms=terms)
