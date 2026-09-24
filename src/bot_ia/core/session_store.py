@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Persistencia local y aislada del estado activo de las conversaciones."""
 from __future__ import annotations
 
@@ -6,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import sqlite3
+import threading
 
 from bot_ia.contracts import SessionState
 
@@ -22,6 +24,7 @@ class PersistentSessionStore:
 
     def __init__(self, database_path: Path) -> None:
         self._path = database_path
+        self._lock = threading.RLock()
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
@@ -29,6 +32,7 @@ class PersistentSessionStore:
         connection = sqlite3.connect(self._path, timeout=10.0)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA busy_timeout=10000")
+        connection.execute("PRAGMA journal_mode=WAL")
         return connection
 
     def _initialize(self) -> None:
@@ -49,6 +53,10 @@ class PersistentSessionStore:
                     connection.execute(f"PRAGMA user_version={self.SCHEMA_VERSION}")
 
     def get(self, user_id: str, conversation_id: str) -> SessionState | None:
+        with self._lock:
+            return self._get_locked(user_id, conversation_id)
+
+    def _get_locked(self, user_id: str, conversation_id: str) -> SessionState | None:
         with closing(self._connection()) as connection:
             row = connection.execute(
                 "SELECT * FROM sessions WHERE user_id=? AND conversation_id=?",
@@ -90,6 +98,10 @@ class PersistentSessionStore:
         return state
 
     def put(self, user_id: str, conversation_id: str, state: SessionState) -> None:
+        with self._lock:
+            return self._put_locked(user_id, conversation_id, state)
+
+    def _put_locked(self, user_id: str, conversation_id: str, state: SessionState) -> None:
         if not user_id or not conversation_id:
             raise SessionStorageError("user and conversation identifiers are required")
         if state.is_expired(datetime.now(timezone.utc)):
@@ -103,6 +115,10 @@ class PersistentSessionStore:
                 )
 
     def delete(self, user_id: str, conversation_id: str) -> None:
+        with self._lock:
+            return self._delete_public_locked(user_id, conversation_id)
+
+    def _delete_public_locked(self, user_id: str, conversation_id: str) -> None:
         with closing(self._connection()) as connection:
             with connection:
                 self._delete(connection, user_id, conversation_id)
