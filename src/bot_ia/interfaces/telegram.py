@@ -12,7 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from bot_ia.core.application import ApplicationRequest, ApplicationResponse, BotApplication
-from bot_ia.core.waitress_session_manager import TavernError, WaitressSessionManager
+from bot_ia.core.waitress_session_manager import TavernError, TavernReply, WaitressSessionManager
 from bot_ia.librarian.models import CoverageStatus
 
 
@@ -155,6 +155,21 @@ class TelegramAdapter:
         inbound = parse_update(update)
         command = inbound.text.casefold().split()[0]
 
+        if command in {"/start", "/menu"}:
+            return TelegramOutbound(
+                inbound.conversation_id,
+                "¡listo! ¿Qué quieres hacer?",
+                "local",
+                self.MAIN_MENU,
+            )
+        if command == "/help":
+            return TelegramOutbound(
+                inbound.conversation_id,
+                "Envía lo que necesitas o usa el menú. Puedes escribir, editar, consultar la biblioteca, revisar continuidad o generar ideas.",
+                "local",
+                self.MAIN_MENU,
+            )
+
         if self._tavern_manager is not None:
             tavern_commands = {
                 "/inventario",
@@ -177,11 +192,10 @@ class TelegramAdapter:
                         inbound.text,
                     )
                 except TavernError as error:
-                    tavern_reply = type("_Reply", (), {
-                        "text": str(error),
-                        "auto_delete_seconds": 45,
-                        "keyboard": (),
-                    })()
+                    tavern_reply = TavernReply(
+                        str(error),
+                        auto_delete_seconds=45,
+                    )
                 return TelegramOutbound(
                     inbound.conversation_id,
                     tavern_reply.text,
@@ -211,10 +225,6 @@ class TelegramAdapter:
                         (),
                         45,
                     )
-        if command in {"/start", "/menu"}:
-            return TelegramOutbound(inbound.conversation_id, "¡listo! ¿Qué quieres hacer?", "local", self.MAIN_MENU)
-        if command == "/help":
-            return TelegramOutbound(inbound.conversation_id, "Envía lo que necesitas o usa el menú. Puedes escribir, editar, consultar la biblioteca, revisar continuidad o generar ideas.", "local", self.MAIN_MENU)
         response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, inbound.text))
         return self.from_response(inbound.conversation_id, response)
 
