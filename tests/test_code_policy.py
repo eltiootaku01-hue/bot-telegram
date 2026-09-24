@@ -24,13 +24,13 @@ class CodePolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "bad.py"
             path.write_bytes(
-                b"\\xef\\xbb\\xbf"
-                b"# -*- coding: utf-8 -*-\\n"
-                b"from PySide6.Core import QObject\\n"
-                b"try:\\n"
-                b"    pass\\n"
-                b"except Exception:\\n"
-                b"    pass\\n"
+                bytes.fromhex("efbbbf")
+                + b"# -*- coding: utf-8 -*-\\n"
+                + b"from PySide6.Core import QObject\\n"
+                + b"try:\\n"
+                + b"    pass\\n"
+                + b"except Exception:\\n"
+                + b"    pass\\n"
             )
             script = root / "scripts" / "check_code_policy.py"
             completed = subprocess.run(
