@@ -6,8 +6,10 @@ from __future__ import annotations
 import hmac
 import ipaddress
 import json
+import socketserver
+import threading
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 from bot_ia.core.application import ApplicationRequest, BotApplication
@@ -23,6 +25,57 @@ class WebApiError(ValueError):
 
 class ExternalApiAuthorizationError(PermissionError):
     """The HTTP surface is not configured to authorize external API use."""
+
+
+class BoundedThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
+    """HTTP server with bounded request concurrency and graceful refusal."""
+
+    daemon_threads = True
+    allow_reuse_address = True
+    block_on_close = False
+    MAX_WORKERS = 8
+
+    def __init__(self, server_address, RequestHandlerClass, *, max_workers: int | None = None):
+        self.max_workers = max_workers or self.MAX_WORKERS
+        if self.max_workers < 1:
+            raise ValueError("max_workers must be positive")
+        self._request_slots = threading.BoundedSemaphore(self.max_workers)
+        super().__init__(server_address, RequestHandlerClass)
+
+    def process_request(self, request, client_address) -> None:
+        if not self._request_slots.acquire(blocking=False):
+            try:
+                request.sendall(
+                    b"HTTP/1.1 503 Service Unavailable\\r\\n"
+                    b"Content-Type: text/plain; charset=utf-8\\r\\n"
+                    b"Connection: close\\r\\n"
+                    b"Content-Length: 19\\r\\n"
+                    b"\\r\\n"
+                    b"server busy\\n",
+                )
+            except OSError:
+                pass
+            finally:
+                self.shutdown_request(request)
+            return
+
+        def run() -> None:
+            try:
+                self.process_request_thread(request, client_address)
+            finally:
+                self._request_slots.release()
+
+        thread = threading.Thread(
+            target=run,
+            name=f"bot-ia-http-{client_address[0]}:{client_address[1]}",
+            daemon=self.daemon_threads,
+        )
+        try:
+            thread.start()
+        except RuntimeError:
+            self._request_slots.release()
+            self.shutdown_request(request)
+            raise
 
 
 class WebApi:
@@ -193,7 +246,7 @@ def create_web_server(
     host: str = "127.0.0.1",
     port: int = 8787,
     public_base_url: str | None = None,
-) -> ThreadingHTTPServer:
+) -> BoundedThreadingHTTPServer:
     if not _is_loopback_host(host) and not api._api_token:
         raise WebApiError("non-loopback HTTP binding requires an API token")
     base_url = public_base_url or f"http://{host}:{port}"
@@ -246,15 +299,21 @@ def create_web_server(
             except (ValueError, UnicodeDecodeError, json.JSONDecodeError, WebApiError) as error:
                 self._send(HTTPStatus.BAD_REQUEST, {"error": str(error)})
                 return
-            except Exception:
-                self._send(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "internal_error"})
+            except Exception as error:
+                print(
+                    f"[ERROR] BOT-IA web request failed: {type(error).__name__}"
+                )
+                self._send(
+                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                    {"error": "internal_error"},
+                )
                 return
             self._send(HTTPStatus.OK, result)
 
         def log_message(self, format: str, *args: Any) -> None:
             return
 
-    return ThreadingHTTPServer((host, port), Handler)
+    return BoundedThreadingHTTPServer((host, port), Handler)
 
 
 def run_web_server(
