@@ -77,23 +77,35 @@ class BotApplication:
             raise RuntimeError("application executor cannot register dynamic universes")
         self._executor.register_universe(definition, entries)
 
-    def select_universe(self, user_id: str, conversation_id: str, universe_id: str) -> SessionState:
-        """Cambia explícitamente la novela activa de una conversación."""
-        if not self._brain._registry.contains(universe_id):
-            raise ValueError(f"unknown universe: {universe_id}")
-        state = SessionState(f"telegram:{user_id}:{conversation_id}", universe_id, datetime.now(timezone.utc) + timedelta(hours=8))
-        self._sessions.put(user_id, conversation_id, state)
-        return state
-
-    def handle(self, request: ApplicationRequest) -> ApplicationResponse:
-        if not request.user_id or not request.conversation_id:
-            raise ValueError("application request identifiers are required")
-        key = (request.user_id, request.conversation_id)
+    def _session_lock_for(self, key: tuple[str, str]) -> _SessionLock:
         with self._session_lock_guard:
             session_lock = self._session_locks.get(key)
             if session_lock is None:
                 session_lock = _SessionLock()
                 self._session_locks[key] = session_lock
+            return session_lock
+
+    def select_universe(self, user_id: str, conversation_id: str, universe_id: str) -> SessionState:
+        """Cambia explícitamente la novela activa de una conversación."""
+        if not user_id or not conversation_id:
+            raise ValueError("application request identifiers are required")
+        if not self._brain._registry.contains(universe_id):
+            raise ValueError(f"unknown universe: {universe_id}")
+        lock = self._session_lock_for((user_id, conversation_id))
+        with lock.lock:
+            state = SessionState(
+                f"telegram:{user_id}:{conversation_id}",
+                universe_id,
+                datetime.now(timezone.utc) + timedelta(hours=8),
+            )
+            self._sessions.put(user_id, conversation_id, state)
+            return state
+
+    def handle(self, request: ApplicationRequest) -> ApplicationResponse:
+        if not request.user_id or not request.conversation_id:
+            raise ValueError("application request identifiers are required")
+        key = (request.user_id, request.conversation_id)
+        session_lock = self._session_lock_for(key)
         with session_lock.lock:
             return self._handle_locked(request)
 
