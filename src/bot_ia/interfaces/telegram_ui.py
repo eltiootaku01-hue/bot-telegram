@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import os
 import re
+from collections import OrderedDict
 
 from bot_ia.core.application import ApplicationRequest, BotApplication
 from bot_ia.core.context_selection import available_context_sources, select_context_sources
@@ -29,18 +31,32 @@ class TelegramNovelAdapter(TelegramAdapter):
         (("❓ Ayuda", "menu:help"),),
     )
 
+    MAX_UI_SESSION_STATES = 512
+
     def __init__(self, application: BotApplication) -> None:
         super().__init__(application)
         self._pending: dict[tuple[str, str], str] = {}
         self._last_message: dict[tuple[str, str], str] = {}
         self._last_execution: dict[tuple[str, str], object] = {}
         self._context_selection: dict[tuple[str, str], set[int]] = {}
+        self._state_activity: OrderedDict[tuple[str, str], None] = OrderedDict()
+
+    def _touch_state(self, key: tuple[str, str]) -> None:
+        self._state_activity.pop(key, None)
+        self._state_activity[key] = None
+        while len(self._state_activity) > self.MAX_UI_SESSION_STATES:
+            oldest, _ = self._state_activity.popitem(last=False)
+            self._pending.pop(oldest, None)
+            self._last_message.pop(oldest, None)
+            self._last_execution.pop(oldest, None)
+            self._context_selection.pop(oldest, None)
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
             return self.handle_callback(update)
         inbound = parse_update(update)
         key = (inbound.user_id, inbound.conversation_id)
+        self._touch_state(key)
         self._last_message[key] = inbound.text
         pending = self._pending.pop(key, None)
         if pending == "local":
@@ -69,6 +85,7 @@ class TelegramNovelAdapter(TelegramAdapter):
     def handle_callback(self, update: dict[str, object]) -> TelegramOutbound:
         callback = parse_callback_update(update)
         key = (callback.user_id, callback.conversation_id)
+        self._touch_state(key)
         data = callback.data
         if data == "menu:novel":
             return TelegramOutbound(callback.conversation_id, "📖 ¿Qué novela quieres trabajar?\n\nEl canon será el de la novela elegida. La obra original queda como referencia, no como canon.", "local", NOVEL_MENU)
