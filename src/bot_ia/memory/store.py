@@ -258,6 +258,42 @@ class MemoryStore:
     @staticmethod
     def _record(row: sqlite3.Row) -> PersistentMemoryRecord:
         try:
-            return PersistentMemoryRecord(row["memory_id"], row["universe_id"], row["user_id"], row["conversation_id"], MemoryType(row["memory_type"]), row["content"], row["source"], datetime.fromisoformat(row["created_at"]), datetime.fromisoformat(row["updated_at"]), bool(row["approved"]), MemoryStatus(row["status"]), Confidence(row["confidence"]), datetime.fromisoformat(row["expires_at"]) if row["expires_at"] else None, datetime.fromisoformat(row["revoked_at"]) if row["revoked_at"] else None, tuple(json.loads(row["tags"])), tuple(json.loads(row["related_entities"])), row["provenance"], row["supersedes"], tuple(json.loads(row["conflicts_with"])))
+            created_at = datetime.fromisoformat(row["created_at"])
+            updated_at = datetime.fromisoformat(row["updated_at"])
+            expires_at = datetime.fromisoformat(row["expires_at"]) if row["expires_at"] else None
+            revoked_at = datetime.fromisoformat(row["revoked_at"]) if row["revoked_at"] else None
+            for value in (created_at, updated_at, expires_at, revoked_at):
+                if value is not None and value.tzinfo is None:
+                    raise ValueError("memory timestamps must be timezone-aware")
+
+            tags = json.loads(row["tags"])
+            related_entities = json.loads(row["related_entities"])
+            conflicts_with = json.loads(row["conflicts_with"])
+            if not all(isinstance(value, list) for value in (tags, related_entities, conflicts_with)):
+                raise ValueError("memory collection fields must be JSON lists")
+            if not all(isinstance(value, str) for value in (*tags, *related_entities, *conflicts_with)):
+                raise ValueError("memory collection items must be strings")
+
+            return PersistentMemoryRecord(
+                row["memory_id"],
+                row["universe_id"],
+                row["user_id"],
+                row["conversation_id"],
+                MemoryType(row["memory_type"]),
+                row["content"],
+                row["source"],
+                created_at,
+                updated_at,
+                bool(row["approved"]),
+                MemoryStatus(row["status"]),
+                Confidence(row["confidence"]),
+                expires_at,
+                revoked_at,
+                tuple(tags),
+                tuple(related_entities),
+                row["provenance"],
+                row["supersedes"],
+                tuple(conflicts_with),
+            )
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
             raise MemoryStorageError("invalid memory record on disk") from error
