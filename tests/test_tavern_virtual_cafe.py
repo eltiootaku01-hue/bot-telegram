@@ -66,8 +66,11 @@ class TavernTests(unittest.TestCase):
             manager.expire_session(first.session_id)
             manager.start_standard_session("1", "luna")
             manager.expire_session(manager.get_active_session("1").session_id)
+            manager.start_standard_session("1", "cari")
+            manager.expire_session(manager.get_active_session("1").session_id)
             snapshot = manager.inventory("1")
             self.assertEqual(0, snapshot.daily_free_uses)
+            self.assertEqual(0, snapshot.cards[0][2])
             manager.shutdown()
 
             connection = sqlite3.connect(
