@@ -406,11 +406,11 @@ class TelegramPoller:
                 except TelegramPartialDeliveryError as error:
                     self._pending_delivery = (update_id, outbound, error.next_chunk_index)
                     self._logger("telegram response delivery deferred after partial send")
-                    continue
+                    break
                 except TelegramTransportError:
                     self._pending_delivery = (update_id, outbound, 0)
                     self._logger("telegram response delivery deferred for retry")
-                    continue
+                    break
                 except (TelegramApiError, TelegramInputError):
                     self._offset = update_id + 1
                     skipped += 1
