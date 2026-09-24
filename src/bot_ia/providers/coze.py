@@ -9,6 +9,7 @@ adaptador independiente aunque participe en el mismo ProviderManager.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
