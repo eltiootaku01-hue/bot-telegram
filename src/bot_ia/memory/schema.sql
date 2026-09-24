@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS waitresses (
     shift_end_hour INTEGER NOT NULL CHECK (shift_end_hour BETWEEN 0 AND 23),
     is_busy INTEGER NOT NULL DEFAULT 0 CHECK (is_busy IN (0,1)),
     is_resting INTEGER NOT NULL DEFAULT 0 CHECK (is_resting IN (0,1)),
+    last_ticket_at TEXT,
     personality_prompt TEXT NOT NULL
 );
 
