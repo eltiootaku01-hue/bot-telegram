@@ -357,6 +357,7 @@ class TelegramApiClient:
         if start_chunk < 0 or start_chunk > len(chunks):
             raise TelegramInputError("invalid Telegram chunk index")
         result: dict[str, object] | None = None
+        message_ids: list[int] = []
         for index in range(start_chunk, len(chunks)):
             chunk = chunks[index]
             payload = outbound.payload()
@@ -367,9 +368,17 @@ class TelegramApiClient:
                 result = self._call("sendMessage", payload)
             except TelegramTransportError as error:
                 raise TelegramPartialDeliveryError(index) from error
+            message_id = result.get("message_id")
+            if not isinstance(message_id, int) or isinstance(message_id, bool):
+                nested = result.get("result")
+                message_id = nested.get("message_id") if isinstance(nested, dict) else None
+            if isinstance(message_id, int) and not isinstance(message_id, bool) and message_id > 0:
+                message_ids.append(message_id)
             if on_chunk_ack is not None:
                 on_chunk_ack(index + 1, result)
-        return result or {"ok": True}
+        final_result = dict(result) if result is not None else {"ok": True}
+        final_result["_bot_ia_message_ids"] = tuple(message_ids)
+        return final_result
 
     def delete_message(self, chat_id: str, message_id: int) -> dict[str, object]:
         chat_id = str(chat_id).strip()
@@ -456,7 +465,7 @@ class TelegramPoller:
         self._client, self._adapter, self._config = client, adapter, config or PollingConfig()
         self._sleeper, self._logger, self._running, self._offset = sleeper, logger or (lambda _: None), True, None
         self._outbox = outbox_store
-        self._pending_delivery: tuple[int, TelegramOutbound, int] | None = None
+        self._pending_delivery: tuple[int, TelegramOutbound, int, tuple[int, ...]] | None = None
 
     @property
     def offset(self) -> int | None:
@@ -465,10 +474,41 @@ class TelegramPoller:
     def stop(self) -> None:
         self._running = False
 
+    @staticmethod
+    def _message_ids_from_result(result: object) -> tuple[int, ...]:
+        if not isinstance(result, dict):
+            return ()
+        raw_ids = result.get("_bot_ia_message_ids")
+        if isinstance(raw_ids, (list, tuple)):
+            ids: list[int] = []
+            for value in raw_ids:
+                if isinstance(value, int) and not isinstance(value, bool) and value > 0 and value not in ids:
+                    ids.append(value)
+            if ids:
+                return tuple(ids)
+
+        value = result.get("message_id")
+        if not isinstance(value, int) or isinstance(value, bool):
+            nested = result.get("result")
+            value = nested.get("message_id") if isinstance(nested, dict) else None
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            return (value,)
+        return ()
+
+    @classmethod
+    def _append_message_ids(
+        cls,
+        target: list[int],
+        result: object,
+    ) -> None:
+        for message_id in cls._message_ids_from_result(result):
+            if message_id not in target:
+                target.append(message_id)
+
     def _schedule_auto_delete_if_needed(
         self,
         outbound: TelegramOutbound,
-        result: dict[str, object],
+        message_ids: list[int] | tuple[int, ...],
     ) -> None:
         auto_delete = outbound.auto_delete_seconds
         schedule = getattr(
@@ -480,21 +520,13 @@ class TelegramPoller:
             return
         if not callable(schedule):
             return
-        message_id = None
-        value = result.get("message_id")
-        if isinstance(value, int):
-            message_id = value
-        nested = result.get("result")
-        if isinstance(nested, dict):
-            value = nested.get("message_id")
-            if isinstance(value, int):
-                message_id = value
-        if message_id is not None:
-            schedule(
-                outbound.chat_id,
-                message_id,
-                auto_delete,
-            )
+        for message_id in tuple(dict.fromkeys(message_ids)):
+            if isinstance(message_id, int) and not isinstance(message_id, bool) and message_id > 0:
+                schedule(
+                    outbound.chat_id,
+                    message_id,
+                    auto_delete,
+                )
 
     def run(self, *, max_cycles: int | None = None) -> PollingResult:
         if max_cycles is not None and max_cycles < 0:
@@ -504,21 +536,28 @@ class TelegramPoller:
             cycles += 1
 
             if self._pending_delivery is not None:
-                pending_id, pending_outbound, next_chunk = self._pending_delivery
+                pending_id, pending_outbound, next_chunk, pending_message_ids = self._pending_delivery
+                message_ids = list(pending_message_ids)
+
+                def acknowledge_pending_chunk(
+                    acknowledged: int,
+                    chunk_result: dict[str, object],
+                ) -> None:
+                    if self._outbox is None:
+                        return
+                    self._outbox.ack_chunk(pending_id, acknowledged)
+                    self._append_message_ids(message_ids, chunk_result)
+
                 try:
                     result = self._client.send(
                         pending_outbound,
                         start_chunk=next_chunk,
-                        on_chunk_ack=(
-                            lambda acknowledged, _result: self._outbox.ack_chunk(
-                                pending_id,
-                                acknowledged,
-                            )
-                        ),
+                        on_chunk_ack=acknowledge_pending_chunk,
                     )
+                    self._append_message_ids(message_ids, result)
                     self._schedule_auto_delete_if_needed(
                         pending_outbound,
-                        result,
+                        message_ids,
                     )
                 except TelegramPartialDeliveryError as error:
                     errors += 1
@@ -526,6 +565,7 @@ class TelegramPoller:
                         pending_id,
                         pending_outbound,
                         error.next_chunk_index,
+                        tuple(message_ids),
                     )
                     self._logger(
                         "telegram pending response delivery failed after partial send"
@@ -612,6 +652,7 @@ class TelegramPoller:
                                 update_id,
                                 existing.outbound,
                                 existing.next_chunk,
+                                (),
                             )
                             break
 
@@ -631,27 +672,29 @@ class TelegramPoller:
                     continue
 
                 try:
+                    message_ids: list[int] = []
                     if self._outbox is not None:
                         record = self._outbox.create_pending(update_id, outbound)
                         start_chunk = record.next_chunk
-                    else:
-                        start_chunk = 0
-                    if self._outbox is None:
-                        result = self._client.send(outbound)
-                    else:
+
+                        def acknowledge_chunk(
+                            acknowledged: int,
+                            chunk_result: dict[str, object],
+                        ) -> None:
+                            self._outbox.ack_chunk(update_id, acknowledged)
+                            self._append_message_ids(message_ids, chunk_result)
+
                         result = self._client.send(
                             outbound,
                             start_chunk=start_chunk,
-                            on_chunk_ack=(
-                                lambda acknowledged, _result: self._outbox.ack_chunk(
-                                    update_id,
-                                    acknowledged,
-                                )
-                            ),
+                            on_chunk_ack=acknowledge_chunk,
                         )
+                    else:
+                        result = self._client.send(outbound)
+                    self._append_message_ids(message_ids, result)
                     self._schedule_auto_delete_if_needed(
                         outbound,
-                        result,
+                        message_ids,
                     )
                     if self._outbox is not None:
                         self._outbox.mark_delivered(update_id)
@@ -660,6 +703,7 @@ class TelegramPoller:
                         update_id,
                         outbound,
                         error.next_chunk_index,
+                        tuple(message_ids),
                     )
                     self._logger(
                         "telegram response delivery deferred after partial send"
@@ -670,6 +714,7 @@ class TelegramPoller:
                         update_id,
                         outbound,
                         0,
+                        tuple(message_ids),
                     )
                     self._logger(
                         "telegram response delivery deferred for retry"
