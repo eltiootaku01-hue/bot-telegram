@@ -24,6 +24,8 @@ jobs:
           python-version: "3.14"
       - name: Compile source and tests
         run: python -m compileall -q src tests launcher.py desktop.py desktop_entry.py
+      - name: Run code policy checks
+        run: python scripts/check_code_policy.py --git-range "${{ github.event.before }}" "${{ github.sha }}"
       - name: Import runtime surface
         run: python -c "import bot_ia; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher; import desktop_entry"
       - name: Run test suite
