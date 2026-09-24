@@ -726,6 +726,13 @@ class WaitressSessionManager:
         if session is None:
             raise SessionExpiredError("no active tavern session")
 
+        if self._mama_mia is not None:
+            self._mama_mia.audit_local_and_direct(
+                session.waitress_id,
+                user_message,
+                context=user_context,
+            )
+
         connection = self._transaction()
         try:
             waitress = self._load_waitress_locked(
@@ -742,13 +749,6 @@ class WaitressSessionManager:
             raise
         finally:
             connection.close()
-
-        if self._mama_mia is not None:
-            self._mama_mia.audit_local_and_direct(
-                session.waitress_id,
-                user_message,
-                context=user_context,
-            )
 
         profile = WaitressPromptProfile(
             waitress_id=session.waitress_id,
@@ -782,7 +782,7 @@ class WaitressSessionManager:
                     context=user_context,
                 )
             except RuntimeError:
-                pass
+                return ticket_id
 
         try:
             self._web_queue.enqueue_bot_message(
