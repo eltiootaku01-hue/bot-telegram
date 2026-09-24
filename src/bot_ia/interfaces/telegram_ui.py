@@ -53,6 +53,8 @@ class TelegramNovelAdapter(TelegramAdapter):
             self._last_execution.pop(oldest, None)
             self._context_selection.pop(oldest, None)
             self._fallback_query.pop(oldest, None)
+            getattr(self, "_selected_main", {}).pop(oldest, None)
+            getattr(self, "_selected_secondary", {}).pop(oldest, None)
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
