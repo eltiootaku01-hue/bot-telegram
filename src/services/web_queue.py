@@ -1391,6 +1391,12 @@ class WebChatQueueManager(QObject):
             })();
         """ if send else ""
 
+        if send:
+            send_code = send_code.replace(
+                "%OPERATION_ID%",
+                js_operation_id,
+            )
+
         set_ticket_code = f"""
             if (
                 window.__casaComandoWebQueue &&
