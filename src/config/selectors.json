@@ -1,0 +1,19 @@
+{
+  "gemini_web": {
+    "prompt_textarea": [
+      "div[contenteditable='true']",
+      "textarea[aria-label*='prompt']",
+      "rich-textarea div.ql-editor"
+    ],
+    "send_button": [
+      "button[aria-label='Enviar mensaje']",
+      "button.send-button",
+      "button[aria-label*='Send']"
+    ],
+    "response_bubble": [
+      "message-content .markdown",
+      ".model-response-text",
+      "div[data-test-id='conversation-turn']"
+    ]
+  }
+}
