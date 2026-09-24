@@ -39,7 +39,7 @@ jobs:
           POLICY_HEAD: ${{ github.sha }}
         run: python scripts/check_code_policy.py --git-range-env
       - name: Import runtime surface
-        run: python -c "import bot_ia; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.core.web_queue; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher; import desktop_entry; import gui.app"
+        run: python -c "import bot_ia; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.core.web_queue; import gui.task_orchestrator; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher; import desktop_entry; import gui.app"
       - name: Run test suite
         env:
           PYTHONWARNINGS: error::ResourceWarning
