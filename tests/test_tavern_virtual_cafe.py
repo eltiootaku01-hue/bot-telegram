@@ -256,17 +256,17 @@ class TavernTests(unittest.TestCase):
                 rest_calls = [
                     call
                     for call in timer_factory.call_args_list
-                    if len(call.args) >= 3
+                    if len(call.args) >= 2
                     and getattr(call.args[1], "__name__", "") == "_mark_resting_if_idle"
-                    and isinstance(call.args[2], tuple)
-                    and len(call.args[2]) == 3
-                    and call.args[2][0] == "cari"
+                    and isinstance(call.kwargs.get("args"), tuple)
+                    and len(call.kwargs["args"]) == 3
+                    and call.kwargs["args"][0] == "cari"
                 ]
                 self.assertEqual(1, len(rest_calls))
                 self.assertAlmostEqual(60.0, rest_calls[0].args[0], places=3)
                 self.assertEqual(
                     base_now.isoformat(),
-                    rest_calls[0].args[2][2],
+                    rest_calls[0].kwargs["args"][2],
                 )
                 second.shutdown()
 
