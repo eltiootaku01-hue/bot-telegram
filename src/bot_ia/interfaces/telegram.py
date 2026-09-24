@@ -271,6 +271,20 @@ class TelegramApiClient:
                 raise TelegramPartialDeliveryError(index) from error
         return result or {"ok": True}
 
+    def delete_message(self, chat_id: str, message_id: int) -> dict[str, object]:
+        chat_id = str(chat_id).strip()
+        if not chat_id:
+            raise TelegramInputError("chat_id cannot be empty")
+        if not isinstance(message_id, int) or message_id < 1:
+            raise TelegramInputError("message_id must be a positive integer")
+        return self._call(
+            "deleteMessage",
+            {
+                "chat_id": chat_id,
+                "message_id": message_id,
+            },
+        )
+
     def get_updates(self, *, offset: int | None = None, timeout_seconds: int = 25) -> tuple[dict[str, object], ...]:
         if offset is not None and offset < 0:
             raise TelegramInputError("Telegram offset cannot be negative")
