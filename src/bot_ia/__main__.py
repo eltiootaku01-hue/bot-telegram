@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import argparse
@@ -8,6 +9,7 @@ from pathlib import Path
 from bot_ia.config.dotenv import load_dotenv
 from bot_ia.core.application import ApplicationRequest
 from bot_ia.interfaces.telegram import TelegramApiClient, TelegramPoller
+from bot_ia.interfaces.telegram_outbox import TelegramOutboxStore
 from bot_ia.interfaces.telegram_projects import TelegramProjectsAdapter
 from bot_ia.interfaces.web import run_web_server
 from bot_ia.interfaces.web_chat import run_web_chat_server
@@ -73,7 +75,12 @@ def _run_telegram(application, runtime) -> None:
     client = TelegramApiClient.from_environment()
     if not client.smoke_test():
         raise RuntimeError("Telegram getMe check failed")
-    result = TelegramPoller(client, TelegramProjectsAdapter(application, runtime)).run()
+    outbox_store = TelegramOutboxStore(runtime.memory_store.path)
+    result = TelegramPoller(
+        client,
+        TelegramProjectsAdapter(application, runtime),
+        outbox_store=outbox_store,
+    ).run()
     print("Telegram detenido:", f"polls={result.polls}", f"received={result.updates_received}", f"processed={result.updates_processed}", f"sent={result.responses_sent}", f"errors={result.transport_errors}")
 
 
