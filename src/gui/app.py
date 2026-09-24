@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-import logging
 import os
 from pathlib import Path
 import sqlite3
@@ -31,7 +30,6 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QSplitter,
-    QStackedWidget,
     QStatusBar,
     QVBoxLayout,
     QWidget,
@@ -46,7 +44,6 @@ from bot_ia.core.waitress_session_manager import (
     WaitressSessionManager,
     WaitressUnavailableError,
 )
-from bot_ia.interfaces.telegram import TelegramOutbound
 from bot_ia.runtime import RuntimeComponents, build_runtime
 from .styles import application_qss
 from .widgets import BotTile, CardFrame, PillButton, SectionHeader
