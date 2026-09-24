@@ -268,6 +268,11 @@ WEB_MONITOR_JS = r"""
             scheduleCompletionCheck();
         },
 
+        setActiveTicket(ticketId) {
+            state.activeTicketId =
+                String(ticketId ?? "");
+        },
+
         getState() {
             return JSON.stringify({
                 sequence: state.sequence,
@@ -827,6 +832,12 @@ class WebChatQueueManager(QObject):
         self._protocol_pending = False
         self._shutdown_started = False
 
+        self._protocol_send_timer = QTimer(self)
+        self._protocol_send_timer.setSingleShot(True)
+        self._protocol_send_timer.timeout.connect(
+            self._on_protocol_send_timeout
+        )
+
         self._response_pattern = self._safe_compile(
             r'respuesta\s+a\s*\(\s*'
             r'(?P<bot>[^()\n]+?)\s+'
@@ -1058,6 +1069,18 @@ class WebChatQueueManager(QObject):
             self._on_monitor_install_result,
         )
 
+    @Slot()
+    def _on_protocol_send_timeout(self) -> None:
+        if self.protocol_initialized:
+            return
+
+        self._protocol_pending = True
+        self.queue_error.emit(
+            "__protocol__",
+            "PROTOCOL_SEND_TIMEOUT",
+        )
+        self.health_failure_requested.emit()
+
     def _on_monitor_install_result(
         self,
         result: Any,
@@ -1096,6 +1119,24 @@ class WebChatQueueManager(QObject):
                 not self.protocol_initialized
             ):
                 self._send_protocol_directive()
+
+            return
+
+        if event_type == "SEND_OK":
+            try:
+                send_event = json.loads(payload)
+            except (TypeError, ValueError):
+                send_event = {}
+
+            sent_ticket_id = str(
+                send_event.get("ticket_id", "")
+            )
+
+            if sent_ticket_id == "__protocol__":
+                if self._protocol_send_timer.isActive():
+                    self._protocol_send_timer.stop()
+
+                self.protocol_initialized = True
 
             return
 
@@ -1174,6 +1215,11 @@ class WebChatQueueManager(QObject):
 
     def _send_protocol_directive(self) -> None:
         self._protocol_pending = False
+
+        if self._protocol_send_timer.isActive():
+            self._protocol_send_timer.stop()
+
+        self._protocol_send_timer.start(5000)
 
         self._inject_to_browser(
             PROTOCOL_DIRECTIVE,
@@ -1262,6 +1308,14 @@ class WebChatQueueManager(QObject):
 
                 button.click();
 
+                sendBridgeEvent(
+                    "SEND_OK",
+                    JSON.stringify({
+                        ticket_id:
+                            state.activeTicketId
+                    })
+                );
+
                 if (
                     window.__casaComandoWebQueue &&
                     typeof window.__casaComandoWebQueue
@@ -1273,6 +1327,17 @@ class WebChatQueueManager(QObject):
                 }
             }, 500);
         """ if send else ""
+
+        set_ticket_code = f"""
+            if (
+                window.__casaComandoWebQueue &&
+                typeof window.__casaComandoWebQueue
+                    .setActiveTicket === "function"
+            ) {{
+                window.__casaComandoWebQueue
+                    .setActiveTicket({js_ticket_id});
+            }}
+        """
 
         begin_send_code = f"""
             if (
@@ -1299,6 +1364,7 @@ class WebChatQueueManager(QObject):
                 return "ERROR: NO_DOM_INPUT";
             }}
 
+            {set_ticket_code}
             {begin_send_code}
 
             if (
