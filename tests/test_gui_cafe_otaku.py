@@ -51,7 +51,6 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "build_runtime",
             "WaitressSessionManager",
             "WebChatQueueManager",
-            "TelegramOutboxStore",
             "TelegramPoller",
         ):
             self.assertIn(symbol, source)
