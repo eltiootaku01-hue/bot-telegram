@@ -116,8 +116,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "set_key",
             "load_dotenv",
             "dotenv_values",
-            "BOT_TOKEN_CARI",
-            "BOT_TOKEN_SCARLET",
+            "BOT_TOKEN_{profile.bot_id.upper()}",
         ):
             self.assertIn(token, source)
 
