@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 import os
@@ -35,6 +36,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from bot_ia.core.application import ApplicationRequest
+from bot_ia.core.web_queue import WebQueueManager
+from .task_orchestrator import Priority, TaskOrchestrator
 from bot_ia.core.waitress_session_manager import (
     InsufficientBalanceError,
     SessionConflictError,
@@ -47,6 +50,11 @@ from bot_ia.core.waitress_session_manager import (
 from bot_ia.runtime import RuntimeComponents, build_runtime
 from .styles import application_qss
 from .widgets import BotTile, CardFrame, PillButton, SectionHeader
+
+try:
+    from qasync import QEventLoop
+except ImportError:
+    QEventLoop = None
 
 
 ROOT = (
@@ -178,6 +186,8 @@ class CafeOtakuWindow(QMainWindow):
         self._tavern: WaitressSessionManager | None = None
         self._telegram_process: subprocess.Popen[str] | None = None
         self._web_chat_process: subprocess.Popen[str] | None = None
+        self._async_orchestrator: TaskOrchestrator | None = None
+        self._async_web_queue: WebQueueManager | None = None
         self._dialogs: list[QWidget] = []
         self._telegram_poll_timer = QTimer(self)
         self._telegram_poll_timer.setInterval(1000)
@@ -398,6 +408,9 @@ class CafeOtakuWindow(QMainWindow):
                     action
                 )
             )
+            if not hasattr(self, "quick_action_buttons"):
+                self.quick_action_buttons = {}
+            self.quick_action_buttons[action_id] = pill
             chips.addWidget(pill)
         chips.addStretch(1)
 
@@ -694,7 +707,87 @@ class CafeOtakuWindow(QMainWindow):
             )
             self.send_button.setEnabled(True)
 
+    def set_async_engine(
+        self,
+        orchestrator: TaskOrchestrator,
+        web_queue: WebQueueManager,
+    ) -> None:
+        self._async_orchestrator = orchestrator
+        self._async_web_queue = web_queue
+
+    async def shutdown_async_engine(self) -> None:
+        orchestrator = self._async_orchestrator
+        web_queue = self._async_web_queue
+        self._async_orchestrator = None
+        self._async_web_queue = None
+
+        if orchestrator is not None:
+            try:
+                await orchestrator.stop_worker()
+            except Exception as error:
+                self._log_error("Async orchestrator shutdown", error)
+
+        if web_queue is not None:
+            try:
+                await web_queue.close_browser_pool()
+            except Exception as error:
+                self._log_error("Playwright shutdown", error)
+
+    def _schedule_async_quick_action(self, action_id: str) -> None:
+        orchestrator = self._async_orchestrator
+        if orchestrator is None:
+            return
+
+        async def callback(response_text: str) -> None:
+            profile = BOT_MAP[self._selected_bot_id]
+            self._append_message(
+                profile.name,
+                response_text,
+                "bot",
+            )
+            self.refresh_state()
+
+        priority = (
+            Priority.HIGH
+            if action_id == "chocolatada"
+            else Priority.MEDIUM
+        )
+        payload = {
+            "is_local_action": action_id == "chocolatada",
+            "template_response": (
+                "¡Marchando una chocolatada caliente con extra espuma! "
+                "🍫✨"
+            ),
+            "prompt": "Genera una pregunta rápida de trivia sobre anime.",
+        }
+
+        try:
+            asyncio.create_task(
+                orchestrator.enqueue_task(
+                    waitress_id=(
+                        "cari"
+                        if action_id == "chocolatada"
+                        else "sunna"
+                    ),
+                    priority=priority,
+                    payload=payload,
+                    callback=callback,
+                )
+            )
+        except RuntimeError as error:
+            self._log_error("Async quick action", error)
+            self._append_system(
+                "El motor asíncrono no está disponible en esta sesión."
+            )
+
     def _quick_action(self, action_id: str) -> None:
+        if (
+            action_id in {"chocolatada", "trivia"}
+            and self._async_orchestrator is not None
+        ):
+            self._schedule_async_quick_action(action_id)
+            return
+
         if action_id == "chocolatada":
             self.input.setPlainText(
                 "Quiero pedir una chocolatada en el Café Otaku."
@@ -1469,14 +1562,56 @@ class CafeOtakuWindow(QMainWindow):
         event.accept()
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication(sys.argv)
-    app.setApplicationName("Café Otaku · BOT-IA")
-    app.setStyle("Fusion")
+async def _async_main(app: QApplication) -> int:
+    quit_event = asyncio.Event()
+    app.aboutToQuit.connect(quit_event.set)
+
+    window = CafeOtakuWindow()
+    window.select_bot("cari")
+    window.show()
+
+    web_queue = WebQueueManager()
+    orchestrator = TaskOrchestrator(
+        web_worker_callback=web_queue.process_task,
+        gui_signal_emitter=None,
+    )
+
+    try:
+        await web_queue.init_browser_pool()
+    except Exception as error:
+        window._log_error("Playwright startup", error)
+        window._append_system(
+            "El motor Playwright no pudo iniciar. "
+            "La interfaz principal continúa disponible."
+        )
+    else:
+        window.set_async_engine(orchestrator, web_queue)
+        asyncio.create_task(orchestrator.start_worker())
+
+    await quit_event.wait()
+    await window.shutdown_async_engine()
+    return 0
+
+
+def _qt_main(app: QApplication) -> int:
     window = CafeOtakuWindow()
     window.select_bot("cari")
     window.show()
     return app.exec()
+
+
+def main() -> int:
+    app = QApplication.instance() or QApplication(sys.argv)
+    app.setApplicationName("Café Otaku · BOT-IA")
+    app.setStyle("Fusion")
+
+    if QEventLoop is not None:
+        return asyncio.run(
+            _async_main(app),
+            loop_factory=QEventLoop,
+        )
+
+    return _qt_main(app)
 
 
 if __name__ == "__main__":
