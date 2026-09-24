@@ -226,6 +226,47 @@ class TavernTests(unittest.TestCase):
             )
             second.shutdown()
 
+    def test_rest_timer_recovers_from_persisted_last_ticket_at(self):
+        from datetime import timedelta
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "work" / "bot_ia_memory.sqlite3"
+            base_now = __import__("datetime").datetime(
+                2026, 9, 24, 15, 0, tzinfo=__import__("datetime").timezone.utc
+            )
+            first = WaitressSessionManager(
+                path,
+                web_queue_manager=FakeWebQueue(),
+                timezone_name="America/Argentina/Buenos_Aires",
+                now_provider=lambda: base_now,
+            )
+            session = first.start_standard_session("1", "cari")
+            first.queue_user_message("1", "primer ticket")
+            first.expire_session(session.session_id)
+            first.shutdown()
+
+            restarted_now = base_now + timedelta(minutes=9)
+            with patch("bot_ia.core.waitress_session_manager.threading.Timer") as timer_factory:
+                second = WaitressSessionManager(
+                    path,
+                    timezone_name="America/Argentina/Buenos_Aires",
+                    now_provider=lambda: restarted_now,
+                )
+                rest_calls = [
+                    call
+                    for call in timer_factory.call_args_list
+                    if getattr(call.args[1], "__name__", "") == "_mark_resting_if_idle"
+                    and call.args[2][0] == "cari"
+                ]
+                self.assertEqual(1, len(rest_calls))
+                self.assertAlmostEqual(60.0, rest_calls[0].args[0], places=3)
+                self.assertEqual(
+                    base_now.isoformat(),
+                    rest_calls[0].args[2][2],
+                )
+                second.shutdown()
+
     def test_expired_persisted_session_is_closed_on_restart(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "work" / "bot_ia_memory.sqlite3"
