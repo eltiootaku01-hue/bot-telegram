@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
+import shutil
 import re
 import threading
 import unicodedata
@@ -126,12 +127,7 @@ class ProjectManager:
             return record
         except Exception:
             if root.exists() and root.is_dir():
-                for child in sorted(root.rglob("*"), reverse=True):
-                    if child.is_file() or child.is_symlink():
-                        child.unlink()
-                    elif child.is_dir():
-                        child.rmdir()
-                root.rmdir()
+                shutil.rmtree(root, ignore_errors=True)
             raise
 
     @classmethod
