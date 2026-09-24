@@ -124,6 +124,7 @@ class WaitressSessionManager:
         message_sender: Callable[[str, str], object] | None = None,
         message_deleter: Callable[[str, int], object] | None = None,
         timezone_name: str = "America/Argentina/Buenos_Aires",
+        now_provider: Callable[[], datetime] | None = None,
         max_notification_workers: int = 4,
     ) -> None:
         self._path = Path(database_path)
@@ -140,6 +141,9 @@ class WaitressSessionManager:
 
         self._web_queue = web_queue_manager
         self._message_sender = message_sender
+        self._now_provider = now_provider or (
+            lambda: datetime.now(timezone.utc)
+        )
         self._message_deleter = message_deleter
         self._notification_pool = ThreadPoolExecutor(
             max_workers=max_notification_workers,
@@ -218,9 +222,13 @@ class WaitressSessionManager:
             raise ValueError(f"{name} exceeds safety limit")
         return value
 
-    @staticmethod
-    def _now_utc() -> datetime:
-        return datetime.now(timezone.utc)
+    def _now_utc(self) -> datetime:
+        value = self._now_provider()
+        if value.tzinfo is None:
+            raise TavernConfigurationError(
+                "now_provider must return timezone-aware datetimes"
+            )
+        return value.astimezone(timezone.utc)
 
     def _now_local(self) -> datetime:
         return self._now_utc().astimezone(self._tz)
