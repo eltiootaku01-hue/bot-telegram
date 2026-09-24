@@ -694,7 +694,7 @@ class CafeOtakuWindow(QMainWindow):
             self.input.setPlainText(
                 "Quiero pedir una chocolatada en el Café Otaku."
             )
-            self.input.setFocus()
+            self.send_message()
             return
 
         if self._tavern is None:
