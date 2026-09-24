@@ -11,10 +11,11 @@ from __future__ import annotations
 import hmac
 import json
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from typing import Any
 
 from bot_ia.core.application import ApplicationRequest, BotApplication
+from bot_ia.interfaces.web import BoundedThreadingHTTPServer
 from .web import MAX_MESSAGE_CHARS, MAX_ID_CHARS, WebApi, WebApiError, ExternalApiAuthorizationError
 
 
@@ -120,15 +121,21 @@ def run_web_chat_server(
             except (ValueError, UnicodeDecodeError, json.JSONDecodeError, WebApiError) as error:
                 self._send(HTTPStatus.BAD_REQUEST, {"error": str(error)})
                 return
-            except Exception:
-                self._send(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "internal_error"})
+            except Exception as error:
+                print(
+                    f"[ERROR] BOT-IA web-chat request failed: {type(error).__name__}"
+                )
+                self._send(
+                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                    {"error": "internal_error"},
+                )
                 return
             self._send(HTTPStatus.OK, result)
 
         def log_message(self, format: str, *args: Any) -> None:
             return
 
-    server = ThreadingHTTPServer((host, port), Handler)
+    server = BoundedThreadingHTTPServer((host, port), Handler)
     print(f"BOT-IA Web Chat escuchando en http://{host}:{port}/")
     try:
         server.serve_forever()
