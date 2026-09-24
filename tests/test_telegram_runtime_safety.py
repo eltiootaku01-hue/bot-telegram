@@ -20,6 +20,59 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
         self.assertEqual(4096, len(calls[0]["text"]))
         self.assertEqual(904, len(calls[1]["text"]))
 
+    def test_poller_schedules_auto_delete_for_every_chunk(self):
+        scheduled = []
+
+        class Adapter:
+            def handle_update(self, _update):
+                return TelegramOutbound(
+                    "2",
+                    "a" * 5000,
+                    auto_delete_seconds=30,
+                )
+
+            def schedule_tavern_auto_delete(self, chat_id, message_id, seconds):
+                scheduled.append((chat_id, message_id, seconds))
+
+        def transport(_url, payload, _timeout):
+            message_id = 100 if len(payload["text"]) == 4096 else 101
+            return {"ok": True, "result": {"message_id": message_id}}
+
+        client = TelegramApiClient("token", transport=transport)
+
+        class Client:
+            def get_updates(self, *, offset=None, timeout_seconds=25):
+                return (
+                    {
+                        "update_id": 7,
+                        "message": {
+                            "from": {"id": 1},
+                            "chat": {"id": 2},
+                            "text": "hola",
+                        },
+                    },
+                )
+
+            def send(self, outbound, *, start_chunk=0, on_chunk_ack=None):
+                return client.send(
+                    outbound,
+                    start_chunk=start_chunk,
+                    on_chunk_ack=on_chunk_ack,
+                )
+
+        poller = TelegramPoller(
+            Client(),
+            Adapter(),
+            sleeper=lambda _: None,
+        )
+        result = poller.run(max_cycles=1)
+
+        self.assertEqual(1, result.responses_sent)
+        self.assertEqual(
+            [("2", 100, 30), ("2", 101, 30)],
+            scheduled,
+        )
+
     def test_poller_does_not_advance_offset_when_delivery_fails(self) -> None:
         class Client:
             def __init__(self):
