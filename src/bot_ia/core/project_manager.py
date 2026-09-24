@@ -207,9 +207,31 @@ class ProjectManager:
                 os.fsync(handle.fileno())
 
             if self._registry_path.exists():
+                # Nunca sustituir un backup sano por un registro primario
+                # corrupto. Validamos el JSON antes de tocar .bak.
+                current = json.loads(
+                    self._registry_path.read_text(encoding="utf-8")
+                )
+                if not isinstance(current, list):
+                    raise ProjectError("existing project registry is invalid")
                 shutil.copy2(self._registry_path, backup)
 
             temporary.replace(self._registry_path)
+
+            # Persistir también la entrada del directorio cuando el sistema
+            # operativo lo permite; el replace del archivo sigue siendo la
+            # operación atómica principal.
+            try:
+                directory_fd = os.open(
+                    self._registry_path.parent,
+                    os.O_RDONLY,
+                )
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
+            except OSError:
+                pass
         finally:
             temporary.unlink(missing_ok=True)
 
