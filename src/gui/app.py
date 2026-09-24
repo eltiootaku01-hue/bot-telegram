@@ -177,6 +177,7 @@ class CafeOtakuWindow(QMainWindow):
         self._web_queue = None
         self._tavern: WaitressSessionManager | None = None
         self._telegram_process: subprocess.Popen[str] | None = None
+        self._web_chat_process: subprocess.Popen[str] | None = None
         self._dialogs: list[QWidget] = []
         self._telegram_poll_timer = QTimer(self)
         self._telegram_poll_timer.setInterval(1000)
@@ -235,6 +236,10 @@ class CafeOtakuWindow(QMainWindow):
             lambda: self._set_page(1)
         )
         top_layout.addWidget(self.operations_button)
+
+        self.local_web_button = QPushButton("🌐 Chat local")
+        self.local_web_button.clicked.connect(self.start_web_chat)
+        top_layout.addWidget(self.local_web_button)
 
         self.web_button = QPushButton("🌐 Web")
         self.web_button.clicked.connect(
@@ -1118,6 +1123,22 @@ class CafeOtakuWindow(QMainWindow):
         telegram_layout.addWidget(telegram_button)
         grid.addWidget(telegram_card, 0, 1)
 
+        web_chat_card = CardFrame()
+        web_chat_layout = QVBoxLayout(web_chat_card)
+        web_chat_layout.addWidget(QLabel("🌐 Chat web local"))
+        web_chat_layout.addWidget(
+            QLabel(
+                "Arranca la API HTML/JSON local de WebChat. Usa el mismo "
+                "runtime, memoria, evidencia y provider configurado."
+            )
+        )
+        web_chat_button = QPushButton(self._web_chat_button_text())
+        web_chat_button.clicked.connect(
+            lambda: self.start_web_chat(web_chat_button)
+        )
+        web_chat_layout.addWidget(web_chat_button)
+        grid.addWidget(web_chat_card, 0, 2)
+
         provider_card = CardFrame()
         provider_layout = QVBoxLayout(provider_card)
         provider_layout.addWidget(QLabel("🤖 Providers"))
@@ -1254,6 +1275,62 @@ class CafeOtakuWindow(QMainWindow):
             return "● Telegram activo"
         return "▶ Iniciar Telegram"
 
+    def _web_chat_button_text(self) -> str:
+        if (
+            self._web_chat_process is not None
+            and self._web_chat_process.poll() is None
+        ):
+            return "● Chat local activo"
+        return "▶ Iniciar Chat local"
+
+    def start_web_chat(self, button: QPushButton | None = None) -> None:
+        process = self._web_chat_process
+        if process is not None and process.poll() is None:
+            if button is not None:
+                button.setText("● Chat local activo")
+            return
+
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(ROOT / "src")
+        if getattr(sys, "frozen", False):
+            command = [sys.executable, "--web-chat-worker"]
+        else:
+            command = [
+                sys.executable,
+                "-m",
+                "desktop_entry",
+                "--web-chat-worker",
+            ]
+        try:
+            self._web_chat_process = subprocess.Popen(
+                command,
+                cwd=str(ROOT),
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            if button is not None:
+                button.setText("● Chat local iniciando…")
+            host = os.getenv("BOT_IA_HOST", "127.0.0.1")
+            port = os.getenv("BOT_IA_PORT", "8787")
+            browser_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
+            self._append_system(
+                f"Chat web local iniciado en http://{browser_host}:{port}/."
+            )
+            try:
+                import webbrowser
+
+                webbrowser.open(
+                    f"http://{browser_host}:{port}/"
+                )
+            except OSError:
+                pass
+        except (OSError, ValueError) as error:
+            self._log_error("Web chat launch", error)
+            self._append_system(
+                "No se pudo iniciar el Chat Web local."
+            )
+
     def start_telegram(self, button: QPushButton | None = None) -> None:
         process = self._telegram_process
         if process is not None and process.poll() is None:
@@ -1302,17 +1379,27 @@ class CafeOtakuWindow(QMainWindow):
 
     def _refresh_telegram_process(self) -> None:
         process = self._telegram_process
-        if process is None:
-            return
-        if process.poll() is None:
-            return
-        code = process.returncode
-        self._telegram_process = None
-        if code != 0:
-            self._append_system(
-                "Telegram terminó con un estado no exitoso. "
-                "Los detalles técnicos quedan fuera de la UI."
-            )
+        if process is not None and process.poll() is not None:
+            code = process.returncode
+            self._telegram_process = None
+            if code != 0:
+                self._append_system(
+                    "Telegram terminó con un estado no exitoso. "
+                    "Los detalles técnicos quedan fuera de la UI."
+                )
+
+        process = self._web_chat_process
+        if process is not None and process.poll() is not None:
+            code = process.returncode
+            self._web_chat_process = None
+            if code != 0:
+                self._append_system(
+                    "El Chat Web local terminó con un estado no exitoso."
+                )
+
+        self.local_web_button.setText(
+            self._web_chat_button_text()
+        )
         self.refresh_state()
 
     # ------------------------------------------------------------------
@@ -1347,6 +1434,12 @@ class CafeOtakuWindow(QMainWindow):
             and self._telegram_process.poll() is None
         ):
             self._telegram_process.terminate()
+
+        if (
+            self._web_chat_process is not None
+            and self._web_chat_process.poll() is None
+        ):
+            self._web_chat_process.terminate()
 
         if self._tavern is not None:
             try:
