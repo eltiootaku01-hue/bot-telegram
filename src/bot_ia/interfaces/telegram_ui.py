@@ -9,6 +9,7 @@ from bot_ia.core.application import ApplicationRequest, BotApplication
 from bot_ia.core.context_selection import available_context_sources, select_context_sources
 from bot_ia.core.context_sharing import build_shared_context
 from bot_ia.core.creative_assist import build_stuck_menu, expand_scene_sketch
+from bot_ia.librarian.models import CoverageStatus
 from bot_ia.interfaces.telegram import TelegramAdapter, TelegramOutbound, parse_callback_update, parse_update
 
 NOVEL_MENU = ((("🐱 One Neko Punch", "novel:one_neko_punch"),), (("⚔️ Neko Fish Online", "novel:neko_fish_online"),), (("🧟 Neko of the Dead", "novel:neko_of_the_dead"),), (("🦸 My Neko Academia", "novel:my_neko_academia"),), (("🧱 Attack on Neko", "novel:attack_on_neko"),), (("⬅️ Menú", "menu:main"),))
@@ -39,6 +40,7 @@ class TelegramNovelAdapter(TelegramAdapter):
         self._last_message: dict[tuple[str, str], str] = {}
         self._last_execution: dict[tuple[str, str], object] = {}
         self._context_selection: dict[tuple[str, str], set[int]] = {}
+        self._fallback_query: dict[tuple[str, str], str] = {}
         self._state_activity: OrderedDict[tuple[str, str], None] = OrderedDict()
 
     def _touch_state(self, key: tuple[str, str]) -> None:
@@ -50,6 +52,7 @@ class TelegramNovelAdapter(TelegramAdapter):
             self._last_message.pop(oldest, None)
             self._last_execution.pop(oldest, None)
             self._context_selection.pop(oldest, None)
+            self._fallback_query.pop(oldest, None)
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
@@ -58,12 +61,17 @@ class TelegramNovelAdapter(TelegramAdapter):
         key = (inbound.user_id, inbound.conversation_id)
         self._touch_state(key)
         self._last_message[key] = inbound.text
+        self._fallback_query.pop(key, None)
         pending = self._pending.pop(key, None)
         if pending == "local":
             return TelegramOutbound(inbound.conversation_id, expand_scene_sketch(inbound.text), "local", (("🧰 Otra ronda", "menu:unstick"), ("⬅️ Menú", "menu:main")))
         if pending == "api":
             response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, inbound.text, allow_external_api=True))
-            self._remember_execution(key, response)
+            self._remember_execution(
+                key,
+                response,
+                fallback_query=inbound.text,
+            )
             return self.from_response(inbound.conversation_id, response)
         if pending == "prompt":
             return TelegramOutbound(inbound.conversation_id, self._build_prompt(inbound.text), "local", (("⬅️ Menú", "menu:main"),))
@@ -73,14 +81,34 @@ class TelegramNovelAdapter(TelegramAdapter):
         if command == "/help":
             return TelegramOutbound(inbound.conversation_id, "Usa los botones para elegir novela, editar, consultar la biblioteca, revisar continuidad, compartir contexto, ver el estado de APIs, ver el progreso o destrabar una escena.", "local", self.MAIN_MENU)
         response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, inbound.text))
-        self._remember_execution(key, response)
+        self._remember_execution(
+            key,
+            response,
+            fallback_query=inbound.text,
+        )
         return self.from_response(inbound.conversation_id, response)
 
-    def _remember_execution(self, key: tuple[str, str], response: object) -> None:
+    def _remember_execution(
+        self,
+        key: tuple[str, str],
+        response: object,
+        *,
+        fallback_query: str | None = None,
+    ) -> None:
         execution = getattr(response, "execution", None)
         if execution is not None:
             self._last_execution[key] = execution
             self._context_selection.pop(key, None)
+            evidence = getattr(execution, "evidence", None)
+            coverage = getattr(evidence, "coverage", None)
+            status = getattr(coverage, "status", None)
+            if (
+                fallback_query and
+                status in {CoverageStatus.NO_ENCONTRADO, CoverageStatus.NO_ESTABLECIDO}
+            ):
+                self._fallback_query[key] = fallback_query
+            else:
+                self._fallback_query.pop(key, None)
 
     def handle_callback(self, update: dict[str, object]) -> TelegramOutbound:
         callback = parse_callback_update(update)
@@ -129,18 +157,21 @@ class TelegramNovelAdapter(TelegramAdapter):
         if data == "menu:progress":
             return self._chapter_progress(callback.conversation_id)
         if data == "fallback:api":
-            original = self._last_message.get(key)
+            original = self._fallback_query.get(key)
             if not original:
-                return TelegramOutbound(callback.conversation_id, "No tengo una consulta pendiente para autorizar.", "local", self.MAIN_MENU)
+                return TelegramOutbound(callback.conversation_id, "La autorización de esta consulta ya no está disponible. Envía la pregunta nuevamente.", "local", self.MAIN_MENU)
             response = self._application.handle(ApplicationRequest(callback.user_id, callback.conversation_id, original, allow_external_api=True))
             self._remember_execution(key, response)
             return self.from_response(callback.conversation_id, response)
         if data == "fallback:prompt":
-            original = self._last_message.get(key, "")
+            original = self._fallback_query.get(key)
+            if not original:
+                return TelegramOutbound(callback.conversation_id, "La consulta asociada a este botón ya no está disponible. Envía la pregunta nuevamente.", "local", (("⬅️ Menú", "menu:main"),))
             return TelegramOutbound(callback.conversation_id, self._build_prompt(original), "local", (("⬅️ Menú", "menu:main"),))
         if data == "menu:main":
             self._pending.pop(key, None)
             self._context_selection.pop(key, None)
+            self._fallback_query.pop(key, None)
             return TelegramOutbound(callback.conversation_id, "Menú principal:", "local", self.MAIN_MENU)
         return super().handle_callback(update)
 
