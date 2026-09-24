@@ -43,20 +43,28 @@ class ApplicationResponse:
 class InMemorySessionStore:
     def __init__(self) -> None:
         self._states: dict[tuple[str, str], SessionState] = {}
+        self._lock = threading.RLock()
 
     def get(self, user_id: str, conversation_id: str) -> SessionState | None:
-        return self._states.get((user_id, conversation_id))
+        with self._lock:
+            return self._states.get((user_id, conversation_id))
 
     def put(self, user_id: str, conversation_id: str, state: SessionState) -> None:
-        self._states[(user_id, conversation_id)] = state
+        with self._lock:
+            self._states[(user_id, conversation_id)] = state
 
     def get_or_create(self, user_id: str, conversation_id: str, universe_id: str | None) -> SessionState | None:
-        state = self.get(user_id, conversation_id)
-        if state is not None or universe_id is None:
+        with self._lock:
+            state = self._states.get((user_id, conversation_id))
+            if state is not None or universe_id is None:
+                return state
+            state = SessionState(
+                f"telegram:{user_id}:{conversation_id}",
+                universe_id,
+                datetime.now(timezone.utc) + timedelta(hours=8),
+            )
+            self._states[(user_id, conversation_id)] = state
             return state
-        state = SessionState(f"telegram:{user_id}:{conversation_id}", universe_id, datetime.now(timezone.utc) + timedelta(hours=8))
-        self.put(user_id, conversation_id, state)
-        return state
 
 class BotApplication:
     def __init__(self, brain: LocalBrain, router: Router, sessions: InMemorySessionStore, *, default_universe_id: str | None = None, candidate_provider: CandidateProvider | None = None, executor: Executor | object | None = None) -> None:
