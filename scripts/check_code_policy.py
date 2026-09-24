@@ -93,7 +93,10 @@ def _is_pass_only_exception(handler: ast.ExceptHandler) -> bool:
 
 
 def _check_file(path: Path, root: Path) -> list[str]:
-    relative = path.relative_to(root).as_posix()
+    try:
+        relative = path.relative_to(root).as_posix()
+    except ValueError:
+        relative = str(path)
     problems: list[str] = []
 
     try:
@@ -101,7 +104,7 @@ def _check_file(path: Path, root: Path) -> list[str]:
     except OSError as error:
         return [f"{relative}: cannot read file: {error}"]
 
-    if raw.startswith(b"\\xef\\xbb\\xbf"):
+    if raw.startswith(bytes.fromhex("efbbbf")):
         problems.append(f"{relative}: UTF-8 BOM is forbidden")
 
     try:
