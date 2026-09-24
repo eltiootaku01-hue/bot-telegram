@@ -181,6 +181,14 @@ class WaitressSessionManager:
             connection.executescript(
                 schema_path.read_text(encoding="utf-8")
             )
+            columns = {
+                row[1]
+                for row in connection.execute("PRAGMA table_info(waitresses)").fetchall()
+            }
+            if "last_ticket_at" not in columns:
+                connection.execute(
+                    "ALTER TABLE waitresses ADD COLUMN last_ticket_at TEXT"
+                )
             connection.commit()
 
     def _connect(self) -> sqlite3.Connection:
@@ -736,15 +744,22 @@ class WaitressSessionManager:
                 context=user_context,
             )
 
+        ticket_at = self._now_utc().isoformat()
+        previous_last_ticket_at: str | None = None
         connection = self._transaction()
         try:
             waitress = self._load_waitress_locked(
                 connection,
                 session.waitress_id,
             )
+            previous_last_ticket_at = waitress["last_ticket_at"]
             directives = self._directives_for(
                 connection,
                 session.waitress_id,
+            )
+            connection.execute(
+                "UPDATE waitresses SET last_ticket_at=? WHERE waitress_id=?",
+                (ticket_at, session.waitress_id),
             )
             connection.commit()
         except Exception:
@@ -802,7 +817,25 @@ class WaitressSessionManager:
         except Exception:
             with self._ticket_lock:
                 self._ticket_sessions.pop(ticket_id, None)
+            connection = self._transaction()
+            try:
+                connection.execute(
+                    "UPDATE waitresses SET last_ticket_at=? "
+                    "WHERE waitress_id=? AND last_ticket_at=?",
+                    (
+                        previous_last_ticket_at,
+                        session.waitress_id,
+                        ticket_at,
+                    ),
+                )
+                connection.commit()
+            except Exception:
+                connection.rollback()
+            finally:
+                connection.close()
+            self._reset_rest_timer(session.waitress_id)
             raise
+        self._reset_rest_timer(session.waitress_id)
         return ticket_id
 
     def add_chocolates(
@@ -1403,13 +1436,37 @@ class WaitressSessionManager:
         return True
 
     def _reset_rest_timer(self, waitress_id: str) -> None:
-        self._cancel_rest_timer(waitress_id)
         key = f"rest:{waitress_id}"
         with self._timer_lock:
+            old = self._timers.pop(key, None)
+            if old is not None:
+                old.cancel()
+
+            with closing(self._connect()) as connection:
+                row = connection.execute(
+                    "SELECT last_ticket_at FROM waitresses WHERE waitress_id=?",
+                    (waitress_id,),
+                ).fetchone()
+            if row is None:
+                return
+
+            last_ticket_raw = row["last_ticket_at"]
+            delay_seconds = float(REST_AFTER_SECONDS)
+            if last_ticket_raw is not None:
+                try:
+                    last_ticket_at = datetime.fromisoformat(str(last_ticket_raw))
+                    if last_ticket_at.tzinfo is None:
+                        raise ValueError("last_ticket_at must be timezone-aware")
+                    delay_seconds = REST_AFTER_SECONDS - (
+                        self._now_utc() - last_ticket_at.astimezone(timezone.utc)
+                    ).total_seconds()
+                except (TypeError, ValueError):
+                    delay_seconds = 0.1
+
             timer = threading.Timer(
-                REST_AFTER_SECONDS,
+                max(0.1, delay_seconds),
                 self._mark_resting_if_idle,
-                args=(waitress_id, key),
+                args=(waitress_id, key, last_ticket_raw),
             )
             timer.daemon = True
             self._timers[key] = timer
@@ -1428,20 +1485,50 @@ class WaitressSessionManager:
         self,
         waitress_id: str,
         key: str,
+        expected_last_ticket_at: str | None,
     ) -> None:
         with self._timer_lock:
+            current_timer = self._timers.get(key)
+            if current_timer is not threading.current_thread():
+                return
             self._timers.pop(key, None)
         if self._shutdown:
             return
         try:
             connection = self._transaction()
             try:
+                row = connection.execute(
+                    "SELECT last_ticket_at FROM waitresses WHERE waitress_id=?",
+                    (waitress_id,),
+                ).fetchone()
+                if row is None:
+                    connection.commit()
+                    return
+                if row["last_ticket_at"] != expected_last_ticket_at:
+                    connection.commit()
+                    return
+
+                remaining = 0.0
+                if expected_last_ticket_at is not None:
+                    try:
+                        last_ticket_at = datetime.fromisoformat(
+                            str(expected_last_ticket_at)
+                        )
+                        if last_ticket_at.tzinfo is None:
+                            raise ValueError("last_ticket_at must be timezone-aware")
+                        remaining = REST_AFTER_SECONDS - (
+                            self._now_utc()
+                            - last_ticket_at.astimezone(timezone.utc)
+                        ).total_seconds()
+                    except (TypeError, ValueError):
+                        remaining = 0.0
+
                 active = connection.execute(
                     "SELECT 1 FROM active_sessions "
                     "WHERE waitress_id=? AND is_active=1",
                     (waitress_id,),
                 ).fetchone()
-                if active is None:
+                if remaining <= 0 and active is None:
                     connection.execute(
                         "UPDATE waitresses SET is_busy=0, is_resting=1 "
                         "WHERE waitress_id=?",
