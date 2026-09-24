@@ -68,7 +68,7 @@ class CozeProvider(BaseProvider):
         start = time.monotonic()
         deadline = start + max(1.0, request.timeout_seconds)
         remaining = max(0.1, deadline - time.monotonic())
-        chat = self._start_chat(token, bot_id, request, timeout_seconds=remaining)
+        chat = self._start_chat(token, bot_id, request, remaining)
         remaining = max(0.1, deadline - time.monotonic())
         text, usage = self._wait_for_answer(token, chat, remaining)
         return ProviderResponse(
@@ -87,7 +87,6 @@ class CozeProvider(BaseProvider):
         token: str,
         bot_id: str,
         request: ProviderRequest,
-        *,
         timeout_seconds: float,
     ) -> dict[str, object]:
         payload = {
