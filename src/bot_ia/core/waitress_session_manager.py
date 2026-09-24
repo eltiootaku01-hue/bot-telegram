@@ -1543,6 +1543,75 @@ class WaitressSessionManager:
         except Exception:
             return
 
+    def rest_seconds_remaining(self, waitress_id: str) -> int:
+        waitress_id = self._bounded(
+            waitress_id,
+            MAX_WAITRESS_ID_CHARS,
+            "waitress_id",
+        )
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                "SELECT last_ticket_at FROM waitresses WHERE waitress_id=?",
+                (waitress_id,),
+            ).fetchone()
+        if row is None:
+            raise WaitressUnavailableError("waitress does not exist")
+        last_ticket_raw = row["last_ticket_at"]
+        if not last_ticket_raw:
+            return REST_AFTER_SECONDS
+        try:
+            last_ticket_at = datetime.fromisoformat(str(last_ticket_raw))
+            if last_ticket_at.tzinfo is None:
+                raise ValueError("last_ticket_at must be timezone-aware")
+        except (TypeError, ValueError):
+            return 0
+        return max(
+            0,
+            int(
+                REST_AFTER_SECONDS
+                - (
+                    self._now_utc()
+                    - last_ticket_at.astimezone(timezone.utc)
+                ).total_seconds()
+            ),
+        )
+
+    def force_rest(self, waitress_id: str) -> None:
+        waitress_id = self._bounded(
+            waitress_id,
+            MAX_WAITRESS_ID_CHARS,
+            "waitress_id",
+        )
+        connection = self._transaction()
+        try:
+            row = connection.execute(
+                "SELECT role FROM waitresses WHERE waitress_id=?",
+                (waitress_id,),
+            ).fetchone()
+            if row is None:
+                raise WaitressUnavailableError("waitress does not exist")
+            active = connection.execute(
+                "SELECT session_id FROM active_sessions "
+                "WHERE waitress_id=? AND is_active=1",
+                (waitress_id,),
+            ).fetchone()
+            if active is not None:
+                raise SessionConflictError(
+                    "no se puede forzar el descanso mientras la mesera atiende una sesión"
+                )
+            connection.execute(
+                "UPDATE waitresses SET is_busy=0, is_resting=1 "
+                "WHERE waitress_id=?",
+                (waitress_id,),
+            )
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        self._cancel_rest_timer(waitress_id)
+
     def remaining_seconds(self, telegram_id: str) -> int:
         session = self.get_active_session(telegram_id)
         if session is None:
