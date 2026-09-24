@@ -202,13 +202,18 @@ class MemoryStore:
         if not self._registry.contains(universe_id) or not user_id or limit < 1:
             raise MemoryStorageError("invalid memory retrieval scope")
         now = now or _now()
-        self.expire_due(now)
+        monotonic_now = time.monotonic()
+        if monotonic_now - self._last_expiry_sweep >= EXPIRY_SWEEP_INTERVAL_SECONDS:
+            with self._lock:
+                if monotonic_now - self._last_expiry_sweep >= EXPIRY_SWEEP_INTERVAL_SECONDS:
+                    self.expire_due(now)
+                    self._last_expiry_sweep = monotonic_now
         if len(query) > MAX_MEMORY_QUERY_CHARS:
             query = query[:MAX_MEMORY_QUERY_CHARS]
         terms = tuple(dict.fromkeys(_TOKENS.findall(query.casefold())))[:64]
         if not terms:
             return ()
-        with self._transaction() as connection:
+        with self._connection() as connection:
             if self._fts_available:
                 try:
                     candidate_ids = MemoryFTS.query(connection, universe_id=universe_id, user_id=user_id, conversation_id=conversation_id, terms=terms)
