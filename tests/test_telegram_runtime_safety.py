@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 
 from bot_ia.interfaces.telegram import TelegramApiClient, TelegramOutbound, TelegramPoller, PollingConfig
