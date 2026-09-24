@@ -12,6 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from bot_ia.core.application import ApplicationRequest, ApplicationResponse, BotApplication
+from bot_ia.core.waitress_session_manager import TavernError, WaitressSessionManager
 from bot_ia.librarian.models import CoverageStatus
 
 
@@ -66,6 +67,7 @@ class TelegramOutbound:
     text: str
     route: str | None = None
     keyboard: tuple[tuple[tuple[str, str], ...], ...] = ()
+    auto_delete_seconds: int | None = None
 
     def payload(self) -> dict[str, object]:
         payload: dict[str, object] = {"chat_id": self.chat_id, "text": self.text}
@@ -138,20 +140,97 @@ class TelegramAdapter:
         (("💡 Ideas", "menu:ideas"), ("❓ Ayuda", "menu:help")),
     )
 
-    def __init__(self, application: BotApplication) -> None:
+    def __init__(
+        self,
+        application: BotApplication,
+        *,
+        tavern_manager: WaitressSessionManager | None = None,
+    ) -> None:
         self._application = application
+        self._tavern_manager = tavern_manager
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
             return self.handle_callback(update)
         inbound = parse_update(update)
         command = inbound.text.casefold().split()[0]
+
+        if self._tavern_manager is not None:
+            tavern_commands = {
+                "/inventario",
+                "/turnos",
+                "/duelo",
+                "/charla",
+                "/tradicional",
+                "/favorita",
+                "/vip",
+                "/ayuda_taberna",
+                "/guia",
+            }
+            active_tavern_session = self._tavern_manager.get_active_session(
+                inbound.user_id
+            )
+            if command in tavern_commands:
+                try:
+                    tavern_reply = self._tavern_manager.command(
+                        inbound.user_id,
+                        inbound.text,
+                    )
+                except TavernError as error:
+                    tavern_reply = type("_Reply", (), {
+                        "text": str(error),
+                        "auto_delete_seconds": 45,
+                        "keyboard": (),
+                    })()
+                return TelegramOutbound(
+                    inbound.conversation_id,
+                    tavern_reply.text,
+                    "tavern",
+                    tavern_reply.keyboard,
+                    tavern_reply.auto_delete_seconds,
+                )
+
+            if active_tavern_session is not None:
+                try:
+                    self._tavern_manager.queue_user_message(
+                        inbound.user_id,
+                        inbound.text,
+                    )
+                    return TelegramOutbound(
+                        inbound.conversation_id,
+                        "💬 Mensaje enviado a la mesera. Estoy esperando su respuesta.",
+                        "tavern",
+                        (),
+                        30,
+                    )
+                except TavernError as error:
+                    return TelegramOutbound(
+                        inbound.conversation_id,
+                        str(error),
+                        "tavern",
+                        (),
+                        45,
+                    )
         if command in {"/start", "/menu"}:
             return TelegramOutbound(inbound.conversation_id, "¡listo! ¿Qué quieres hacer?", "local", self.MAIN_MENU)
         if command == "/help":
             return TelegramOutbound(inbound.conversation_id, "Envía lo que necesitas o usa el menú. Puedes escribir, editar, consultar la biblioteca, revisar continuidad o generar ideas.", "local", self.MAIN_MENU)
         response = self._application.handle(ApplicationRequest(inbound.user_id, inbound.conversation_id, inbound.text))
         return self.from_response(inbound.conversation_id, response)
+
+    def schedule_tavern_auto_delete(
+        self,
+        chat_id: str,
+        message_id: int,
+        seconds: int,
+    ) -> None:
+        if self._tavern_manager is None:
+            return
+        self._tavern_manager.schedule_auto_delete(
+            chat_id,
+            message_id,
+            seconds=seconds,
+        )
 
     def handle_callback(self, update: dict[str, object]) -> TelegramOutbound:
         callback = parse_callback_update(update)
@@ -422,7 +501,28 @@ class TelegramPoller:
                     self._logger(f"telegram update processing failed: {type(error).__name__}")
                     continue
                 try:
-                    self._client.send(outbound)
+                    result = self._client.send(outbound)
+                auto_delete = getattr(outbound, "auto_delete_seconds", None)
+                schedule = getattr(self._adapter, "schedule_tavern_auto_delete", None)
+                if (
+                    isinstance(auto_delete, int)
+                    and auto_delete > 0
+                    and callable(schedule)
+                ):
+                    message_id = None
+                    if isinstance(result, dict):
+                        value = result.get("message_id")
+                        if isinstance(value, int):
+                            message_id = value
+                        nested = result.get("result")
+                        if isinstance(nested, dict) and isinstance(nested.get("message_id"), int):
+                            message_id = nested["message_id"]
+                    if message_id is not None:
+                        schedule(
+                            outbound.chat_id,
+                            message_id,
+                            auto_delete,
+                        )
                 except TelegramPartialDeliveryError as error:
                     self._pending_delivery = (update_id, outbound, error.next_chunk_index)
                     self._logger("telegram response delivery deferred after partial send")
