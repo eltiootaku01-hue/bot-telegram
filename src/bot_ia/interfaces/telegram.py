@@ -8,12 +8,15 @@ import json
 import os
 import time
 from typing import Callable
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from bot_ia.core.application import ApplicationRequest, ApplicationResponse, BotApplication
 from bot_ia.core.waitress_session_manager import TavernError, TavernReply, WaitressSessionManager
 from bot_ia.librarian.models import CoverageStatus
+
+from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 
 
 class TelegramInputError(ValueError):
@@ -343,7 +346,13 @@ class TelegramApiClient:
             raise TelegramConfigurationError("TELEGRAM_BOT_TOKEN is not configured")
         return cls(token)
 
-    def send(self, outbound: TelegramOutbound, *, start_chunk: int = 0) -> dict[str, object]:
+    def send(
+        self,
+        outbound: TelegramOutbound,
+        *,
+        start_chunk: int = 0,
+        on_chunk_ack: Callable[[int, dict[str, object]], None] | None = None,
+    ) -> dict[str, object]:
         chunks = _split_message(outbound.text)
         if start_chunk < 0 or start_chunk > len(chunks):
             raise TelegramInputError("invalid Telegram chunk index")
@@ -358,6 +367,8 @@ class TelegramApiClient:
                 result = self._call("sendMessage", payload)
             except TelegramTransportError as error:
                 raise TelegramPartialDeliveryError(index) from error
+            if on_chunk_ack is not None:
+                on_chunk_ack(index + 1, result)
         return result or {"ok": True}
 
     def delete_message(self, chat_id: str, message_id: int) -> dict[str, object]:
@@ -432,9 +443,19 @@ class PollingResult:
 
 
 class TelegramPoller:
-    def __init__(self, client: TelegramApiClient, adapter: TelegramAdapter, *, config: PollingConfig | None = None, sleeper: Callable[[float], None] = time.sleep, logger: Callable[[str], None] | None = None) -> None:
+    def __init__(
+        self,
+        client: TelegramApiClient,
+        adapter: TelegramAdapter,
+        *,
+        config: PollingConfig | None = None,
+        sleeper: Callable[[float], None] = time.sleep,
+        logger: Callable[[str], None] | None = None,
+        outbox_store: TelegramOutboxStore | None = None,
+    ) -> None:
         self._client, self._adapter, self._config = client, adapter, config or PollingConfig()
         self._sleeper, self._logger, self._running, self._offset = sleeper, logger or (lambda _: None), True, None
+        self._outbox = outbox_store
         self._pending_delivery: tuple[int, TelegramOutbound, int] | None = None
 
     @property
