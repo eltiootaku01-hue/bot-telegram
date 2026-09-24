@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Persistencia local para proyectos/novelas creados desde BOT-IA."""
 
 from __future__ import annotations
@@ -6,6 +7,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import re
+import threading
 import unicodedata
 
 
@@ -36,6 +38,7 @@ class ProjectManager:
             raise ProjectError("project storage must remain inside the workspace")
         self._registry_path.parent.mkdir(parents=True, exist_ok=True)
         self._projects_dir.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.RLock()
         self._records = self._load()
 
     @property
@@ -47,15 +50,21 @@ class ProjectManager:
         return self._projects_dir
 
     def all(self) -> tuple[ProjectRecord, ...]:
-        return tuple(self._records.values())
+        with self._lock:
+            return tuple(self._records.values())
 
     def get(self, project_id: str) -> ProjectRecord:
-        try:
-            return self._records[project_id]
-        except KeyError as error:
-            raise ProjectError(f"project not found: {project_id}") from error
+        with self._lock:
+            try:
+                return self._records[project_id]
+            except KeyError as error:
+                raise ProjectError(f"project not found: {project_id}") from error
 
     def create_novel(self, display_name: str) -> ProjectRecord:
+        with self._lock:
+            return self._create_novel_locked(display_name)
+
+    def _create_novel_locked(self, display_name: str) -> ProjectRecord:
         name = " ".join(display_name.strip().split())
         if not name:
             raise ProjectError("project name cannot be empty")
