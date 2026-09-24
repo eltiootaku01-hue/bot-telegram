@@ -79,3 +79,17 @@ VALUES
 ('scarlet','Scarlet','novice','NIGHT',18,2,0,0,'Profesional, despierta, directa y amable durante el turno nocturno.'),
 ('chloe','Chloe','novice','NIGHT',18,2,0,0,'Alegre, sociable, servicial y energética durante el turno nocturno.'),
 ('mama_mia','Mama Mia','supervisor','ALL_NIGHT',0,0,0,0,'Supervisora firme, protectora y orientada a mantener seguridad, rol y continuidad.');
+
+
+CREATE TABLE IF NOT EXISTS telegram_outbox (
+    update_id INTEGER PRIMARY KEY,
+    chat_id INTEGER NOT NULL,
+    payload TEXT NOT NULL,
+    next_chunk INTEGER NOT NULL DEFAULT 0 CHECK (next_chunk >= 0),
+    status TEXT NOT NULL DEFAULT 'PENDING'
+        CHECK (status IN ('PENDING', 'DELIVERED', 'FAILED')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS ix_telegram_outbox_status
+ON telegram_outbox(status, created_at);
