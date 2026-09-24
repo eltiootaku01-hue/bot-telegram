@@ -85,17 +85,18 @@ class PersistentSessionStore:
                 raise SessionStorageError("invalid persisted session") from error
 
     def get_or_create(self, user_id: str, conversation_id: str, universe_id: str | None) -> SessionState | None:
-        """Satisfy the application session-store contract using only local persistence."""
-        state = self.get(user_id, conversation_id)
-        if state is not None or universe_id is None:
+        """Obtiene o crea una sesión en una única sección crítica."""
+        with self._lock:
+            state = self._get_locked(user_id, conversation_id)
+            if state is not None or universe_id is None:
+                return state
+            state = SessionState(
+                f"local:{user_id}:{conversation_id}",
+                universe_id,
+                datetime.now(timezone.utc) + timedelta(hours=8),
+            )
+            self._put_locked(user_id, conversation_id, state)
             return state
-        state = SessionState(
-            f"local:{user_id}:{conversation_id}",
-            universe_id,
-            datetime.now(timezone.utc) + timedelta(hours=8),
-        )
-        self.put(user_id, conversation_id, state)
-        return state
 
     def put(self, user_id: str, conversation_id: str, state: SessionState) -> None:
         with self._lock:
