@@ -48,6 +48,7 @@ from bot_ia.core.waitress_session_manager import (
     WaitressUnavailableError,
 )
 from bot_ia.runtime import RuntimeComponents, build_runtime
+from .gui_bridge import WorkerSignals
 from .styles import application_qss
 from .widgets import BotTile, CardFrame, PillButton, SectionHeader
 
@@ -83,6 +84,23 @@ BOT_PROFILES = (
     BotProfile("scarlet", "Scarlet", "🧛‍♀️", "Vampiresa"),
 )
 BOT_MAP = {item.bot_id: item for item in BOT_PROFILES}
+
+
+class GUIBridgeSignalAdapter:
+    """Adapta estados del orquestador a señales Qt del puente visual."""
+
+    def __init__(self, signals: WorkerSignals) -> None:
+        self.signals = signals
+
+    def emit_status_change(
+        self,
+        waitress_id: str,
+        status: str,
+    ) -> None:
+        self.signals.status_changed.emit(
+            waitress_id,
+            status,
+        )
 
 
 class GuiSignals(QObject):
@@ -151,6 +169,16 @@ class CafeOtakuWindow(QMainWindow):
         )
 
         self.signals = GuiSignals()
+        self.bridge_signals = WorkerSignals()
+        self.bridge_signal_adapter = GUIBridgeSignalAdapter(
+            self.bridge_signals
+        )
+        self.bridge_signals.status_changed.connect(
+            self._on_async_status_changed
+        )
+        self.bridge_signals.message_received.connect(
+            self._on_async_message_received
+        )
         self.signals.application_finished.connect(
             self._on_application_finished
         )
@@ -740,12 +768,10 @@ class CafeOtakuWindow(QMainWindow):
 
         async def callback(response_text: str) -> None:
             profile = BOT_MAP[self._selected_bot_id]
-            self._append_message(
-                profile.name,
+            self.bridge_signals.message_received.emit(
+                profile.bot_id,
                 response_text,
-                "bot",
             )
-            self.refresh_state()
 
         priority = (
             Priority.HIGH
@@ -780,6 +806,46 @@ class CafeOtakuWindow(QMainWindow):
                 "El motor asíncrono no está disponible en esta sesión."
             )
 
+    @Slot(str, str)
+    def _on_async_status_changed(
+        self,
+        waitress_id: str,
+        status: str,
+    ) -> None:
+        tile = self.bot_tiles.get(waitress_id)
+        if tile is None:
+            return
+
+        normalized = status.casefold()
+        if "online" in normalized:
+            state = "online"
+        elif "procesando" in normalized:
+            state = "online"
+        elif "fallback" in normalized or "reintentando" in normalized:
+            state = "warn"
+        else:
+            state = "warn"
+
+        tile.set_status(status, state)
+        self._update_selected_status()
+        self._update_footer()
+
+    @Slot(str, str)
+    def _on_async_message_received(
+        self,
+        waitress_id: str,
+        response_text: str,
+    ) -> None:
+        profile = BOT_MAP.get(waitress_id)
+        speaker = profile.name if profile is not None else waitress_id
+        self._append_message(
+            speaker,
+            response_text,
+            "bot",
+        )
+        self.refresh_state()
+
+    @Slot(str)
     def _quick_action(self, action_id: str) -> None:
         if (
             action_id in {"chocolatada", "trivia"}
@@ -1573,7 +1639,7 @@ async def _async_main(app: QApplication) -> int:
     web_queue = WebQueueManager()
     orchestrator = TaskOrchestrator(
         web_worker_callback=web_queue.process_task,
-        gui_signal_emitter=None,
+        gui_signal_emitter=window.bridge_signal_adapter,
     )
 
     try:
@@ -1605,7 +1671,10 @@ def main() -> int:
     app.setApplicationName("Café Otaku · BOT-IA")
     app.setStyle("Fusion")
 
-    if QEventLoop is not None:
+    if (
+        QEventLoop is not None
+        and sys.version_info < (3, 14)
+    ):
         return asyncio.run(
             _async_main(app),
             loop_factory=QEventLoop,
