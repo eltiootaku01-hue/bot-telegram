@@ -14,6 +14,7 @@ from collections.abc import Callable, Mapping
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from bot_ia.core.mama_mia_supervisor import MamaMiaSupervisor
 from bot_ia.providers.prompt_builder import (
     SupervisorDirective,
     TavernSessionType,
@@ -121,6 +122,7 @@ class WaitressSessionManager:
         database_path: str | Path,
         *,
         web_queue_manager: object | None = None,
+        mama_mia_supervisor: MamaMiaSupervisor | None = None,
         message_sender: Callable[[str, str], object] | None = None,
         message_deleter: Callable[[str, int], object] | None = None,
         timezone_name: str = "America/Argentina/Buenos_Aires",
@@ -140,6 +142,7 @@ class WaitressSessionManager:
             raise TavernConfigurationError("max_notification_workers must be positive")
 
         self._web_queue = web_queue_manager
+        self._mama_mia = mama_mia_supervisor
         self._message_sender = message_sender
         self._now_provider = now_provider or (
             lambda: datetime.now(timezone.utc)
@@ -148,6 +151,10 @@ class WaitressSessionManager:
         self._notification_pool = ThreadPoolExecutor(
             max_workers=max_notification_workers,
             thread_name_prefix="bot-ia-tavern",
+        )
+        self._supervision_pool = ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="bot-ia-mama-mia",
         )
         self._timers: dict[str, threading.Timer] = {}
         self._timer_lock = threading.RLock()
@@ -736,6 +743,13 @@ class WaitressSessionManager:
         finally:
             connection.close()
 
+        if self._mama_mia is not None:
+            self._mama_mia.audit_local_and_direct(
+                session.waitress_id,
+                user_message,
+                context=user_context,
+            )
+
         profile = WaitressPromptProfile(
             waitress_id=session.waitress_id,
             display_name=str(waitress["display_name"]),
@@ -758,6 +772,17 @@ class WaitressSessionManager:
             if self._shutdown:
                 raise TavernError("tavern manager is shut down")
             self._ticket_sessions[ticket_id] = session.session_id
+
+        if self._mama_mia is not None:
+            try:
+                self._supervision_pool.submit(
+                    self._mama_mia.audit_gemini_and_direct,
+                    session.waitress_id,
+                    user_message,
+                    context=user_context,
+                )
+            except RuntimeError:
+                pass
 
         try:
             self._web_queue.enqueue_bot_message(
@@ -1448,6 +1473,10 @@ class WaitressSessionManager:
             timer.cancel()
 
         self._notification_pool.shutdown(
+            wait=False,
+            cancel_futures=True,
+        )
+        self._supervision_pool.shutdown(
             wait=False,
             cancel_futures=True,
         )
