@@ -1,8 +1,12 @@
 from pathlib import Path
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
+
 
 from bot_ia.runtime import build_runtime
+from bot_ia.interfaces import telegram as telegram_interface
 
 
 class Phase15RuntimeBootstrapTests(unittest.TestCase):
@@ -34,6 +38,46 @@ enabled = false
 """.strip(),
             encoding="utf-8",
         )
+
+
+    def test_telegram_entrypoint_injects_durable_outbox(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            db_path = Path(temp) / "memory.sqlite3"
+            runtime = SimpleNamespace(memory_store=SimpleNamespace(path=db_path))
+
+            class FakeClient:
+                @classmethod
+                def from_environment(cls):
+                    return cls()
+
+                def smoke_test(self):
+                    return True
+
+            captured = {}
+
+            class FakePoller:
+                def __init__(self, client, adapter, **kwargs):
+                    captured["client"] = client
+                    captured["adapter"] = adapter
+                    captured.update(kwargs)
+
+                def run(self):
+                    return SimpleNamespace(
+                        polls=1,
+                        updates_received=0,
+                        updates_processed=0,
+                        responses_sent=0,
+                        transport_errors=0,
+                    )
+
+            with patch.object(telegram_interface, "TelegramApiClient", FakeClient), \
+                 patch.object(telegram_interface, "TelegramPoller", FakePoller), \
+                 patch.object(telegram_interface, "TelegramProjectsAdapter", lambda application, runtime: object()):
+                telegram_interface._run_telegram(object(), runtime)
+
+            self.assertIn("outbox_store", captured)
+            self.assertIsNotNone(captured["outbox_store"])
+            self.assertEqual(db_path, captured["outbox_store"]._path)
 
     def test_build_runtime_loads_project_configuration(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
