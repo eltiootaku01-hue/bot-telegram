@@ -24,6 +24,8 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.14"
+      - name: Install runtime dependencies
+        run: python -m pip install --disable-pip-version-check tzdata
       - name: Compile source and tests
         run: python -m compileall -q src tests launcher.py desktop.py desktop_entry.py
       - name: Run code policy checks
