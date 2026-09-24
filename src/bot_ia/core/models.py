@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Contratos locales de procesamiento; no contienen adaptadores externos."""
 
 from __future__ import annotations

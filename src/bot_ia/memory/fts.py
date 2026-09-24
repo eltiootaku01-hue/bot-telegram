@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Índice FTS5 opcional y reconstruible para la memoria local."""
 from __future__ import annotations
 

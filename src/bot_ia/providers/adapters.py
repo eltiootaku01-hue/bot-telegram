@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Adaptadores HTTP de proveedores de modelos."""
 
 from __future__ import annotations

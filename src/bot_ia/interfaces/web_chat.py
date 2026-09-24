@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Lightweight browser chat surface for BOT-IA.
 
 No frontend build, Node runtime, database, or extra dependency is required.

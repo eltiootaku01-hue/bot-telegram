@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Contratos de memoria persistente; la memoria nunca es canon."""
 from __future__ import annotations
 

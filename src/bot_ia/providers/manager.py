@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Gateway central de ejecución, salud y fallback."""
 
 from __future__ import annotations

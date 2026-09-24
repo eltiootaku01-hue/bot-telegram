@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Cerebro local de Fase 2: produce expediente y decisión, sin generar prosa."""
 
 from __future__ import annotations

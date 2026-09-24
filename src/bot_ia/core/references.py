@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Resolución básica, determinista y aislada por universo."""
 
 from __future__ import annotations

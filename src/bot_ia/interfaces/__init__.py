@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Interfaces externas del BOT-IA."""
 
 from .telegram import TelegramAdapter, TelegramApiClient, TelegramPoller

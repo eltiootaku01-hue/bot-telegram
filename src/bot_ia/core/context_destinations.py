@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Destinos seguros para abrir una IA después de preparar contexto.
 
 Los destinos son sólo accesos de navegador: este módulo no envía el contexto.

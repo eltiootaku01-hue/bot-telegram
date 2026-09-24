@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Políticas puras para separar propuestas externas del conocimiento autorizado."""
 
 from __future__ import annotations

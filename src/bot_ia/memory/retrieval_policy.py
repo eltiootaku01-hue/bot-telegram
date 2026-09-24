@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Presupuestos deterministas para recuperación de memoria local."""
 from __future__ import annotations
 

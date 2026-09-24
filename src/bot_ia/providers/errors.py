@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Errores tipados que nunca incluyen claves ni cuerpos de respuesta."""
 
 class ProviderError(RuntimeError):

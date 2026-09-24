@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Gateway de proveedores de BOT-IA."""
 
 from .adapters import (

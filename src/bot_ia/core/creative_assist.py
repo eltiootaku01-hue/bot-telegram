@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Herramientas creativas deterministas para desarrollar escenas sin API."""
 
 from __future__ import annotations

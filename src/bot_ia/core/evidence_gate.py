@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Evidence Gate determinista: la IA no puede elevar evidencia ni inventar canon."""
 
 from __future__ import annotations

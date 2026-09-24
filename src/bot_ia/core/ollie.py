@@ -1,4 +1,5 @@
-﻿"""Ayudante ligero de orientación para el flujo local."""
+# -*- coding: utf-8 -*-
+"""Ayudante ligero de orientación para el flujo local."""
 
 from __future__ import annotations
 

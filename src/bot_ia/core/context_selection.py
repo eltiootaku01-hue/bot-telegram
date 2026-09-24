@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Selección explícita de evidencia antes de compartir contexto.
 
 La selección opera únicamente sobre la evidencia que ya recuperó BOT-IA.

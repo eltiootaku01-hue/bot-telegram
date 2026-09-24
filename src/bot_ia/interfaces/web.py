@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """HTTP interface for local use and ChatGPT GPT Actions."""
 
 from __future__ import annotations

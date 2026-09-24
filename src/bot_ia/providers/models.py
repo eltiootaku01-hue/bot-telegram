@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Contratos mínimos entre BOT-IA y los providers."""
 
 from __future__ import annotations

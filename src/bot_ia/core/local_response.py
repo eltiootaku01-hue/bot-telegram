@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Respuestas conversacionales deterministas para tareas que no necesitan un LLM."""
 
 from __future__ import annotations

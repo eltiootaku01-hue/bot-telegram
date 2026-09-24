@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Preparación segura de contexto para una IA externa.
 
 Este módulo NO es un puente de red y NO concede acceso a la biblioteca.

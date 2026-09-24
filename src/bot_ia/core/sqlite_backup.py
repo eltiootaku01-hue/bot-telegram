@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Validated local backups for BOT-IA SQLite stores.
 
 Backups are derived artifacts. The original SQLite database remains the

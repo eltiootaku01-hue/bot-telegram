@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Clasificación centralizada de errores de providers."""
 
 from __future__ import annotations

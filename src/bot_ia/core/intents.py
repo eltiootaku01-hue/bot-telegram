@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Clasificador extensible de reglas locales, sin modelos estadísticos."""
 
 from __future__ import annotations

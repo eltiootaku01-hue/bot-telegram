@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Router puro: decide una ruta, nunca ejecuta proveedores ni búsquedas."""
 
 from __future__ import annotations

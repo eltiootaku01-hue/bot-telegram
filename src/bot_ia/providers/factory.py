@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Construcción de providers desde la configuración de runtime."""
 
 from __future__ import annotations

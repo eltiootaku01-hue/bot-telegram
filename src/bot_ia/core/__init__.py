@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Cerebro local y router determinista de Fase 2."""
 
 from .brain import LocalBrain
