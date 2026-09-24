@@ -52,6 +52,44 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
         self.assertEqual(0, result.responses_sent)
         self.assertIsNone(poller.offset)
 
+    def test_delivery_failure_stops_processing_later_updates_in_same_batch(self) -> None:
+        class Client:
+            def __init__(self):
+                self.sent = 0
+
+            def get_updates(self, *, offset=None, timeout_seconds=25):
+                return (
+                    {"update_id": 7, "message": {"from": {"id": 1}, "chat": {"id": 2}, "text": "uno"}},
+                    {"update_id": 8, "message": {"from": {"id": 1}, "chat": {"id": 2}, "text": "dos"}},
+                )
+
+            def send(self, outbound, *, start_chunk=0):
+                self.sent += 1
+                from bot_ia.interfaces.telegram import TelegramTransportError
+                raise TelegramTransportError("temporary")
+
+        class Adapter:
+            def __init__(self):
+                self.handled = []
+
+            def handle_update(self, update):
+                self.handled.append(update["update_id"])
+                return TelegramOutbound("2", f"respuesta {update['update_id']}")
+
+        client = Client()
+        adapter = Adapter()
+        poller = TelegramPoller(
+            client,
+            adapter,
+            config=PollingConfig(max_consecutive_failures=1),
+            sleeper=lambda _: None,
+        )
+        result = poller.run(max_cycles=1)
+
+        self.assertEqual([7], adapter.handled)
+        self.assertEqual(0, result.responses_sent)
+        self.assertIsNone(poller.offset)
+
 
 if __name__ == "__main__":
     unittest.main()
