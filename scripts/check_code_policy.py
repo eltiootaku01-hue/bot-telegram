@@ -118,11 +118,9 @@ def _check_file(path: Path, root: Path) -> list[str]:
             f"{relative}: first line must be exactly {REQUIRED_HEADER!r}"
         )
 
-    if "PySide6.Core" in source:
-        problems.append(f"{relative}: forbidden import path 'PySide6.Core'")
-
+    parse_source = source.lstrip("\ufeff")
     try:
-        tree = ast.parse(source, filename=str(path))
+        tree = ast.parse(parse_source, filename=str(path))
     except SyntaxError as error:
         problems.append(
             f"{relative}: syntax error while applying code policy: {error}"
@@ -130,6 +128,14 @@ def _check_file(path: Path, root: Path) -> list[str]:
         return problems
 
     for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(alias.name == "PySide6.Core" for alias in node.names):
+                problems.append(f"{relative}: forbidden import path 'PySide6.Core'")
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if module == "PySide6.Core":
+                problems.append(f"{relative}: forbidden import path 'PySide6.Core'")
+
         if isinstance(node, ast.ExceptHandler) and _is_pass_only_exception(node):
             problems.append(
                 f"{relative}:{node.lineno}: 'except Exception: pass' is forbidden"
