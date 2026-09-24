@@ -17,7 +17,7 @@ from urllib.request import Request, urlopen
 
 from bot_ia.config import SecretLoader
 
-from .adapters import BaseProvider, HttpTransport
+from .adapters import MAX_PROVIDER_HTTP_RESPONSE_BYTES, BaseProvider, HttpTransport
 from .errors import (
     MissingApiKeyError,
     ProviderProtocolError,
@@ -168,7 +168,12 @@ class CozeProvider(BaseProvider):
         request = Request(url, data=data, headers=headers, method="POST" if payload is not None else "GET")
         try:
             with urlopen(request, timeout=timeout) as response:
-                raw = json.loads(response.read().decode("utf-8"))
+                raw_body = response.read(MAX_PROVIDER_HTTP_RESPONSE_BYTES + 1)
+                if len(raw_body) > MAX_PROVIDER_HTTP_RESPONSE_BYTES:
+                    raise ProviderProtocolError(
+                        "Coze response body exceeds safety limit"
+                    )
+                raw = json.loads(raw_body.decode("utf-8"))
         except TimeoutError as error:
             raise ProviderTimeoutError("Coze request timed out") from error
         except HTTPError as error:
