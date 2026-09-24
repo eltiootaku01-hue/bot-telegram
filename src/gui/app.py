@@ -14,7 +14,8 @@ import sys
 import traceback
 from contextlib import closing
 
-from PySide6.QtCore import QObject, QRunnable, QThreadPool, QTimer, Qt, QUrl, Signal, Slot
+from PySide6.QtCore import QEvent, QObject, QRunnable, QThreadPool, QTimer, Qt, QUrl, Signal, Slot
+from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -567,14 +568,15 @@ class CafeOtakuWindow(QMainWindow):
         self.chat_title.setText(titles[index])
 
     def eventFilter(self, watched: QObject, event: object) -> bool:
-        if watched is self.input and getattr(event, "type", lambda: None)() == 51:
-            if (
-                getattr(event, "key", lambda: None)() == 16777220
-                and getattr(event, "modifiers", lambda: Qt.NoModifier)()
-                & Qt.ControlModifier
-            ):
-                self.send_message()
-                return True
+        if (
+            watched is self.input
+            and isinstance(event, QKeyEvent)
+            and event.type() == QEvent.KeyPress
+            and event.key() in {Qt.Key_Return, Qt.Key_Enter}
+            and event.modifiers() & Qt.ControlModifier
+        ):
+            self.send_message()
+            return True
         return super().eventFilter(watched, event)
 
     def send_message(self) -> None:
