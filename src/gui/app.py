@@ -184,6 +184,7 @@ class CafeOtakuWindow(QMainWindow):
         self._web_queue: WebChatQueueManager | None = None
         self._tavern: WaitressSessionManager | None = None
         self._telegram_process: subprocess.Popen[str] | None = None
+        self._dialogs: list[QWidget] = []
         self._telegram_poll_timer = QTimer(self)
         self._telegram_poll_timer.setInterval(1000)
         self._telegram_poll_timer.timeout.connect(
@@ -1167,7 +1168,17 @@ class CafeOtakuWindow(QMainWindow):
         close.clicked.connect(dialog.close)
         layout.addWidget(close, 0, Qt.AlignRight)
 
+        self._dialogs.append(dialog)
+        dialog.destroyed.connect(
+            lambda _obj=None: self._discard_dialog(dialog)
+        )
         dialog.show()
+
+    def _discard_dialog(self, dialog: QWidget) -> None:
+        try:
+            self._dialogs.remove(dialog)
+        except ValueError:
+            return
 
     def _create_project_from_ui(
         self,
