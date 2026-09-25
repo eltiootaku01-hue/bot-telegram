@@ -673,6 +673,23 @@ class TelegramApiClient:
             },
         )
 
+    def ban_chat_member(self, chat_id: str, user_id: str) -> dict[str, object]:
+        return self._call(
+            "banChatMember",
+            {"chat_id": str(chat_id), "user_id": int(user_id)},
+        )
+
+    def restrict_chat_member(self, chat_id: str, user_id: str, until_date: int) -> dict[str, object]:
+        return self._call(
+            "restrictChatMember",
+            {
+                "chat_id": str(chat_id),
+                "user_id": int(user_id),
+                "permissions": {"can_send_messages": False},
+                "until_date": int(until_date),
+            },
+        )
+
     def get_updates(self, *, offset: int | None = None, timeout_seconds: int = 25) -> tuple[dict[str, object], ...]:
         if offset is not None and offset < 0:
             raise TelegramInputError("Telegram offset cannot be negative")
