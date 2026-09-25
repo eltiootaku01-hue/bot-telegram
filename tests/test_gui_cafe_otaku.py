@@ -1128,6 +1128,136 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("def _draw_ur_element_effects", app)
         self.assertIn('if rarity == "UR":', app)
 
+    def test_cafe_maid_personalities_and_tea_time_contract(self):
+        from bot_ia.interfaces.cafe_immersion import (
+            TEA_TIME_DURATION_SECONDS,
+            TEA_TIME_MULTIPLIER,
+            WAITRESS_PROFILES,
+            TeaTimeScheduler,
+            waitress_exclusive_dialogue,
+        )
+
+        self.assertEqual(
+            {"Cari", "Sunna", "Cami", "Chie"},
+            set(WAITRESS_PROFILES),
+        )
+        self.assertIn("Maid", WAITRESS_PROFILES["Cari"]["focus"])
+        self.assertIn("21", WAITRESS_PROFILES["Sunna"]["focus"])
+        self.assertIn("Bebidas", WAITRESS_PROFILES["Cami"]["focus"])
+        self.assertIn("trivias", WAITRESS_PROFILES["Chie"]["focus"])
+
+        now = [1000.0]
+        scheduler = TeaTimeScheduler(
+            clock=lambda: now[0],
+            min_interval_seconds=1,
+            max_interval_seconds=1,
+        )
+        scheduler.activate(now=now[0])
+        self.assertTrue(scheduler.is_active(now=now[0] + 1))
+        self.assertEqual(TEA_TIME_MULTIPLIER, scheduler.multiplier(now=now[0] + 1))
+        self.assertEqual(
+            TEA_TIME_DURATION_SECONDS - 1,
+            scheduler.remaining_seconds(now=now[0] + 1),
+        )
+        self.assertFalse(scheduler.is_active(now=now[0] + TEA_TIME_DURATION_SECONDS + 1))
+        self.assertEqual(1, scheduler.multiplier(now=now[0] + TEA_TIME_DURATION_SECONDS + 1))
+        self.assertIn("Heart", waitress_exclusive_dialogue("Cami", 3))
+
+    def test_tea_time_doubles_local_game_rewards(self):
+        from tempfile import TemporaryDirectory
+        from bot_ia.interfaces.cafe_economy import CafeWalletStore
+        from bot_ia.interfaces.cafe_immersion import TeaTimeScheduler
+        from gui.mini_games import LocalGameRouter
+
+        with TemporaryDirectory() as tmp:
+            store = CafeWalletStore(Path(tmp))
+            now = [100.0]
+            scheduler = TeaTimeScheduler(
+                clock=lambda: now[0],
+                min_interval_seconds=1,
+                max_interval_seconds=1,
+            )
+            scheduler.activate(now=now[0])
+            router = LocalGameRouter(store, scheduler)
+            router._reward_game("tea-user", "21")
+            self.assertEqual(70, store.balance("tea-user"))
+
+    def test_waitress_affinity_tip_persistence_and_gacha_bonus(self):
+        from tempfile import TemporaryDirectory
+        from bot_ia.interfaces.cafe_economy import CafeWalletStore, draw_gacha
+        from gui.waifu_registry import (
+            AFFINITY_EXCLUSIVE_LEVEL,
+            AFFINITY_GACHA_BONUS_LEVEL,
+            HEART_LEVEL_MAX,
+            WaifuRegistry,
+        )
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wallet = CafeWalletStore(root)
+            registry = WaifuRegistry(root)
+            registry.save([])
+
+            maid, charged, level = registry.tip_waitress("u1", "Cami", 15, wallet)
+            self.assertEqual("Cami", maid)
+            self.assertEqual(15, charged)
+            self.assertEqual(AFFINITY_EXCLUSIVE_LEVEL, level)
+            self.assertLessEqual(level, HEART_LEVEL_MAX)
+
+            reloaded = WaifuRegistry(root)
+            self.assertEqual(level, reloaded.affinity_level("u1", "Cami"))
+            self.assertIn("Cami: 3/10", reloaded.affinity_summary("u1"))
+
+            registry.tip_waitress("u2", "Cami", AFFINITY_GACHA_BONUS_LEVEL * 5, wallet)
+            self.assertEqual(AFFINITY_GACHA_BONUS_LEVEL, registry.affinity_level("u2", "Cami"))
+            result = draw_gacha(
+                "u2",
+                wallet,
+                roll=lambda: 0,
+                maid="Cami",
+                affinity_level=registry.affinity_level("u2", "Cami"),
+            )
+            self.assertEqual("R", result.rarity)
+            self.assertTrue(result.affinity_bonus)
+            self.assertEqual(1, wallet.get("u2").pity_sr)
+
+    def test_cafe_telegram_immersion_handlers_contract(self):
+        source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        immersion = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+        mini = (self.ROOT / "src" / "gui" / "mini_games.py").read_text(encoding="utf-8")
+        registry = (self.ROOT / "src" / "gui" / "waifu_registry.py").read_text(encoding="utf-8")
+        for token in (
+            'command == "/propina"',
+            'command == "/afinidad"',
+            'command == "/mesera"',
+            '"affinity:show"',
+            "waitress_dialogue",
+            "affinity_level=",
+        ):
+            self.assertIn(token, source)
+        for token in (
+            "WAITRESS_PROFILES",
+            "TeaTimeScheduler",
+            "TEA_TIME_DURATION_SECONDS",
+            "TEA_TIME_MULTIPLIER",
+            "waitress_exclusive_dialogue",
+        ):
+            self.assertIn(token, immersion)
+        for token in (
+            "TeaTimeScheduler",
+            "tea_scheduler",
+            "multiplier=self._tea_scheduler.multiplier()",
+            "waitress_dialogue",
+        ):
+            self.assertIn(token, mini)
+        for token in (
+            "WAITRESS_IDS",
+            "HEART_LEVEL_MAX",
+            "waitress_affinity",
+            "tip_waitress",
+        ):
+            self.assertIn(token, registry)
+
 
 if __name__ == "__main__":
     unittest.main()
