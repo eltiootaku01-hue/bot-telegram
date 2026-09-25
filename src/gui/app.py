@@ -3328,6 +3328,8 @@ class CommandCenterWindow(QMainWindow):
                 f"{profile.name}: puedo atender saludos, estado, ayuda y "
                 "acciones locales sencillas sin consumir una sesión web."
             )
+        elif normalized == "/tutorial":
+            response = build_tutorial_text()
         elif any(
             token in normalized
             for token in ("waifu", "carta tcg", "prompt tcg")
