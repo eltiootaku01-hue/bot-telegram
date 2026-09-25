@@ -37,6 +37,8 @@ class WaifuRecord:
     element: str
     cosplay_reference: str
     card_category: str = "Waifu / TCG"
+    card_number: str = ""
+    card_suit: str = ""
     lora_tags: str = ""
     prompt: str = ""
     image_path: str = ""
@@ -90,6 +92,8 @@ class WaifuRegistry:
                         card_category=str(
                             item.get("card_category", "Waifu / TCG")
                         ).strip() or "Waifu / TCG",
+                        card_number=str(item.get("card_number", "")).strip(),
+                        card_suit=str(item.get("card_suit", "")).strip(),
                         lora_tags=str(item.get("lora_tags", "")).strip(),
                         prompt=str(item.get("prompt", "")).strip(),
                         image_path=str(item.get("image_path", "")).strip(),
@@ -172,6 +176,11 @@ def generate_tcg_prompt(record: WaifuRecord) -> str:
     category = record.card_category.strip() or "Waifu / TCG"
     lora_tags = normalize_lora_tags(record.lora_tags)
     lora_line = f"LoRA tags: {lora_tags}.\\n" if lora_tags else ""
+    card_line = ""
+    if category.casefold() in {"póker", "poker", "cartas de juego"}:
+        number = record.card_number.strip() or "A"
+        suit = record.card_suit.strip() or "Corazones"
+        card_line = f"Playing card: {number} of {suit}. Use the matching playing-card template.\\n"
     return (
         "TCG / GAME CARD ART\\n"
         f"Category: {category}.\\n"
