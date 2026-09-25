@@ -312,24 +312,46 @@ MATRIX_BOT_SPECS = (
 )
 
 
+INITIAL_SETUP_MODE_ENV = "INITIAL_SETUP_MODE"
+
 LIGHTWEIGHT_CHROMIUM_ARGS = (
     "--disable-blink-features=AutomationControlled",
     "--hide-crash-restore-bubble",
-    "--no-sandbox",
     "--disable-gpu",
     "--disable-dev-shm-usage",
     "--no-first-run",
+    "--no-sandbox",
     "--disable-extensions",
     "--disable-background-networking",
-    "--disable-component-update",
+    "--disable-background-timer-throttling",
+    "--disable-client-side-phishing-detection",
+    "--disable-default-apps",
+    "--disable-hang-monitor",
+    "--disable-popup-blocking",
+    "--disable-prompt-on-repost",
+    "--disable-sync",
+    "--disable-translate",
+    "--metrics-recording-only",
+    "--no-zygote",
     "--renderer-process-limit=2",
-    "--disable-features=Translate,BackForwardCache",
 )
 
 
-def _lightweight_browser_args() -> list[str]:
-    """Devuelve flags ligeros; --single-process queda como opt-in."""
+def _initial_setup_mode() -> bool:
+    value = os.getenv(INITIAL_SETUP_MODE_ENV, "false")
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _lightweight_browser_args(*, headless: bool) -> list[str]:
     args = list(LIGHTWEIGHT_CHROMIUM_ARGS)
+    if headless:
+        args.insert(0, "--headless=new")
+    if (
+        headless
+        and os.getenv("PLAYWRIGHT_DISABLE_IMAGES", "false").strip().lower()
+        in {"1", "true", "yes", "on"}
+    ):
+        args.append("--blink-settings=imagesEnabled=false")
     if os.getenv("PLAYWRIGHT_SINGLE_PROCESS", "").strip().lower() in {
         "1",
         "true",
@@ -349,6 +371,7 @@ class GeminiLobbyWorker(QObject):
 
     CONTEXT_ACK_TOKEN = "CONTEXTO_LISTO"
     TIMEOUT_MS = 30_000
+    SETUP_LOGIN_TIMEOUT_MS = 300_000
     NEW_CHAT_TIMEOUT_MS = 8_000
     POLL_INTERVAL_MS = 100
     STABLE_POLLS = 2
@@ -394,8 +417,16 @@ class GeminiLobbyWorker(QObject):
         return configured.strip() or provider.default_url
 
     @property
+    def setup_mode(self) -> bool:
+        return _initial_setup_mode()
+
+    @property
+    def headless(self) -> bool:
+        return not self.setup_mode
+
+    @property
     def browser_args(self) -> list[str]:
-        return _lightweight_browser_args()
+        return _lightweight_browser_args(headless=self.headless)
 
     def build_prompt(self) -> str:
         if not self.system_prompt:
@@ -504,7 +535,7 @@ class GeminiLobbyWorker(QObject):
             playwright = sync_playwright().start()
             context = playwright.chromium.launch_persistent_context(
                 self.browser_profile,
-                headless=False,
+                headless=self.headless,
                 args=self.browser_args,
             )
             page = context.new_page()
@@ -528,10 +559,15 @@ class GeminiLobbyWorker(QObject):
                     .strip()
                 )
 
+            login_timeout = (
+                self.SETUP_LOGIN_TIMEOUT_MS
+                if self.setup_mode
+                else self.TIMEOUT_MS
+            )
             input_locator = self._wait_for_visible(
                 page,
                 self.provider.input_selectors,
-                self.TIMEOUT_MS,
+                login_timeout,
             )
             input_locator.fill(prompt)
             input_locator.press("Enter")
@@ -877,11 +913,7 @@ class SystemDiagnosticWorker(QObject):
                 context = playwright.chromium.launch_persistent_context(
                     str(browser_path),
                     headless=True,
-                    args=[
-                        "--disable-blink-features=AutomationControlled",
-                        "--hide-crash-restore-bubble",
-                        "--no-sandbox",
-                    ],
+                    args=_lightweight_browser_args(headless=True),
                 )
                 page = (
                     context.pages[0]
@@ -1467,6 +1499,18 @@ class CommandCenterWindow(QMainWindow):
             self._show_diagnostic_dialog
         )
         top_layout.addWidget(self.diagnostic_button)
+
+        self.manual_login_button = QPushButton(
+            "🔑 Iniciar Sesión Manual"
+        )
+        self.manual_login_button.setToolTip(
+            "Activa INITIAL_SETUP_MODE para que la próxima cadena "
+            "abra Chromium visible y permita completar el inicio de sesión."
+        )
+        self.manual_login_button.clicked.connect(
+            self._enable_manual_setup_mode
+        )
+        top_layout.addWidget(self.manual_login_button)
 
         root_layout.addWidget(top)
 
@@ -2219,6 +2263,24 @@ class CommandCenterWindow(QMainWindow):
             except TavernError as error:
                 self._append_system(self._friendly_tavern_error(error))
 
+    def _enable_manual_setup_mode(self) -> None:
+        try:
+            self.config_manager.set_values(
+                {INITIAL_SETUP_MODE_ENV: "true"}
+            )
+            self._refresh_config_dialog_fields()
+            self._append_system(
+                "🔑 INITIAL_SETUP_MODE activado. "
+                "La próxima cadena abrirá Chromium visible para completar "
+                "el inicio de sesión de los perfiles aislados."
+            )
+            self.manual_login_button.setEnabled(False)
+        except Exception as error:
+            self._log_error("Manual browser setup", error)
+            self._append_system(
+                "No se pudo activar el modo de inicio de sesión manual."
+            )
+
     def _start_matrix_chain(self, start_bot_id: str = "cari") -> None:
         if self._closing or self._matrix_dispatcher.is_running:
             return
@@ -2484,6 +2546,7 @@ class CommandCenterWindow(QMainWindow):
         provider_fields: dict[str, QLineEdit] = {}
         provider_keys = (
             "BOT_IA_PROVIDER",
+            "INITIAL_SETUP_MODE",
             "OPENAI_API_KEY",
             "GROQ_API_KEY",
             "OPENROUTER_API_KEY",

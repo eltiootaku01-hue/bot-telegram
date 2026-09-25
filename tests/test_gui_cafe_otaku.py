@@ -90,6 +90,72 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ):
             self.assertIn(token, source)
 
+    def test_hybrid_playwright_and_ultra_lightweight_contract(self):
+        source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+
+        for token in (
+            'INITIAL_SETUP_MODE_ENV = "INITIAL_SETUP_MODE"',
+            "def _initial_setup_mode()",
+            "def _lightweight_browser_args(*, headless: bool)",
+            '"--headless=new"',
+            '"--disable-gpu"',
+            '"--disable-dev-shm-usage"',
+            '"--no-first-run"',
+            '"--no-sandbox"',
+            '"--disable-extensions"',
+            '"--disable-background-networking"',
+            '"--disable-background-timer-throttling"',
+            '"--disable-client-side-phishing-detection"',
+            '"--disable-default-apps"',
+            '"--disable-hang-monitor"',
+            '"--disable-popup-blocking"',
+            '"--disable-prompt-on-repost"',
+            '"--disable-sync"',
+            '"--disable-translate"',
+            '"--metrics-recording-only"',
+            '"--no-zygote"',
+            '"--blink-settings=imagesEnabled=false"',
+            "PLAYWRIGHT_DISABLE_IMAGES",
+            "setup_mode",
+            "headless=self.headless",
+            "SETUP_LOGIN_TIMEOUT_MS = 300_000",
+            "🔑 Iniciar Sesión Manual",
+            "_enable_manual_setup_mode",
+            "_lightweight_browser_args(headless=True)",
+        ):
+            self.assertIn(token, source)
+
+        module = __import__(
+            "gui.app",
+            fromlist=["_initial_setup_mode", "_lightweight_browser_args"],
+        )
+
+        with patch.dict(
+            os.environ,
+            {
+                "INITIAL_SETUP_MODE": "false",
+                "PLAYWRIGHT_DISABLE_IMAGES": "false",
+                "PLAYWRIGHT_SINGLE_PROCESS": "false",
+            },
+            clear=False,
+        ):
+            self.assertFalse(module._initial_setup_mode())
+            args = module._lightweight_browser_args(headless=True)
+            self.assertIn("--headless=new", args)
+            self.assertIn("--disable-gpu", args)
+
+        with patch.dict(
+            os.environ,
+            {"INITIAL_SETUP_MODE": "true"},
+            clear=False,
+        ):
+            self.assertTrue(module._initial_setup_mode())
+            args = module._lightweight_browser_args(headless=False)
+            self.assertNotIn("--headless=new", args)
+            self.assertIn("--disable-extensions", args)
+
     def test_python_dotenv_dependency_is_declared(self):
         pyproject = (self.ROOT / "pyproject.toml").read_text(encoding="utf-8")
         self.assertIn("python-dotenv>=1.1,<2", pyproject)
