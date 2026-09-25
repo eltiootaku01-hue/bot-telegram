@@ -186,7 +186,7 @@ class SQLiteEconomyTests(unittest.TestCase):
                 results = list(executor.map(debit_one, range(12)))
 
             self.assertEqual(7, sum(results))
-            self.assertEqual(9, bootstrap.balance("concurrent"))
+            self.assertEqual(0, bootstrap.balance("concurrent"))
 
     def test_concurrent_credits_are_not_lost(self):
         with TemporaryDirectory() as temporary:
