@@ -2718,7 +2718,7 @@ class SchrodingerDialog(QDialog):
 def build_schrodinger_router() -> SchrodingerRouter:
     """Construye adaptadores de Telegram/Discord desde variables de entorno."""
     telegram_sender = None
-    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    telegram_token = os.getenv("SCHRODINGER_BOT_TOKEN", "").strip() or os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     if telegram_token:
         client = TelegramApiClient(telegram_token)
 
