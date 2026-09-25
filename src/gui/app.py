@@ -2786,8 +2786,11 @@ class CommandCenterWindow(QMainWindow):
             else MATRIX_INITIALIZATION_ORDER[0]
         )
         spec = next(
-            item for item in MATRIX_BOT_SPECS
-            if item.bot_id == target_id
+            (
+                item for item in MATRIX_BOT_SPECS
+                if item.bot_id == target_id
+            ),
+            None,
         )
         widgets = self._matrix_widgets.get(target_id, {})
         provider = widgets.get("provider")
@@ -2795,12 +2798,26 @@ class CommandCenterWindow(QMainWindow):
         provider_id = (
             str(provider.currentData()).strip().lower()
             if isinstance(provider, QComboBox)
-            else spec.default_provider
+            else (
+                spec.default_provider
+                if spec is not None
+                else "gemini"
+            )
         )
         provider_url = (
             str(provider_url_field.text()).strip()
             if isinstance(provider_url_field, QLineEdit)
             else ""
+        )
+        browser_profile = (
+            spec.browser_profile
+            if spec is not None
+            else f"./browser_data/{target_id}"
+        )
+        display_name = (
+            spec.display_name
+            if spec is not None
+            else BOT_MAP[target_id].name
         )
 
         try:
@@ -2811,7 +2828,7 @@ class CommandCenterWindow(QMainWindow):
 
             worker = ManualBrowserSetupWorker(
                 target_id,
-                spec.browser_profile,
+                browser_profile,
                 provider_id,
                 provider_url,
             )
@@ -2845,7 +2862,7 @@ class CommandCenterWindow(QMainWindow):
                 expanded.set_status("🔑 Chromium manual abierto")
 
             self._append_system(
-                f"🔑 Abriendo Chromium nativo para {spec.display_name}. "
+                f"🔑 Abriendo Chromium nativo para {display_name}. "
                 "La autenticación se realiza directamente en esa ventana; "
                 "no se usa el visor WebQueue."
             )
