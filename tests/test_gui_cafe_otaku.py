@@ -1261,6 +1261,73 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ):
             self.assertIn(token, registry)
 
+    def test_cafe_group_sfw_mature_feeds_and_admin_contract(self):
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        rooms = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_rooms.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        mini = (self.ROOT / "src" / "gui" / "mini_games.py").read_text(encoding="utf-8")
+        immersion = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+
+        for token in (
+            '"#general"',
+            '"#tcg-collection"',
+            '"#pedidos-sfw"',
+            '"#noticias-otaku"',
+            '"#cantina-18"',
+            '"#pedidos-nsfw"',
+            '"#mesa-de-apuestas-21"',
+            '"#pedidos"',
+            "SFW_ROOM_KEYS",
+            "MATURE_ROOM_KEYS",
+            "ADMIN_ROOM_KEY",
+            "REPOST_FEEDS",
+            "https://t.me/eltiootaku",
+            "https://t.me/yandere_nsfw",
+            "https://t.me/danbooru_sfw",
+            "https://t.me/danbooru_nsfw",
+            '"feeds"',
+        ):
+            self.assertIn(token, group)
+
+        for token in (
+            "MATURE_KEYWORDS",
+            "sfw_transition",
+            "Scarlet",
+            "Chloé",
+            "mature_game_host",
+            "#cantina-18",
+        ):
+            self.assertIn(token, rooms)
+
+        for token in (
+            'command == "/21"',
+            'command == "/blackjack"',
+            'command == "/apuestas"',
+            'value.casefold() == "nsfw"',
+            "#cantina-18",
+            "Scarlet o Chloé",
+        ):
+            self.assertIn(token, telegram)
+
+        self.assertIn('"21": "Scarlet"', mini)
+        self.assertIn("mature_game_message", mini)
+        self.assertIn("Scarlet", immersion)
+        self.assertIn("Chloé", immersion)
+
+    def test_sfw_mature_transition_behavior(self):
+        from bot_ia.interfaces.cafe_rooms import mature_game_host, sfw_transition
+
+        transition = sfw_transition("Quiero una bebida whisky para adulto", waitress="Cami")
+        self.assertIsNotNone(transition)
+        self.assertEqual("#cantina-18", transition.target)
+        self.assertEqual("Scarlet", transition.waitress)
+        self.assertIn("Cantina +18", transition.message)
+        self.assertIn("Scarlet", transition.message)
+        self.assertIsNone(sfw_transition("Quiero un café con leche", waitress="Cari"))
+        self.assertEqual("Scarlet", mature_game_host("21"))
+        self.assertEqual("Scarlet", mature_game_host("blackjack"))
+        self.assertEqual("Chloé", mature_game_host("apuestas"))
+
 
 if __name__ == "__main__":
     unittest.main()
