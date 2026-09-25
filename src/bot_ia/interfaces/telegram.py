@@ -1467,7 +1467,13 @@ class TelegramPoller:
                             break
 
                 try:
-                    self._sync_authorized_bot_join(update)
+                    sync_authorized_bot_join = getattr(
+                        self._adapter,
+                        "_sync_authorized_bot_join",
+                        None,
+                    )
+                    if callable(sync_authorized_bot_join):
+                        sync_authorized_bot_join(update)
                     outbound: TelegramOutbound | None = None
                     moderation_outbound: TelegramOutbound | None = None
                     inline_query = update.get("inline_query")
