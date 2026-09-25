@@ -3,6 +3,29 @@
 
 from __future__ import annotations
 
+
+import base64
+from pathlib import Path
+
+AVATAR_DIR = Path(__file__).resolve().parents[3] / "assets" / "avatars"
+DEFAULT_AVATAR = AVATAR_DIR / "default.png"
+AVATAR_FILENAMES = {"Cari": "cari.png", "Cami": "cami.png", "Sunna": "sunna.png", "Chie": "chie.png", "Scarlet": "scarlet.png", "Chloé": "chloe.png"}
+
+def waitress_avatar_path(name: str) -> Path:
+    candidate = AVATAR_DIR / AVATAR_FILENAMES.get(name, "default.png")
+    return candidate if candidate.is_file() else DEFAULT_AVATAR
+
+def waitress_avatar_data_uri(name: str) -> str | None:
+    path = waitress_avatar_path(name)
+    if not path.is_file():
+        return None
+    try:
+        payload = base64.b64encode(path.read_bytes()).decode("ascii")
+    except OSError:
+        return None
+    return "data:image/png;base64," + payload
+
+
 from dataclasses import dataclass
 from random import SystemRandom
 import threading
