@@ -84,7 +84,7 @@ COMMENT_MAX_LENGTH = 280
 class TelegramCommentDecision:
     should_reply: bool
     chat_id: str
-    reply_to_message_id: int | None
+    reply_to_message_id: int | None = None
     text: str = COMMENT_REPLY_TEXT
 
 
