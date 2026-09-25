@@ -2133,6 +2133,7 @@ class BebidaOrderDialog(QDialog):
         if existing is None:
             self.records.append(record)
         else:
+            existing.danbooru_tag = record.danbooru_tag
             existing.personality = record.personality
             existing.appearance = record.appearance
             existing.element = record.element
