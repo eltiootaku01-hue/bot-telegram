@@ -76,14 +76,36 @@ def waitress_exclusive_dialogue(maid: str, heart_level: int) -> str:
     return messages[name]
 
 
-def waitress_dialogue(maid: str, event: str = "greeting") -> str:
+def waitress_dialogue(
+    maid: str,
+    event: str = "greeting",
+    *,
+    chat_title: str | None = None,
+) -> str:
     name = normalize_maid(maid)
     profile = WAITRESS_PROFILES[name]
+    place = str(chat_title or "").strip()
+    prefix = f"☕ {place} · " if place else ""
     if event == "tea":
-        return profile["tea"]
+        return prefix + profile["tea"]
     if event == "role":
-        return f"{name}: {profile['focus']}."
-    return profile["greeting"]
+        return f"{prefix}{name}: {profile['focus']}."
+    return prefix + profile["greeting"]
+
+
+def resolve_chat_title(platform: str, chat: object) -> str:
+    """Obtiene el nombre real de Telegram/Discord sin depender de un nombre fijo."""
+    network = str(platform).strip().casefold()
+    if isinstance(chat, dict):
+        key = "title" if network == "telegram" else "name"
+        value = chat.get(key)
+        if value:
+            return str(value).strip()
+    return ""
+
+
+def waitress_chat_title(platform: str, chat: object) -> str:
+    return resolve_chat_title(platform, chat)
 
 # Estado multiplataforma de las meseras.
 BUSY_EVENT_TIMEOUT_SECONDS = 60.0
