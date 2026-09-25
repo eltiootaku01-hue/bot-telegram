@@ -20,6 +20,7 @@ from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
 from .hardening import MutexGuard
+from .auto_moderation import moderate
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text
 from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue
 from .cafe_rooms import sfw_transition, mature_game_message
@@ -183,6 +184,22 @@ class TelegramAdapter:
         if "callback_query" in update:
             return self.handle_callback(update)
         inbound = parse_update(update)
+        moderation = moderate(
+            inbound.text,
+            room_key=str(inbound.metadata.get("room_key", "general")),
+            image_tags=tuple(
+                str(tag)
+                for tag in inbound.metadata.get("image_tags", ())
+                if isinstance(tag, str)
+            ),
+        )
+        if moderation.action != "allow":
+            return TelegramOutbound(
+                inbound.conversation_id,
+                moderation.message,
+                str(inbound.metadata.get("room_key", "general")),
+                auto_delete_seconds=30,
+            )
         command = inbound.text.casefold().split()[0]
 
         if command in {"/start", "/menu"}:
