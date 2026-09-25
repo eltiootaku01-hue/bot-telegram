@@ -17,7 +17,9 @@ from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.waitress_session_manager import TavernError, TavernReply, WaitressSessionManager
 from bot_ia.librarian.models import CoverageStatus
 
-from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
+from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore, TelegramOutboxRecord
+from .telegram_event_ledger import TelegramEventLedger, TelegramEventLedgerError
+from .telegram_instance_lock import TelegramInstanceAlreadyRunning, TelegramInstanceLock
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary, build_bebida_prompt, RESOLUTIONS, RENDER_STYLES
 from .hardening import MutexGuard
@@ -1015,6 +1017,11 @@ class TelegramApiClient:
         self._max_retries, self._retry_delay, self._sleeper = max_retries, retry_delay_seconds, sleeper
 
     @classmethod
+    @property
+    def token(self) -> str:
+        """Token actual; se utiliza sólo para derivar el hash del lock."""
+        return self._token
+
     def from_environment(cls) -> "TelegramApiClient":
         token = os.getenv("TELEGRAM_BOT_TOKEN")
         if not token:
@@ -1171,12 +1178,21 @@ class TelegramPoller:
         sleeper: Callable[[float], None] = time.sleep,
         logger: Callable[[str], None] | None = None,
         outbox_store: TelegramOutboxStore | None = None,
+        event_ledger: TelegramEventLedger | None = None,
+        instance_lock: TelegramInstanceLock | None = None,
     ) -> None:
         self._client, self._adapter, self._config = client, adapter, config or PollingConfig()
         self._sleeper, self._logger, self._running, self._offset = sleeper, logger or (lambda _: None), True, None
         self._outbox = outbox_store
+        self._event_ledger = event_ledger or TelegramEventLedger(
+            PROJECT_ROOT / "config" / "bot_ia_events.sqlite3"
+        )
+        self._instance_lock = instance_lock or TelegramInstanceLock(
+            self._client.token,
+            PROJECT_ROOT,
+        )
         self._callback_mutex = MutexGuard()
-        self._pending_delivery: tuple[int, TelegramOutbound, int, tuple[int, ...]] | None = None
+        self._pending_delivery: tuple[TelegramOutboxRecord, tuple[int, ...]] | None = None
 
     @property
     def offset(self) -> int | None:
