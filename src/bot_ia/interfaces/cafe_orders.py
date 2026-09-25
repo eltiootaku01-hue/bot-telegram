@@ -123,7 +123,7 @@ def build_bebida_prompt(order: BebidaOrder) -> str:
     """Prepara metadata para el pipeline de arte; no añade contenido sexual."""
     item = order.normalized()
     return (
-        "BOT-IA · PEDIDO BEBIDA ESPECIAL\n"
+        "BOT-IA · SPECIAL DRINK IMAGE ORDER\n"
         f"Character: {item.character}.\n"
         f"Character tag: {item.character_tag}.\n"
         f"Exposure tier: {item.exposure}.\n"
