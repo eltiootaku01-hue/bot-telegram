@@ -20,8 +20,9 @@ from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
 from .hardening import MutexGuard
+from .order_support import ComplaintStore, OrderConfirmation, new_order_id, order_destination
 from .auto_moderation import moderate
-from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text
+from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, purchase_bebida_order, quote_bebida_order
 from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue
 from .cafe_rooms import sfw_transition, mature_game_message
 from gui.waifu_registry import WaifuRegistry
@@ -80,9 +81,13 @@ class TelegramOutbound:
     route: str | None = None
     keyboard: tuple[tuple[tuple[str, str], ...], ...] = ()
     auto_delete_seconds: int | None = None
+    message_thread_id: int | None = None
+    followups: tuple["TelegramOutbound", ...] = ()
 
     def payload(self) -> dict[str, object]:
         payload: dict[str, object] = {"chat_id": self.chat_id, "text": self.text}
+        if self.message_thread_id is not None:
+            payload["message_thread_id"] = int(self.message_thread_id)
         if self.keyboard:
             payload["reply_markup"] = {"inline_keyboard": [[{"text": label, "callback_data": data} for label, data in row] for row in self._normalized_keyboard()]}
         return payload
@@ -166,6 +171,9 @@ class TelegramAdapter:
         self._bebida_flow = BebidaOrderFlow(
             allowed_tags=self._waifu_registry.danbooru_whitelist(),
         )
+        self._complaint_store = ComplaintStore(Path.cwd())
+        self._pending_orders: dict[str, OrderConfirmation] = {}
+        self._last_orders: dict[str, OrderConfirmation] = {}
         self._callback_mutex = MutexGuard()
 
     def _active_maid(self, user_id: str) -> str:
@@ -179,6 +187,63 @@ class TelegramAdapter:
 
     def _affinity_level(self, user_id: str, maid: str) -> int:
         return self._waifu_registry.affinity_level(user_id, maid)
+
+    @staticmethod
+    def _admin_ids() -> frozenset[str]:
+        raw = os.getenv("TELEGRAM_ADMIN_USER_IDS", "")
+        return frozenset(part.strip() for part in raw.split(",") if part.strip())
+
+    def _admin_followup(self, complaint) -> TelegramOutbound | None:
+        admin_chat = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "").strip()
+        if not admin_chat:
+            return None
+        thread_raw = os.getenv("TELEGRAM_ADMIN_THREAD_ID", "").strip()
+        try:
+            thread_id = int(thread_raw) if thread_raw else None
+        except ValueError:
+            thread_id = None
+        text = (
+            "📣 NUEVO RECLAMO · Café Otaku\n"
+            f"ID: {complaint.complaint_id}\n"
+            f"Usuario: {complaint.user_id}\n"
+            f"Pedido: {complaint.order_id or 'sin pedido'}\n"
+            f"Producto: {complaint.product_type or 'no indicado'}\n"
+            f"Puntos pagados: {complaint.points_paid}\n"
+            f"Motivo: {complaint.text}"
+        )
+        keyboard = (
+            (
+                ("✅ Reembolsar Puntos", f"complaint:refund:{complaint.complaint_id}"),
+                ("🔄 Convertir a Imagen", f"complaint:convert_image:{complaint.complaint_id}"),
+            ),
+            (("❌ Rechazar", f"complaint:reject:{complaint.complaint_id}"),),
+        )
+        return TelegramOutbound(
+            admin_chat,
+            text,
+            "admin_complaint",
+            keyboard,
+            message_thread_id=thread_id,
+        )
+
+    def _complaint_response(self, callback: TelegramCallback, action: str, complaint_id: str) -> TelegramOutbound:
+        if callback.user_id not in self._admin_ids():
+            return TelegramOutbound(callback.conversation_id, "⛔ Esta acción está reservada al equipo administrativo.", "admin")
+        try:
+            record = self._complaint_store.resolve(
+                complaint_id,
+                action,
+                wallet_store=self._wallet_store,
+                registry=self._waifu_registry,
+            )
+        except ValueError as error:
+            return TelegramOutbound(callback.conversation_id, f"📣 Reclamo: {error}", "admin")
+        points = record.points_paid if action == "refund" else 0
+        return TelegramOutbound(
+            callback.conversation_id,
+            f"📣 Reclamo #{record.complaint_id}: {record.status}. Ajuste de puntos: {points}.",
+            "admin",
+        )
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
@@ -325,6 +390,37 @@ class TelegramAdapter:
                 "bebida",
                 ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)),
             )
+        if command == "/queja":
+            complaint_text = inbound.text.partition(" ")[2].strip()
+            if not complaint_text:
+                return TelegramOutbound(
+                    inbound.conversation_id,
+                    "📣 Uso: /queja <texto>. Puedes indicar una sugerencia, problema o solicitud de reembolso.",
+                    "complaint",
+                )
+            last = self._last_orders.get(inbound.user_id)
+            complaint = self._complaint_store.create(
+                inbound.user_id,
+                inbound.conversation_id,
+                complaint_text,
+                order_id=last.order_id if last else "",
+                product_type=last.product_type if last else "",
+                points_paid=last.cost if last else 0,
+            )
+            admin = self._admin_followup(complaint)
+            if admin is None:
+                return TelegramOutbound(
+                    inbound.conversation_id,
+                    f"📣 Reclamo #{complaint.complaint_id} registrado. Configura TELEGRAM_ADMIN_CHAT_ID para recibirlo.",
+                    "complaint",
+                )
+            return TelegramOutbound(
+                inbound.conversation_id,
+                f"📣 Reclamo #{complaint.complaint_id} enviado al canal administrativo #pedidos-admin.",
+                "complaint",
+                followups=(admin,),
+            )
+
         if command == "/setup_group":
             try:
                 setup = TelegramGroupSetup(os.getenv("TELEGRAM_BOT_TOKEN", ""))
@@ -540,7 +636,69 @@ class TelegramAdapter:
                     "bebida",
                     ((("Carta TCG", "bebida:product_type:Carta TCG"), ("Naipe", "bebida:product_type:Naipe")), (("Waifumon", "bebida:product_type:Waifumon"),)),
                 )
-            return TelegramOutbound(callback.conversation_id, build_bebida_summary(order), "bebida")
+            quote = quote_bebida_order(
+                existing=True,
+                target_rarity="R",
+                points=self._wallet_store.balance(callback.user_id),
+            )
+            pending = OrderConfirmation(
+                order_id=new_order_id(),
+                user_id=callback.user_id,
+                product_type=order.product_type,
+                destination=order_destination(order.product_type),
+                rarity=quote.rarity,
+                cost=quote.cost,
+                summary=build_bebida_summary(order),
+            )
+            self._pending_orders[callback.user_id] = pending
+            return TelegramOutbound(
+                callback.conversation_id,
+                "⚠️ CONFIRMACIÓN PREVIA\n\n"
+                + pending.summary
+                + "\n\nDestino: " + pending.destination
+                + "\nRareza: " + pending.rarity
+                + "\nCosto: " + str(pending.cost) + " puntos\n\n"
+                + "No se cobrará nada hasta pulsar [✅ Confirmar].",
+                "bebida_confirmation",
+                (((("✅ Confirmar", "order:confirm"), ("❌ Cancelar", "order:cancel")),),),
+            )
+        if callback.data == "order:cancel":
+            self._pending_orders.pop(callback.user_id, None)
+            return TelegramOutbound(callback.conversation_id, "❌ Pedido cancelado. No se descontaron puntos.", "bebida")
+        if callback.data == "order:confirm":
+            pending = self._pending_orders.get(callback.user_id)
+            if pending is None:
+                return TelegramOutbound(callback.conversation_id, "⚠️ No hay un pedido pendiente de confirmación.", "bebida")
+            quote = purchase_bebida_order(
+                self._wallet_store,
+                callback.user_id,
+                existing=True,
+                target_rarity=pending.rarity,
+            )
+            if not quote.can_afford:
+                return TelegramOutbound(callback.conversation_id, "❌ Saldo insuficiente al confirmar. No se descontaron puntos.", "bebida")
+            self._pending_orders.pop(callback.user_id, None)
+            self._last_orders[callback.user_id] = pending
+            return TelegramOutbound(
+                callback.conversation_id,
+                "✅ Pedido " + pending.order_id + " confirmado.\n"
+                + pending.destination + "\n"
+                + pending.rarity + " · " + str(pending.cost) + " puntos descontados.",
+                "bebida",
+                (((("📣 Queja / Reembolso", "complaint:help"),)),),
+            )
+        if callback.data == "complaint:help":
+            return TelegramOutbound(
+                callback.conversation_id,
+                "📣 Para presentar un reclamo escribe /queja <texto>.\n"
+                "Puedes solicitar reembolso, conversión a imagen o dejar una sugerencia.",
+                "complaint",
+            )
+        if callback.data.startswith("complaint:"):
+            parts = callback.data.split(":", 2)
+            if len(parts) != 3:
+                raise TelegramInputError("invalid complaint callback")
+            return self._complaint_response(callback, parts[1], parts[2])
         if callback.data == "tutorial:show":
             return TelegramOutbound(callback.conversation_id, build_tutorial_text(), "tutorial")
         text = actions.get(callback.data)
