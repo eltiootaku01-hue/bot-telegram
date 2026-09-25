@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
 import json
+import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from bot_ia.core.web_queue import (
     SOFT_RESET_AFTER_INTERACTIONS,
@@ -110,6 +112,38 @@ class WebQueueCoreTests(unittest.IsolatedAsyncioTestCase):
 
             resolver = SelectorResolver(path)
             self.assertEqual("a, b, c", resolver.get("prompt_textarea"))
+
+    def test_lightweight_chromium_args_include_headless_mode(self):
+        with patch.dict(
+            os.environ,
+            {"PLAYWRIGHT_DISABLE_IMAGES": "true"},
+            clear=False,
+        ):
+            from bot_ia.core.web_queue import _lightweight_browser_args
+
+            args = _lightweight_browser_args(headless=True)
+
+        self.assertIn("--headless=new", args)
+        for flag in (
+            "--disable-gpu",
+            "--disable-dev-shm-usage",
+            "--no-first-run",
+            "--no-sandbox",
+            "--disable-extensions",
+            "--disable-background-networking",
+            "--disable-background-timer-throttling",
+            "--disable-client-side-phishing-detection",
+            "--disable-default-apps",
+            "--disable-hang-monitor",
+            "--disable-popup-blocking",
+            "--disable-prompt-on-repost",
+            "--disable-sync",
+            "--disable-translate",
+            "--metrics-recording-only",
+            "--no-zygote",
+        ):
+            self.assertIn(flag, args)
+        self.assertIn("--blink-settings=imagesEnabled=false", args)
 
     async def test_get_active_locator_skips_hidden_and_uses_visible(self):
         manager = WebQueueManager(

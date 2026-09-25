@@ -8,6 +8,7 @@ personaje, con selectores OR cargados desde configuración externa.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,42 @@ PAGE_TIMEOUT_MS = 15_000
 RESPONSE_TIMEOUT_MS = 10_000
 NAVIGATION_TIMEOUT_MS = 20_000
 SOFT_RESET_AFTER_INTERACTIONS = 20
+
+LIGHTWEIGHT_CHROMIUM_ARGS = (
+    "--disable-blink-features=AutomationControlled",
+    "--hide-crash-restore-bubble",
+    "--disable-gpu",
+    "--disable-dev-shm-usage",
+    "--no-first-run",
+    "--no-sandbox",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-background-timer-throttling",
+    "--disable-client-side-phishing-detection",
+    "--disable-default-apps",
+    "--disable-hang-monitor",
+    "--disable-popup-blocking",
+    "--disable-prompt-on-repost",
+    "--disable-sync",
+    "--disable-translate",
+    "--metrics-recording-only",
+    "--no-zygote",
+    "--renderer-process-limit=2",
+)
+
+
+def _lightweight_browser_args(*, headless: bool) -> list[str]:
+    args = list(LIGHTWEIGHT_CHROMIUM_ARGS)
+    if headless:
+        args.insert(0, "--headless=new")
+        if os.getenv("PLAYWRIGHT_DISABLE_IMAGES", "false").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            args.append("--blink-settings=imagesEnabled=false")
+    return args
 
 
 class SelectorResolver:
@@ -89,6 +126,9 @@ class WebQueueManager:
         try:
             self.browser = await self.playwright.chromium.launch(
                 headless=self.headless,
+                args=_lightweight_browser_args(
+                    headless=self.headless,
+                ),
             )
             self.context = await self.browser.new_context()
 
