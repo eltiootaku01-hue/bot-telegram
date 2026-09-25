@@ -1016,12 +1016,12 @@ class TelegramApiClient:
         self._token, self._transport, self._timeout = token, transport or _http_post, timeout_seconds
         self._max_retries, self._retry_delay, self._sleeper = max_retries, retry_delay_seconds, sleeper
 
-    @classmethod
     @property
     def token(self) -> str:
         """Token actual; se utiliza sólo para derivar el hash del lock."""
         return self._token
 
+    @classmethod
     def from_environment(cls) -> "TelegramApiClient":
         token = os.getenv("TELEGRAM_BOT_TOKEN")
         if not token:
