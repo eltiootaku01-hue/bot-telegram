@@ -128,6 +128,7 @@ except ImportError:
 
 
 ROOT = PROJECT_ROOT
+BOT_IA_ADMIN_MODE = os.getenv("BOT_IA_ADMIN_MODE", "0")
 DESKTOP_USER = "desktop-user"
 DESKTOP_SESSION = "desktop-session"
 
