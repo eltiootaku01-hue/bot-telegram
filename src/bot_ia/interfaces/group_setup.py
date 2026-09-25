@@ -46,6 +46,16 @@ READ_ONLY_ORDERS = {
     "discord": {"view_channel": True, "send_messages": False, "attach_files": False},
 }
 
+# Telegram no admite permisos independientes por tema de foro.
+SUNNA_PRIMARY_ADMIN = "SUNNA_BOT_TOKEN"
+AUTHORIZED_BOT_TOKEN_ENV = (
+    "CARI_BOT_TOKEN",
+    "CAMI_BOT_TOKEN",
+    "SCHRODINGER_BOT_TOKEN",
+    "CHLOE_BOT_TOKEN",
+    "SCARLET_BOT_TOKEN",
+)
+
 
 
 class GroupSetupError(RuntimeError):
@@ -426,6 +436,66 @@ class TelegramGroupSetup:
             raise GroupSetupError(f"Telegram: {description}")
         return value
 
+    def _bot_id_from_token(self, token: str) -> int | None:
+        if not token.strip():
+            return None
+        value = self._call_with_token(token.strip(), "getMe", {})
+        result = value.get("result")
+        return int(result["id"]) if isinstance(result, dict) and isinstance(result.get("id"), int) else None
+
+    def _call_with_token(self, token: str, method: str, payload: dict[str, object]) -> dict[str, object]:
+        request = Request(
+            self.API.format(token=token, method=method),
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                raw = response.read(1024 * 1024)
+        except (HTTPError, URLError, TimeoutError, OSError) as error:
+            raise GroupSetupError(f"Telegram no pudo ejecutar {method}") from error
+        try:
+            value = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise GroupSetupError(f"Telegram devolvió JSON inválido en {method}") from error
+        if not isinstance(value, dict) or value.get("ok") is not True:
+            raise GroupSetupError(f"Telegram rechazó {method}")
+        return value
+
+    def configure_authorized_bots(self, chat_id: str) -> tuple[int, ...]:
+        promoted: list[int] = []
+        sunna_token = os.getenv(SUNNA_PRIMARY_ADMIN, "").strip()
+        if sunna_token:
+            sunna_id = self._bot_id_from_token(sunna_token)
+            if sunna_id is not None:
+                self._call("promoteChatMember", {
+                    "chat_id": chat_id,
+                    "user_id": sunna_id,
+                    "can_invite_users": True,
+                    "can_delete_messages": True,
+                    "can_manage_topics": True,
+                })
+                promoted.append(sunna_id)
+        for env_name in AUTHORIZED_BOT_TOKEN_ENV:
+            token = os.getenv(env_name, "").strip()
+            if not token:
+                continue
+            bot_id = self._bot_id_from_token(token)
+            if bot_id is None:
+                continue
+            self._call("promoteChatMember", {
+                "chat_id": chat_id,
+                "user_id": bot_id,
+                "can_delete_messages": True,
+                "can_restrict_members": True,
+                "can_manage_topics": True,
+                "can_invite_users": False,
+                "can_promote_members": False,
+            })
+            promoted.append(bot_id)
+        return tuple(dict.fromkeys(promoted))
+
     def setup_chat(self, chat_id: str, store: GroupSetupStore) -> GroupSetupResult:
         chat_id = str(chat_id).strip()
         if not chat_id:
@@ -458,6 +528,7 @@ class TelegramGroupSetup:
             room = GroupRoom(name, key, str(topic_id))
             rooms.append(room)
             existing[key] = room
+        self.configure_authorized_bots(chat_id)
         result = GroupSetupResult("telegram", chat_id, tuple(rooms))
         store.save_target("telegram", chat_id, result.rooms)
         return result
