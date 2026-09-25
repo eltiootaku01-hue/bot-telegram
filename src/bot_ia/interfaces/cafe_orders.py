@@ -19,6 +19,18 @@ PRODUCT_TYPES = ("Carta TCG", "Naipe", "Waifumon", "Imagen IA Personalizada")
 DEFAULT_POSES = ("De pie", "Acción dinámica", "Retrato", "Pose cosplay")
 DEFAULT_OUTFITS = ("Uniforme", "Casual", "Fantasia", "Cosplay")
 
+RESOLUTIONS = {
+    "XL": "1104x1824",
+    "L": "944x1584",
+    "M": "768x1280",
+}
+RENDER_STYLES = {
+    "Classic Anime": "classic anime style, cel shaded",
+    "Retro Glam Anime": "retro glam anime, 90s anime aesthetic",
+    "Modern Glam Anime": "modern glam anime, detailed shading, soft lighting",
+    "Hyper Pop": "hyper pop style, neon lines, vibrant colors",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class BebidaOrder:
@@ -32,11 +44,15 @@ class BebidaOrder:
     outfit: str = "Casual"
     cosplay: str = ""
     product_type: str = "Carta TCG"
+    resolution: str = "L"
+    render_style: str = "Classic Anime"
 
     def normalized(self) -> "BebidaOrder":
         exposure = self.exposure if self.exposure in EXPOSURE_LEVELS else "SFW"
         boldness = self.boldness if self.boldness in BOLDNESS_LEVELS else "Suave"
         product = self.product_type if self.product_type in PRODUCT_TYPES else "Carta TCG"
+        resolution = self.resolution if self.resolution in RESOLUTIONS else "L"
+        render_style = self.render_style if self.render_style in RENDER_STYLES else "Classic Anime"
         return replace(
             self,
             character=sanitize_control_text(self.character, max_length=128),
@@ -47,6 +63,8 @@ class BebidaOrder:
             outfit=sanitize_free_text(self.outfit) or "Casual",
             cosplay=sanitize_free_text(self.cosplay)[:128],
             product_type=product,
+            resolution=resolution,
+            render_style=render_style,
         )
 
 
@@ -95,7 +113,9 @@ def build_bebida_summary(order: BebidaOrder) -> str:
         f"Pose: {item.pose}\n"
         f"Vestimenta: {item.outfit}\n"
         f"Cosplay: {item.cosplay or 'No especificado'}\n"
-        f"Producto: {item.product_type}"
+        f"Producto: {item.product_type}\n"
+        f"Resolución: {item.resolution} ({RESOLUTIONS[item.resolution]})\n"
+        f"Estilo: {item.render_style}"
     )
 
 
@@ -112,6 +132,8 @@ def build_bebida_prompt(order: BebidaOrder) -> str:
         f"Outfit: {item.outfit}.\n"
         f"Cosplay: {item.cosplay or 'none'}.\n"
         f"Product type: {item.product_type}.\n"
+        f"Resolution: {item.resolution} ({RESOLUTIONS[item.resolution]}).\n"
+        f"Rendering style: {RENDER_STYLES[item.render_style]}.\n"
         "simple white background, isolated.\n"
         "Use the selected metadata exactly; do not invent character identity."
     )
@@ -147,6 +169,8 @@ class BebidaOrderFlow:
             "exposure": EXPOSURE_LEVELS,
             "boldness": BOLDNESS_LEVELS,
             "product_type": PRODUCT_TYPES,
+            "resolution": tuple(RESOLUTIONS),
+            "render_style": tuple(RENDER_STYLES),
         }
         values = allowed.get(field)
         if values is None or value not in values:
