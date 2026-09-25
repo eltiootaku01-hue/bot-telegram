@@ -929,10 +929,14 @@ class TelegramPoller:
                         self._logger("telegram outbox record is corrupt; update will be reprocessed")
                     if existing is not None:
                         if existing.status == "DELIVERED":
+                            if callback_key:
+                                self._callback_mutex.release(callback_key)
                             self._offset = update_id + 1
                             skipped += 1
                             continue
                         if existing.status == "PENDING":
+                            if callback_key:
+                                self._callback_mutex.release(callback_key)
                             self._pending_delivery = (
                                 update_id,
                                 existing.outbound,
