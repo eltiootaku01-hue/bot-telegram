@@ -636,13 +636,18 @@ class TelegramAdapter:
             if field == "boldness":
                 return TelegramOutbound(
                     callback.conversation_id,
-                    "🥤 Elige producto:",
+                    "🥤 Elige destino del pedido:",
                     "bebida",
-                    ((("Carta TCG", "bebida:product_type:Carta TCG"), ("Naipe", "bebida:product_type:Naipe")), (("Waifumon", "bebida:product_type:Waifumon"),)),
+                    (
+                        (("🎴 Carta TCG para el Pool", "bebida:product_type:Carta TCG"),),
+                        (("🖼️ Imagen IA Personalizada", "bebida:product_type:Imagen IA Personalizada"),),
+                    ),
                 )
+            is_image = order.product_type.casefold() == "imagen ia personalizada"
+            target_rarity = "SPECIAL" if is_image else "R"
             quote = quote_bebida_order(
-                existing=True,
-                target_rarity="R",
+                existing=not is_image,
+                target_rarity=target_rarity,
                 points=self._wallet_store.balance(callback.user_id),
             )
             pending = OrderConfirmation(
@@ -676,7 +681,7 @@ class TelegramAdapter:
             quote = purchase_bebida_order(
                 self._wallet_store,
                 callback.user_id,
-                existing=True,
+                existing=pending.rarity != "SPECIAL",
                 target_rarity=pending.rarity,
             )
             if not quote.can_afford:
