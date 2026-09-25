@@ -439,7 +439,7 @@ class TelegramAdapter:
                 feeds = GroupSetupStore(Path.cwd()).get_feeds("telegram", inbound.conversation_id)
                 feed_text = "\n".join(f"• {name}: {url}" for name, url in feeds)
                 privacy_note = (
-                    "\n\n⚠️ Telegram: #pedidos se crea como tema del foro; "
+                    "\n\n⚠️ Telegram: #pedidos-admin se crea como tema del foro; "
                     "Telegram no permite permisos privados por tema. Para privacidad real usa un chat/canal admin separado."
                 )
                 return TelegramOutbound(
