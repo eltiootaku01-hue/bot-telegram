@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -12,6 +13,7 @@ from urllib.request import Request, urlopen
 
 
 ROOMS = (
+    ("#bienvenida", "bienvenida"),
     ("#general", "general"),
     ("#tcg-collection", "tcg_collection"),
     ("#pedidos-sfw", "pedidos_sfw"),
@@ -215,6 +217,47 @@ class DiscordGroupSetup:
             f"/guilds/{guild_id}/members/{user_id}",
             {"communication_disabled_until": until_iso8601},
         )
+
+    def kick_member(self, guild_id: str, user_id: str) -> None:
+        self._request("DELETE", f"/guilds/{guild_id}/members/{user_id}")
+
+    def add_role(self, guild_id: str, user_id: str, role_id: str) -> None:
+        self._request("PUT", f"/guilds/{guild_id}/members/{user_id}/roles/{role_id}")
+
+    def remove_role(self, guild_id: str, user_id: str, role_id: str) -> None:
+        self._request("DELETE", f"/guilds/{guild_id}/members/{user_id}/roles/{role_id}")
+
+    def send_channel_message(self, channel_id: str, payload: dict[str, object]) -> dict[str, object]:
+        value = self._request("POST", f"/channels/{channel_id}/messages", payload)
+        if not isinstance(value, dict):
+            raise GroupSetupError("Discord no devolvió el mensaje creado")
+        return value
+
+    def welcome_message(self, channel_id: str) -> dict[str, object]:
+        from .discord_community import welcome_embed_payload
+        payload = welcome_embed_payload()
+        return self.send_channel_message(
+            channel_id,
+            {
+                "embeds": [{
+                    "title": payload["title"],
+                    "description": payload["description"],
+                    "color": payload["color"],
+                }],
+                "components": list(payload["components"]),
+            },
+        )
+
+    def apply_strike(self, guild_id: str, channel_id: str, message_id: str, user_id: str, *, action: str) -> None:
+        from .discord_community import STRIKE_TIMEOUT_SECONDS
+        self.delete_message(channel_id, message_id)
+        if action == "timeout":
+            until = (datetime.now(timezone.utc) + timedelta(seconds=STRIKE_TIMEOUT_SECONDS)).isoformat()
+            self.timeout_member(guild_id, user_id, until)
+        elif action == "isolate":
+            until = (datetime.now(timezone.utc) + timedelta(days=28)).isoformat()
+            self.timeout_member(guild_id, user_id, until)
+
 
     def setup_guild(self, guild_id: str, store: GroupSetupStore) -> GroupSetupResult:
         guild_id = str(guild_id).strip()
