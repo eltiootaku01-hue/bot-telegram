@@ -89,6 +89,7 @@ from .waifu_registry import (
 )
 from .mini_games import LocalGameRouter
 from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, GroupSetupStore, TelegramGroupSetup
+from bot_ia.interfaces.cafe_economy import (CafeWalletStore, GACHA_COST, economy_price_text, draw_gacha)
 from bot_ia.interfaces.cafe_orders import (
     BOLDNESS_LEVELS,
     DEFAULT_OUTFITS,
@@ -2457,9 +2458,10 @@ class CommandCenterWindow(QMainWindow):
         self._matrix_widgets: dict[str, dict[str, object]] = {}
         self._expanded_bot_dialogs: dict[str, BotExpandedDialog] = {}
         self.waifu_registry = WaifuRegistry(ROOT)
+        self.cafe_wallet = CafeWalletStore(ROOT)
         self._waifu_dialog: WaifuRegistryDialog | None = None
         self._bebida_dialog: BebidaOrderDialog | None = None
-        self._mini_game_router = LocalGameRouter()
+        self._mini_game_router = LocalGameRouter(self.cafe_wallet)
         self._mini_games_dialog: QDialog | None = None
         self._matrix_chain_running = False
         self._matrix_chain_button: QPushButton | None = None
@@ -2624,6 +2626,14 @@ class CommandCenterWindow(QMainWindow):
         )
         self.admin_button.clicked.connect(self._activate_admin_mode)
         top_layout.addWidget(self.admin_button)
+
+        self.points_button = QPushButton("☕ Puntos del Café")
+        self.points_button.clicked.connect(self._show_cafe_economy)
+        top_layout.addWidget(self.points_button)
+
+        self.gacha_button = QPushButton("🎰 Gacha")
+        self.gacha_button.clicked.connect(self._run_local_gacha)
+        top_layout.addWidget(self.gacha_button)
 
         self.group_setup_button = QPushButton("🛠 Estructurar Grupo")
         self.group_setup_button.clicked.connect(self._open_group_setup)
@@ -3281,10 +3291,22 @@ class CommandCenterWindow(QMainWindow):
         self._waifu_dialog.raise_()
         self._waifu_dialog.activateWindow()
 
+    def _show_cafe_economy(self) -> None:
+        points = self.cafe_wallet.balance("local-user")
+        QMessageBox.information(self, "☕ Puntos del Café", f"{economy_price_text()}\\n\\nSaldo local: {points} puntos.")
+
+    def _run_local_gacha(self) -> None:
+        try:
+            result = draw_gacha("local-user", self.cafe_wallet, maid="Cami")
+        except ValueError as error:
+            QMessageBox.warning(self, "🎰 Gacha", str(error))
+            return
+        QMessageBox.information(self, "🎰 Gacha · Resultado", f"Rareza: {result.rarity}\\nCoste: {result.points_spent} puntos\\n\\n{result.consolation}")
+
     def _open_bebida_order(self) -> None:
         self.select_bot("cami")
         if self._bebida_dialog is None:
-            self._bebida_dialog = BebidaOrderDialog(self.waifu_registry, parent=self)
+            self._bebida_dialog = BebidaOrderDialog(self.waifu_registry, wallet_store=self.cafe_wallet, parent=self)
         self._bebida_dialog.show()
         self._bebida_dialog.raise_()
         self._bebida_dialog.activateWindow()
