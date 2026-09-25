@@ -1736,17 +1736,25 @@ class WaifuRegistryDialog(QDialog):
             ("Waifu / TCG", "Cartas de Juego", "Póker", "UNO")
         )
         form.addWidget(self.card_category, 5, 1)
-        form.addWidget(QLabel("Etiquetas LoRA"), 6, 0)
+        form.addWidget(QLabel("Número / Rango"), 6, 0)
+        self.card_number = QComboBox()
+        self.card_number.addItems(("A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"))
+        form.addWidget(self.card_number, 6, 1)
+        form.addWidget(QLabel("Palo"), 7, 0)
+        self.card_suit = QComboBox()
+        self.card_suit.addItems(("Corazones", "Diamantes", "Tréboles", "Picas"))
+        form.addWidget(self.card_suit, 7, 1)
+        form.addWidget(QLabel("Etiquetas LoRA"), 8, 0)
         self.lora_tags = QLineEdit()
         self.lora_tags.setPlaceholderText("[LORA_NAME], [STYLE_TAG]")
-        form.addWidget(self.lora_tags, 6, 1)
-        form.addWidget(QLabel("Slot de carta"), 7, 0)
+        form.addWidget(self.lora_tags, 8, 1)
+        form.addWidget(QLabel("Slot de carta"), 9, 0)
         self.card_slot = QComboBox()
         self.card_slot.addItems(
             ("Carta 1 · R", "Carta 2 · SR", "Cosplay UR · UR")
         )
         self.card_slot.currentIndexChanged.connect(self._select_slot)
-        form.addWidget(self.card_slot, 7, 1)
+        form.addWidget(self.card_slot, 9, 1)
         root.addLayout(form)
 
         actions = QHBoxLayout()
@@ -1853,6 +1861,8 @@ class WaifuRegistryDialog(QDialog):
             element=str(self.element.currentText()).strip(),
             cosplay_reference=str(self.cosplay.currentText()).strip(),
             card_category=str(self.card_category.currentText()).strip(),
+            card_number=str(self.card_number.currentText()).strip(),
+            card_suit=str(self.card_suit.currentText()).strip(),
             lora_tags=normalize_lora_tags(self.lora_tags.text()),
             prompt=self.prompt.toPlainText().strip(),
             image_path=self.image_path,
@@ -1927,6 +1937,8 @@ class WaifuRegistryDialog(QDialog):
             existing.element = record.element
             existing.cosplay_reference = record.cosplay_reference
             existing.card_category = record.card_category
+            existing.card_number = record.card_number
+            existing.card_suit = record.card_suit
             existing.lora_tags = record.lora_tags
             existing.prompt = record.prompt
             existing.image_path = record.image_path or existing.image_path
@@ -1938,6 +1950,30 @@ class WaifuRegistryDialog(QDialog):
         self.registry.save(self.records)
         self._refresh_records()
         self.status.setText("Waifu registrada en config/waifu_registry.json.")
+
+    def _draw_playing_card_template(self, painter: QPainter, record: WaifuRecord) -> None:
+        """Dibuja una plantilla de naipe local sin depender de arte externo."""
+        painter.setPen(QColor(35, 35, 35))
+        painter.setBrush(QColor(250, 250, 250))
+        painter.drawRoundedRect(18, 18, 732, 988, 28, 28)
+        suit_symbols = {
+            "Corazones": "♥",
+            "Diamantes": "♦",
+            "Tréboles": "♣",
+            "Picas": "♠",
+        }
+        suit = record.card_suit.strip() or "Corazones"
+        number = record.card_number.strip() or "A"
+        symbol = suit_symbols.get(suit, "♥")
+        suit_color = QColor(190, 35, 35) if suit in {"Corazones", "Diamantes"} else QColor(30, 30, 30)
+        painter.setPen(suit_color)
+        painter.setFont(QFont("Georgia", 42, QFont.Bold))
+        painter.drawText(42, 72, f"{number} {symbol}")
+        painter.setFont(QFont("Georgia", 82, QFont.Bold))
+        painter.drawText(338, 550, symbol)
+        painter.setFont(QFont("Georgia", 24))
+        painter.drawText(42, 975, f"{number} · {suit}")
+        painter.setPen(QColor(35, 35, 35))
 
     def _assemble(self) -> None:
         slot = self.card_slots[self.selected_slot_index]
@@ -1965,6 +2001,7 @@ class WaifuRegistryDialog(QDialog):
 
         rarity = slot.rarity
         element = str(self.element.currentText()).strip()
+        record = self._current_record()
         name = self.name.text().strip() or "Waifu"
         frame_path = next(
             (path for path in frame_candidates(
@@ -2007,6 +2044,8 @@ class WaifuRegistryDialog(QDialog):
             painter.drawPixmap(0, 0, frame.scaled(
                 768, 1024, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
             ))
+            if record.card_category.casefold() in {"póker", "poker", "cartas de juego"}:
+                self._draw_playing_card_template(painter, record)
 
             painter.setPen(QColor(255, 255, 255))
             painter.setFont(QFont("Georgia", 28, QFont.Bold))
