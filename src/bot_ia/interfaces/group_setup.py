@@ -139,6 +139,23 @@ class DiscordGroupSetup:
             raise GroupSetupError("Respuesta Discord inválida")
         return value
 
+    def delete_message(self, channel_id: str, message_id: str) -> None:
+        self._request("DELETE", f"/channels/{channel_id}/messages/{message_id}")
+
+    def ban_member(self, guild_id: str, user_id: str, *, delete_message_seconds: int = 604800) -> None:
+        self._request(
+            "PUT",
+            f"/guilds/{guild_id}/bans/{user_id}",
+            {"delete_message_seconds": max(0, min(int(delete_message_seconds), 604800))},
+        )
+
+    def timeout_member(self, guild_id: str, user_id: str, until_iso8601: str) -> None:
+        self._request(
+            "PATCH",
+            f"/guilds/{guild_id}/members/{user_id}",
+            {"communication_disabled_until": until_iso8601},
+        )
+
     def setup_guild(self, guild_id: str, store: GroupSetupStore) -> GroupSetupResult:
         guild_id = str(guild_id).strip()
         if not guild_id:
