@@ -8,6 +8,8 @@ import re
 import unicodedata
 from typing import Iterable
 
+from .cafe_economy import ORDER_COST_HIGH, ORDER_COST_NORMAL, OrderQuote, quote_bebida_order
+
 
 
 EXPOSURE_LEVELS = ("SFW", "Sugerente", "NSFW")
@@ -143,3 +145,18 @@ class BebidaOrderFlow:
 
     def clear(self, user_id: str) -> None:
         self._orders.pop(str(user_id), None)
+
+def bebida_order_quote(order: BebidaOrder, *, existing_character: bool, points: int) -> OrderQuote:
+    """Cotiza clonación local vs. carta personalizada sin usar red."""
+    item = order.normalized()
+    _ = item
+    return quote_bebida_order(existing=existing_character, points=points)
+
+
+def bebida_price_text() -> str:
+    return (
+        "☕ Puntos del Café: "
+        f"clonación existente = {ORDER_COST_NORMAL}; "
+        f"carta personalizada = {ORDER_COST_HIGH}."
+    )
+
