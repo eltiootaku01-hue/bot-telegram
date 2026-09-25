@@ -465,10 +465,12 @@ class TelegramGroupSetup:
 
     def configure_authorized_bots(self, chat_id: str) -> tuple[int, ...]:
         promoted: list[int] = []
+        current = self._call("getMe", {}).get("result")
+        current_id = int(current["id"]) if isinstance(current, dict) and isinstance(current.get("id"), int) else None
         sunna_token = os.getenv(SUNNA_PRIMARY_ADMIN, "").strip()
         if sunna_token:
             sunna_id = self._bot_id_from_token(sunna_token)
-            if sunna_id is not None:
+            if sunna_id is not None and sunna_id != current_id:
                 self._call("promoteChatMember", {
                     "chat_id": chat_id,
                     "user_id": sunna_id,
@@ -482,7 +484,7 @@ class TelegramGroupSetup:
             if not token:
                 continue
             bot_id = self._bot_id_from_token(token)
-            if bot_id is None:
+            if bot_id is None or bot_id == current_id:
                 continue
             self._call("promoteChatMember", {
                 "chat_id": chat_id,
