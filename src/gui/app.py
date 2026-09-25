@@ -91,7 +91,7 @@ from .waifu_registry import (
 )
 from .mini_games import LocalGameRouter
 from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, GroupSetupStore, TelegramGroupSetup
-from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text, draw_gacha, pity_text, purchase_bebida_order)
+from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text, draw_gacha, pity_text, purchase_bebida_order, quote_bebida_order)
 from bot_ia.interfaces.cafe_immersion import TeaTimeScheduler
 from bot_ia.interfaces.hardening import sanitize_control_text, whitelist_tag
 from bot_ia.interfaces.order_support import ComplaintStore, new_order_id, order_destination\nfrom bot_ia.interfaces.cafe_orders import (
@@ -1905,11 +1905,10 @@ class BebidaOrderDialog(QDialog):
                 f"La carta objetivo {target_key} no está disponible en el registro local.",
             )
             return
-        quote = purchase_bebida_order(
-            self.wallet_store,
-            "local-user",
+        quote = quote_bebida_order(
             existing=target_key != "SPECIAL",
             target_rarity=target_key,
+            points=self.wallet_store.balance("local-user"),
         )
         if not quote.can_afford:
             QMessageBox.warning(
