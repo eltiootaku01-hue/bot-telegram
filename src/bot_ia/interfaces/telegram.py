@@ -252,6 +252,25 @@ class TelegramAdapter:
         raw = os.getenv("TELEGRAM_ADMIN_USER_IDS", "")
         return frozenset(part.strip() for part in raw.split(",") if part.strip())
 
+    def _sync_authorized_bot_join(self, update: dict[str, object]) -> None:
+        message = update.get("message")
+        if not isinstance(message, dict):
+            return
+        members = message.get("new_chat_members")
+        chat = message.get("chat")
+        if not isinstance(members, list) or not isinstance(chat, dict):
+            return
+        if not any(isinstance(member, dict) and bool(member.get("is_bot")) for member in members):
+            return
+        chat_id = str(chat.get("id", "")).strip()
+        token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+        if not chat_id or not token:
+            return
+        try:
+            TelegramGroupSetup(token).configure_authorized_bots(chat_id)
+        except GroupSetupError as error:
+            self._logger(f"telegram bot role sync skipped: {error}")
+
     def _admin_followup(self, complaint) -> TelegramOutbound | None:
         admin_chat = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "").strip()
         if not admin_chat:
@@ -1433,6 +1452,7 @@ class TelegramPoller:
                             break
 
                 try:
+                    self._sync_authorized_bot_join(update)
                     outbound: TelegramOutbound | None = None
                     moderation_outbound: TelegramOutbound | None = None
                     inline_query = update.get("inline_query")
