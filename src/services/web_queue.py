@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QEvent, QObject, QThread, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -942,13 +942,6 @@ class WebChatQueueManager(QObject):
         self.web_view.page().windowCloseRequested.connect(
             self._on_window_close_requested
         )
-        app = self.web_view.window().windowHandle()
-        if app is not None:
-            app.destroyed.connect(self._restore_web_focus)
-        application = self.web_view.window().findChild(QObject)
-        if application is not None:
-            _ = application
-
         self._response_pattern = self._safe_compile(
             r'respuesta\s+a\s*\(\s*'
             r'(?P<bot>[^()\n]+?)\s+'
