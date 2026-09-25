@@ -13,6 +13,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from bot_ia.core.application import ApplicationRequest, ApplicationResponse, BotApplication
+from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.waitress_session_manager import TavernError, TavernReply, WaitressSessionManager
 from bot_ia.librarian.models import CoverageStatus
 
@@ -215,14 +216,14 @@ class TelegramAdapter:
     ) -> None:
         self._application = application
         self._tavern_manager = tavern_manager
-        self._wallet_store = CafeWalletStore(Path.cwd())
-        self._waifu_registry = WaifuRegistry(Path.cwd())
+        self._wallet_store = CafeWalletStore(PROJECT_ROOT)
+        self._waifu_registry = WaifuRegistry(PROJECT_ROOT)
         self._bebida_flow = BebidaOrderFlow(
             allowed_tags=self._waifu_registry.danbooru_whitelist(),
         )
-        self._complaint_store = ComplaintStore(Path.cwd())
-        self._vip_store = VipStore(Path.cwd())
-        self._order_store = OrderStore(Path.cwd())
+        self._complaint_store = ComplaintStore(PROJECT_ROOT)
+        self._vip_store = VipStore(PROJECT_ROOT)
+        self._order_store = OrderStore(PROJECT_ROOT)
         self._pending_orders: dict[str, OrderConfirmation] = {}
         self._last_orders: dict[str, OrderConfirmation] = {}
         self._pending_attachments: dict[str, OrderConfirmation] = {}
@@ -235,7 +236,7 @@ class TelegramAdapter:
             cafe_url=os.getenv("CAFE_OTAKU_INVITE_URL", "").strip(),
         )
         self._callback_mutex = MutexGuard()
-        self._xp_tracker = PassiveXPTracker(Path.cwd() / "config" / "nakama_xp.sqlite3")
+        self._xp_tracker = PassiveXPTracker(PROJECT_ROOT / "config" / "nakama_xp.sqlite3")
         self._audit_bus = AuditBus()
 
     def _active_maid(self, user_id: str) -> str:
@@ -622,13 +623,13 @@ class TelegramAdapter:
                 setup = TelegramGroupSetup(os.getenv("TELEGRAM_BOT_TOKEN", ""))
                 result = setup.setup_chat(
                     inbound.conversation_id,
-                    GroupSetupStore(Path.cwd()),
+                    GroupSetupStore(PROJECT_ROOT),
                 )
                 summary = "\n".join(
                     f"• {room.name} → topic {room.external_id}"
                     for room in result.rooms
                 )
-                feeds = GroupSetupStore(Path.cwd()).get_feeds("telegram", inbound.conversation_id)
+                feeds = GroupSetupStore(PROJECT_ROOT).get_feeds("telegram", inbound.conversation_id)
                 feed_text = "\n".join(f"• {name}: {url}" for name, url in feeds)
                 privacy_note = (
                     "\n\n⚠️ Telegram: #pedidos-admin se crea como tema del foro; "

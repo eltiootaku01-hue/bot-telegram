@@ -65,6 +65,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from bot_ia.core.application import ApplicationRequest
+from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.web_queue import WebQueueManager
 from .task_orchestrator import Priority, TaskOrchestrator
 from bot_ia.core.waitress_session_manager import (
@@ -126,11 +127,7 @@ except ImportError:
     QEventLoop = None
 
 
-ROOT = (
-    Path(sys.executable).resolve().parent
-    if getattr(sys, "frozen", False)
-    else Path(__file__).resolve().parents[2]
-)
+ROOT = PROJECT_ROOT
 DESKTOP_USER = "desktop-user"
 DESKTOP_SESSION = "desktop-session"
 

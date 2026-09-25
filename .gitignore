@@ -9,6 +9,7 @@ dist/
 venv/
 *.db
 *.sqlite3
+*.sqlite3-*
 *.log
 browser_data/
 work/*.lock
