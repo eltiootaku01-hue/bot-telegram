@@ -220,6 +220,24 @@ PROVIDER_WEB_SPECS = {
             "div[data-testid^='conversation-turn']",
         ),
     ),
+    "copilot": ProviderWebSpec(
+        "copilot",
+        "Microsoft Copilot",
+        "https://copilot.microsoft.com/",
+        (
+            "button[aria-label*='New chat']",
+            "button[aria-label*='Nuevo chat']",
+            "button:has-text('New chat')",
+            "button:has-text('Nuevo chat')",
+        ),
+        ("textarea", "div[contenteditable='true']"),
+        (
+            "[data-message-author-role='assistant']",
+            "[data-testid*='assistant']",
+            ".response-message",
+            ".message-content",
+        ),
+    ),
     "grok_claude": ProviderWebSpec(
         "grok_claude",
         "Grok / Claude",
@@ -410,6 +428,8 @@ class GeminiLobbyWorker(QObject):
             configured = os.getenv("BOT_IA_GEMINI_URL", "")
         elif self.provider_id == "chatgpt":
             configured = os.getenv("BOT_IA_CHATGPT_URL", "")
+        elif self.provider_id == "copilot":
+            configured = os.getenv("BOT_IA_COPILOT_URL", "")
         else:
             configured = (
                 self.provider_url
@@ -1466,82 +1486,124 @@ class SystemDiagnosticWorker(QObject):
 
 
 class BotExpandedDialog(QDialog):
-    """Visor ampliado tipo pestaña/ventana para una sesión individual."""
+    """Visor ampliado con proveedor, estado de sesión y contador de uso."""
 
     send_requested = Signal(str, str)
     manual_requested = Signal(str)
     start_requested = Signal(str)
+    provider_changed = Signal(str, str)
 
-    def __init__(
-        self,
-        profile: BotProfile,
-        parent: QWidget | None = None,
-    ) -> None:
+    def __init__(self, profile: BotProfile, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.bot_id = profile.bot_id
-        self.setWindowTitle(
-            f"{profile.avatar} {profile.name} · Visor ampliado"
-        )
+        self.setWindowTitle(f"{profile.avatar} {profile.name} · Visor ampliado")
         self.setMinimumSize(980, 680)
         self.resize(1180, 780)
+        self._usage_seconds: dict[str, int] = {}
+        self._active_provider = ""
+        self._usage_timer = QTimer(self)
+        self._usage_timer.setInterval(1000)
+        self._usage_timer.timeout.connect(self._tick_usage)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(16, 16, 16, 16)
         root.setSpacing(10)
 
         header = QHBoxLayout()
-        title = QLabel(
-            f"{profile.avatar} {profile.name}"
-        )
+        title = QLabel(f"{profile.avatar} {profile.name}")
         title.setObjectName("PageTitle")
         header.addWidget(title)
         role = QLabel(profile.short_role)
         role.setObjectName("Muted")
         header.addWidget(role)
         header.addStretch(1)
-
+        self.led = QLabel("🔴 Desconectado")
+        self.led.setObjectName("Muted")
+        header.addWidget(self.led)
         self.status = QLabel("En espera")
         self.status.setObjectName("Muted")
         header.addWidget(self.status)
         root.addLayout(header)
 
         controls = QHBoxLayout()
-        self.provider_label = QLabel("Proveedor: —")
-        controls.addWidget(self.provider_label)
-        controls.addStretch(1)
+        controls.addWidget(QLabel("Proveedor web"))
+        self.provider = QComboBox()
+        self.provider.addItem("Google Gemini", "gemini")
+        self.provider.addItem("OpenAI ChatGPT", "chatgpt")
+        self.provider.addItem("Microsoft Copilot", "copilot")
+        self.provider.addItem("Grok / Claude", "grok_claude")
+        self.provider.currentIndexChanged.connect(self._provider_changed)
+        controls.addWidget(self.provider, 1)
+        self.usage = QLabel("Uso activo: 00:00:00 · proveedor")
+        self.usage.setObjectName("Muted")
+        controls.addWidget(self.usage)
 
         self.start_button = QPushButton("▶ Iniciar desde este bot")
-        self.start_button.clicked.connect(
-            lambda: self.start_requested.emit(self.bot_id)
-        )
+        self.start_button.clicked.connect(lambda: self.start_requested.emit(self.bot_id))
         controls.addWidget(self.start_button)
-
-        self.manual_button = QPushButton("🔑 Sesión Manual")
-        self.manual_button.clicked.connect(
-            lambda: self.manual_requested.emit(self.bot_id)
-        )
+        self.manual_button = QPushButton("🔑 Registrarse / Candado")
+        self.manual_button.clicked.connect(lambda: self.manual_requested.emit(self.bot_id))
         controls.addWidget(self.manual_button)
         root.addLayout(controls)
 
+        self.auth_hint = QLabel(
+            "La sesión persistente se guarda en ./browser_data/<bot>. "
+            "El LED indica que existe estado de autenticación local."
+        )
+        self.auth_hint.setObjectName("Muted")
+        self.auth_hint.setWordWrap(True)
+        root.addWidget(self.auth_hint)
+
         self.history = QPlainTextEdit()
         self.history.setReadOnly(True)
-        self.history.setPlaceholderText(
-            "Historial completo de actividad de este bot…"
-        )
+        self.history.setPlaceholderText("Historial completo de actividad de este bot…")
         root.addWidget(self.history, 1)
 
         composer = QHBoxLayout()
         self.input = QLineEdit()
-        self.input.setPlaceholderText(
-            "Escribe un mensaje para este bot…"
-        )
+        self.input.setPlaceholderText("Escribe un mensaje para este bot…")
         self.input.returnPressed.connect(self._emit_message)
         composer.addWidget(self.input, 1)
-
         send = QPushButton("Enviar")
         send.clicked.connect(self._emit_message)
         composer.addWidget(send)
         root.addLayout(composer)
+
+    def _provider_changed(self, _index: int) -> None:
+        provider_id = str(self.provider.currentData() or "").strip()
+        if not provider_id:
+            return
+        self._set_active_provider(provider_id)
+        self.provider_changed.emit(self.bot_id, provider_id)
+
+    def _set_active_provider(self, provider_id: str) -> None:
+        self._active_provider = provider_id
+        self._refresh_usage_label()
+        self._update_usage_timer()
+
+    def _update_usage_timer(self) -> None:
+        if self.led.text().startswith("🟢"):
+            if not self._usage_timer.isActive():
+                self._usage_timer.start()
+        else:
+            self._usage_timer.stop()
+
+    def _tick_usage(self) -> None:
+        if not self._active_provider or not self.led.text().startswith("🟢"):
+            return
+        self._usage_seconds[self._active_provider] = self._usage_seconds.get(
+            self._active_provider, 0
+        ) + 1
+        self._refresh_usage_label()
+
+    def _refresh_usage_label(self) -> None:
+        seconds = self._usage_seconds.get(self._active_provider, 0)
+        minutes, secs = divmod(seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+        self.usage.setText(
+            f"Uso activo: {hours:02d}:{minutes:02d}:{secs:02d} · "
+            f"{self._active_provider or 'proveedor'}"
+        )
 
     def _emit_message(self) -> None:
         text = self.input.text().strip()
@@ -1552,9 +1614,22 @@ class BotExpandedDialog(QDialog):
         self.send_requested.emit(self.bot_id, text)
 
     def set_provider(self, provider_id: str) -> None:
-        self.provider_label.setText(
-            f"Proveedor: {provider_id or '—'}"
+        index = self.provider.findData(provider_id)
+        if index >= 0 and index != self.provider.currentIndex():
+            self.provider.blockSignals(True)
+            self.provider.setCurrentIndex(index)
+            self.provider.blockSignals(False)
+        self._set_active_provider(provider_id)
+
+    def set_connection_state(self, authenticated: bool, detail: str = "") -> None:
+        self.led.setText(
+            "🟢 Autenticado y Activo"
+            if authenticated
+            else "🔴 Desconectado"
         )
+        if detail:
+            self.status.setText(detail)
+        self._update_usage_timer()
 
     def set_status(self, status: str) -> None:
         self.status.setText(status)
@@ -1562,11 +1637,10 @@ class BotExpandedDialog(QDialog):
     def append_history(self, speaker: str, text: str) -> None:
         clean = str(text).strip()
         if clean:
-            self.history.appendPlainText(
-                f"{speaker}: {clean}"
-            )
+            self.history.appendPlainText(f"{speaker}: {clean}")
 
     def closeEvent(self, event: object) -> None:
+        self._usage_timer.stop()
         self.hide()
         event.accept()
 
@@ -2286,14 +2360,21 @@ class CommandCenterWindow(QMainWindow):
             dialog.start_requested.connect(
                 self._start_matrix_chain
             )
+            dialog.provider_changed.connect(
+                self._on_expanded_provider_changed
+            )
             self._expanded_bot_dialogs[bot_id] = dialog
 
         widgets = self._matrix_widgets.get(bot_id, {})
         provider = widgets.get("provider")
         if isinstance(provider, QComboBox):
-            dialog.set_provider(
-                str(provider.currentData()).strip()
+            provider_id = str(provider.currentData()).strip()
+            dialog.set_provider(provider_id)
+            authenticated, detail = self._browser_auth_state(
+                bot_id,
+                provider_id,
             )
+            dialog.set_connection_state(authenticated, detail)
 
         status = widgets.get("status")
         if isinstance(status, QLabel):
@@ -2307,6 +2388,39 @@ class CommandCenterWindow(QMainWindow):
         dialog.raise_()
         dialog.activateWindow()
 
+    @staticmethod
+    def _browser_auth_state(bot_id: str, provider_id: str) -> tuple[bool, str]:
+        state_path = ROOT / "browser_data" / bot_id / "storage_state.json"
+        if not state_path.is_file():
+            return False, "Sin estado de autenticación guardado."
+        try:
+            payload = json.loads(state_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return False, "Estado de autenticación inválido."
+        cookies = payload.get("cookies", [])
+        origins = payload.get("origins", [])
+        if not isinstance(cookies, list):
+            cookies = []
+        if not isinstance(origins, list):
+            origins = []
+        if not cookies and not origins:
+            return False, f"Sin sesión guardada para {provider_id}."
+        return True, f"{provider_id}: sesión persistente disponible."
+
+    def _on_expanded_provider_changed(self, bot_id: str, provider_id: str) -> None:
+        widgets = self._matrix_widgets.get(bot_id, {})
+        provider = widgets.get("provider")
+        if isinstance(provider, QComboBox):
+            index = provider.findData(provider_id)
+            if index >= 0:
+                provider.blockSignals(True)
+                provider.setCurrentIndex(index)
+                provider.blockSignals(False)
+        provider_url = widgets.get("provider_url")
+        if isinstance(provider_url, QLineEdit):
+            provider_url.setVisible(provider_id == "grok_claude")
+        self._sync_expanded_bot(bot_id)
+
     def _sync_expanded_bot(self, bot_id: str) -> None:
         dialog = self._expanded_bot_dialogs.get(bot_id)
         widgets = self._matrix_widgets.get(bot_id, {})
@@ -2318,7 +2432,13 @@ class CommandCenterWindow(QMainWindow):
         if isinstance(status, QLabel):
             dialog.set_status(status.text())
         if isinstance(provider, QComboBox):
-            dialog.set_provider(str(provider.currentData()).strip())
+            provider_id = str(provider.currentData()).strip()
+            dialog.set_provider(provider_id)
+            authenticated, detail = self._browser_auth_state(
+                bot_id,
+                provider_id,
+            )
+            dialog.set_connection_state(authenticated, detail)
         if isinstance(log, QPlainTextEdit):
             dialog.history.setPlainText(log.toPlainText())
 
@@ -2339,7 +2459,13 @@ class CommandCenterWindow(QMainWindow):
         if bot_id not in BOT_MAP:
             return
         self.select_bot(bot_id)
-        self._enable_manual_setup_mode(bot_id)
+        dialog = self._expanded_bot_dialogs.get(bot_id)
+        provider_id = (
+            str(dialog.provider.currentData()).strip()
+            if dialog is not None
+            else "gemini"
+        )
+        self._enable_manual_setup_mode(bot_id, provider_id=provider_id)
 
     def select_bot(self, bot_id: str) -> None:
         if bot_id not in BOT_MAP:
@@ -2808,7 +2934,13 @@ class CommandCenterWindow(QMainWindow):
                 f"❌ No se pudo iniciar la cadena: {error}"
             )
 
-    def _enable_manual_setup_mode(self, bot_id: str | None = None) -> None:
+    def _enable_manual_setup_mode(
+        self,
+        bot_id: str | None = None,
+        *,
+        provider_id: str = "",
+        provider_url: str = "",
+    ) -> None:
         """Lanza el Chromium nativo de configuración para el perfil seleccionado."""
         if self._manual_setup_thread is not None:
             self._append_system(
@@ -2834,20 +2966,26 @@ class CommandCenterWindow(QMainWindow):
         widgets = self._matrix_widgets.get(target_id, {})
         provider = widgets.get("provider")
         provider_url_field = widgets.get("provider_url")
-        provider_id = (
+        selected_provider_id = (
             str(provider.currentData()).strip().lower()
             if isinstance(provider, QComboBox)
-            else (
+            else ""
+        )
+        provider_id = (
+            provider_id.strip().lower()
+            or selected_provider_id
+            or (
                 spec.default_provider
                 if spec is not None
                 else "gemini"
             )
         )
-        provider_url = (
+        selected_provider_url = (
             str(provider_url_field.text()).strip()
             if isinstance(provider_url_field, QLineEdit)
             else ""
         )
+        provider_url = provider_url.strip() or selected_provider_url
         browser_profile = (
             spec.browser_profile
             if spec is not None
