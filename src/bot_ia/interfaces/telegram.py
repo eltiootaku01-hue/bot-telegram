@@ -21,6 +21,7 @@ from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text
 from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue
+from .cafe_rooms import sfw_transition, mature_game_message
 from gui.waifu_registry import WaifuRegistry
 from .tutorials import build_tutorial_text
 
@@ -239,6 +240,12 @@ class TelegramAdapter:
                 waitress_dialogue(self._active_maid(inbound.user_id), "role"),
                 "cafe",
             )
+        if command in {"/21", "/blackjack", "/apuestas", "/apuesta"}:
+            return TelegramOutbound(
+                inbound.conversation_id,
+                mature_game_message(command.lstrip("/")),
+                "cantina_18",
+            )
         if command == "/gacha":
             maid = self._active_maid(inbound.user_id)
             try:
@@ -265,6 +272,14 @@ class TelegramAdapter:
             )
         if command == "/bebida":
             argument = inbound.text.partition(" ")[2].strip()
+            transition = sfw_transition(argument)
+            if transition is not None:
+                return TelegramOutbound(
+                    inbound.conversation_id,
+                    transition.message
+                    + "\n➡️ Ve a #cantina-18 y habla con Scarlet o Chloé.",
+                    "cantina_18",
+                )
             order = self._bebida_flow.start(inbound.user_id, argument)
             if argument:
                 self._bebida_flow.set_character(inbound.user_id, argument)
@@ -457,6 +472,14 @@ class TelegramAdapter:
                     "🥤 BEBIDA ESPECIAL · CAMI\nEscribe /bebida <personaje> para fijar el personaje y luego elige el grado de exposición.",
                     "bebida",
                     ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)),
+                )
+            if field == "exposure" and value.casefold() == "nsfw":
+                transition = sfw_transition("nsfw")
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    transition.message
+                    + "\n➡️ Ve a #cantina-18 y habla con Scarlet o Chloé.",
+                    "cantina_18",
                 )
             order = self._bebida_flow.choose(callback.user_id, field, value)
             if field == "exposure":
