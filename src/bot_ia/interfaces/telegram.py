@@ -17,6 +17,7 @@ from bot_ia.core.waitress_session_manager import TavernError, TavernReply, Waitr
 from bot_ia.librarian.models import CoverageStatus
 
 from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
+from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 
 
 class TelegramInputError(ValueError):
@@ -165,6 +166,29 @@ class TelegramAdapter:
                 "local",
                 self.MAIN_MENU,
             )
+        if command == "/setup_group":
+            try:
+                setup = TelegramGroupSetup(os.getenv("TELEGRAM_BOT_TOKEN", ""))
+                result = setup.setup_chat(
+                    inbound.conversation_id,
+                    GroupSetupStore(Path.cwd()),
+                )
+                summary = "\n".join(
+                    f"• {room.name} → topic {room.external_id}"
+                    for room in result.rooms
+                )
+                return TelegramOutbound(
+                    inbound.conversation_id,
+                    "Estructura Telegram preparada:\n" + summary,
+                    "admin_setup",
+                )
+            except GroupSetupError as error:
+                return TelegramOutbound(
+                    inbound.conversation_id,
+                    f"No se pudo estructurar el grupo: {error}",
+                    "admin_setup_error",
+                )
+
         if command == "/help":
             return TelegramOutbound(
                 inbound.conversation_id,
