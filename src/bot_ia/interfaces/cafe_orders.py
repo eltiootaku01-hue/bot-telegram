@@ -147,17 +147,23 @@ class BebidaOrderFlow:
     def clear(self, user_id: str) -> None:
         self._orders.pop(str(user_id), None)
 
-def bebida_order_quote(order: BebidaOrder, *, existing_character: bool, points: int) -> OrderQuote:
-    """Cotiza clonación local vs. carta personalizada sin usar red."""
+def bebida_order_quote(order: BebidaOrder, *, existing_character: bool, points: int, target_rarity: str | None = None) -> OrderQuote:
+    """Cotiza la rareza exacta de la carta objetivo, sin usar red."""
     item = order.normalized()
     _ = item
-    return quote_bebida_order(existing=existing_character, points=points)
+    return quote_bebida_order(
+        existing=existing_character,
+        target_rarity=target_rarity,
+        points=points,
+    )
 
 
 def bebida_price_text() -> str:
     return (
         "☕ Puntos del Café: "
-        f"clonación existente = {ORDER_COST_NORMAL}; "
-        f"carta personalizada = {ORDER_COST_HIGH}."
+        f"R = {ORDER_COST_NORMAL}; "
+        f"SR = 35; "
+        f"UR = 100; "
+        f"Especial = 150."
     )
 
