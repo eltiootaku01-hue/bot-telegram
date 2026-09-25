@@ -11,7 +11,7 @@ import re
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 
-from bot_ia.interfaces.cafe_economy import RARITY_PRICES
+from bot_ia.interfaces.cafe_economy import CafeWalletStore, RARITY_PRICES
 
 
 @dataclass(slots=True)
@@ -53,6 +53,13 @@ class WaifuRecord:
     card_slots: list[CardSlot] = field(default_factory=list)
 
 
+WAITRESS_IDS = ("Cari", "Sunna", "Cami", "Chie")
+HEART_LEVEL_MAX = 10
+TIP_MIN_POINTS = 5
+TIP_POINTS_PER_HEART = 5
+AFFINITY_EXCLUSIVE_LEVEL = 3
+AFFINITY_GACHA_BONUS_LEVEL = 5
+
 def bebida_rarity_price_menu() -> str:
     """Menú local de precios para clonación por rareza y pedido custom."""
     return (
@@ -71,6 +78,7 @@ class WaifuRegistry:
             _ensure_slots(record)
             record.progress = record_progress(record)
         payload = [asdict(record) for record in records]
+        payload.append({"__meta__": {"waitress_affinity": self._waitress_affinity}})
         temporary = self.path.with_suffix(".json.tmp")
         temporary.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
@@ -83,6 +91,69 @@ class WaifuRegistry:
         self.root = Path(root)
         self.path = self.root / "config" / "waifu_registry.json"
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._waitress_affinity: dict[str, dict[str, int]] = {}
+
+    def _load_affinity_meta(self, item: object) -> None:
+        if not isinstance(item, dict):
+            return
+        meta = item.get("__meta__")
+        if not isinstance(meta, dict):
+            return
+        raw = meta.get("waitress_affinity")
+        if not isinstance(raw, dict):
+            return
+        result: dict[str, dict[str, int]] = {}
+        for user_id, values in raw.items():
+            if not isinstance(values, dict):
+                continue
+            profile: dict[str, int] = {}
+            for maid in WAITRESS_IDS:
+                try:
+                    profile[maid] = max(0, min(HEART_LEVEL_MAX, int(values.get(maid, 0))))
+                except (TypeError, ValueError):
+                    profile[maid] = 0
+            result[str(user_id)] = profile
+        self._waitress_affinity = result
+
+    def _normalize_affinity_name(self, maid: str) -> str:
+        value = str(maid or "").strip().casefold()
+        for name in WAITRESS_IDS:
+            if name.casefold() == value:
+                return name
+        raise ValueError("Mesera inválida; usa Cari, Sunna, Cami o Chie.")
+
+    def affinity_level(self, user_id: str, maid: str) -> int:
+        name = self._normalize_affinity_name(maid)
+        self.load()
+        return self._waitress_affinity.get(str(user_id), {}).get(name, 0)
+
+    def affinity_summary(self, user_id: str) -> str:
+        self.load()
+        profile = self._waitress_affinity.get(str(user_id), {})
+        return " · ".join(
+            f"{maid}: {profile.get(maid, 0)}/{HEART_LEVEL_MAX} ❤️"
+            for maid in WAITRESS_IDS
+        )
+
+    def tip_waitress(self, user_id: str, maid: str, points: int, wallet_store: CafeWalletStore) -> tuple[str, int, int]:
+        amount = int(points)
+        if amount < TIP_MIN_POINTS:
+            raise ValueError(f"La propina mínima es de {TIP_MIN_POINTS} puntos.")
+        name = self._normalize_affinity_name(maid)
+        self.load()
+        current = self._waitress_affinity.get(str(user_id), {}).get(name, 0)
+        hearts = min(HEART_LEVEL_MAX - current, amount // TIP_POINTS_PER_HEART)
+        if hearts <= 0:
+            raise ValueError("La afinidad ya está al máximo.")
+        charged = hearts * TIP_POINTS_PER_HEART
+        wallet_store.debit(user_id, charged)
+        profile = dict(self._waitress_affinity.get(str(user_id), {}))
+        profile[name] = current + hearts
+        for waitress in WAITRESS_IDS:
+            profile.setdefault(waitress, 0)
+        self._waitress_affinity[str(user_id)] = profile
+        self.save(self.load())
+        return name, charged, profile[name]
 
     def load(self) -> list[WaifuRecord]:
         if not self.path.is_file():
@@ -93,8 +164,10 @@ class WaifuRegistry:
             return []
         if not isinstance(payload, list):
             return []
+        self._waitress_affinity = {}
         records: list[WaifuRecord] = []
         for item in payload:
+            self._load_affinity_meta(item)
             if isinstance(item, dict) and str(item.get("name", "")).strip():
                 records.append(
                     WaifuRecord(
