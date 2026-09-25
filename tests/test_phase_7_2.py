@@ -1,14 +1,17 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
 import unittest
 from unittest.mock import patch
+import tempfile
 from urllib.error import HTTPError
 
 from bot_ia.contracts import UniverseDefinition, UniverseRegistry
 from bot_ia.core.application import BotApplication, InMemorySessionStore
 from bot_ia.core.brain import LocalBrain
 from bot_ia.core.router import Router
+from bot_ia.interfaces.telegram_event_ledger import TelegramEventLedger
 from bot_ia.interfaces.telegram import PollingConfig, TelegramAdapter, TelegramApiClient, TelegramApiError, TelegramHttpError, TelegramPoller, TelegramTransportError, _http_post
 
 
@@ -22,6 +25,9 @@ class Phase72Tests(unittest.TestCase):
         universes.register(UniverseDefinition("one_neko_punch", "One Neko Punch", Path("data/one")))
         universes.register(UniverseDefinition("other_world", "Other World", Path("data/other")))
         self.sessions = InMemorySessionStore()
+        self._ledger_tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ledger_tmp.cleanup)
+        self.event_ledger = TelegramEventLedger(Path(self._ledger_tmp.name) / "events.sqlite3")
         self.adapter = TelegramAdapter(BotApplication(LocalBrain(universes), Router(), self.sessions, default_universe_id="one_neko_punch"))
 
     def client(self, transport, **kwargs) -> TelegramApiClient:
@@ -44,7 +50,7 @@ class Phase72Tests(unittest.TestCase):
                 return {"ok": True, "result": batches.pop(0)}
             sent.append(payload)
             return {"ok": True, "result": {}}
-        poller = TelegramPoller(self.client(transport), self.adapter, sleeper=lambda _: None)
+        poller = TelegramPoller(self.client(transport), self.adapter, sleeper=lambda _: None, event_ledger=self.event_ledger)
         result = poller.run(max_cycles=2)
         self.assertEqual(11, poller.offset)
         self.assertEqual(1, result.updates_processed)
@@ -59,7 +65,7 @@ class Phase72Tests(unittest.TestCase):
             if len(calls) == 1:
                 raise TimeoutError("local timeout")
             return {"ok": True, "result": []}
-        poller = TelegramPoller(self.client(transport, max_retries=0), self.adapter, config=PollingConfig(retry_delay_seconds=3), sleeper=waits.append)
+        poller = TelegramPoller(self.client(transport, max_retries=0), self.adapter, config=PollingConfig(retry_delay_seconds=3), sleeper=waits.append, event_ledger=self.event_ledger)
         result = poller.run(max_cycles=2)
         self.assertEqual(1, result.transport_errors)
         self.assertEqual(1, result.polls)
@@ -102,7 +108,7 @@ class Phase72Tests(unittest.TestCase):
                 return {"ok": True, "result": [update(3, "Hola", user=11, chat=22)]}
             sent.append(payload)
             return {"ok": True}
-        TelegramPoller(self.client(transport), self.adapter, sleeper=lambda _: None).run(max_cycles=1)
+        TelegramPoller(self.client(transport), self.adapter, sleeper=lambda _: None, event_ledger=self.event_ledger).run(max_cycles=1)
         self.assertIsNotNone(self.sessions.get("11", "22"))
         self.assertEqual("22", sent[0]["chat_id"])
 
@@ -111,12 +117,12 @@ class Phase72Tests(unittest.TestCase):
             if url.endswith("getUpdates"):
                 return {"ok": True, "result": [update(1, "Cambiar al universo other_world", user=1, chat=10), update(2, "Hola", user=2, chat=10)]}
             return {"ok": True}
-        TelegramPoller(self.client(transport), self.adapter, sleeper=lambda _: None).run(max_cycles=1)
+        TelegramPoller(self.client(transport), self.adapter, sleeper=lambda _: None, event_ledger=self.event_ledger).run(max_cycles=1)
         self.assertEqual("other_world", self.sessions.get("1", "10").universe_id)
         self.assertEqual("one_neko_punch", self.sessions.get("2", "10").universe_id)
 
     def test_stop_closes_polling_cleanly(self) -> None:
-        poller = TelegramPoller(self.client(lambda *_: self.fail("transport must not run")), self.adapter, sleeper=lambda _: None)
+        poller = TelegramPoller(self.client(lambda *_: self.fail("transport must not run")), self.adapter, sleeper=lambda _: None, event_ledger=self.event_ledger)
         poller.stop()
         result = poller.run()
         self.assertTrue(result.stopped)
@@ -129,7 +135,7 @@ class Phase72Tests(unittest.TestCase):
                 return {"ok": True, "result": [update(1, " "), update(2, "Hola")]}
             sent.append(payload)
             return {"ok": True}
-        result = TelegramPoller(self.client(transport), self.adapter, sleeper=lambda _: None).run(max_cycles=1)
+        result = TelegramPoller(self.client(transport), self.adapter, sleeper=lambda _: None, event_ledger=self.event_ledger).run(max_cycles=1)
         self.assertEqual(1, result.updates_skipped)
         self.assertEqual(1, result.updates_processed)
         self.assertEqual(1, len(sent))
@@ -141,7 +147,7 @@ class Phase72Tests(unittest.TestCase):
                 return {"ok": True, "result": [update(8, "Hola", user=5, chat=6)]}
             sent.append(payload)
             return {"ok": True}
-        result = TelegramPoller(self.client(transport), self.adapter, sleeper=lambda _: None).run(max_cycles=1)
+        result = TelegramPoller(self.client(transport), self.adapter, sleeper=lambda _: None, event_ledger=self.event_ledger).run(max_cycles=1)
         self.assertEqual(1, result.responses_sent)
         self.assertEqual({"chat_id": "6", "text": "Solicitud local procesada."}, sent[0])
         self.assertIsNotNone(self.sessions.get("5", "6"))

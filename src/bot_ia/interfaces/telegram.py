@@ -17,7 +17,9 @@ from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.waitress_session_manager import TavernError, TavernReply, WaitressSessionManager
 from bot_ia.librarian.models import CoverageStatus
 
-from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
+from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore, TelegramOutboxRecord
+from .telegram_event_ledger import TelegramEventLedger, TelegramEventLedgerError
+from .telegram_instance_lock import TelegramInstanceAlreadyRunning, TelegramInstanceLock
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary, build_bebida_prompt, RESOLUTIONS, RENDER_STYLES
 from .hardening import MutexGuard
@@ -1014,6 +1016,11 @@ class TelegramApiClient:
         self._token, self._transport, self._timeout = token, transport or _http_post, timeout_seconds
         self._max_retries, self._retry_delay, self._sleeper = max_retries, retry_delay_seconds, sleeper
 
+    @property
+    def token(self) -> str:
+        """Token actual; se utiliza sólo para derivar el hash del lock."""
+        return self._token
+
     @classmethod
     def from_environment(cls) -> "TelegramApiClient":
         token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -1171,12 +1178,21 @@ class TelegramPoller:
         sleeper: Callable[[float], None] = time.sleep,
         logger: Callable[[str], None] | None = None,
         outbox_store: TelegramOutboxStore | None = None,
+        event_ledger: TelegramEventLedger | None = None,
+        instance_lock: TelegramInstanceLock | None = None,
     ) -> None:
         self._client, self._adapter, self._config = client, adapter, config or PollingConfig()
         self._sleeper, self._logger, self._running, self._offset = sleeper, logger or (lambda _: None), True, None
         self._outbox = outbox_store
+        self._event_ledger = event_ledger or TelegramEventLedger(
+            PROJECT_ROOT / "config" / "bot_ia_events.sqlite3"
+        )
+        self._instance_lock = instance_lock or TelegramInstanceLock(
+            self._client.token,
+            PROJECT_ROOT,
+        )
         self._callback_mutex = MutexGuard()
-        self._pending_delivery: tuple[int, TelegramOutbound, int, tuple[int, ...]] | None = None
+        self._pending_delivery: tuple[TelegramOutboxRecord, tuple[int, ...]] | None = None
 
     @property
     def offset(self) -> int | None:
@@ -1328,303 +1344,403 @@ class TelegramPoller:
             return ""
         return f"telegram:button:{user_id}:{chat_id}:{message_id}:{data}"
 
+    def _event_ids(self, update_id: int, update: dict[str, object]) -> tuple[tuple[str, str], ...]:
+        events = [("update_id", str(update_id))]
+        message = update.get("message")
+        if isinstance(message, dict):
+            payment = message.get("successful_payment")
+            if isinstance(payment, dict):
+                charge_id = str(
+                    payment.get("telegram_payment_charge_id", "")
+                ).strip()
+                if charge_id:
+                    events.append(("telegram_payment_charge_id", charge_id))
+        return tuple(events)
+
+    def _claim_event(self, update_id: int, update: dict[str, object]) -> tuple[bool, bool]:
+        event_ids = self._event_ids(update_id, update)
+        for event_type, event_id in event_ids:
+            try:
+                if self._event_ledger.seen(event_type, event_id):
+                    return False, True
+            except TelegramEventLedgerError:
+                raise
+
+        for event_type, event_id in event_ids:
+            if not self._event_ledger.claim(
+                event_type,
+                event_id,
+                update_id=update_id,
+            ):
+                return False, True
+        return True, False
+
+    def _mark_events_completed(
+        self,
+        update_id: int,
+        update: dict[str, object],
+    ) -> None:
+        for event_type, event_id in self._event_ids(update_id, update):
+            self._event_ledger.mark_completed(
+                event_type,
+                event_id,
+            )
+
+    def _send_outbox_record(
+        self,
+        record: TelegramOutboxRecord,
+        *,
+        message_ids: list[int] | None = None,
+    ) -> bool:
+        ids = message_ids if message_ids is not None else []
+        try:
+            def acknowledge(
+                acknowledged: int,
+                result: dict[str, object],
+            ) -> None:
+                if record.kind == "main":
+                    self._outbox.ack_chunk(record.update_id, acknowledged)
+                else:
+                    self._outbox.ack_followup_chunk(
+                        record.delivery_id,
+                        acknowledged,
+                    )
+                self._append_message_ids(ids, result)
+
+            result = self._client.send(
+                record.outbound,
+                start_chunk=record.next_chunk,
+                on_chunk_ack=acknowledge,
+            )
+            self._append_message_ids(ids, result)
+            self._schedule_auto_delete_if_needed(
+                record.outbound,
+                ids,
+            )
+            if record.kind == "main":
+                self._outbox.mark_delivered(record.update_id)
+            else:
+                self._outbox.mark_followup_delivered(record.delivery_id)
+            return True
+        except TelegramPartialDeliveryError as error:
+            self._logger(
+                f"telegram {record.kind} delivery partial failure at "
+                f"chunk {error.next_chunk_index}"
+            )
+            self._sleeper(self._config.retry_delay_seconds)
+            return False
+        except TelegramTransportError as error:
+            self._logger(
+                f"telegram {record.kind} delivery transport failure: "
+                f"{type(error).__name__}"
+            )
+            self._sleeper(self._config.retry_delay_seconds)
+            return False
+
+    def _drain_update_outbox(self, update_id: int) -> bool:
+        if self._outbox is None:
+            return True
+        while True:
+            pending = self._outbox.pending_for_update(update_id)
+            if not pending:
+                return self._outbox.all_delivered(update_id)
+            record = pending[0]
+            if not self._send_outbox_record(record):
+                return False
+
     def run(self, *, max_cycles: int | None = None) -> PollingResult:
         if max_cycles is not None and max_cycles < 0:
             raise ValueError("max_cycles cannot be negative")
+
         polls = received = processed = skipped = sent = errors = cycles = consecutive_failures = 0
-        while self._running and (max_cycles is None or cycles < max_cycles):
-            cycles += 1
+        acquired = False
+        try:
+            self._instance_lock.acquire()
+            acquired = True
+            while self._running and (
+                max_cycles is None or cycles < max_cycles
+            ):
+                cycles += 1
 
-            if self._pending_delivery is not None:
-                pending_id, pending_outbound, next_chunk, pending_message_ids = self._pending_delivery
-                message_ids = list(pending_message_ids)
-
-                def acknowledge_pending_chunk(
-                    acknowledged: int,
-                    chunk_result: dict[str, object],
-                ) -> None:
-                    if self._outbox is None:
-                        return
-                    self._outbox.ack_chunk(pending_id, acknowledged)
-                    self._append_message_ids(message_ids, chunk_result)
+                # Primero recupera entregas durables, incluso después de un
+                # cierre abrupto donde Telegram ya había entregado el update.
+                if self._outbox is not None:
+                    pending_records = self._outbox.pending_unfinished(limit=20)
+                    if pending_records:
+                        recovered = True
+                        for record in pending_records:
+                            if not self._send_outbox_record(record):
+                                recovered = False
+                                break
+                            if self._outbox.all_delivered(record.update_id):
+                                self._offset = max(
+                                    self._offset or 0,
+                                    record.update_id + 1,
+                                )
+                        if not recovered:
+                            continue
 
                 try:
-                    result = self._client.send(
-                        pending_outbound,
-                        start_chunk=next_chunk,
-                        on_chunk_ack=acknowledge_pending_chunk,
+                    updates = self._client.get_updates(
+                        offset=self._offset,
+                        timeout_seconds=self._config.poll_timeout_seconds,
                     )
-                    self._append_message_ids(message_ids, result)
-                    self._schedule_auto_delete_if_needed(
-                        pending_outbound,
-                        message_ids,
-                    )
-                except TelegramPartialDeliveryError as error:
-                    errors += 1
-                    self._pending_delivery = (
-                        pending_id,
-                        pending_outbound,
-                        error.next_chunk_index,
-                        tuple(message_ids),
-                    )
-                    self._logger(
-                        "telegram pending response delivery failed after partial send"
-                    )
-                    self._sleeper(self._config.retry_delay_seconds)
-                    continue
                 except TelegramTransportError:
                     errors += 1
-                    self._logger(
-                        "telegram pending response delivery failed"
-                    )
+                    consecutive_failures += 1
+                    self._logger("telegram polling transport error")
+                    if consecutive_failures >= self._config.max_consecutive_failures:
+                        self.stop()
+                        break
                     self._sleeper(self._config.retry_delay_seconds)
                     continue
-                except (TelegramApiError, TelegramInputError):
-                    self._pending_delivery = None
-                    self._offset = pending_id + 1
-                    skipped += 1
-                    self._logger(
-                        "telegram pending response rejected"
-                    )
-                    continue
 
-                if self._outbox is not None:
-                    try:
-                        self._outbox.mark_delivered(pending_id)
-                    except TelegramOutboxError:
-                        errors += 1
-                        self._logger("telegram outbox could not mark pending update delivered")
-                        self._sleeper(self._config.retry_delay_seconds)
+                polls += 1
+                consecutive_failures = 0
+                received += len(updates)
+
+                for update in updates:
+                    update_id = update.get("update_id")
+                    if (
+                        not isinstance(update_id, int)
+                        or (
+                            self._offset is not None
+                            and update_id < self._offset
+                        )
+                    ):
+                        skipped += 1
+                        self._logger("telegram update skipped")
                         continue
-                self._pending_delivery = None
-                self._offset = pending_id + 1
-                processed += 1
-                sent += 1
-                continue
 
-            try:
-                updates = self._client.get_updates(
-                    offset=self._offset,
-                    timeout_seconds=self._config.poll_timeout_seconds,
-                )
-            except TelegramTransportError:
-                errors += 1
-                consecutive_failures += 1
-                self._logger(
-                    "telegram polling transport error"
-                )
-                if consecutive_failures >= self._config.max_consecutive_failures:
-                    self.stop()
-                    break
-                self._sleeper(self._config.retry_delay_seconds)
-                continue
+                    callback_key = self._callback_key(update)
+                    if (
+                        callback_key
+                        and not self._callback_mutex.try_acquire(callback_key)
+                    ):
+                        skipped += 1
+                        errors += 1
+                        self._logger(
+                            "telegram callback duplicate/concurrent delivery skipped"
+                        )
+                        break
 
-            polls += 1
-            consecutive_failures = 0
-            received += len(updates)
-
-            for update in updates:
-                update_id = update.get("update_id")
-                if (
-                    not isinstance(update_id, int)
-                    or (
-                        self._offset is not None
-                        and update_id < self._offset
-                    )
-                ):
-                    skipped += 1
-                    self._logger("telegram update skipped")
-                    continue
-
-                callback_key = self._callback_key(update)
-                if callback_key and not self._callback_mutex.try_acquire(callback_key):
-                    self._offset = update_id + 1
-                    skipped += 1
-                    self._logger("telegram callback dropped by local mutex")
-                    continue
-
-                if self._outbox is not None:
                     try:
-                        existing = self._outbox.get(update_id)
-                    except TelegramOutboxError:
-                        existing = None
-                        self._logger("telegram outbox record is corrupt; update will be reprocessed")
-                    if existing is not None:
-                        if existing.status == "DELIVERED":
+                        claimed, already_seen = self._claim_event(
+                            update_id,
+                            update,
+                        )
+                    except TelegramEventLedgerError:
+                        if callback_key:
+                            self._callback_mutex.release(callback_key)
+                        errors += 1
+                        self._logger(
+                            "telegram event ledger unavailable; offset preserved"
+                        )
+                        self._sleeper(self._config.retry_delay_seconds)
+                        break
+
+                    if already_seen:
+                        # The effect has already been claimed/completed. Never
+                        # re-enter application/economy logic. Only durable
+                        # deliveries may still need recovery.
+                        if callback_key:
+                            self._callback_mutex.release(callback_key)
+                        if self._outbox is not None:
+                            if self._drain_update_outbox(update_id):
+                                if self._outbox.all_delivered(update_id):
+                                    self._offset = update_id + 1
+                                    skipped += 1
+                                    continue
+                                errors += 1
+                                break
+                        self._offset = update_id + 1
+                        skipped += 1
+                        continue
+
+                    if not claimed:
+                        if callback_key:
+                            self._callback_mutex.release(callback_key)
+                        errors += 1
+                        self._logger(
+                            "telegram event could not be claimed; offset preserved"
+                        )
+                        break
+
+                    try:
+                        sync_authorized_bot_join = getattr(
+                            self._adapter,
+                            "_sync_authorized_bot_join",
+                            None,
+                        )
+                        if callable(sync_authorized_bot_join):
+                            sync_authorized_bot_join(update)
+
+                        outbound: TelegramOutbound | None = None
+                        moderation_outbound: TelegramOutbound | None = None
+                        inline_query = update.get("inline_query")
+                        if isinstance(inline_query, dict):
+                            inline = parse_inline_query_update(update)
+                            result = self._inline_handler.handle(
+                                user_id=inline.user_id,
+                                query=inline.query,
+                                chat_id=inline.chat_id,
+                            )
+                            self._client.answer_inline_query(
+                                inline.query_id,
+                                {
+                                    "type": "article",
+                                    "id": "cafe-redirect",
+                                    "title": "☕ Café Otaku",
+                                    "description": result.text,
+                                    "input_message_content": {
+                                        "message_text": result.text
+                                    },
+                                    "reply_markup": {
+                                        "inline_keyboard": [[
+                                            {
+                                                "text": result.button_label,
+                                                "url": result.button_url,
+                                            }
+                                        ]]
+                                    },
+                                },
+                            )
+                            self._mark_events_completed(update_id, update)
                             if callback_key:
                                 self._callback_mutex.release(callback_key)
                             self._offset = update_id + 1
-                            skipped += 1
+                            processed += 1
+                            sent += 1
                             continue
-                        if existing.status == "PENDING":
-                            if callback_key:
-                                self._callback_mutex.release(callback_key)
-                            self._pending_delivery = (
+                        moderation_outbound = self._moderate_raw_update(update)
+                        comment_outbound = (
+                            None
+                            if moderation_outbound is not None
+                            else self._comment_raw_update(update)
+                        )
+                        if moderation_outbound is not None:
+                            outbound = moderation_outbound
+                        elif comment_outbound is not None:
+                            outbound = comment_outbound
+                        elif (
+                            isinstance(update.get("message"), dict)
+                            and isinstance(
+                                update["message"].get("photo"),
+                                list,
+                            )
+                        ):
+                            outbound = self._adapter.handle_photo_update(update)
+                        else:
+                            outbound = self._adapter.handle_update(update)
+                    except TelegramInputError:
+                        if callback_key:
+                            self._callback_mutex.release(callback_key)
+                        self._event_ledger.mark_completed(
+                            "update_id",
+                            str(update_id),
+                            metadata="input_rejected",
+                        )
+                        self._offset = update_id + 1
+                        skipped += 1
+                        continue
+                    except Exception as error:
+                        if callback_key:
+                            self._callback_mutex.release(callback_key)
+                        errors += 1
+                        self._logger(
+                            f"telegram update processing failed: "
+                            f"{type(error).__name__}; event claim retained"
+                        )
+                        self._sleeper(
+                            max(
+                                self._config.retry_delay_seconds,
+                                0.1,
+                            )
+                        )
+                        break
+
+                    if outbound is None:
+                        if callback_key:
+                            self._callback_mutex.release(callback_key)
+                        self._mark_events_completed(update_id, update)
+                        self._offset = update_id + 1
+                        processed += 1
+                        continue
+
+                    try:
+                        if self._outbox is not None:
+                            self._outbox.create_pending(
                                 update_id,
-                                existing.outbound,
-                                existing.next_chunk,
-                                (),
+                                outbound,
+                            )
+                            self._outbox.create_followups(
+                                update_id,
+                                outbound.followups,
+                            )
+                            # Once the durable output exists, the event itself
+                            # is safe to consider claimed/completed. A crash
+                            # before sending is recovered from the outbox.
+                            self._mark_events_completed(
+                                update_id,
+                                update,
+                            )
+                            delivered = self._drain_update_outbox(update_id)
+                            if not delivered:
+                                if callback_key:
+                                    self._callback_mutex.release(callback_key)
+                                errors += 1
+                                break
+                        else:
+                            result = self._client.send(outbound)
+                            self._append_message_ids(
+                                [],
+                                result,
+                            )
+                            self._mark_events_completed(
+                                update_id,
+                                update,
+                            )
+                    except TelegramOutboxError as error:
+                        if callback_key:
+                            self._callback_mutex.release(callback_key)
+                        errors += 1
+                        self._logger(
+                            f"telegram outbox persistence failure: {type(error).__name__}"
+                        )
+                        self._sleeper(self._config.retry_delay_seconds)
+                        break
+                    except TelegramTransportError:
+                        errors += 1
+                        if callback_key:
+                            self._callback_mutex.release(callback_key)
+                        # The outbox already owns the unsent unit; no effect is
+                        # re-entered on replay.
+                        if self._outbox is not None:
+                            self._sleeper(
+                                self._config.retry_delay_seconds
                             )
                             break
+                        self._sleeper(
+                            self._config.retry_delay_seconds
+                        )
+                        break
 
-                try:
-                    sync_authorized_bot_join = getattr(
-                        self._adapter,
-                        "_sync_authorized_bot_join",
-                        None,
-                    )
-                    if callable(sync_authorized_bot_join):
-                        sync_authorized_bot_join(update)
-                    outbound: TelegramOutbound | None = None
-                    moderation_outbound: TelegramOutbound | None = None
-                    inline_query = update.get("inline_query")
-                    if isinstance(inline_query, dict):
-                        inline = parse_inline_query_update(update)
-                        result = self._inline_handler.handle(
-                            user_id=inline.user_id,
-                            query=inline.query,
-                            chat_id=inline.chat_id,
-                        )
-                        self._client.answer_inline_query(
-                            inline.query_id,
-                            {
-                                "type": "article",
-                                "id": "cafe-redirect",
-                                "title": "☕ Café Otaku",
-                                "description": result.text,
-                                "input_message_content": {"message_text": result.text},
-                                "reply_markup": {
-                                    "inline_keyboard": [[
-                                        {"text": result.button_label, "url": result.button_url}
-                                    ]]
-                                },
-                            },
-                        )
-                        outbound = TelegramOutbound(
-                            inline.chat_id or inline.user_id,
-                            result.text,
-                            "inline",
-                        )
+                    if callback_key:
+                        self._callback_mutex.release(callback_key)
+
+                    if self._outbox is None or self._outbox.all_delivered(update_id):
+                        self._offset = update_id + 1
+                        processed += 1
+                        sent += 1
                     else:
-                        moderation_outbound = self._moderate_raw_update(update)
-                    comment_outbound = (
-                        None
-                        if moderation_outbound is not None
-                        else self._comment_raw_update(update)
-                    )
-                    if moderation_outbound is not None:
-                        outbound = moderation_outbound
-                    elif comment_outbound is not None:
-                        outbound = comment_outbound
-                    elif isinstance(update.get("message"), dict) and isinstance(update["message"].get("photo"), list):
-                        outbound = self._adapter.handle_photo_update(update)
-                    else:
-                        outbound = self._adapter.handle_update(update)
-                except TelegramInputError:
-                    if callback_key:
-                        self._callback_mutex.release(callback_key)
-                    self._offset = update_id + 1
-                    skipped += 1
-                    self._logger("telegram update rejected")
-                    continue
-                except Exception as error:
-                    if callback_key:
-                        self._callback_mutex.release(callback_key)
+                        errors += 1
+                        break
 
-                    # Internal logic/database failures are retriable. Never
-                    # acknowledge the update in this case: keeping the offset
-                    # unchanged lets Telegram redeliver the same update.
-                    errors += 1
-                    self._logger(
-                        f"telegram update processing failed: {type(error).__name__}; "
-                        "offset preserved for retry"
-                    )
-                    self._sleeper(max(self._config.retry_delay_seconds, 0.1))
-                    break
-
-                try:
-                    message_ids: list[int] = []
-                    if self._outbox is not None:
-                        record = self._outbox.create_pending(update_id, outbound)
-                        start_chunk = record.next_chunk
-
-                        def acknowledge_chunk(
-                            acknowledged: int,
-                            chunk_result: dict[str, object],
-                        ) -> None:
-                            self._outbox.ack_chunk(update_id, acknowledged)
-                            self._append_message_ids(message_ids, chunk_result)
-
-                        result = self._client.send(
-                            outbound,
-                            start_chunk=start_chunk,
-                            on_chunk_ack=acknowledge_chunk,
-                        )
-                    else:
-                        result = self._client.send(outbound)
-                    self._append_message_ids(message_ids, result)
-                    self._schedule_auto_delete_if_needed(
-                        outbound,
-                        message_ids,
-                    )
-                    if self._outbox is not None:
-                        self._outbox.mark_delivered(update_id)
-                    for followup in outbound.followups:
-                        try:
-                            self._client.send(followup)
-                        except TelegramTransportError as error:
-                            self._logger(
-                                f"telegram followup delivery failed: {type(error).__name__}"
-                            )
-                except TelegramPartialDeliveryError as error:
-                    self._pending_delivery = (
-                        update_id,
-                        outbound,
-                        error.next_chunk_index,
-                        tuple(message_ids),
-                    )
-                    if callback_key:
-                        self._callback_mutex.release(callback_key)
-                    self._logger(
-                        "telegram response delivery deferred after partial send"
-                    )
-                    break
-                except TelegramTransportError:
-                    self._pending_delivery = (
-                        update_id,
-                        outbound,
-                        0,
-                        tuple(message_ids),
-                    )
-                    if callback_key:
-                        self._callback_mutex.release(callback_key)
-                    self._logger(
-                        "telegram response delivery deferred for retry"
-                    )
-                    break
-                except (TelegramApiError, TelegramInputError):
-                    if self._outbox is not None:
-                        try:
-                            self._outbox.mark_failed(update_id)
-                        except TelegramOutboxError:
-                            self._logger("telegram outbox could not mark update failed")
-                    self._offset = update_id + 1
-                    skipped += 1
-                    if callback_key:
-                        self._callback_mutex.release(callback_key)
-                    self._logger(
-                        "telegram response delivery rejected"
-                    )
-                    continue
-
-                if callback_key:
-                    self._callback_mutex.release(callback_key)
-                self._offset = update_id + 1
-                processed += 1
-                sent += 1
-
-            if self._running and not updates:
-                self._sleeper(self._config.idle_delay_seconds)
+                if self._running and not updates:
+                    self._sleeper(self._config.idle_delay_seconds)
+        finally:
+            if acquired:
+                self._instance_lock.release()
 
         return PollingResult(
             polls,
