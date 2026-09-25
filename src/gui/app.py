@@ -2053,6 +2053,7 @@ class BebidaOrderDialog(QDialog):
     def _current_record(self) -> WaifuRecord:
         return WaifuRecord(
             name=self.name.text().strip(),
+            danbooru_tag=self.danbooru_tag.text().strip(),
             personality=self.personality.text().strip(),
             appearance=self.appearance.text().strip(),
             element=str(self.element.currentText()).strip(),
@@ -2453,6 +2454,7 @@ class CommandCenterWindow(QMainWindow):
         self._expanded_bot_dialogs: dict[str, BotExpandedDialog] = {}
         self.waifu_registry = WaifuRegistry(ROOT)
         self._waifu_dialog: WaifuRegistryDialog | None = None
+        self._bebida_dialog: BebidaOrderDialog | None = None
         self._mini_game_router = LocalGameRouter()
         self._mini_games_dialog: QDialog | None = None
         self._matrix_chain_running = False
@@ -3274,6 +3276,14 @@ class CommandCenterWindow(QMainWindow):
         self._waifu_dialog.show()
         self._waifu_dialog.raise_()
         self._waifu_dialog.activateWindow()
+
+    def _open_bebida_order(self) -> None:
+        self.select_bot("cami")
+        if self._bebida_dialog is None:
+            self._bebida_dialog = BebidaOrderDialog(self.waifu_registry, parent=self)
+        self._bebida_dialog.show()
+        self._bebida_dialog.raise_()
+        self._bebida_dialog.activateWindow()
 
     def _try_local_bot_response(self, message: str) -> bool:
         bot_id = self._selected_bot_id
