@@ -207,3 +207,39 @@ def admin_strike_actions(user_id: str) -> tuple[tuple[str, str], ...]:
 def should_purge(last_activity: float, *, now: float | None = None, inactivity_seconds: float = WEEKLY_PURGE_SECONDS) -> bool:
     current = time.time() if now is None else float(now)
     return current - float(last_activity) >= float(inactivity_seconds)
+
+
+class DiscordWelcomeHandler:
+    """Contrato de interacción para los botones de bienvenida."""
+
+    def __init__(self, gate: WelcomeGate | None = None) -> None:
+        self.gate = gate or WelcomeGate()
+
+    def on_member_join(self, user_id: str) -> WelcomeDecision:
+        if not self.gate.start(user_id):
+            return WelcomeDecision("ignore", "⏳ Chie: bienvenida en cooldown.")
+        return WelcomeDecision("prompt", WELCOME_RULES_TEXT)
+
+    def on_button(self, user_id: str, custom_id: str) -> WelcomeDecision:
+        if self.gate.ignore_during_cooldown(user_id):
+            return WelcomeDecision("ignore", "⏳ Chie: espera 15 segundos antes de responder.")
+        choice = "usuario" if custom_id == "welcome:user" else "bot" if custom_id == "welcome:bot" else ""
+        return self.gate.choose(user_id, choice)
+
+
+class DiscordStrikeHandler:
+    """Convierte una infracción en acciones REST sin bloquear el listener."""
+
+    def __init__(self, engine: ImmersiveStrikeEngine) -> None:
+        self.engine = engine
+
+    def handle(self, guild_id: str, user_id: str, reason: str, *, username: str = "", burst: bool = False) -> dict[str, object]:
+        record = self.engine.evaluate(guild_id, user_id, reason, username=username, burst=burst)
+        action = self.engine.action_for(record)
+        return {
+            "action": action,
+            "strikes": record.strikes if record else 0,
+            "message": self.engine.cari_message(record),
+            "admin_actions": admin_strike_actions(user_id) if action == "isolate" else (),
+            "superadmin_immune": action == "immune",
+        }
