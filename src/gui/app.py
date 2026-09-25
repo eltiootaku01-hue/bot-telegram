@@ -58,6 +58,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QSplitter,
     QStatusBar,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -114,6 +115,7 @@ from bot_ia.interfaces.cafe_orders import (
 )
 from bot_ia.interfaces.tutorials import build_tutorial_html, build_tutorial_text
 from bot_ia.interfaces.platform_health import probe_telegram, probe_discord, probe_with_retry
+from .incidents_panel import IncidentsPanel
 
 try:
     from qasync import QEventLoop
@@ -2778,6 +2780,7 @@ class CommandCenterWindow(QMainWindow):
         self.setWindowTitle("Casa de Comando · BOT-IA")
         self.resize(1440, 900)
         self.setMinimumSize(1120, 720)
+        self.setWindowState(self.windowState() | Qt.WindowMaximized)
 
         self.runtime = runtime or build_runtime(ROOT)
         self.application = self.runtime.build_application(
@@ -3133,9 +3136,98 @@ class CommandCenterWindow(QMainWindow):
         splitter.addWidget(right)
 
         splitter.setSizes((250, 720, 430))
-        root_layout.addWidget(splitter, 1)
+        # Arquitectura principal multipestaña estilo navegador.
+        self.main_tabs = QTabWidget()
+        self.main_tabs.setDocumentMode(True)
+        self.main_tabs.currentChanged.connect(self._on_main_tab_changed)
 
+        web_tab = QWidget()
+        web_layout = QVBoxLayout(web_tab)
+        web_layout.setContentsMargins(0, 0, 0, 0)
+        web_layout.addWidget(splitter, 1)
+        self.main_tabs.addTab(web_tab, "🌐 Navegador Web")
+
+        self.main_tabs.addTab(self._build_schrodinger_tab(), "⚛ Chat Schrödinger")
+        self.main_tabs.addTab(self._build_orders_tab(), "🎴 Pedidos & Hashtags")
+        self.incidents_panel = IncidentsPanel(
+            ROOT,
+            wallet=self.cafe_wallet,
+            registry=self.waifu_registry,
+            parent=self,
+        )
+        self.main_tabs.addTab(self.incidents_panel, "🛡 Incidencias & Moderación")
+
+        root_layout.addWidget(self.main_tabs, 1)
         self.setCentralWidget(root)
+
+    def _on_main_tab_changed(self, index: int) -> None:
+        titles = (
+            "Navegador Web",
+            "Chat Schrödinger",
+            "Pedidos & Hashtags",
+            "Incidencias & Moderación",
+        )
+        if 0 <= index < len(titles):
+            self.page_title.setText(titles[index])
+
+    def _build_schrodinger_tab(self) -> QWidget:
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        title = QLabel("⚛ Schrödinger · Intervención directa")
+        title.setObjectName("PageTitle")
+        layout.addWidget(title)
+        info = QLabel(
+            "Superficie agnóstica para Telegram ⇄ Discord. "
+            "El router valida destino y token antes de despachar."
+        )
+        info.setObjectName("Muted")
+        info.setWordWrap(True)
+        layout.addWidget(info)
+        status = QLabel("Estado: listo para intervención administrativa.")
+        layout.addWidget(status)
+        open_button = QPushButton("⚛ Abrir Chat Schrödinger")
+        open_button.clicked.connect(self._open_schrodinger)
+        layout.addWidget(open_button, 0, Qt.AlignLeft)
+        layout.addStretch(1)
+        return panel
+
+    def _build_orders_tab(self) -> QWidget:
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        title = QLabel("🎴 Pedidos & Hashtags")
+        title.setObjectName("PageTitle")
+        layout.addWidget(title)
+        info = QLabel(
+            "Gestiona pedidos confirmados, abre el constructor de imágenes "
+            "y prepara publicaciones sociales con hashtags derivados de la ficha."
+        )
+        info.setObjectName("Muted")
+        info.setWordWrap(True)
+        layout.addWidget(info)
+        actions = QHBoxLayout()
+        order_button = QPushButton("🥤 Nuevo Pedido")
+        order_button.clicked.connect(self._open_bebida_order)
+        publish_button = QPushButton("🌐 Publicar en Redes")
+        publish_button.clicked.connect(self._publish_from_orders_tab)
+        actions.addWidget(order_button)
+        actions.addWidget(publish_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        self.orders_status = QPlainTextEdit()
+        self.orders_status.setReadOnly(True)
+        self.orders_status.setPlainText(
+            "Los pedidos requieren confirmación explícita antes del débito.\n"
+            "Destino TCG: 🎴 Carta TCG para el Pool\n"
+            "Destino IA: 🖼️ Imagen IA Personalizada"
+        )
+        layout.addWidget(self.orders_status, 1)
+        return panel
+
+    def _publish_from_orders_tab(self) -> None:
+        if self._bebida_dialog is None:
+            self._open_bebida_order()
+            return
+        self._bebida_dialog._publish_social()
 
     def _build_sidebar(self) -> QWidget:
         panel = QFrame()
