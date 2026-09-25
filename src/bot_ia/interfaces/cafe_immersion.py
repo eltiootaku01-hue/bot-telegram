@@ -129,6 +129,40 @@ def analyze_discord_announcement(
     return DiscordThreadDecision(True, str(channel_id))
 
 
+class DiscordCommentThreadManager:
+    """Crea un único hilo de comentarios por publicación del SuperAdmin."""
+
+    def __init__(self, discord_client: object) -> None:
+        self._client = discord_client
+        self._created: set[str] = set()
+
+    def on_announcement(
+        self,
+        *,
+        author_id: str,
+        superadmin_id: str,
+        channel_id: str,
+        message_id: str,
+        is_announcement_channel: bool,
+        is_bot: bool = False,
+    ) -> dict[str, object] | None:
+        decision = analyze_discord_announcement(
+            author_id=author_id,
+            superadmin_id=superadmin_id,
+            channel_id=channel_id,
+            is_announcement_channel=is_announcement_channel,
+            is_bot=is_bot,
+        )
+        if not decision.should_create or str(message_id) in self._created:
+            return None
+        creator = getattr(self._client, "create_comment_thread", None)
+        if not callable(creator):
+            raise TypeError("Discord client must provide create_comment_thread")
+        thread = creator(channel_id, message_id, name=decision.thread_name)
+        self._created.add(str(message_id))
+        return thread
+
+
 
 
 def normalize_maid(maid: str) -> str:
