@@ -8,6 +8,7 @@ from random import SystemRandom
 import re
 
 from bot_ia.interfaces.cafe_economy import CafeWalletStore
+from bot_ia.interfaces.cafe_immersion import TeaTimeScheduler, waitress_dialogue
 
 
 _RANDOM = SystemRandom()
@@ -61,10 +62,27 @@ class BlackjackState:
 class LocalGameRouter:
     """Router de juegos sin red; mantiene estado aislado por usuario y mesera."""
 
-    def __init__(self, wallet_store: CafeWalletStore | None = None) -> None:
+    def __init__(
+        self,
+        wallet_store: CafeWalletStore | None = None,
+        tea_scheduler: TeaTimeScheduler | None = None,
+    ) -> None:
         self._wallet_store = wallet_store
+        self._tea_scheduler = tea_scheduler or TeaTimeScheduler()
         self._blackjack: dict[tuple[str, str], BlackjackState] = {}
         self._uno: dict[tuple[str, str], UnoState] = {}
+
+    def tea_status(self) -> str:
+        return self._tea_scheduler.status_text()
+
+    def _reward_game(self, user_id: str, game: str) -> None:
+        if self._wallet_store is not None:
+            self._wallet_store.reward_game(
+                user_id,
+                game,
+                won=True,
+                multiplier=self._tea_scheduler.multiplier(),
+            )
 
     @staticmethod
     def _key(user_id: str, bot_id: str) -> tuple[str, str]:
@@ -181,8 +199,7 @@ class LocalGameRouter:
             state.player_cards.remove(candidates[0])
             if not state.player_cards:
                 state.finished = True
-                if self._wallet_store is not None:
-                    self._wallet_store.reward_game(user_id, "uno", won=True)
+                self._reward_game(user_id, "uno")
                 return f"UNO local · ¡ganaste! Anfitriona: {GAME_HOSTS['uno']}."
             return (
                 f"UNO local · jugaste {state.top_card}. "
@@ -208,8 +225,8 @@ class LocalGameRouter:
             result = "empate"
         else:
             result = "perdiste"
-        if result == "ganaste" and self._wallet_store is not None:
-            self._wallet_store.reward_game(user_id, "21", won=True)
+        if result == "ganaste":
+            self._reward_game(user_id, "21")
         prefix = "¡21!" if natural or player == 21 else "21 local"
         return (
             f"{prefix} · tú: {player} [{', '.join(state.player_cards)}] · "
@@ -245,9 +262,12 @@ class LocalGameRouter:
             result = "ganaste"
         else:
             result = "perdiste"
-        if result == "ganaste" and self._wallet_store is not None:
-            self._wallet_store.reward_game(user_id, "ppt", won=True)
-        return f"PPT local · anfitriona: {GAME_HOSTS['ppt']} · tú: {choice} · mesera: {bot} · {result}."
+        if result == "ganaste":
+            self._reward_game(user_id, "ppt")
+        return (
+            f"PPT local · anfitriona: {GAME_HOSTS['ppt']} · tú: {choice} · mesera: {bot} · {result}.\n"
+            f"{waitress_dialogue(GAME_HOSTS['ppt'], 'role')}"
+        )
 
     def route(self, message: str, user_id: str, bot_id: str) -> str | None:
         normalized = " ".join(message.casefold().strip().split())
