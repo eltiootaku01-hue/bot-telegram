@@ -268,6 +268,7 @@ class WaifuRegistry:
         if not isinstance(payload, list):
             return []
         self._waitress_affinity = {}
+        self._interaction_transfers = {}
         records: list[WaifuRecord] = []
         for item in payload:
             self._load_affinity_meta(item)
