@@ -34,6 +34,14 @@ REPOST_FEEDS = (
 SFW_ROOM_KEYS = frozenset({"general", "tcg_collection", "pedidos_sfw", "noticias_otaku"})
 MATURE_ROOM_KEYS = frozenset({"cantina_18", "pedidos_nsfw", "mesa_apuestas_21"})
 ADMIN_ROOM_KEY = "pedidos_admin"
+ORDERS_ROOM_KEY = "pedidos"
+
+# Telegram: en un grupo/supergrupo el bot puede aplicar permisos de envío.
+# Discord: se traduce a permission overwrites para @everyone/bot/admin.
+READ_ONLY_ORDERS = {
+    "telegram": {"can_send_messages": False, "can_send_media": False},
+    "discord": {"view_channel": True, "send_messages": False, "attach_files": False},
+}
 
 
 
