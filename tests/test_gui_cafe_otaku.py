@@ -201,6 +201,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertNotIn("DynamicLLMPool", source)
         self.assertNotIn("self.signals.web_result.connect(\n            self._on_web_result", source)
         self.assertIn("self.signals.web_result.connect(\n            self._on_web_state", source)
+        self.assertIn("self.signals.web_failed.connect(\n            self._on_web_state", source)
+        self.assertNotIn("self.signals.web_failed.connect(\n            self._on_web_failed", source)
 
     def test_env_example_contains_all_bot_credentials(self):
         source = (self.ROOT / ".env.example").read_text(encoding="utf-8")
