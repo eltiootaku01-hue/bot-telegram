@@ -871,6 +871,84 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             )
 
 
+    def test_tutorial_elemental_matrix_and_card_parts_contract(self):
+        from bot_ia.interfaces.tutorials import build_tutorial_html, build_tutorial_text
+
+        text = build_tutorial_text()
+        html = build_tutorial_html()
+        self.assertIn("Fuego → Aire → Tierra → Agua → Fuego", text)
+        for token in ("Marco / rareza", "Arte", "Elemento", "HP", "Ataque", "Cosplay"):
+            self.assertIn(token, text)
+        self.assertIn("<table", html)
+        self.assertIn("Fuego", html)
+        self.assertIn("Waifumon", html)
+
+    def test_bebida_order_flow_and_local_autocomplete_contract(self):
+        from bot_ia.interfaces.cafe_orders import (
+            BOLDNESS_LEVELS,
+            EXPOSURE_LEVELS,
+            PRODUCT_TYPES,
+            BebidaOrder,
+            BebidaOrderFlow,
+            build_bebida_prompt,
+            character_suggestions,
+        )
+        from gui.waifu_registry import WaifuRecord
+
+        record = WaifuRecord(
+            name="Aki",
+            danbooru_tag="aki_(anime)",
+            personality="serena",
+            appearance="cabello plateado",
+            element="Fuego",
+            cosplay_reference="UR",
+            lora_tags="[AKI_LORA]",
+        )
+        self.assertEqual(["Aki", "aki_(anime)"], character_suggestions([record]))
+        flow = BebidaOrderFlow()
+        flow.start("user-1", "Aki")
+        flow.set_character("user-1", "Aki", "aki_(anime)")
+        flow.choose("user-1", "exposure", "SFW")
+        flow.choose("user-1", "boldness", "Atrevido")
+        order = flow.choose("user-1", "product_type", "Waifumon")
+        self.assertEqual("aki_(anime)", order.character_tag)
+        self.assertIn("Character tag: aki_(anime)", build_bebida_prompt(order))
+        self.assertEqual(EXPOSURE_LEVELS[0], "SFW")
+        self.assertIn("Atrevido", BOLDNESS_LEVELS)
+        self.assertIn("Waifumon", PRODUCT_TYPES)
+
+    def test_bebida_gui_and_telegram_contract(self):
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        registry = (self.ROOT / "src" / "gui" / "waifu_registry.py").read_text(encoding="utf-8")
+        for token in (
+            "BebidaOrderDialog",
+            "🥤 Bebida Especial",
+            "Grado de Exposición",
+            "Nivel de Atrevimiento",
+            "Pose",
+            "Vestimenta",
+            "Cosplay",
+            "Carta TCG",
+            "Naipe",
+            "Waifumon",
+            "QCompleter",
+            "character_suggestions",
+            "danbooru_tag",
+        ):
+            self.assertIn(token, app)
+        for token in (
+            'command == "/tutorial"',
+            'command == "/bebida"',
+            "BebidaOrderFlow",
+            "build_tutorial_text",
+            "bebida:exposure:",
+            "bebida:boldness:",
+            "bebida:product_type:",
+        ):
+            self.assertIn(token, telegram)
+        self.assertIn("danbooru_tag", registry)
+
     def test_group_setup_and_rarity_contract(self):
         group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
         telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
