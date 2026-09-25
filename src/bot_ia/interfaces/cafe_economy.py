@@ -134,11 +134,34 @@ class CafeWalletStore:
             },
         )
 
-    def reward_game(self, user_id: str, game: str, *, won: bool) -> CafeWallet:
+    def reward_game(
+        self,
+        user_id: str,
+        game: str,
+        *,
+        won: bool,
+        multiplier: int = 1,
+    ) -> CafeWallet:
         if not won:
             return self.get(user_id)
-        amount = GAME_REWARDS.get(str(game).casefold(), 0)
+        if multiplier < 1:
+            raise ValueError("game reward multiplier must be positive")
+        amount = GAME_REWARDS.get(str(game).casefold(), 0) * int(multiplier)
         return self.credit(user_id, amount)
+
+    def boost_pity_sr(self, user_id: str, amount: int = 1) -> CafeWallet:
+        """Aplica un pequeño avance de afinidad sin superar el umbral de garantía."""
+        amount = max(0, int(amount))
+        wallet = self.get(user_id)
+        pity_sr = min(PITY_SR_LIMIT - 1, wallet.pity_sr + amount)
+        return self._write_profile(
+            user_id,
+            {
+                "points": wallet.points,
+                "pity_sr": pity_sr,
+                "pity_ur": wallet.pity_ur,
+            },
+        )
 
     def record_gacha(self, user_id: str, rarity: str) -> CafeWallet:
         wallet = self.get(user_id)
@@ -209,6 +232,7 @@ class GachaResult:
     consolation: str
     pity_sr: int
     pity_ur: int
+    affinity_bonus: bool = False
 
 
 def draw_gacha(
@@ -217,6 +241,7 @@ def draw_gacha(
     *,
     roll: Callable[[], int] | None = None,
     maid: str = "Cami",
+    affinity_level: int = 0,
 ) -> GachaResult:
     if store.balance(user_id) < GACHA_COST:
         raise ValueError("Puntos del Café insuficientes para el Gacha")
@@ -240,13 +265,22 @@ def draw_gacha(
 
     store.debit(user_id, GACHA_COST)
     updated = store.record_gacha(user_id, rarity)
-    consolation = maid_consolation(maid, rarity)
+    affinity_bonus = rarity == "R" and int(affinity_level) >= 5
+    if affinity_bonus:
+        updated = store.boost_pity_sr(user_id, 1)
+        consolation = (
+            maid_consolation(maid, rarity)
+            + " ❤️ Afinidad Lv.5+: ganas +1 progreso hacia la garantía SR."
+        )
+    else:
+        consolation = maid_consolation(maid, rarity)
     return GachaResult(
         rarity,
         GACHA_COST,
         consolation,
         updated.pity_sr,
         updated.pity_ur,
+        affinity_bonus,
     )
 
 
