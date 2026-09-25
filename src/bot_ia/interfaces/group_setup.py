@@ -198,9 +198,15 @@ class DiscordGroupSetup:
                 "type": 0,
                 "topic": f"BOT-IA · {key}",
             }
-            if key == ADMIN_ROOM_KEY:
-                # Discord permite hacer #pedidos privado mediante permission overwrites.
+            if key in {ADMIN_ROOM_KEY, ORDERS_ROOM_KEY}:
+                # @everyone puede leer #pedidos pero no publicar; sólo bot y administradores publican.
+                send_bits = (1 << 11) | (1 << 12)
+                attach_bit = 1 << 15
                 overwrites = [
+                    {"id": guild_id, "type": 0, "deny": str(send_bits | attach_bit)},
+                ] if key == ORDERS_ROOM_KEY else [
+                    {"id": guild_id, "type": 0, "deny": str(1 << 10)},
+                ]
                     {"id": guild_id, "type": 0, "deny": str(1 << 10)},
                 ]
                 for role in roles:
@@ -212,7 +218,11 @@ class DiscordGroupSetup:
                         continue
                     if role_permissions & 0x8:
                         overwrites.append(
-                            {"id": str(role.get("id")), "type": 0, "allow": str((1 << 10) | (1 << 11))}
+                            {"id": str(role.get("id")), "type": 0, "allow": str((1 << 10) | (1 << 11) | (1 << 12) | (1 << 15))}
+                        )
+                    elif key == ORDERS_ROOM_KEY and role_permissions & 0x8:
+                        overwrites.append(
+                            {"id": str(role.get("id")), "type": 0, "allow": str((1 << 11) | (1 << 12) | (1 << 15))}
                         )
                 for role_id in role_ids:
                     overwrites.append(
