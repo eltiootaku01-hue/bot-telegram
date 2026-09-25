@@ -248,6 +248,12 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "worker.ready.connect(self._on_bot_ready)",
             "thread.finished.connect(thread.deleteLater)",
             "self._start_next()",
+            "⛓ Ejecutar cadena 4 bots",
+            "🔑 Iniciar Sesión Manual",
+            "self.lobby_manual_login_button",
+            "matrix_grid.addWidget(",
+            "layout.addWidget(matrix)",
+            "def _enable_manual_setup_mode",
         ):
             self.assertIn(token, source)
 
