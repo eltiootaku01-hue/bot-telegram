@@ -14,6 +14,7 @@ from bot_ia.interfaces.telegram_outbox import TelegramOutboxStore
 from bot_ia.interfaces.telegram_projects import TelegramProjectsAdapter
 from bot_ia.interfaces.web import run_web_server
 from bot_ia.interfaces.web_chat import run_web_chat_server
+from bot_ia.paths import PROJECT_ROOT
 from bot_ia.runtime import build_runtime
 
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -159,7 +160,7 @@ def _run_web_chat(application, host: str, port: int) -> None:
 
 
 def main() -> None:
-    project_root = Path(__file__).resolve().parents[2]
+    project_root = PROJECT_ROOT
     load_dotenv(project_root / ".env")
     args = _parser().parse_args()
     runtime, application, universe_id, provider_id = _build_application(project_root)
