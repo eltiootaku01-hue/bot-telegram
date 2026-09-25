@@ -122,6 +122,28 @@ class WaifuRegistry:
                 return name
         raise ValueError("Mesera inválida; usa Cari, Sunna, Cami o Chie.")
 
+    def danbooru_whitelist(self) -> tuple[str, ...]:
+        """Devuelve exclusivamente los tags Danbooru declarados en el registro local."""
+        tags: list[str] = []
+        for record in self.load():
+            tag = record.danbooru_tag.strip()
+            if tag and tag not in tags:
+                tags.append(tag)
+        return tuple(tags)
+
+    def resolve_danbooru_tag(self, value: str) -> str:
+        """Resuelve nombre o tag local a un tag Danbooru existente; nunca inventa uno."""
+        normalized = str(value or "").strip().casefold()
+        if not normalized:
+            return ""
+        for record in self.load():
+            if (
+                record.name.strip().casefold() == normalized
+                or record.danbooru_tag.strip().casefold() == normalized
+            ):
+                return record.danbooru_tag.strip()
+        return ""
+
     def affinity_level(self, user_id: str, maid: str) -> int:
         name = self._normalize_affinity_name(maid)
         self.load()
