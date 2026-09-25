@@ -409,5 +409,72 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("outbox_store=outbox_store", source)
 
 
+    def test_admin_provisioning_is_idempotent_and_creates_base_structure(self):
+        import json
+        import tempfile
+        from gui.admin_provisioning import (
+            AdminProvisioner,
+            DEFAULT_ADMIN_VALUES,
+        )
+
+        class FakeConfig:
+            def __init__(self):
+                self.values = {}
+
+            def set_values(self, values):
+                self.values.update({str(k): str(v) for k, v in values.items()})
+                return dict(self.values)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            provisioner = AdminProvisioner(temp_dir)
+            config = FakeConfig()
+            first = provisioner.activate(config)
+            self.assertEqual(
+                {"animals_city", "cafe_otaku", "taberna"},
+                set(first["panels"]),
+            )
+            self.assertEqual(
+                {"animals_city", "cafe_otaku", "taberna"},
+                set(first["themes"]),
+            )
+            self.assertEqual(set(DEFAULT_ADMIN_VALUES), set(config.values))
+
+            structure_path = Path(first["path"])
+            self.assertTrue(structure_path.is_file())
+            payload = json.loads(structure_path.read_text(encoding="utf-8"))
+            self.assertEqual(3, len(payload["panels"]))
+            self.assertEqual(3, len(payload["themes"]))
+
+            payload["panels"][0]["description"] = "personalizado"
+            structure_path.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            second = provisioner.activate(config)
+            self.assertFalse(second["config_created"])
+            payload_after = json.loads(
+                structure_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                "personalizado",
+                payload_after["panels"][0]["description"],
+            )
+
+    def test_admin_button_contract_and_confirmation_message(self):
+        source = (self.ROOT / "src" / "gui" / "app.py").read_text(
+            encoding="utf-8"
+        )
+        for token in (
+            'QPushButton("👑 Soy Admin")',
+            "self.admin_button.setCheckable(True)",
+            "self.admin_button.clicked.connect(self._activate_admin_mode)",
+            "self.admin_provisioner = AdminProvisioner(ROOT)",
+            "self.admin_provisioner.activate(self.config_manager)",
+            "BOT_IA_ADMIN_MODE",
+            "Modo Administrador activado: Paneles y temas estructurados correctamente.",
+        ):
+            self.assertIn(token, source)
+
+
 if __name__ == "__main__":
     unittest.main()
