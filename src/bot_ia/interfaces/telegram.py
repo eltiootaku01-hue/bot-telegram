@@ -293,6 +293,30 @@ class TelegramAdapter:
             "admin",
         )
 
+    def handle_photo_update(self, update: dict[str, object]) -> TelegramOutbound:
+        message = update.get("message")
+        if not isinstance(message, dict):
+            raise TelegramInputError("photo update missing message")
+        sender = message.get("from")
+        chat = message.get("chat")
+        photos = message.get("photo")
+        if not isinstance(sender, dict) or not isinstance(chat, dict) or not isinstance(photos, list) or not photos:
+            raise TelegramInputError("invalid photo update")
+        admin_id = str(sender.get("id", ""))
+        pending = self._pending_attachments.get(admin_id)
+        if pending is None:
+            raise TelegramInputError("no order is waiting for an attachment")
+        largest = photos[-1]
+        if not isinstance(largest, dict) or not isinstance(largest.get("file_id"), str):
+            raise TelegramInputError("photo file_id missing")
+        self._pending_attachments.pop(admin_id, None)
+        return TelegramOutbound(
+            chat_id=pending.user_id,
+            text=f"Pedido {pending.order_id} · {pending.resolution} · {pending.render_style}",
+            route="order_delivery",
+            photo_file_id=largest["file_id"],
+        )
+
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
             return self.handle_callback(update)
@@ -1253,11 +1277,12 @@ class TelegramPoller:
 
                 try:
                     moderation_outbound = self._moderate_raw_update(update)
-                    outbound = (
-                        moderation_outbound
-                        if moderation_outbound is not None
-                        else self._adapter.handle_update(update)
-                    )
+                    if moderation_outbound is not None:
+                        outbound = moderation_outbound
+                    elif isinstance(update.get("message"), dict) and isinstance(update["message"].get("photo"), list):
+                        outbound = self._adapter.handle_photo_update(update)
+                    else:
+                        outbound = self._adapter.handle_update(update)
                 except TelegramInputError:
                     if callback_key:
                         self._callback_mutex.release(callback_key)
