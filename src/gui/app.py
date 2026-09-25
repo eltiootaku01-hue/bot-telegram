@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
+import json
 import os
 from pathlib import Path
 import sqlite3
@@ -14,8 +15,10 @@ import sys
 import time
 import traceback
 from contextlib import closing
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
-from dotenv import dotenv_values, load_dotenv, set_key
+from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 from PySide6.QtCore import (
     QEvent,
@@ -30,6 +33,7 @@ from PySide6.QtCore import (
     Slot,
 )
 from PySide6.QtGui import QKeyEvent
+from core.config import DynamicConfigManager
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -287,6 +291,505 @@ class GeminiLobbyWorker(QObject):
             )
 
 
+class SystemDiagnosticWorker(QObject):
+    """Inspector Sentry que verifica salud web, Telegram, providers y SQLite."""
+
+    finished = Signal(dict)
+    failed = Signal(str)
+
+    TELEGRAM_TIMEOUT_SECONDS = 8.0
+    PROVIDER_TIMEOUT_SECONDS = 8.0
+    BROWSER_TIMEOUT_MS = 10_000
+    BROWSER_DATA_DIR = Path("./browser_data")
+    GEMINI_URL = "https://gemini.google.com"
+    GEMINI_INPUT_SELECTOR = "div[contenteditable='true']"
+
+    def __init__(
+        self,
+        project_root: Path,
+        database_path: Path,
+        runtime_config: object,
+    ) -> None:
+        super().__init__()
+        self.project_root = Path(project_root)
+        self.database_path = Path(database_path)
+        self.runtime_config = runtime_config
+
+    @staticmethod
+    def _provider_endpoint(
+        provider_id: str,
+        base_url: str,
+    ) -> str | None:
+        normalized = provider_id.strip().lower()
+        if normalized == "ollama":
+            root = (
+                base_url.rstrip("/")
+                if base_url
+                else "http://127.0.0.1:11434"
+            )
+            return f"{root}/api/tags"
+
+        defaults = {
+            "openai": "https://api.openai.com/v1",
+            "groq": "https://api.groq.com/openai/v1",
+            "openrouter": "https://openrouter.ai/api/v1",
+        }
+        if normalized in defaults:
+            root = base_url.rstrip("/") if base_url else defaults[normalized]
+            return f"{root}/models"
+        return None
+
+    @staticmethod
+    def _http_get(
+        url: str,
+        *,
+        token: str | None = None,
+        timeout_seconds: float,
+    ) -> int:
+        headers = {
+            "User-Agent": "BOT-IA-Sentry/1.0",
+            "Accept": "application/json",
+        }
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        request = Request(url, headers=headers, method="GET")
+        with urlopen(request, timeout=timeout_seconds) as response:
+            return int(response.status)
+
+    def _check_gemini_web(self) -> dict[str, object]:
+        browser_path = (
+            self.project_root / self.BROWSER_DATA_DIR
+        ).resolve()
+        result: dict[str, object] = {
+            "status": "warning",
+            "severity": "warning",
+            "path": str(browser_path),
+            "session_ready": False,
+            "cause": "",
+            "suggestion": "",
+        }
+
+        if not browser_path.is_dir():
+            result.update(
+                cause="No existe el perfil persistente browser_data.",
+                suggestion=(
+                    "Inicia Gemini Lobby una vez para crear la "
+                    "sesión persistente."
+                ),
+            )
+            return result
+
+        context = None
+        try:
+            with sync_playwright() as playwright:
+                context = playwright.chromium.launch_persistent_context(
+                    str(browser_path),
+                    headless=True,
+                    args=[
+                        "--disable-blink-features=AutomationControlled",
+                        "--hide-crash-restore-bubble",
+                        "--no-sandbox",
+                    ],
+                )
+                page = (
+                    context.pages[0]
+                    if context.pages
+                    else context.new_page()
+                )
+                page.goto(
+                    self.GEMINI_URL,
+                    wait_until="domcontentloaded",
+                    timeout=self.BROWSER_TIMEOUT_MS,
+                )
+                locator = page.locator(self.GEMINI_INPUT_SELECTOR)
+                ready = any(
+                    locator.nth(index).is_visible()
+                    for index in range(locator.count())
+                )
+                result.update(
+                    status="ok" if ready else "warning",
+                    severity="info" if ready else "warning",
+                    session_ready=ready,
+                    page_url=page.url,
+                    cause=(
+                        ""
+                        if ready
+                        else (
+                            "Gemini cargó, pero no apareció el "
+                            "editor autenticado."
+                        )
+                    ),
+                    suggestion=(
+                        ""
+                        if ready
+                        else (
+                            "Comprueba que la sesión de Google siga "
+                            "activa en browser_data."
+                        )
+                    ),
+                )
+        except Exception as error:
+            message = f"{type(error).__name__}: {error}"
+            locked = any(
+                token in message.lower()
+                for token in ("lock", "in use", "user data directory")
+            )
+            result.update(
+                status="in_use" if locked else "error",
+                severity="warning" if locked else "error",
+                cause=message,
+                suggestion=(
+                    "Cierra otra ventana que esté usando browser_data "
+                    "y repite el diagnóstico."
+                    if locked
+                    else (
+                        "Revisa Chromium de Playwright y la sesión "
+                        "persistente de Gemini."
+                    )
+                ),
+            )
+        finally:
+            if context is not None:
+                try:
+                    context.close()
+                except Exception as error:
+                    _ = error
+        return result
+
+    def _check_telegram(self) -> list[dict[str, object]]:
+        keys = ["TELEGRAM_BOT_TOKEN"] + [
+            f"BOT_TOKEN_{profile.bot_id.upper()}"
+            for profile in BOT_PROFILES
+        ]
+        report: list[dict[str, object]] = []
+
+        for key in keys:
+            token = os.getenv(key, "").strip()
+            if not token:
+                report.append(
+                    {
+                        "token": key,
+                        "status": "missing_credentials",
+                        "severity": "error",
+                        "cause": "No hay token configurado.",
+                        "suggestion": (
+                            f"Guarda {key} desde la gestión de "
+                            "PROVEEDORES LLM / APIs y BOTS."
+                        ),
+                    }
+                )
+                continue
+
+            try:
+                status_code = self._http_get(
+                    f"https://api.telegram.org/bot{token}/getMe",
+                    timeout_seconds=self.TELEGRAM_TIMEOUT_SECONDS,
+                )
+                ok = 200 <= status_code < 300
+                report.append(
+                    {
+                        "token": key,
+                        "status": "ok" if ok else "error",
+                        "severity": "info" if ok else "error",
+                        "http_status": status_code,
+                        "cause": (
+                            ""
+                            if ok
+                            else "Telegram respondió con estado no exitoso."
+                        ),
+                        "suggestion": (
+                            ""
+                            if ok
+                            else "Verifica el token y el estado del bot."
+                        ),
+                    }
+                )
+            except HTTPError as error:
+                report.append(
+                    {
+                        "token": key,
+                        "status": "error",
+                        "severity": "error",
+                        "http_status": error.code,
+                        "cause": "Telegram rechazó getMe.",
+                        "suggestion": (
+                            "Verifica el token y los permisos del bot."
+                        ),
+                    }
+                )
+            except (URLError, OSError, TimeoutError):
+                report.append(
+                    {
+                        "token": key,
+                        "status": "error",
+                        "severity": "error",
+                        "cause": "Telegram no fue accesible desde esta sesión.",
+                        "suggestion": (
+                            "Comprueba la conectividad hacia "
+                            "api.telegram.org."
+                        ),
+                    }
+                )
+        return report
+
+    def _check_providers(self) -> list[dict[str, object]]:
+        report: list[dict[str, object]] = []
+        for provider in getattr(
+            self.runtime_config,
+            "providers",
+            (),
+        ):
+            provider_id = getattr(provider, "provider_id", "")
+            if not getattr(provider, "enabled", False):
+                continue
+
+            accounts = getattr(provider, "accounts", ()) or (None,)
+            for account in accounts:
+                if account is not None and not getattr(
+                    account,
+                    "enabled",
+                    True,
+                ):
+                    continue
+
+                account_id = (
+                    getattr(account, "account_id", provider_id)
+                    if account is not None
+                    else provider_id
+                )
+                secret_env = (
+                    getattr(account, "secret_env", "")
+                    if account is not None
+                    else ""
+                )
+                endpoint = self._provider_endpoint(
+                    provider_id,
+                    getattr(provider, "base_url", ""),
+                )
+
+                if endpoint is None:
+                    report.append(
+                        {
+                            "provider": provider_id,
+                            "account": account_id,
+                            "status": "not_checked",
+                            "severity": "warning",
+                            "cause": (
+                                "No existe un endpoint genérico seguro "
+                                "para este provider."
+                            ),
+                            "suggestion": (
+                                "Ejecuta una petición real desde el "
+                                "flujo normal del provider."
+                            ),
+                        }
+                    )
+                    continue
+
+                token = (
+                    os.getenv(secret_env, "").strip()
+                    if secret_env
+                    else None
+                )
+                if secret_env and not token:
+                    report.append(
+                        {
+                            "provider": provider_id,
+                            "account": account_id,
+                            "status": "missing_credentials",
+                            "severity": "error",
+                            "cause": f"No existe {secret_env}.",
+                            "suggestion": (
+                                "Guarda la credencial desde "
+                                "PROVEEDORES LLM / APIs."
+                            ),
+                        }
+                    )
+                    continue
+
+                try:
+                    status_code = self._http_get(
+                        endpoint,
+                        token=(
+                            token
+                            if provider_id != "ollama"
+                            else None
+                        ),
+                        timeout_seconds=self.PROVIDER_TIMEOUT_SECONDS,
+                    )
+                    ok = 200 <= status_code < 300
+                    report.append(
+                        {
+                            "provider": provider_id,
+                            "account": account_id,
+                            "status": "ok" if ok else "error",
+                            "severity": "info" if ok else "error",
+                            "http_status": status_code,
+                            "cause": (
+                                ""
+                                if ok
+                                else (
+                                    "El endpoint respondió con "
+                                    "estado no exitoso."
+                                )
+                            ),
+                            "suggestion": (
+                                ""
+                                if ok
+                                else (
+                                    "Revisa credenciales, URL y cuota "
+                                    "del provider."
+                                )
+                            ),
+                        }
+                    )
+                except HTTPError as error:
+                    report.append(
+                        {
+                            "provider": provider_id,
+                            "account": account_id,
+                            "status": "error",
+                            "severity": "error",
+                            "http_status": error.code,
+                            "cause": (
+                                "El provider rechazó la consulta de salud."
+                            ),
+                            "suggestion": (
+                                "Verifica credenciales y disponibilidad "
+                                "del servicio."
+                            ),
+                        }
+                    )
+                except (URLError, OSError, TimeoutError) as error:
+                    report.append(
+                        {
+                            "provider": provider_id,
+                            "account": account_id,
+                            "status": "error",
+                            "severity": "error",
+                            "cause": f"{type(error).__name__}: {error}",
+                            "suggestion": (
+                                "Comprueba red, DNS y URL del provider."
+                            ),
+                        }
+                    )
+        return report
+
+    def _check_sqlite(self) -> dict[str, object]:
+        result: dict[str, object] = {
+            "status": "error",
+            "severity": "error",
+            "path": str(self.database_path),
+            "quick_check": None,
+            "cause": "",
+            "suggestion": "",
+        }
+        if not self.database_path.is_file():
+            result.update(
+                cause="La base de datos de eventos no existe.",
+                suggestion=(
+                    "Inicializa el runtime para crear la base SQLite."
+                ),
+            )
+            return result
+
+        try:
+            with closing(
+                sqlite3.connect(
+                    self.database_path,
+                    timeout=2.0,
+                )
+            ) as connection:
+                row = connection.execute(
+                    "PRAGMA quick_check"
+                ).fetchone()
+            value = row[0] if row else None
+            ok = value == "ok"
+            result.update(
+                status="ok" if ok else "error",
+                severity="info" if ok else "error",
+                quick_check=value,
+                cause=(
+                    ""
+                    if ok
+                    else "PRAGMA quick_check no devolvió ok."
+                ),
+                suggestion=(
+                    ""
+                    if ok
+                    else (
+                        "Detén workers activos y revisa o restaura "
+                        "la copia de seguridad SQLite."
+                    )
+                ),
+            )
+        except (OSError, sqlite3.Error) as error:
+            result.update(
+                cause=f"{type(error).__name__}: {error}",
+                suggestion=(
+                    "Comprueba bloqueo, permisos y espacio disponible "
+                    "del archivo SQLite."
+                ),
+            )
+        return result
+
+    def run(self) -> None:
+        try:
+            report: dict[str, object] = {
+                "ok": True,
+                "browser": self._check_gemini_web(),
+                "telegram": self._check_telegram(),
+                "providers": self._check_providers(),
+                "sqlite": self._check_sqlite(),
+                "errors": [],
+                "suggestions": [],
+            }
+
+            sections = (
+                report["browser"],
+                report["telegram"],
+                report["providers"],
+                report["sqlite"],
+            )
+            for section in sections:
+                items = (
+                    section
+                    if isinstance(section, list)
+                    else [section]
+                )
+                for item in items:
+                    if not isinstance(item, dict):
+                        continue
+                    if item.get("severity") == "error":
+                        report["ok"] = False
+                    cause = str(item.get("cause", "")).strip()
+                    suggestion = str(
+                        item.get("suggestion", "")
+                    ).strip()
+                    if cause and isinstance(
+                        report["errors"],
+                        list,
+                    ):
+                        report["errors"].append(cause)
+                    if suggestion and isinstance(
+                        report["suggestions"],
+                        list,
+                    ):
+                        report["suggestions"].append(suggestion)
+
+            report["errors"] = list(
+                dict.fromkeys(report["errors"])
+            )
+            report["suggestions"] = list(
+                dict.fromkeys(report["suggestions"])
+            )
+            self.finished.emit(report)
+        except Exception as error:
+            self.failed.emit(
+                f"{type(error).__name__}: {error}"
+            )
+
+
 class CommandCenterWindow(QMainWindow):
     """UI principal que conserva el runtime y backend existentes."""
 
@@ -366,6 +869,13 @@ class CommandCenterWindow(QMainWindow):
         self._async_orchestrator: TaskOrchestrator | None = None
         self._async_web_queue: WebQueueManager | None = None
         self._dialogs: list[QWidget] = []
+        self.config_manager = DynamicConfigManager(
+            ROOT,
+            runtime=self.runtime,
+        )
+        self._config_dialog_fields: dict[str, dict[str, QLineEdit]] = {}
+        self._diagnostic_thread: QThread | None = None
+        self._diagnostic_worker: SystemDiagnosticWorker | None = None
         self._bot_credentials = {
             f"BOT_TOKEN_{profile.bot_id.upper()}": os.getenv(
                 f"BOT_TOKEN_{profile.bot_id.upper()}", ""
@@ -441,6 +951,12 @@ class CommandCenterWindow(QMainWindow):
             lambda: self._set_page(2)
         )
         top_layout.addWidget(self.web_button)
+
+        self.diagnostic_button = QPushButton("🔍 Diagnóstico")
+        self.diagnostic_button.clicked.connect(
+            self._show_diagnostic_dialog
+        )
+        top_layout.addWidget(self.diagnostic_button)
 
         root_layout.addWidget(top)
 
@@ -1130,92 +1646,197 @@ class CommandCenterWindow(QMainWindow):
         if self._gemini_worker is worker:
             self._gemini_worker = None
 
-    def save_and_verify_credentials(
+    def _save_dynamic_configuration(
         self,
-        fields: dict[str, QLineEdit],
+        values: dict[str, str],
     ) -> bool:
-        """Guarda tokens BOTS en .env y verifica que se hayan persistido."""
-        dotenv_path = ROOT / ".env"
-        dotenv_path.parent.mkdir(parents=True, exist_ok=True)
-
-        for bot_id, field in fields.items():
-            token = field.text().strip()
-            if not token:
-                continue
-            key = f"BOT_TOKEN_{bot_id.upper()}"
-            set_key(
-                str(dotenv_path),
-                key,
-                token,
-                quote_mode="auto",
+        try:
+            self.config_manager.set_values(values)
+        except Exception as error:
+            self._log_error("Configuration save", error)
+            self._append_system(
+                "No se pudo guardar la configuración en .env."
             )
-            os.environ[key] = token
-            self._bot_credentials[key] = token
+            return False
 
-        load_dotenv(dotenv_path, override=False)
-        values = dotenv_values(dotenv_path)
+        for key, value in values.items():
+            if key.startswith("BOT_TOKEN_"):
+                self._bot_credentials[key] = value
 
-        for bot_id, field in fields.items():
-            token = field.text().strip()
-            if not token:
-                continue
-            key = f"BOT_TOKEN_{bot_id.upper()}"
-            if values.get(key) != token:
-                self._append_system(
-                    f"No se pudo verificar la persistencia de {key}."
-                )
-                return False
+        previous_application = self.application
+        previous_provider = self.provider_id
+        previous_universe = self.default_universe
 
+        self.provider_id = os.getenv(
+            "BOT_IA_PROVIDER",
+            "openai",
+        ).strip() or "openai"
+        self.default_universe = os.getenv(
+            "BOT_IA_UNIVERSE",
+            "one_neko_punch",
+        ).strip() or "one_neko_punch"
+
+        try:
+            self.application = self.runtime.build_application(
+                default_universe_id=self.default_universe,
+                provider_id=self.provider_id,
+            )
+        except Exception as error:
+            self.application = previous_application
+            self.provider_id = previous_provider
+            self.default_universe = previous_universe
+            self._log_error("Runtime hot reload", error)
+            self._append_system(
+                "La configuración quedó guardada, pero el runtime "
+                "no pudo reconstruir la aplicación con esos valores."
+            )
+            self._refresh_config_dialog_fields()
+            return False
+
+        self._refresh_config_dialog_fields()
+        self.refresh_state()
         self._append_system(
-            "✅ Credenciales BOTS guardadas en .env y verificadas."
+            "✅ Configuración guardada en .env y aplicada en caliente."
         )
         return True
 
+    def save_and_verify_credentials(
+        self,
+        fields: dict[str, QLineEdit],
+        provider_fields: dict[str, QLineEdit] | None = None,
+    ) -> bool:
+        """Persiste BOTS y, opcionalmente, providers desde el panel de configuración."""
+        values: dict[str, str] = {}
+
+        for bot_id, field in fields.items():
+            values[f"BOT_TOKEN_{bot_id.upper()}"] = (
+                field.text().strip()
+            )
+
+        if provider_fields is not None:
+            values.update(
+                {
+                    key: field.text().strip()
+                    for key, field in provider_fields.items()
+                }
+            )
+
+        return self._save_dynamic_configuration(values)
+
     def _show_bots_credentials_dialog(self) -> None:
+        self._show_dynamic_config_dialog()
+
+    def _show_dynamic_config_dialog(self) -> None:
         dialog = QWidget()
-        dialog.setWindowTitle("Café Otaku · BOTS · Credenciales")
-        dialog.setMinimumSize(760, 520)
+        dialog.setWindowTitle(
+            "Casa de Comando · PROVEEDORES LLM / APIs + BOTS"
+        )
+        dialog.setMinimumSize(900, 720)
         dialog.setAttribute(Qt.WA_DeleteOnClose)
 
-        layout = QVBoxLayout(dialog)
-        layout.addWidget(
+        outer = QVBoxLayout(dialog)
+        outer.addWidget(
             SectionHeader(
-                "Credenciales de los 6 BOTS",
-                "Los tokens se guardan en .env, que está excluido del repositorio.",
+                "PROVEEDORES LLM / APIs",
+                "Los cambios se guardan en .env y se aplican inmediatamente al runtime."
             )
         )
 
-        form = QGridLayout()
-        layout.addLayout(form)
-        fields: dict[str, QLineEdit] = {}
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
 
+        provider_fields: dict[str, QLineEdit] = {}
+        provider_keys = (
+            "BOT_IA_PROVIDER",
+            "OPENAI_API_KEY",
+            "GROQ_API_KEY",
+            "OPENROUTER_API_KEY",
+            "COZE_API_TOKEN",
+            "COZE_BOT_ID",
+            "GEMINI_API_KEY",
+            "OLLAMA_BASE_URL",
+            "TELEGRAM_BOT_TOKEN",
+        )
+        provider_grid = QGridLayout()
+        for row, key in enumerate(provider_keys):
+            provider_grid.addWidget(
+                QLabel(key),
+                row,
+                0,
+            )
+            field = QLineEdit(
+                self.config_manager.get(
+                    key,
+                    os.getenv(key, ""),
+                )
+            )
+            if "API_KEY" in key or "TOKEN" in key:
+                field.setEchoMode(QLineEdit.Password)
+            field.setPlaceholderText(key)
+            provider_grid.addWidget(field, row, 1)
+            provider_fields[key] = field
+
+        content_layout.addLayout(provider_grid)
+        content_layout.addSpacing(14)
+        content_layout.addWidget(
+            SectionHeader(
+                "BOTS",
+                "Tokens persistentes de Cari, Cami, Sunna, Chie, Chloe y Scarlet."
+            )
+        )
+
+        bot_fields: dict[str, QLineEdit] = {}
+        bot_grid = QGridLayout()
         for row, profile in enumerate(BOT_PROFILES):
             key = f"BOT_TOKEN_{profile.bot_id.upper()}"
+            bot_grid.addWidget(
+                QLabel(f"{profile.avatar} {profile.name}"),
+                row,
+                0,
+            )
             field = QLineEdit(
-                self._bot_credentials.get(
+                self.config_manager.get(
                     key,
                     os.getenv(key, ""),
                 )
             )
             field.setEchoMode(QLineEdit.Password)
             field.setPlaceholderText(key)
-            form.addWidget(
-                QLabel(f"{profile.avatar} {profile.name}"),
-                row,
-                0,
-            )
-            form.addWidget(field, row, 1)
-            fields[profile.bot_id] = field
+            bot_grid.addWidget(field, row, 1)
+            bot_fields[profile.bot_id] = field
 
-        save = QPushButton("Guardar y verificar")
+        content_layout.addLayout(bot_grid)
+        content_layout.addStretch(1)
+        scroll.setWidget(content)
+        outer.addWidget(scroll, 1)
+
+        self._config_dialog_fields = {
+            "providers": provider_fields,
+            "bots": bot_fields,
+        }
+
+        buttons = QHBoxLayout()
+        save = QPushButton("💾 Guardar")
         save.clicked.connect(
-            lambda: self.save_and_verify_credentials(fields)
+            lambda: self.save_and_verify_credentials(
+                bot_fields,
+                provider_fields,
+            )
         )
-        layout.addWidget(save, 0, Qt.AlignRight)
+        buttons.addWidget(save)
+
+        reset = QPushButton("🔄 Restablecer Configuración de Fábrica")
+        reset.clicked.connect(
+            lambda: self._reset_configuration_factory(dialog)
+        )
+        buttons.addWidget(reset)
 
         close = QPushButton("Cerrar")
         close.clicked.connect(dialog.close)
-        layout.addWidget(close, 0, Qt.AlignRight)
+        buttons.addWidget(close)
+        outer.addLayout(buttons)
 
         self._dialogs.append(dialog)
         dialog.destroyed.connect(
@@ -1223,6 +1844,201 @@ class CommandCenterWindow(QMainWindow):
         )
         dialog.show()
 
+    def _refresh_config_dialog_fields(self) -> None:
+        for section in self._config_dialog_fields.values():
+            for key, field in section.items():
+                value = self.config_manager.get(
+                    key,
+                    os.getenv(key, ""),
+                )
+                field.blockSignals(True)
+                field.setText(value)
+                field.blockSignals(False)
+
+    def _reset_configuration_factory(self, dialog: QWidget) -> None:
+        answer = QMessageBox.question(
+            dialog,
+            "Confirmar restablecimiento",
+            "Se reemplazará .env por .env.example y se restaurarán "
+            "los valores de fábrica. ¿Continuar?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+
+        try:
+            self.config_manager.reset_to_factory()
+            self.provider_id = os.getenv(
+                "BOT_IA_PROVIDER",
+                "openai",
+            ).strip() or "openai"
+            self.default_universe = os.getenv(
+                "BOT_IA_UNIVERSE",
+                "one_neko_punch",
+            ).strip() or "one_neko_punch"
+            self.application = self.runtime.build_application(
+                default_universe_id=self.default_universe,
+                provider_id=self.provider_id,
+            )
+            self._bot_credentials = {
+                f"BOT_TOKEN_{profile.bot_id.upper()}": os.getenv(
+                    f"BOT_TOKEN_{profile.bot_id.upper()}",
+                    "",
+                ).strip()
+                for profile in BOT_PROFILES
+            }
+            self._refresh_config_dialog_fields()
+            self.refresh_state()
+            self._append_system(
+                "🔄 Configuración de fábrica restaurada desde .env.example."
+            )
+        except Exception as error:
+            self._log_error("Factory reset", error)
+            self._append_system(
+                "No se pudo restablecer la configuración de fábrica."
+            )
+
+    def _show_diagnostic_dialog(self) -> None:
+        dialog = QWidget()
+        dialog.setWindowTitle(
+            "🔍 DIAGNÓSTICO Y ANÁLISIS · Sentry"
+        )
+        dialog.setMinimumSize(1000, 720)
+
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(
+            SectionHeader(
+                "Inspector interno Sentry",
+                "Comprueba Gemini Web, Telegram, providers activos y la integridad de SQLite sin mostrar secretos."
+            )
+        )
+
+        report_view = QPlainTextEdit()
+        report_view.setReadOnly(True)
+        report_view.setPlainText(
+            "Pulsa «Ejecutar diagnóstico» para iniciar la inspección."
+        )
+        layout.addWidget(report_view, 1)
+
+        run_button = QPushButton("🔍 Ejecutar diagnóstico")
+        run_button.clicked.connect(
+            lambda: self._start_system_diagnostic(
+                report_view,
+                run_button,
+            )
+        )
+        layout.addWidget(run_button, 0, Qt.AlignRight)
+
+        self._dialogs.append(dialog)
+        dialog.destroyed.connect(
+            lambda _obj=None: self._discard_dialog(dialog)
+        )
+        dialog.show()
+
+    def _start_system_diagnostic(
+        self,
+        report_view: QPlainTextEdit,
+        run_button: QPushButton,
+    ) -> None:
+        if (
+            self._diagnostic_thread is not None
+            and self._diagnostic_thread.isRunning()
+        ):
+            return
+
+        run_button.setEnabled(False)
+        run_button.setText("⏳ Analizando…")
+        self.config_manager.load()
+
+        worker = SystemDiagnosticWorker(
+            ROOT,
+            self.runtime.memory_store.path,
+            self.runtime.config,
+        )
+        thread = QThread(self)
+        worker.moveToThread(thread)
+
+        worker.finished.connect(
+            lambda report: self._diagnostic_done(
+                report,
+                report_view,
+                run_button,
+            )
+        )
+        worker.failed.connect(
+            lambda error: self._diagnostic_failed(
+                error,
+                report_view,
+                run_button,
+            )
+        )
+        thread.started.connect(worker.run)
+        worker.finished.connect(thread.quit)
+        worker.failed.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        worker.failed.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(
+            lambda: self._cleanup_diagnostic_thread(
+                thread,
+                worker,
+            )
+        )
+
+        self._diagnostic_thread = thread
+        self._diagnostic_worker = worker
+        thread.start()
+
+    @Slot(dict)
+    def _diagnostic_done(
+        self,
+        report: dict,
+        report_view: QPlainTextEdit,
+        run_button: QPushButton,
+    ) -> None:
+        report_view.setPlainText(
+            json.dumps(
+                report,
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        run_button.setEnabled(True)
+        run_button.setText("🔍 Ejecutar diagnóstico")
+
+    @Slot(str)
+    def _diagnostic_failed(
+        self,
+        error: str,
+        report_view: QPlainTextEdit,
+        run_button: QPushButton,
+    ) -> None:
+        report_view.setPlainText(
+            json.dumps(
+                {
+                    "ok": False,
+                    "errors": [error],
+                    "suggestions": [
+                        "Repite el diagnóstico y revisa work/gui.log."
+                    ],
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        run_button.setEnabled(True)
+        run_button.setText("🔍 Ejecutar diagnóstico")
+
+    def _cleanup_diagnostic_thread(
+        self,
+        thread: QThread,
+        worker: SystemDiagnosticWorker,
+    ) -> None:
+        if self._diagnostic_thread is thread:
+            self._diagnostic_thread = None
+        if self._diagnostic_worker is worker:
+            self._diagnostic_worker = None
 
     def _append_message(self, speaker: str, text: str, role: str) -> None:
         bubble = QLabel(f"<b>{speaker}</b><br>{self._escape(text)}")
@@ -1651,6 +2467,42 @@ class CommandCenterWindow(QMainWindow):
         bots_layout.addWidget(bots_button)
         grid.addWidget(bots_card, 1, 2)
 
+        config_card = CardFrame()
+        config_layout = QVBoxLayout(config_card)
+        config_layout.addWidget(
+            QLabel("⚙ PROVEEDORES LLM / APIs")
+        )
+        config_layout.addWidget(
+            QLabel(
+                "Guarda claves, tokens y selección de provider en .env "
+                "con aplicación inmediata al runtime."
+            )
+        )
+        config_button = QPushButton("Abrir configuración")
+        config_button.clicked.connect(
+            self._show_dynamic_config_dialog
+        )
+        config_layout.addWidget(config_button)
+        grid.addWidget(config_card, 2, 1)
+
+        diagnostic_card = CardFrame()
+        diagnostic_layout = QVBoxLayout(diagnostic_card)
+        diagnostic_layout.addWidget(
+            QLabel("🔍 DIAGNÓSTICO Y ANÁLISIS")
+        )
+        diagnostic_layout.addWidget(
+            QLabel(
+                "Sentry inspecciona Gemini Web, Telegram, providers "
+                "y la integridad SQLite."
+            )
+        )
+        diagnostic_button = QPushButton("Ejecutar Sentry")
+        diagnostic_button.clicked.connect(
+            self._show_diagnostic_dialog
+        )
+        diagnostic_layout.addWidget(diagnostic_button)
+        grid.addWidget(diagnostic_card, 2, 2)
+
         network_card = CardFrame()
         network_layout = QVBoxLayout(network_card)
         network_layout.addWidget(QLabel("🗺️ Redes y canales"))
@@ -1948,6 +2800,22 @@ class CommandCenterWindow(QMainWindow):
                     thread.wait(2200)
             except Exception as error:
                 self._log_error("WebQueue shutdown", error)
+
+        if (
+            self._diagnostic_thread is not None
+            and self._diagnostic_thread.isRunning()
+        ):
+            self._diagnostic_thread.requestInterruption()
+            self._diagnostic_thread.quit()
+            self._diagnostic_thread.wait(1000)
+
+        if (
+            self._gemini_thread is not None
+            and self._gemini_thread.isRunning()
+        ):
+            self._gemini_thread.requestInterruption()
+            self._gemini_thread.quit()
+            self._gemini_thread.wait(1000)
 
         try:
             self.task_pool.waitForDone(2200)

@@ -85,7 +85,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "thread.finished.connect(thread.deleteLater)",
             "save_and_verify_credentials",
             "load_dotenv",
-            "set_key",
+            "set_values",
         ):
             self.assertIn(token, source)
 
@@ -100,6 +100,13 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         for token in (
             "class CommandCenterWindow(QMainWindow):",
             "CafeOtakuWindow = CommandCenterWindow",
+            "class SystemDiagnosticWorker(QObject):",
+            "finished = Signal(dict)",
+            "failed = Signal(str)",
+            "_show_diagnostic_dialog",
+            "_start_system_diagnostic",
+            "json.dumps",
+            "reset_to_factory",
             "window = CommandCenterWindow()",
             "sync_playwright",
             "launch_persistent_context(",
@@ -113,10 +120,13 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "worker.finished.connect(worker.deleteLater)",
             "worker.failed.connect(worker.deleteLater)",
             "thread.finished.connect(thread.deleteLater)",
-            "set_key",
+            "DynamicConfigManager",
             "load_dotenv",
-            "dotenv_values",
+            "set_values",
             "BOT_TOKEN_{profile.bot_id.upper()}",
+            "PROVEEDORES LLM / APIs",
+            "Restablecer Configuración de Fábrica",
+            "config_manager.set_values",
         ):
             self.assertIn(token, source)
 
