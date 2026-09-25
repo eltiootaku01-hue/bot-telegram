@@ -1144,7 +1144,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("Maid", WAITRESS_PROFILES["Cari"]["focus"])
         self.assertIn("21", WAITRESS_PROFILES["Sunna"]["focus"])
         self.assertIn("Bebidas", WAITRESS_PROFILES["Cami"]["focus"])
-        self.assertIn("trivias", WAITRESS_PROFILES["Chie"]["focus"])
+        self.assertIn("Trivias", WAITRESS_PROFILES["Chie"]["focus"])
 
         now = [1000.0]
         scheduler = TeaTimeScheduler(
