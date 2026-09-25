@@ -75,6 +75,62 @@ WAITRESS_PROFILES = {
 }
 
 
+COMMENT_REPLY_TEXT = "¡Gracias por comentar, Nakama! ☕"
+DISCORD_COMMENT_THREAD_NAME = "💬 Comentarios"
+COMMENT_MAX_LENGTH = 280
+
+
+@dataclass(frozen=True, slots=True)
+class TelegramCommentDecision:
+    should_reply: bool
+    chat_id: str
+    reply_to_message_id: int | None
+    text: str = COMMENT_REPLY_TEXT
+
+
+@dataclass(frozen=True, slots=True)
+class DiscordThreadDecision:
+    should_create: bool
+    channel_id: str
+    thread_name: str = DISCORD_COMMENT_THREAD_NAME
+
+
+def analyze_telegram_comment(update: dict[str, object]) -> TelegramCommentDecision:
+    """Detecta comentarios del grupo vinculado sin responder a otros bots ni a comandos."""
+    message = update.get("message")
+    if not isinstance(message, dict):
+        return TelegramCommentDecision(False, "")
+    chat = message.get("chat")
+    sender = message.get("from")
+    if not isinstance(chat, dict) or not isinstance(sender, dict):
+        return TelegramCommentDecision(False, "")
+    if bool(sender.get("is_bot")):
+        return TelegramCommentDecision(False, str(chat.get("id", "")))
+    text = str(message.get("text", "") or "").strip()
+    if not text or text.startswith("/"):
+        return TelegramCommentDecision(False, str(chat.get("id", "")))
+    reply = message.get("reply_to_message")
+    reply_id = reply.get("message_id") if isinstance(reply, dict) else None
+    if not isinstance(reply_id, int) or reply_id <= 0:
+        return TelegramCommentDecision(False, str(chat.get("id", "")))
+    return TelegramCommentDecision(True, str(chat.get("id", "")), reply_id)
+
+
+def analyze_discord_announcement(
+    *,
+    author_id: str,
+    superadmin_id: str,
+    channel_id: str,
+    is_announcement_channel: bool,
+    is_bot: bool = False,
+) -> DiscordThreadDecision:
+    if is_bot or str(author_id) != str(superadmin_id) or not is_announcement_channel:
+        return DiscordThreadDecision(False, str(channel_id))
+    return DiscordThreadDecision(True, str(channel_id))
+
+
+
+
 def normalize_maid(maid: str) -> str:
     value = str(maid or "").strip().casefold()
     for name in WAITRESS_PROFILES:
