@@ -1835,7 +1835,9 @@ class BebidaOrderDialog(QDialog):
     def _prepare(self) -> None:
         record = self._find_record(self.character.currentText())
         target = self.target_rarity.currentText()
-        target_key = "SPECIAL" if target == "Especial" else target
+        target_key = "SPECIAL" if self.product.currentText() == "Imagen IA Personalizada" else ("SPECIAL" if target == "Especial" else target)
+        if self.product.currentText() == "Imagen IA Personalizada":
+            self.target_rarity.setCurrentText("Especial")
         allowed_tag = whitelist_tag(
             record.danbooru_tag if record is not None else "",
             self.registry.danbooru_whitelist(),
@@ -1897,7 +1899,7 @@ class BebidaOrderDialog(QDialog):
             )
             return
         target = self.target_rarity.currentText()
-        target_key = "SPECIAL" if target == "Especial" else target
+        target_key = "SPECIAL" if self._prepared_order.product_type == "Imagen IA Personalizada" else ("SPECIAL" if target == "Especial" else target)
         if target_key != "SPECIAL" and not self._record_supports_rarity(record, target_key):
             QMessageBox.warning(
                 self,
