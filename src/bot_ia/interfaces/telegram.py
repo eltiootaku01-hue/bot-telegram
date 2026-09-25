@@ -19,9 +19,8 @@ from bot_ia.librarian.models import CoverageStatus
 from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
+from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text
 from .tutorials import build_tutorial_text
-from .cafe_orders import BebidaOrderFlow, build_bebida_summary
-from gui.tutorials import build_tutorial_text
 
 
 class TelegramInputError(ValueError):
@@ -157,7 +156,7 @@ class TelegramAdapter:
         self._application = application
         self._tavern_manager = tavern_manager
         self._bebida_flow = BebidaOrderFlow()
-        self._bebida_flow = BebidaOrderFlow()
+        self._wallet_store = CafeWalletStore(Path.cwd())
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
@@ -172,6 +171,15 @@ class TelegramAdapter:
                 "local",
                 self.MAIN_MENU,
             )
+        if command in {"/puntos", "/economia", "/precios"}:
+            wallet = self._wallet_store.get(inbound.user_id)
+            return TelegramOutbound(inbound.conversation_id, economy_price_text() + f"\n\nSaldo de {inbound.user_id}: {wallet.points} puntos.", "economy")
+        if command == "/gacha":
+            try:
+                result = draw_gacha(inbound.user_id, self._wallet_store, maid="Cami")
+            except ValueError as error:
+                return TelegramOutbound(inbound.conversation_id, f"🎰 Gacha: {error}", "gacha")
+            return TelegramOutbound(inbound.conversation_id, f"🎰 Resultado: {result.rarity}\n{result.consolation}\nCoste: {result.points_spent} puntos.", "gacha")
         if command == "/tutorial":
             return TelegramOutbound(
                 inbound.conversation_id,
