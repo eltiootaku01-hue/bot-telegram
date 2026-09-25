@@ -32,6 +32,7 @@ from random import SystemRandom
 import threading
 import time
 from typing import Callable
+from .cami_guard import CamiGuardDecision, scan_cami_guard, is_superadmin
 
 
 WAITRESS_PROFILES = {
@@ -263,6 +264,31 @@ class AsyncBusyGuard:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+
+
+def supervise_admin_publication(
+    text: object,
+    *,
+    image_tags: tuple[str, ...] = (),
+    user_id: object = "",
+    username: object = "",
+    content_kind: str = "text",
+    target_room: str = "#general",
+) -> CamiGuardDecision:
+    """Punto único de entrada de Cami Guard para publicaciones del administrador."""
+    return scan_cami_guard(
+        text,
+        image_tags=image_tags,
+        user_id=user_id,
+        username=username,
+        content_kind=content_kind,
+        target_room=target_room,
+    )
+
+
+def superadmin_is_immune(user_id: object = "", username: object = "") -> bool:
+    return is_superadmin(user_id, username)
+
 
 
 TEA_TIME_DURATION_SECONDS = 20 * 60
