@@ -100,6 +100,8 @@ from bot_ia.interfaces.order_support import ComplaintStore, new_order_id, order_
     DEFAULT_POSES,
     EXPOSURE_LEVELS,
     PRODUCT_TYPES,
+    RESOLUTIONS,
+    RENDER_STYLES,
     BebidaOrder,
     build_bebida_prompt,
     build_bebida_summary,
@@ -1776,15 +1778,24 @@ class BebidaOrderDialog(QDialog):
         self.product = QComboBox()
         self.product.addItems(PRODUCT_TYPES)
         form.addWidget(self.product, 6, 1)
-        form.addWidget(QLabel("Rareza objetivo"), 7, 0)
+        form.addWidget(QLabel("Resolución"), 7, 0)
+        self.resolution = QComboBox()
+        self.resolution.addItems(tuple(RESOLUTIONS))
+        self.resolution.setCurrentText("L")
+        form.addWidget(self.resolution, 7, 1)
+        form.addWidget(QLabel("Estilo de renderizado"), 8, 0)
+        self.render_style = QComboBox()
+        self.render_style.addItems(tuple(RENDER_STYLES))
+        form.addWidget(self.render_style, 8, 1)
+        form.addWidget(QLabel("Rareza objetivo"), 9, 0)
         self.target_rarity = QComboBox()
         self.target_rarity.addItems(("R", "SR", "UR", "Especial"))
         self.target_rarity.setCurrentText("R")
-        form.addWidget(self.target_rarity, 7, 1)
+        form.addWidget(self.target_rarity, 9, 1)
         price_label = QLabel(bebida_rarity_price_menu())
         price_label.setWordWrap(True)
         price_label.setObjectName("Muted")
-        form.addWidget(price_label, 8, 0, 1, 2)
+        form.addWidget(price_label, 10, 0, 1, 2)
         root.addLayout(form)
         actions = QHBoxLayout()
         self.prepare = QPushButton("🥤 Preparar Pedido")
@@ -1866,6 +1877,8 @@ class BebidaOrderDialog(QDialog):
             outfit=self.outfit.currentText(),
             cosplay=self.cosplay.text(),
             product_type=self.product.currentText(),
+            resolution=self.resolution.currentText(),
+            render_style=self.render_style.currentText(),
         ).normalized()
         self._prepared_order = order
         points = self.wallet_store.balance("local-user") if self.wallet_store else 0
