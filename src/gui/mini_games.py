@@ -9,6 +9,7 @@ import re
 
 from bot_ia.interfaces.cafe_economy import CafeWalletStore
 from bot_ia.interfaces.cafe_immersion import TeaTimeScheduler, waitress_dialogue
+from bot_ia.interfaces.cafe_rooms import mature_game_message
 
 
 _RANDOM = SystemRandom()
@@ -23,7 +24,7 @@ PPT_ALIASES = {
     "t": "tijera",
 }
 BLACKJACK_ACTIONS = {"carta", "hit", "pedir", "otra", "plantarse", "plantar", "stand", "paso"}
-GAME_HOSTS = {"ppt": "Cari", "21": "Sunna", "uno": "Cami", "mesa": "Chie"}
+GAME_HOSTS = {"ppt": "Cari", "21": "Scarlet", "uno": "Cami", "mesa": "Chloé"}
 UNO_COLORS = ("rojo", "amarillo", "verde", "azul")
 UNO_VALUES = tuple("0 1 2 3 4 5 6 7 8 9 +2 salto reversa".split())
 
@@ -144,7 +145,9 @@ class LocalGameRouter:
             if player == 21:
                 return self._finish_blackjack(state, natural=True, user_id=user_id)
             return (
-                f"21 local · {waitress_dialogue(GAME_HOSTS['21'], 'role')} "
+                f"{mature_game_message('21')}\n"
+                f"{mature_game_message('21')}\n"
+            f"21 local · {waitress_dialogue(GAME_HOSTS['21'], 'role')} "
                 f"tus cartas: {', '.join(state.player_cards)} "
                 f"({player}). Dealer visible: {state.dealer_cards[0]}. "
                 "Escribe «carta» o «plantarse»."
