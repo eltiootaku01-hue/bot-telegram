@@ -2062,6 +2062,78 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertEqual(7 * 24 * 60 * 60, WEEKLY_PURGE_SECONDS)
         self.assertIn("Sé un buen nakama", WELCOME_RULES_TEXT)
 
+    def test_antimurphy_platform_reconnect_and_async_busy_guard(self):
+        import asyncio
+        from bot_ia.interfaces.platform_health import PlatformHealth, probe_with_retry
+        from bot_ia.interfaces.cafe_immersion import AsyncBusyGuard
+
+        attempts = []
+        def flaky_probe():
+            attempts.append(True)
+            return PlatformHealth("Discord", len(attempts) >= 2, "conectado" if len(attempts) >= 2 else "sin conexión")
+
+        result = probe_with_retry(flaky_probe, retries=2, backoff_seconds=0)
+        self.assertTrue(result.ok)
+        self.assertEqual(2, len(attempts))
+
+        async def scenario():
+            guard = AsyncBusyGuard()
+            self.assertTrue(await guard.acquire("cami", timeout=60))
+            self.assertFalse(await guard.acquire("cami", timeout=60))
+            await guard.release("cami")
+            self.assertTrue(await guard.acquire("cami", timeout=60))
+            await guard.close()
+
+        asyncio.run(scenario())
+
+    def test_antimurphy_20_messages_per_second_burst_contract(self):
+        from bot_ia.interfaces.discord_community import BurstGate, WelcomeGate
+        gate = BurstGate(max_events=15, window_seconds=15, clock=lambda: 100.0)
+        allowed = sum(gate.allow("welcome:u1") for _ in range(20))
+        self.assertEqual(15, allowed)
+        self.assertFalse(gate.allow("welcome:u1"))
+        welcome = WelcomeGate(clock=lambda: 100.0)
+        self.assertTrue(welcome.start("u2"))
+        self.assertFalse(welcome.start("u2"))
+        self.assertTrue(welcome.ignore_during_cooldown("u2"))
+
+    def test_env_contract_for_discord_and_schrodinger_tokens(self):
+        import os
+        from bot_ia.interfaces.schrodinger import platform_env_status
+        previous = {key: os.environ.get(key) for key in ("DISCORD_BOT_TOKEN", "DISCORD_CLIENT_ID", "SCHRODINGER_BOT_TOKEN")}
+        try:
+            os.environ["DISCORD_BOT_TOKEN"] = "discord-test"
+            os.environ["DISCORD_CLIENT_ID"] = "client-test"
+            os.environ["SCHRODINGER_BOT_TOKEN"] = "schrodinger-test"
+            self.assertEqual(
+                {"DISCORD_BOT_TOKEN": True, "DISCORD_CLIENT_ID": True, "SCHRODINGER_BOT_TOKEN": True},
+                platform_env_status(),
+            )
+        finally:
+            for key, value in previous.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+    def test_web_profile_persistence_contract(self):
+        source = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        for token in ("WEB_PROFILE_DIR", 'os.getenv("WEB_PROFILE_DIR", "./web_profile")', "launch_persistent_context(", "profile_root"):
+            self.assertIn(token, source)
+
+    def test_antimurphy_source_contract(self):
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        health = (self.ROOT / "src" / "bot_ia" / "interfaces" / "platform_health.py").read_text(encoding="utf-8")
+        immersion = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+        community = (self.ROOT / "src" / "bot_ia" / "interfaces" / "discord_community.py").read_text(encoding="utf-8")
+        schrodinger = (self.ROOT / "src" / "bot_ia" / "interfaces" / "schrodinger.py").read_text(encoding="utf-8")
+        self.assertIn("probe_with_retry(", app)
+        self.assertIn("def probe_with_retry(", health)
+        self.assertIn("AsyncBusyGuard", immersion)
+        self.assertIn("asyncio.create_task", immersion)
+        self.assertIn("class BurstGate", community)
+        self.assertIn("REQUIRED_PLATFORM_ENV", schrodinger)
+
 
 if __name__ == "__main__":
     unittest.main()
