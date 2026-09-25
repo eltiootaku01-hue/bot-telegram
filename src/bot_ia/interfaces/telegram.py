@@ -411,8 +411,17 @@ class TelegramAdapter:
             )
         inbound = parse_update(update)
         self._xp_tracker.record_message(inbound.user_id, "telegram")
-        comment = analyze_telegram_comment(update)
-        if comment.should_reply:
+
+        # Explicit Telegram commands must never be intercepted by the
+        # comment/reply detector. Command handling remains the authoritative
+        # path below, while ordinary replies may enter the comment flow.
+        command_candidate = inbound.text.casefold().split()[0]
+        comment = (
+            None
+            if command_candidate.startswith("/")
+            else analyze_telegram_comment(update)
+        )
+        if comment is not None and comment.should_reply:
             return TelegramOutbound(
                 inbound.conversation_id,
                 comment.text,
