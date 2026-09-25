@@ -1726,6 +1726,42 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("route="order_delivery"", source)
         self.assertIn("pending.user_id", source)
 
+    def test_cross_platform_presence_and_transfer_contract(self):
+        from tempfile import TemporaryDirectory
+        from bot_ia.interfaces.presence import WaitressPresenceManager
+        from gui.waifu_registry import WaifuRecord, WaifuRegistry
+
+        manager = WaitressPresenceManager(clock=lambda: 100.0)
+        manager.start("Cami", "discord", "procesando pedido")
+        reply = manager.reply_for("Cami")
+        self.assertTrue(reply.occupied)
+        self.assertIn("Cami", reply.message)
+        self.assertIn("Discord", reply.message)
+        self.assertIn("atendiendo una mesa", reply.message)
+        manager.transfer_interaction("Cami", "ORD-42")
+        self.assertEqual(1, manager.transferred_count("Cami", "ORD-42"))
+        manager.finish("Cami")
+        self.assertFalse(manager.reply_for("Cami").occupied)
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            registry = WaifuRegistry(root)
+            registry.save([WaifuRecord(name="Aki")])
+            registry.record_interaction_transfer("u1", "Cami", "ORD-42", points=5)
+            raw = (root / "config" / "waifu_registry.json").read_text(encoding="utf-8")
+            self.assertIn("interaction_transfers", raw)
+            self.assertIn("ORD-42", raw)
+            self.assertEqual(1, registry.affinity_level("u1", "Cami"))
+
+    def test_orders_channel_permissions_contract(self):
+        source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        self.assertIn('ORDERS_ROOM_KEY = "pedidos"', source)
+        self.assertIn("READ_ONLY_ORDERS", source)
+        self.assertIn('"can_send_messages": False', source)
+        self.assertIn('"attach_files": False', source)
+        self.assertIn('key in {ADMIN_ROOM_KEY, ORDERS_ROOM_KEY}', source)
+        self.assertIn('"permission_overwrites"', source)
+
     def test_group_setup_complaints_topics_contract(self):
         group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
         self.assertIn('"#pedidos-admin"', group)
