@@ -146,3 +146,76 @@ class DiscordGroupSetup:
         result = GroupSetupResult("discord", guild_id, tuple(rooms))
         store.save_target("discord", guild_id, result.rooms)
         return result
+
+
+class TelegramGroupSetup:
+    """Provisiona temas de un supergrupo-foro usando el Bot API oficial."""
+
+    API = "https://api.telegram.org/bot{token}/{method}"
+
+    def __init__(self, token: str, *, timeout: float = 15.0) -> None:
+        if not token.strip():
+            raise GroupSetupError("TELEGRAM_BOT_TOKEN no está configurado")
+        self.token = token.strip()
+        self.timeout = timeout
+
+    def _call(self, method: str, payload: dict[str, object]) -> dict[str, object]:
+        request = Request(
+            self.API.format(token=self.token, method=method),
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                raw = response.read(1024 * 1024)
+        except HTTPError as error:
+            if error.code in {401, 403}:
+                raise GroupSetupError(f"Telegram rechazó la operación HTTP {error.code}") from error
+            raise GroupSetupError(f"Telegram HTTP {error.code}") from error
+        except (URLError, TimeoutError, OSError) as error:
+            raise GroupSetupError("No se pudo contactar con Telegram") from error
+        try:
+            value = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise GroupSetupError("Telegram devolvió una respuesta inválida") from error
+        if not isinstance(value, dict) or value.get("ok") is not True:
+            description = value.get("description", "operación rechazada") if isinstance(value, dict) else "respuesta inválida"
+            raise GroupSetupError(f"Telegram: {description}")
+        return value
+
+    def setup_chat(self, chat_id: str, store: GroupSetupStore) -> GroupSetupResult:
+        chat_id = str(chat_id).strip()
+        if not chat_id:
+            raise GroupSetupError("chat_id es obligatorio")
+        me = self._call("getMe", {})
+        bot_id = me.get("result", {}).get("id") if isinstance(me.get("result"), dict) else None
+        if not isinstance(bot_id, int):
+            raise GroupSetupError("No se pudo identificar al bot de Telegram")
+        member = self._call("getChatMember", {"chat_id": chat_id, "user_id": bot_id})
+        member_data = member.get("result")
+        if not isinstance(member_data, dict) or member_data.get("status") not in {"administrator", "creator"}:
+            raise GroupSetupError("El bot de Telegram debe ser administrador del grupo")
+        if member_data.get("status") == "administrator" and not member_data.get("can_manage_topics", False):
+            raise GroupSetupError("El bot necesita el permiso can_manage_topics")
+        chat = self._call("getChat", {"chat_id": chat_id})
+        chat_data = chat.get("result")
+        if not isinstance(chat_data, dict) or not chat_data.get("is_forum", False):
+            raise GroupSetupError("El grupo de Telegram debe ser un supergrupo con Temas/Foro activado")
+
+        existing = {r.key: r for r in store.get_rooms("telegram", chat_id)}
+        rooms: list[GroupRoom] = list(existing.values())
+        for name, key in ROOMS:
+            if key in existing:
+                continue
+            created = self._call("createForumTopic", {"chat_id": chat_id, "name": name})
+            topic = created.get("result")
+            topic_id = topic.get("message_thread_id") if isinstance(topic, dict) else None
+            if not isinstance(topic_id, int):
+                raise GroupSetupError(f"Telegram no devolvió ID para {name}")
+            room = GroupRoom(name, key, str(topic_id))
+            rooms.append(room)
+            existing[key] = room
+        result = GroupSetupResult("telegram", chat_id, tuple(rooms))
+        store.save_target("telegram", chat_id, result.rooms)
+        return result
