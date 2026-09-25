@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
+import os
 from pathlib import Path
 import threading
 import time
@@ -141,13 +142,14 @@ class ImmersiveStrikeEngine:
 
     def __init__(self, store: StrikeStore, *, superadmin: str = SUPERADMIN_TELEGRAM) -> None:
         self.store = store
-        self.superadmin = superadmin.casefold().lstrip("@")
+        configured = superadmin or os.getenv("TELEGRAM_SUPERADMIN_USERNAME", SUPERADMIN_TELEGRAM)
+        self.superadmin = configured.casefold().lstrip("@")
+        self.discord_superadmin_id = os.getenv("DISCORD_SUPERADMIN_USER_ID", "").strip()
 
     def is_superadmin(self, user_id: str, username: str = "") -> bool:
         return (
-            str(user_id).casefold() == self.superadmin
-            or str(username).casefold().lstrip("@") == self.superadmin
-        )
+            bool(self.discord_superadmin_id) and str(user_id) == self.discord_superadmin_id
+        ) or str(username).casefold().lstrip("@") == self.superadmin
 
     def evaluate(self, guild_id: str, user_id: str, reason: str, *, username: str = "", burst: bool = False) -> StrikeRecord | None:
         if self.is_superadmin(user_id, username):
