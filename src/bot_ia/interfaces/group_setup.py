@@ -207,8 +207,6 @@ class DiscordGroupSetup:
                 ] if key == ORDERS_ROOM_KEY else [
                     {"id": guild_id, "type": 0, "deny": str(1 << 10)},
                 ]
-                    {"id": guild_id, "type": 0, "deny": str(1 << 10)},
-                ]
                 for role in roles:
                     if not isinstance(role, dict):
                         continue
@@ -220,13 +218,15 @@ class DiscordGroupSetup:
                         overwrites.append(
                             {"id": str(role.get("id")), "type": 0, "allow": str((1 << 10) | (1 << 11) | (1 << 12) | (1 << 15))}
                         )
-                    elif key == ORDERS_ROOM_KEY and role_permissions & 0x8:
-                        overwrites.append(
-                            {"id": str(role.get("id")), "type": 0, "allow": str((1 << 11) | (1 << 12) | (1 << 15))}
-                        )
                 for role_id in role_ids:
                     overwrites.append(
-                        {"id": role_id, "type": 0, "allow": str((1 << 10) | (1 << 11))}
+                        {
+                            "id": role_id,
+                            "type": 0,
+                            "allow": str(
+                                (1 << 10) | (1 << 11) | (1 << 12) | (1 << 15)
+                            ),
+                        }
                     )
                 payload["permission_overwrites"] = overwrites
             created = self._request(
