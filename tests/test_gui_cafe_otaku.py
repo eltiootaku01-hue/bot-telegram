@@ -2256,6 +2256,71 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ):
             self.assertIn(token, immersion)
 
+    def test_cari_telegram_comments_and_discord_threads_contract(self):
+        from bot_ia.interfaces.cafe_immersion import (
+            COMMENT_REPLY_TEXT,
+            DISCORD_COMMENT_THREAD_NAME,
+            analyze_discord_announcement,
+            analyze_telegram_comment,
+        )
+        from bot_ia.interfaces.group_setup import DiscordGroupSetup
+
+        telegram_update = {
+            "message": {
+                "message_id": 42,
+                "from": {"id": 77, "is_bot": False},
+                "chat": {"id": -100123},
+                "text": "¡Me encanta!",
+                "reply_to_message": {"message_id": 12},
+            }
+        }
+        decision = analyze_telegram_comment(telegram_update)
+        self.assertTrue(decision.should_reply)
+        self.assertEqual("-100123", decision.chat_id)
+        self.assertEqual(12, decision.reply_to_message_id)
+        self.assertEqual(COMMENT_REPLY_TEXT, decision.text)
+
+        self.assertFalse(
+            analyze_telegram_comment(
+                {
+                    "message": {
+                        "message_id": 43,
+                        "from": {"id": 78, "is_bot": True},
+                        "chat": {"id": -100123},
+                        "text": "bot",
+                        "reply_to_message": {"message_id": 12},
+                    }
+                }
+            ).should_reply
+        )
+        self.assertTrue(
+            analyze_discord_announcement(
+                author_id="999",
+                superadmin_id="999",
+                channel_id="123",
+                is_announcement_channel=True,
+            ).should_create
+        )
+        self.assertFalse(
+            analyze_discord_announcement(
+                author_id="888",
+                superadmin_id="999",
+                channel_id="123",
+                is_announcement_channel=True,
+            ).should_create
+        )
+
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        immersion = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+        self.assertIn("def create_comment_thread", group)
+        self.assertIn("/messages/{message_id}/threads", group)
+        self.assertIn("analyze_telegram_comment", telegram)
+        self.assertIn("reply_to_message_id", telegram)
+        self.assertIn("COMMENT_REPLY_TEXT", immersion)
+        self.assertIn(DISCORD_COMMENT_THREAD_NAME, immersion)
+
+
 
 if __name__ == "__main__":
     unittest.main()
