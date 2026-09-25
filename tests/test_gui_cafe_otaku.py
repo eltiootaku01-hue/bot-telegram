@@ -1933,6 +1933,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "kick_member",
             "add_role",
             "apply_strike",
+            "Nakama",
+            "Gestionar Roles",
         ):
             self.assertIn(token, group)
         for token in (
@@ -1949,6 +1951,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertIn(token, community)
         for token in (
             "ImmersiveStrikeEngine",
+            "is_superadmin",
             "strike_store",
             "burst: bool = False",
             "timeout_member",
