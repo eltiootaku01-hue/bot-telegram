@@ -1528,6 +1528,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
 
         self.assertEqual("🎴 Carta TCG para el Pool", order_destination("Carta TCG"))
         self.assertEqual("🖼️ Imagen IA Personalizada", order_destination("Imagen IA Personalizada"))
+        from bot_ia.interfaces.cafe_orders import PRODUCT_TYPES
+        self.assertIn("Imagen IA Personalizada", PRODUCT_TYPES)
 
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
