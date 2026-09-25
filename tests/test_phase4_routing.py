@@ -213,7 +213,17 @@ class Phase4RoutingTests(unittest.TestCase):
                 GroupRoom("#mesa-de-apuestas-21", "mesa_apuestas_21", "78"),
             )
             store.save_target("telegram", "-100123", rooms)
-            router = TelegramRoomRouter(root / "telegram_rooms.sqlite3")
+            payload = store.load()["telegram:-100123"]
+            self.assertEqual(
+                {
+                    "77": "pedidos_admin",
+                    "78": "mesa_apuestas_21",
+                },
+                payload["room_map"],
+            )
+            router = TelegramRoomRouter(
+                root / "config" / "telegram_rooms.sqlite3"
+            )
             self.assertEqual(
                 "pedidos_admin",
                 router.resolve("-100123", 77),
