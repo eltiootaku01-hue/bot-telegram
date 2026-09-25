@@ -978,6 +978,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         registry = (self.ROOT / "src" / "gui" / "waifu_registry.py").read_text(encoding="utf-8")
         telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
         economy = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_economy.py").read_text(encoding="utf-8")
+        from gui.waifu_registry import bebida_rarity_price_menu
+        menu = bebida_rarity_price_menu()
         for token in (
             "Bebida R: 10 Puntos",
             "Bebida SR: 35 Puntos",
@@ -988,7 +990,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "🍀 Pity",
             "pity_text",
         ):
-            self.assertIn(token, app + registry + economy)
+            self.assertIn(token, app + registry + economy + menu)
         for token in ('"/pity"', '"pity:show"', '"gacha:draw"', "pity_text"):
             self.assertIn(token, telegram)
 
