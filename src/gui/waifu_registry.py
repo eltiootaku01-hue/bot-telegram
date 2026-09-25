@@ -60,7 +60,10 @@ class WaifuRegistry:
                         ).strip(),
                         progress=max(
                             0,
-                            min(100, int(item.get("progress", 0) or 0)),
+                            min(
+                                100,
+                                _safe_progress(item.get("progress", 0)),
+                            ),
                         ),
                     )
                 )
@@ -74,6 +77,13 @@ class WaifuRegistry:
             encoding="utf-8",
         )
         temporary.replace(self.path)
+
+
+def _safe_progress(value: object) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def generate_tcg_prompt(record: WaifuRecord) -> str:
