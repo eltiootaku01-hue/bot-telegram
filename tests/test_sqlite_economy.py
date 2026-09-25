@@ -143,7 +143,7 @@ class SQLiteEconomyTests(unittest.TestCase):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
             bootstrap = CafeWalletStore(root)
-            bootstrap.credit("concurrent", 79)
+            bootstrap.credit("concurrent", 20)
 
             def debit_one(_):
                 store = CafeWalletStore(root)
@@ -177,7 +177,7 @@ class SQLiteEconomyTests(unittest.TestCase):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
             store = CafeWalletStore(root)
-            store.credit("gacha", GACHA_COST * 12)
+            store.credit("gacha", GACHA_COST * 12 - 50)
 
             results = []
 
