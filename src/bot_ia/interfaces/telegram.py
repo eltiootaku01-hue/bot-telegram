@@ -23,11 +23,9 @@ from .telegram_instance_lock import TelegramInstanceAlreadyRunning, TelegramInst
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .telegram_room_routing import TelegramRoomRouter, TelegramRoomRoutingError
 from .telegram_security import (
-    authorized_group_ids,
     is_authorized_admin_destination,
     is_authorized_telegram_forum_route,
     is_authorized_telegram_group,
-    require_authorized_group,
 )
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary, build_bebida_prompt, RESOLUTIONS, RENDER_STYLES
 from .hardening import MutexGuard
@@ -323,7 +321,7 @@ class TelegramAdapter:
 
         return "general"
 
-    def _sync_authorized_bot_join(self, update: dict[str, object]) -> None
+    def _sync_authorized_bot_join(self, update: dict[str, object]) -> None:
         message = update.get("message")
         if not isinstance(message, dict):
             return
@@ -338,9 +336,11 @@ class TelegramAdapter:
         if not chat_id or not token:
             return
         if not is_authorized_telegram_group(chat_id):
-            self._logger(
-                f"telegram bot role sync denied for unauthorized chat {chat_id}"
-            )
+            logger = getattr(self, "_logger", None)
+            if callable(logger):
+                logger(
+                    f"telegram bot role sync denied for unauthorized chat {chat_id}"
+                )
             return
         try:
             TelegramGroupSetup(token).configure_authorized_bots(chat_id)
