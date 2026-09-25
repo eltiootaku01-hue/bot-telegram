@@ -110,6 +110,7 @@ from bot_ia.interfaces.social_publish import build_publication, open_x_draft\nfr
     bebida_order_quote,
 )
 from bot_ia.interfaces.tutorials import build_tutorial_html, build_tutorial_text
+from bot_ia.interfaces.platform_health import probe_telegram, probe_discord
 
 try:
     from qasync import QEventLoop
@@ -172,6 +173,24 @@ class GuiSignals(QObject):
     web_state = Signal(str)
     group_setup_finished = Signal(str)
     group_setup_failed = Signal(str)
+
+
+class PlatformHealthSignals(QObject):
+    result = Signal(str, bool, str)
+
+
+class PlatformHealthWorker(QRunnable):
+    """Comprueba Telegram/Discord fuera del hilo de la GUI."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.signals = PlatformHealthSignals()
+        self.setAutoDelete(True)
+
+    def run(self) -> None:
+        for probe in (probe_telegram, probe_discord):
+            health = probe()
+            self.signals.result.emit(health.platform, health.ok, health.detail)
 
 
 class ApplicationTask(QRunnable):
@@ -2721,6 +2740,8 @@ class CommandCenterWindow(QMainWindow):
         self._configure_window()
         self._build_layout()
         self._wire_backend()
+        self._platform_health_workers: list[PlatformHealthWorker] = []
+        self._start_platform_health_checks()
         self._load_web_page()
         self.refresh_state()
         self._telegram_poll_timer.start()
@@ -2734,6 +2755,20 @@ class CommandCenterWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Ventana y layout
     # ------------------------------------------------------------------
+
+    def _start_platform_health_checks(self) -> None:
+        worker = PlatformHealthWorker()
+        worker.signals.result.connect(self._on_platform_health)
+        self._platform_health_workers.append(worker)
+        self.task_pool.start(worker)
+
+    @Slot(str, bool, str)
+    def _on_platform_health(self, platform: str, ok: bool, detail: str) -> None:
+        label = self.platform_health.get(platform)
+        if label is None:
+            return
+        label.setText(f"🟢 {platform}" if ok else f"🔴 {platform}")
+        label.setToolTip(detail)
 
     def _open_group_setup(self) -> None:
         platform, ok = QInputDialog.getItem(self, "Estructurar Grupo", "Plataforma:", ("Telegram", "Discord"), 0, False)
@@ -2831,6 +2866,13 @@ class CommandCenterWindow(QMainWindow):
         self.universe_label = QLabel()
         self.universe_label.setObjectName("Muted")
         top_layout.addWidget(self.universe_label)
+        self.platform_health = {
+            "Telegram": QLabel("🔴 Telegram"),
+            "Discord": QLabel("🔴 Discord"),
+        }
+        for label in self.platform_health.values():
+            label.setObjectName("Muted")
+            top_layout.addWidget(label)
 
         self.operations_button = QPushButton("⚙ Panel")
         self.operations_button.clicked.connect(
