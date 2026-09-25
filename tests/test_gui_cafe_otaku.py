@@ -2319,6 +2319,41 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ):
             self.assertIn(token, immersion)
 
+    def test_isolated_comment_threads_anti_spam_contract(self):
+        from bot_ia.interfaces.cafe_immersion import DiscordCommentThreadManager
+
+        class FakeDiscord:
+            def __init__(self):
+                self.calls = []
+
+            def create_comment_thread(self, channel_id, message_id, *, name):
+                self.calls.append((channel_id, message_id, name))
+                return {"id": "thread-1", "name": name}
+
+        client = FakeDiscord()
+        manager = DiscordCommentThreadManager(client)
+        first = manager.on_announcement(
+            author_id="admin",
+            superadmin_id="admin",
+            channel_id="news",
+            message_id="msg-1",
+            is_announcement_channel=True,
+        )
+        duplicate = manager.on_announcement(
+            author_id="admin",
+            superadmin_id="admin",
+            channel_id="news",
+            message_id="msg-1",
+            is_announcement_channel=True,
+        )
+        self.assertEqual({"id": "thread-1", "name": "💬 Comentarios"}, first)
+        self.assertIsNone(duplicate)
+        self.assertEqual([("news", "msg-1", "💬 Comentarios")], client.calls)
+
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        self.assertIn('"auto_archive_duration": 1440', group)
+        self.assertIn("/messages/{message_id}/threads", group)
+
     def test_cari_telegram_comments_and_discord_threads_contract(self):
         from bot_ia.interfaces.cafe_immersion import (
             COMMENT_REPLY_TEXT,
