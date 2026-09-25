@@ -1675,7 +1675,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("if isinstance(button, bool) or button is None:", app)
         self.assertIn("sender = self.sender()", app)
         self.assertIn("isinstance(sender, QPushButton)", app)
-        self.assertNotIn("button.setText", app[app.index("def start_web_chat"):app.index("def start_telegram")])
+        self.assertIn("if button is not None:", app[app.index("def start_web_chat"):app.index("def start_telegram")])
 
     def test_app_python_and_embedded_js_contract(self):
         app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
