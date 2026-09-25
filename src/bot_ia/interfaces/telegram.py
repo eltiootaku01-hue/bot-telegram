@@ -258,7 +258,7 @@ class TelegramAdapter:
             "Prompt optimizado en inglés:\n"
             f"{order.prompt_en}"
         )
-        keyboard = (((("📎 Adjuntar / Subir imagen generada", f"order:attach:{order.order_id}"),),),)
+        keyboard = ((("📎 Adjuntar / Subir imagen generada", f"order:attach:{order.order_id}"),),)
         return TelegramOutbound(admin_chat, text, "admin_order", keyboard, message_thread_id=thread_id)
 
     def _order_attach(self, callback: TelegramCallback, order_id: str) -> TelegramOutbound:
