@@ -25,3 +25,7 @@ src/*.egg-info/
 *.sqlite3
 
 browser_data/
+
+# Datos y artefactos locales del Registro de Waifus / TCG
+config/waifu_registry.json
+artifacts/tcg_cards/
