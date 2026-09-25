@@ -654,5 +654,81 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertIn(token, source)
 
 
+    def test_local_mini_games_router_is_webqueue_free(self):
+        from gui.mini_games import LocalGameRouter
+
+        router = LocalGameRouter()
+        for bot_id in ("cari", "sunna", "cami", "chie"):
+            ppt = router.route("piedra", "desktop-user", bot_id)
+            self.assertIsNotNone(ppt)
+            self.assertIn("PPT local", ppt)
+
+        opening = router.route("21 nuevo", "desktop-user", "sunna")
+        self.assertIn("21 local", opening)
+        action = router.route("carta", "desktop-user", "sunna")
+        self.assertIn("21 local", action)
+        self.assertIn("No se usa WebQueue", router.route("21 ???", "desktop-user", "sunna"))
+
+    def test_game_card_lora_prompt_and_auto_crop_contract(self):
+        from PySide6.QtGui import QImage, QColor
+        from gui.waifu_registry import (
+            WaifuRecord,
+            crop_sprite_to_ratio,
+            generate_tcg_prompt,
+            normalize_lora_tags,
+        )
+
+        self.assertEqual("[LORA_NAME] [STYLE_TAG]", normalize_lora_tags("[LORA_NAME], STYLE_TAG"))
+        record = WaifuRecord(
+            name="Aki",
+            personality="tsundere",
+            appearance="silver hair",
+            element="Luz",
+            cosplay_reference="UR",
+            card_category="UNO",
+            lora_tags="[LORA_NAME]",
+        )
+        prompt = generate_tcg_prompt(record)
+        self.assertIn("Category: UNO", prompt)
+        self.assertIn("LoRA tags: [LORA_NAME]", prompt)
+        self.assertIn("simple white background", prompt)
+        self.assertIn("isolated", prompt)
+
+        image = QImage(400, 400, QImage.Format_RGBA8888)
+        image.fill(QColor(255, 255, 255, 255))
+        for y in range(100, 300):
+            for x in range(150, 250):
+                image.setPixelColor(x, y, QColor(30, 30, 30, 255))
+        cropped = crop_sprite_to_ratio(image, ratio=3 / 4)
+        self.assertEqual(3, cropped.width() * 4 // cropped.height())
+        self.assertLess(cropped.width(), image.width())
+        self.assertLess(cropped.height(), image.height())
+
+    def test_app_routes_games_and_exposes_card_catalog(self):
+        source = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        registry = (self.ROOT / "src" / "gui" / "waifu_registry.py").read_text(encoding="utf-8")
+        for token in (
+            "LocalGameRouter",
+            "self._mini_game_router.route(",
+            "Mini-Juegos",
+            "Cartas de Juego",
+            "Póker",
+            "UNO",
+            "crop_sprite_to_ratio(",
+            "target_ratio = 1.0 if",
+            "WebQueue omitido",
+        ):
+            self.assertIn(token, source)
+        for token in (
+            "card_category",
+            "lora_tags",
+            "normalize_lora_tags",
+            "crop_sprite_to_ratio",
+            "simple white background",
+            "isolated",
+        ):
+            self.assertIn(token, registry)
+
+
 if __name__ == "__main__":
     unittest.main()
