@@ -212,16 +212,32 @@ def crop_sprite_to_ratio(
     background_threshold: int = 245,
     padding: float = 0.06,
 ) -> QImage:
-    """Detecta contenido, centra el recorte y conserva la proporción pedida."""
+    """Detecta contenido con una sonda limitada, centra el recorte y conserva proporción."""
     if image.isNull():
         return QImage()
     ratio = max(0.25, min(4.0, float(ratio)))
     source = image.convertToFormat(QImage.Format_RGBA8888)
     width, height = source.width(), source.height()
-    left, top, right, bottom = width, height, -1, -1
-    for y in range(height):
-        for x in range(width):
-            pixel = source.pixel(x, y)
+
+    # La detección trabaja sobre una miniatura para no bloquear la GUI con
+    # millones de píxeles cuando se sube una imagen 4K o mayor.
+    max_probe = 512
+    scale = min(1.0, max_probe / max(width, height))
+    probe = (
+        source
+        if scale == 1.0
+        else source.scaled(
+            max(1, round(width * scale)),
+            max(1, round(height * scale)),
+            aspectMode=1,
+            transformMode=0,
+        )
+    )
+    pw, ph = probe.width(), probe.height()
+    left, top, right, bottom = pw, ph, -1, -1
+    for y in range(ph):
+        for x in range(pw):
+            pixel = probe.pixel(x, y)
             alpha = (pixel >> 24) & 0xFF
             red = (pixel >> 16) & 0xFF
             green = (pixel >> 8) & 0xFF
@@ -233,24 +249,37 @@ def crop_sprite_to_ratio(
             ):
                 left, top = min(left, x), min(top, y)
                 right, bottom = max(right, x), max(bottom, y)
+
     if right < left or bottom < top:
-        left, top, right, bottom = 0, 0, width - 1, height - 1
+        left, top, right, bottom = 0, 0, pw - 1, ph - 1
+
+    inv_scale = 1.0 / scale
+    left = max(0, int(round(left * inv_scale)))
+    top = max(0, int(round(top * inv_scale)))
+    right = min(width - 1, int(round((right + 1) * inv_scale)) - 1)
+    bottom = min(height - 1, int(round((bottom + 1) * inv_scale)) - 1)
+
     pad_x = max(1, int((right - left + 1) * padding))
     pad_y = max(1, int((bottom - top + 1) * padding))
     left, top = max(0, left - pad_x), max(0, top - pad_y)
-    right, bottom = min(width - 1, right + pad_x), min(height - 1, bottom + pad_y)
+    right = min(width - 1, right + pad_x)
+    bottom = min(height - 1, bottom + pad_y)
+
     box_w, box_h = right - left + 1, bottom - top + 1
     target_w, target_h = box_w, box_h
     if box_w / box_h > ratio:
         target_h = max(1, round(box_w / ratio))
     else:
         target_w = max(1, round(box_h * ratio))
+
+    # Si el recuadro requerido supera la imagen, se limita sin deformarla.
+    target_w = min(target_w, width)
+    target_h = min(target_h, height)
     center_x = (left + right) / 2
     center_y = (top + bottom) / 2
     left = max(0, min(width - target_w, round(center_x - target_w / 2)))
     top = max(0, min(height - target_h, round(center_y - target_h / 2)))
     return source.copy(left, top, target_w, target_h)
-
 
 def frame_candidates(root: Path, rarity: str, element: str) -> list[Path]:
     """Devuelve marcos elemento-específicos y el fallback por rareza."""
