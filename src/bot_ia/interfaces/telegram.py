@@ -1174,6 +1174,7 @@ class TelegramPoller:
         self._client, self._adapter, self._config = client, adapter, config or PollingConfig()
         self._sleeper, self._logger, self._running, self._offset = sleeper, logger or (lambda _: None), True, None
         self._outbox = outbox_store
+        self._callback_mutex = MutexGuard()
         self._pending_delivery: tuple[int, TelegramOutbound, int, tuple[int, ...]] | None = None
 
     @property
