@@ -219,3 +219,22 @@ class TelegramGroupSetup:
         result = GroupSetupResult("telegram", chat_id, tuple(rooms))
         store.save_target("telegram", chat_id, result.rooms)
         return result
+
+
+class DiscordSetupCommand:
+    """Handler desacoplado para conectar /setup_group a cualquier runtime Discord."""
+
+    def __init__(self, root: Path) -> None:
+        self.store = GroupSetupStore(root)
+
+    def handle_setup_group(self, guild_id: str) -> str:
+        try:
+            result = DiscordGroupSetup(os.getenv("DISCORD_BOT_TOKEN", "")).setup_guild(
+                guild_id,
+                self.store,
+            )
+        except GroupSetupError as error:
+            return f"No se pudo estructurar Discord: {error}"
+        return "Estructura Discord preparada:\n" + "\n".join(
+            f"• {room.name} → canal {room.external_id}" for room in result.rooms
+        )
