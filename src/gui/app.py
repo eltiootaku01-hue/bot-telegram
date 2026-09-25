@@ -5674,7 +5674,12 @@ class CommandCenterWindow(QMainWindow):
             return "● Chat local activo"
         return "▶ Iniciar Chat local"
 
-    def start_web_chat(self, button: QPushButton | None = None) -> None:
+    def start_web_chat(self, button: QPushButton | bool | None = None) -> None:
+        """Inicia el Chat Web tolerando el payload bool de clicked."""
+        if isinstance(button, bool) or button is None:
+            sender = self.sender()
+            button = sender if isinstance(sender, QPushButton) else None
+
         process = self._web_chat_process
         if process is not None and process.poll() is None:
             if button is not None:
@@ -5710,17 +5715,12 @@ class CommandCenterWindow(QMainWindow):
             )
             try:
                 import webbrowser
-
-                webbrowser.open(
-                    f"http://{browser_host}:{port}/"
-                )
+                webbrowser.open(f"http://{browser_host}:{port}/")
             except OSError:
                 pass
         except (OSError, ValueError) as error:
             self._log_error("Web chat launch", error)
-            self._append_system(
-                "No se pudo iniciar el Chat Web local."
-            )
+            self._append_system("No se pudo iniciar el Chat Web local.")
 
     def start_telegram(self, button: QPushButton | None = None) -> None:
         process = self._telegram_process
