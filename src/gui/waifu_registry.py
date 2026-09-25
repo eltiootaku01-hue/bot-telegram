@@ -187,6 +187,41 @@ class WaifuRegistry:
                 return record.danbooru_tag.strip()
         return ""
 
+    def record_interaction_transfer(
+        self,
+        user_id: str,
+        maid: str,
+        interaction_id: str,
+        *,
+        points: int = 0,
+    ) -> None:
+        """Registra una interacción mientras la mesera está ocupada sin perder afinidad."""
+        name = self._normalize_affinity_name(maid)
+        self.load()
+        profile = dict(self._waitress_affinity.get(str(user_id), {}))
+        for waitress in WAITRESS_IDS:
+            profile.setdefault(waitress, 0)
+        if points > 0:
+            profile[name] = min(HEART_LEVEL_MAX, profile.get(name, 0) + int(points) // TIP_POINTS_PER_HEART)
+        self._waitress_affinity[str(user_id)] = profile
+        records = self.load()
+        self._waitress_affinity[str(user_id)] = profile
+        payload = self._load_raw_payload(records)
+        meta = payload.setdefault("__interaction_transfers__", {})
+        if not isinstance(meta, dict):
+            meta = {}
+            payload["__interaction_transfers__"] = meta
+        entries = meta.setdefault(str(user_id), [])
+        if not isinstance(entries, list):
+            entries = []
+            meta[str(user_id)] = entries
+        entries.append({
+            "maid": name,
+            "interaction_id": str(interaction_id),
+            "points": max(0, int(points)),
+        })
+        self._save_raw_payload(payload)
+
     def affinity_level(self, user_id: str, maid: str) -> int:
         name = self._normalize_affinity_name(maid)
         self.load()
