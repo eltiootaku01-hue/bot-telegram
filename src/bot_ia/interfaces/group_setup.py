@@ -557,3 +557,16 @@ class DiscordSetupCommand:
             + "\n\nFeeds configurados:\n"
             + "\n".join(f"• {name}: {url}" for name, url in feeds)
         )
+
+
+class PassiveXPAuditIntegration:
+    """Contrato ligero para que el runtime Discord conecte XP/auditoría sin bloquear."""
+    def __init__(self, tracker, audit_bus) -> None:
+        self.tracker = tracker
+        self.audit_bus = audit_bus
+
+    def on_message(self, user_id: str, *, event: str = "message", details: str = ""):
+        result = self.tracker.record_message(user_id, "discord")
+        self.tracker.audit("discord", user_id, event, details)
+        self.audit_bus.publish(event, platform="discord", user_id=user_id, details=details)
+        return result
