@@ -12,8 +12,8 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from bot_ia.core.application import ApplicationRequest
-from bot_ia.paths import PROJECT_ROOT, ApplicationResponse, BotApplication
+from bot_ia.core.application import ApplicationRequest, ApplicationResponse, BotApplication
+from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.waitress_session_manager import TavernError, TavernReply, WaitressSessionManager
 from bot_ia.librarian.models import CoverageStatus
 
@@ -236,7 +236,7 @@ class TelegramAdapter:
             cafe_url=os.getenv("CAFE_OTAKU_INVITE_URL", "").strip(),
         )
         self._callback_mutex = MutexGuard()
-        self._xp_tracker = PassiveXPTracker(Path.cwd() / "config" / "nakama_xp.sqlite3")
+        self._xp_tracker = PassiveXPTracker(PROJECT_ROOT / "config" / "nakama_xp.sqlite3")
         self._audit_bus = AuditBus()
 
     def _active_maid(self, user_id: str) -> str:
