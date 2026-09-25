@@ -40,6 +40,9 @@ class WaifuRecord:
     card_number: str = ""
     card_suit: str = ""
     lora_tags: str = ""
+    card_hp: str = ""
+    card_attack: str = ""
+    card_type: str = ""
     prompt: str = ""
     image_path: str = ""
     assembled_path: str = ""
@@ -95,6 +98,9 @@ class WaifuRegistry:
                         card_number=str(item.get("card_number", "")).strip(),
                         card_suit=str(item.get("card_suit", "")).strip(),
                         lora_tags=str(item.get("lora_tags", "")).strip(),
+                        card_hp=str(item.get("card_hp", "")).strip(),
+                        card_attack=str(item.get("card_attack", "")).strip(),
+                        card_type=str(item.get("card_type", "")).strip(),
                         prompt=str(item.get("prompt", "")).strip(),
                         image_path=str(item.get("image_path", "")).strip(),
                         assembled_path=str(
@@ -181,6 +187,14 @@ def generate_tcg_prompt(record: WaifuRecord) -> str:
         number = record.card_number.strip() or "A"
         suit = record.card_suit.strip() or "Corazones"
         card_line = f"Playing card: {number} of {suit}. Use the matching playing-card template.\\n"
+    elif category.casefold() in {"waifumon / ficha de stats", "waifumon", "ficha de stats"}:
+        hp = record.card_hp.strip() or "—"
+        attack = record.card_attack.strip() or "—"
+        card_type = record.card_type.strip() or "—"
+        card_line = (
+            f"Waifumon stats: HP {hp}, Attack {attack}, Element {element}, Type {card_type}. "
+            "Use the matching Waifumon stats-card template.\\n"
+        )
     return (
         "TCG / GAME CARD ART\\n"
         f"Category: {category}.\\n"
