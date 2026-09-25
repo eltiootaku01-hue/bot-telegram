@@ -239,7 +239,8 @@ class TelegramOutboxStore:
             row = connection.execute(
                 """
                 SELECT update_id, chat_id, payload, next_chunk,
-                       status, CAST(update_id AS TEXT) AS delivery_id
+                       status, created_at,
+                       CAST(update_id AS TEXT) AS delivery_id
                 FROM telegram_outbox
                 WHERE update_id=?
                 """,
@@ -258,7 +259,7 @@ class TelegramOutboxStore:
         from .telegram import TelegramOutbound
 
         if not isinstance(outbound, TelegramOutbound):
-            raise TelegramInputError("outbound is invalid")
+            raise TelegramOutboxError("outbound is invalid")
 
         main = TelegramOutbound(
             outbound.chat_id,
@@ -352,7 +353,7 @@ class TelegramOutboxStore:
             rows = connection.execute(
                 """
                 SELECT update_id, chat_id, payload, next_chunk,
-                       status, delivery_id
+                       status, created_at, delivery_id
                 FROM telegram_outbox_followups
                 WHERE update_id=?
                 ORDER BY sequence
@@ -536,7 +537,37 @@ class TelegramOutboxStore:
                 raise
 
     def mark_failed(self, update_id: int) -> None:
-        self._mark("main", str(update_id))
+        self._mark_failed("main", str(update_id))
+
+    def mark_followup_failed(self, delivery_id: str) -> None:
+        self._mark_failed("followup", str(delivery_id))
+
+    def _mark_failed(self, kind: str, delivery_id: str) -> None:
+        with closing(self._connection()) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                if kind == "main":
+                    connection.execute(
+                        """
+                        UPDATE telegram_outbox
+                        SET status='FAILED'
+                        WHERE update_id=?
+                        """,
+                        (int(delivery_id),),
+                    )
+                else:
+                    connection.execute(
+                        """
+                        UPDATE telegram_outbox_followups
+                        SET status='FAILED'
+                        WHERE delivery_id=?
+                        """,
+                        (delivery_id,),
+                    )
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
 
     def pending_unfinished(self, limit: int = 100) -> tuple[TelegramOutboxRecord, ...]:
         if limit < 1:
