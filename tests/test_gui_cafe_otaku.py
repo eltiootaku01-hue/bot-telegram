@@ -1516,6 +1516,110 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertEqual("Scarlet", mature_game_host("blackjack"))
         self.assertEqual("Chloé", mature_game_host("apuestas"))
 
+    def test_order_confirmation_and_complaint_refund_contract(self):
+        from tempfile import TemporaryDirectory
+        from bot_ia.interfaces.cafe_economy import CafeWalletStore
+        from bot_ia.interfaces.order_support import (
+            ComplaintStore,
+            OrderConfirmation,
+            order_destination,
+        )
+        from gui.waifu_registry import WaifuRegistry
+
+        self.assertEqual("🎴 Carta TCG para el Pool", order_destination("Carta TCG"))
+        self.assertEqual("🖼️ Imagen IA Personalizada", order_destination("Imagen IA Personalizada"))
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wallet = CafeWalletStore(root)
+            registry = WaifuRegistry(root)
+            registry.save([])
+            store = ComplaintStore(root)
+
+            complaint = store.create(
+                "u-refund",
+                "chat-1",
+                "La carta no era la que confirmé.",
+                order_id="ORD-TEST",
+                product_type="Carta TCG",
+                points_paid=35,
+            )
+            self.assertEqual("OPEN", complaint.status)
+            self.assertEqual("ORD-TEST", store.get(complaint.complaint_id).order_id)
+
+            before = wallet.balance("u-refund")
+            resolved = store.resolve(
+                complaint.complaint_id,
+                "refund",
+                wallet_store=wallet,
+                registry=registry,
+            )
+            self.assertEqual("REFUNDED", resolved.status)
+            self.assertEqual(before + 35, wallet.balance("u-refund"))
+
+            raw_registry = (root / "config" / "waifu_registry.json").read_text(encoding="utf-8")
+            self.assertIn("complaint_balances", raw_registry)
+            self.assertIn(complaint.complaint_id, raw_registry)
+
+            with self.assertRaises(ValueError):
+                store.resolve(
+                    complaint.complaint_id,
+                    "refund",
+                    wallet_store=wallet,
+                    registry=registry,
+                )
+
+    def test_order_confirmation_gui_and_telegram_contract(self):
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        support = (self.ROOT / "src" / "bot_ia" / "interfaces" / "order_support.py").read_text(encoding="utf-8")
+
+        for token in (
+            "quote_bebida_order(",
+            "⚠️ Confirmación final del pedido",
+            "✅ Confirmar",
+            "❌ Cancelar",
+            "🎴 Carta TCG para el Pool",
+            "🖼️ Imagen IA Personalizada",
+            "La compra NO se ejecutará hasta pulsar [✅ Confirmar].",
+            "📣 Queja / Reembolso",
+        ):
+            self.assertIn(token, app)
+
+        for token in (
+            'command == "/queja"',
+            "OrderConfirmation",
+            'callback.data == "order:confirm"',
+            'callback.data == "order:cancel"',
+            "complaint:refund:",
+            "complaint:convert_image:",
+            "complaint:reject:",
+            "TELEGRAM_ADMIN_CHAT_ID",
+            "TELEGRAM_ADMIN_USER_IDS",
+            "followups=(admin,)",
+            "message_thread_id",
+        ):
+            self.assertIn(token, telegram)
+
+        for token in (
+            "class ComplaintStore",
+            "def resolve",
+            "REFUNDED",
+            "CONVERTED_TO_IMAGE",
+            "REJECTED",
+            "record_complaint_balance",
+            "def order_destination",
+        ):
+            self.assertIn(token, support)
+
+    def test_group_setup_complaints_topics_contract(self):
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        self.assertIn('"#pedidos-admin"', group)
+        self.assertIn('"pedidos_admin"', group)
+        self.assertIn('"#atencion-y-quejas"', group)
+        self.assertIn('"atencion_quejas"', group)
+
+
 
 if __name__ == "__main__":
     unittest.main()
