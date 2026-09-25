@@ -198,22 +198,6 @@ class TelegramAdapter:
                 "bebida",
                 ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)),
             )
-        if command == "/tutorial":
-            return TelegramOutbound(
-                inbound.conversation_id,
-                build_tutorial_text(),
-                "tutorial",
-                ((("🥤 Pedir Bebida Especial", "bebida:start:")),),
-            )
-        if command == "/bebida":
-            argument = inbound.text.partition(" ")[2].strip()
-            self._bebida_flow.start(inbound.user_id, argument)
-            return TelegramOutbound(
-                inbound.conversation_id,
-                "🥤 BEBIDA ESPECIAL · CAMI\n" + ("Personaje: " + argument if argument else "Primero puedes responder con /bebida <personaje>") + "\nElige grado de exposición:",
-                "bebida",
-                ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)),
-            )
         if command == "/setup_group":
             try:
                 setup = TelegramGroupSetup(os.getenv("TELEGRAM_BOT_TOKEN", ""))
