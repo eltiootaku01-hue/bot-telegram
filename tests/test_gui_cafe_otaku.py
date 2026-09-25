@@ -730,5 +730,75 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertIn(token, registry)
 
 
+    def test_playing_card_catalog_and_template_contract(self):
+        registry = (self.ROOT / "src" / "gui" / "waifu_registry.py").read_text(encoding="utf-8")
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        mini = (self.ROOT / "src" / "gui" / "mini_games.py").read_text(encoding="utf-8")
+        for token in (
+            "card_number",
+            "card_suit",
+            "Playing card:",
+            "matching playing-card template",
+        ):
+            self.assertIn(token, registry)
+        for token in (
+            "Número / Rango",
+            "Palo",
+            "Corazones",
+            "Diamantes",
+            "Tréboles",
+            "Picas",
+            "def _draw_playing_card_template",
+            "suit_symbols",
+            "QColor",
+        ):
+            self.assertIn(token, app)
+        for token in (
+            "GAME_HOSTS",
+            '"ppt": "Cari"',
+            '"21": "Sunna"',
+            '"uno": "Cami"',
+            "class UnoState",
+            "def _new_uno",
+            "def _uno_response",
+        ):
+            self.assertIn(token, mini)
+
+    def test_playing_card_record_persists_rank_and_suit(self):
+        import tempfile
+        from pathlib import Path
+        from gui.waifu_registry import WaifuRecord, WaifuRegistry, generate_tcg_prompt
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            record = WaifuRecord(
+                name="Aki",
+                personality="serena",
+                appearance="cabello plateado",
+                element="Neutro",
+                cosplay_reference="SR",
+                card_category="Póker",
+                card_number="Q",
+                card_suit="Picas",
+                lora_tags="[CARD_LORA]",
+            )
+            record.prompt = generate_tcg_prompt(record)
+            registry = WaifuRegistry(Path(temp_dir))
+            registry.save([record])
+            loaded = registry.load()[0]
+            self.assertEqual("Q", loaded.card_number)
+            self.assertEqual("Picas", loaded.card_suit)
+            self.assertIn("Playing card: Q of Picas", loaded.prompt)
+
+    def test_uno_is_an_actual_local_game_route(self):
+        from gui.mini_games import LocalGameRouter
+
+        router = LocalGameRouter()
+        opening = router.route("UNO nuevo", "desktop-user", "cami")
+        self.assertIn("UNO local", opening)
+        self.assertIn("Cami", opening)
+        draw = router.route("robar", "desktop-user", "cami")
+        self.assertIn("UNO local", draw)
+        self.assertNotIn("WebQueue", draw)
+
 if __name__ == "__main__":
     unittest.main()
