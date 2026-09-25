@@ -77,11 +77,14 @@ from .waifu_registry import (
     CardSlot,
     WaifuRecord,
     WaifuRegistry,
+    crop_sprite_to_ratio,
     frame_candidates,
     generate_tcg_prompt,
+    normalize_lora_tags,
     record_progress,
     slugify,
 )
+from .mini_games import LocalGameRouter
 
 try:
     from qasync import QEventLoop
@@ -1727,13 +1730,23 @@ class WaifuRegistryDialog(QDialog):
         self.cosplay = QComboBox()
         self.cosplay.addItems(("SR", "UR"))
         form.addWidget(self.cosplay, 4, 1)
-        form.addWidget(QLabel("Slot de carta"), 5, 0)
+        form.addWidget(QLabel("Categoría de carta"), 5, 0)
+        self.card_category = QComboBox()
+        self.card_category.addItems(
+            ("Waifu / TCG", "Cartas de Juego", "Póker", "UNO")
+        )
+        form.addWidget(self.card_category, 5, 1)
+        form.addWidget(QLabel("Etiquetas LoRA"), 6, 0)
+        self.lora_tags = QLineEdit()
+        self.lora_tags.setPlaceholderText("[LORA_NAME], [STYLE_TAG]")
+        form.addWidget(self.lora_tags, 6, 1)
+        form.addWidget(QLabel("Slot de carta"), 7, 0)
         self.card_slot = QComboBox()
         self.card_slot.addItems(
             ("Carta 1 · R", "Carta 2 · SR", "Cosplay UR · UR")
         )
         self.card_slot.currentIndexChanged.connect(self._select_slot)
-        form.addWidget(self.card_slot, 5, 1)
+        form.addWidget(self.card_slot, 7, 1)
         root.addLayout(form)
 
         actions = QHBoxLayout()
@@ -1839,6 +1852,8 @@ class WaifuRegistryDialog(QDialog):
             appearance=self.appearance.text().strip(),
             element=str(self.element.currentText()).strip(),
             cosplay_reference=str(self.cosplay.currentText()).strip(),
+            card_category=str(self.card_category.currentText()).strip(),
+            lora_tags=normalize_lora_tags(self.lora_tags.text()),
             prompt=self.prompt.toPlainText().strip(),
             image_path=self.image_path,
             assembled_path=self.assembled_path,
@@ -1911,6 +1926,8 @@ class WaifuRegistryDialog(QDialog):
             existing.appearance = record.appearance
             existing.element = record.element
             existing.cosplay_reference = record.cosplay_reference
+            existing.card_category = record.card_category
+            existing.lora_tags = record.lora_tags
             existing.prompt = record.prompt
             existing.image_path = record.image_path or existing.image_path
             existing.assembled_path = (
@@ -1934,6 +1951,17 @@ class WaifuRegistryDialog(QDialog):
         if sprite.isNull():
             self.status.setText("No se pudo leer el sprite seleccionado.")
             return
+
+        # Auto-Crop & Fit: detecta contenido, centra y conserva proporción.
+        target_ratio = 1.0 if "Póker" in self.card_category.currentText() else 3 / 4
+        cropped = crop_sprite_to_ratio(
+            sprite.toImage(),
+            ratio=target_ratio,
+        )
+        if cropped.isNull():
+            self.status.setText("No se pudo calcular el Auto-Crop del sprite.")
+            return
+        sprite = QPixmap.fromImage(cropped)
 
         rarity = slot.rarity
         element = str(self.element.currentText()).strip()
@@ -2118,6 +2146,8 @@ class CommandCenterWindow(QMainWindow):
         self._expanded_bot_dialogs: dict[str, BotExpandedDialog] = {}
         self.waifu_registry = WaifuRegistry(ROOT)
         self._waifu_dialog: WaifuRegistryDialog | None = None
+        self._mini_game_router = LocalGameRouter()
+        self._mini_games_dialog: QDialog | None = None
         self._matrix_chain_running = False
         self._matrix_chain_button: QPushButton | None = None
         self._matrix_chain_summary: QLabel | None = None
@@ -2349,6 +2379,13 @@ class CommandCenterWindow(QMainWindow):
         )
         self.waifu_sidebar_button.clicked.connect(self._open_waifu_registry)
         layout.addWidget(self.waifu_sidebar_button)
+
+        self.mini_games_sidebar_button = QPushButton("🎮 Mini-Juegos")
+        self.mini_games_sidebar_button.setToolTip(
+            "PPT y 21/Blackjack local; las respuestas no pasan por WebQueue."
+        )
+        self.mini_games_sidebar_button.clicked.connect(self._open_mini_games)
+        layout.addWidget(self.mini_games_sidebar_button)
 
         return panel
 
@@ -2826,6 +2863,52 @@ class CommandCenterWindow(QMainWindow):
         if isinstance(log, QPlainTextEdit):
             dialog.history.setPlainText(log.toPlainText())
 
+    def _open_mini_games(self) -> None:
+        if self._mini_games_dialog is None:
+            dialog = QDialog(self)
+            dialog.setWindowTitle("🎮 Mini-Juegos · Taberna local")
+            dialog.setMinimumSize(520, 360)
+            layout = QVBoxLayout(dialog)
+            title = QLabel("🎮 Mini-Juegos locales")
+            title.setObjectName("PageTitle")
+            layout.addWidget(title)
+            info = QLabel(
+                "PPT: escribe «piedra», «papel» o «tijera». "
+                "21: «21 nuevo», «carta» y «plantarse». "
+                "UNO queda registrado como catálogo de cartas."
+            )
+            info.setWordWrap(True)
+            info.setObjectName("Muted")
+            layout.addWidget(info)
+            for label, command in (
+                ("🪨 Piedra", "piedra"),
+                ("📄 Papel", "papel"),
+                ("✂️ Tijera", "tijera"),
+                ("🃏 21 nuevo", "21 nuevo"),
+                ("🎴 UNO", "UNO"),
+            ):
+                button = QPushButton(label)
+                button.clicked.connect(
+                    lambda _checked=False, value=command: self._start_local_game_command(value)
+                )
+                layout.addWidget(button)
+            close = QPushButton("Cerrar")
+            close.clicked.connect(dialog.hide)
+            layout.addWidget(close)
+            self._mini_games_dialog = dialog
+        self.select_bot(self._selected_bot_id)
+        self._mini_games_dialog.show()
+        self._mini_games_dialog.raise_()
+        self._mini_games_dialog.activateWindow()
+
+    def _start_local_game_command(self, command: str) -> None:
+        self.chat_mode.setCurrentIndex(1)
+        self.input.setPlainText(command)
+        self.input.setFocus()
+        self._append_system(
+            "Mini-juego local seleccionado. La resolución usa LocalGameRouter; WebQueue omitido."
+        )
+
     def _open_waifu_registry(self, bot_id: str | None = None) -> None:
         selected = bot_id or self._selected_bot_id
         if selected in BOT_MAP:
@@ -3017,6 +3100,25 @@ class CommandCenterWindow(QMainWindow):
         self._send_web_persona(message)
 
     def _send_tavern(self, message: str) -> None:
+        local_game = self._mini_game_router.route(
+            message,
+            DESKTOP_USER,
+            self._selected_bot_id,
+        )
+        if local_game is not None:
+            profile = BOT_MAP[self._selected_bot_id]
+            self._append_message(profile.name, local_game, "bot")
+            dialog = self._expanded_bot_dialogs.get(self._selected_bot_id)
+            if dialog is not None:
+                dialog.append_history(profile.name, local_game)
+                dialog.append_history("Sistema", "Mini-juego local; WebQueue omitido.")
+            self._append_system(
+                f"{profile.name}: mini-juego local; WebQueue omitido."
+            )
+            self.send_button.setEnabled(True)
+            self.refresh_state()
+            return
+
         if self._tavern is None:
             self._append_system(
                 "La Taberna no pudo inicializarse. El runtime sigue protegido."
