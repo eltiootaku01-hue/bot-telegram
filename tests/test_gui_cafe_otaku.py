@@ -49,6 +49,46 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ):
             self.assertIn(token, panel)
 
+    def test_passive_xp_sqlite_cooldown_and_audit_contract(self):
+        from tempfile import TemporaryDirectory
+        from src.bot_ia.interfaces.xp_audit import AuditBus, PassiveXPTracker
+
+        with TemporaryDirectory() as tmp:
+            tracker = PassiveXPTracker(Path(tmp) / "xp.sqlite3")
+            events = []
+            bus = AuditBus()
+            bus.subscribe(lambda event, details: events.append((event, details)))
+            first = tracker.record_message("user-1", "telegram")
+            second = tracker.record_message("user-1", "telegram")
+            self.assertTrue(first.granted)
+            self.assertFalse(second.granted)
+            self.assertEqual(10, first.xp)
+            self.assertEqual(1, first.level)
+            tracker.audit("telegram", "user-1", "moderation", "message deleted")
+            bus.publish("moderation", platform="telegram", user_id="user-1", details="message deleted")
+            self.assertEqual("moderation", events[0][0])
+            tracker.stop()
+
+    def test_passive_xp_discord_integration_contract(self):
+        source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        xp = (self.ROOT / "src" / "bot_ia" / "interfaces" / "xp_audit.py").read_text(encoding="utf-8")
+        for token in (
+            "PassiveXPAuditIntegration",
+            'record_message(user_id, "discord")',
+            'self.tracker.audit("discord"',
+            "self.audit_bus.publish",
+        ):
+            self.assertIn(token, source)
+        for token in (
+            "class PassiveXPTracker",
+            "sqlite3",
+            "cooldown_seconds",
+            "journal_mode=WAL",
+            "class AuditBus",
+            "audit_log",
+        ):
+            self.assertIn(token, xp)
+
     def test_gui_package_and_qss_are_present(self):
         package = self.ROOT / "src" / "gui" / "__init__.py"
         app = self.ROOT / "src" / "gui" / "app.py"
