@@ -65,6 +65,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from bot_ia.core.application import ApplicationRequest
+from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.web_queue import WebQueueManager
 from .task_orchestrator import Priority, TaskOrchestrator
 from bot_ia.core.waitress_session_manager import (
