@@ -85,6 +85,88 @@ def waitress_dialogue(maid: str, event: str = "greeting") -> str:
         return f"{name}: {profile['focus']}."
     return profile["greeting"]
 
+# Estado multiplataforma de las meseras.
+BUSY_EVENT_TIMEOUT_SECONDS = 60.0
+OPPOSITE_NETWORK_LINKS = {
+    "Telegram": "https://t.me/eltiootaku",
+    "Discord": "https://discord.gg/eltiootaku",
+}
+
+
+@dataclass(frozen=True, slots=True)
+class WaitressBusyState:
+    maid: str
+    platform: str
+    busy_until: float
+    event_id: str
+
+    @property
+    def busy(self) -> bool:
+        return self.busy_until > time.monotonic()
+
+
+class WaitressPresenceManager:
+    """Presencia multiplataforma con límite duro de 60 segundos por evento."""
+
+    def __init__(self, *, clock: Callable[[], float] = time.monotonic) -> None:
+        self._clock = clock
+        self._lock = threading.RLock()
+        self._states: dict[str, WaitressBusyState] = {}
+
+    def acquire(self, maid: str, platform: str, event_id: str, timeout: float = BUSY_EVENT_TIMEOUT_SECONDS) -> bool:
+        name = normalize_maid(maid)
+        network = str(platform).strip().title()
+        if network not in OPPOSITE_NETWORK_LINKS or timeout <= 0:
+            raise ValueError("platform or timeout is invalid")
+        now = self._clock()
+        with self._lock:
+            state = self._states.get(name)
+            if state is not None and state.busy_until > now:
+                return False
+            self._states[name] = WaitressBusyState(
+                name,
+                network,
+                now + min(float(timeout), BUSY_EVENT_TIMEOUT_SECONDS),
+                str(event_id),
+            )
+            return True
+
+    def release(self, maid: str, event_id: str | None = None) -> None:
+        name = normalize_maid(maid)
+        with self._lock:
+            state = self._states.get(name)
+            if state is not None and (event_id is None or state.event_id == str(event_id)):
+                self._states.pop(name, None)
+
+    def state(self, maid: str) -> WaitressBusyState | None:
+        name = normalize_maid(maid)
+        now = self._clock()
+        with self._lock:
+            state = self._states.get(name)
+            if state is not None and state.busy_until <= now:
+                self._states.pop(name, None)
+                return None
+            return state
+
+    def encargado_message(self, maid: str, requesting_platform: str) -> str | None:
+        state = self.state(maid)
+        if state is None:
+            return None
+        opposite = state.platform
+        link = OPPOSITE_NETWORK_LINKS[opposite]
+        return (
+            f"Disculpe, cliente-sama. {state.maid} se encuentra en nuestro grupo de "
+            f"{opposite} ({link}) atendiendo a un cliente. Volverá en breve."
+        )
+
+    def sweep_expired(self) -> int:
+        now = self._clock()
+        with self._lock:
+            expired = [name for name, state in self._states.items() if state.busy_until <= now]
+            for name in expired:
+                self._states.pop(name, None)
+            return len(expired)
+
 
 TEA_TIME_DURATION_SECONDS = 20 * 60
 TEA_TIME_MIN_INTERVAL_SECONDS = 30 * 60
