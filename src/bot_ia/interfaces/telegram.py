@@ -1223,6 +1223,13 @@ class TelegramPoller:
                     )
                     if self._outbox is not None:
                         self._outbox.mark_delivered(update_id)
+                    for followup in outbound.followups:
+                        try:
+                            self._client.send(followup)
+                        except TelegramTransportError as error:
+                            self._logger(
+                                f"telegram followup delivery failed: {type(error).__name__}"
+                            )
                 except TelegramPartialDeliveryError as error:
                     self._pending_delivery = (
                         update_id,
