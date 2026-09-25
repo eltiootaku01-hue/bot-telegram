@@ -244,6 +244,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             '"./browser_data/chie"',
             'provider.addItem("Google Gemini", "gemini")',
             'provider.addItem("OpenAI ChatGPT", "chatgpt")',
+            'provider.addItem("Microsoft Copilot", "copilot")',
             'provider.addItem("Grok / Claude", "grok_claude")',
             "BOT_IA_GROK_CLAUDE_URL",
             "new_chat_selectors",
