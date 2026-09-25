@@ -89,6 +89,30 @@ class SQLiteEconomyTests(unittest.TestCase):
             with self.assertRaises(EconomyPersistenceError):
                 CafeWalletStore(root)
 
+    def test_corrupt_legacy_vip_and_complaint_fail_closed_before_migration(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config"
+            config.mkdir(parents=True)
+
+            (config / "cafe_vip.json").write_text(
+                "{broken",
+                encoding="utf-8",
+            )
+            with self.assertRaises(EconomyPersistenceError):
+                VipStore(root)
+
+            (config / "cafe_vip.json").write_text(
+                "{}",
+                encoding="utf-8",
+            )
+            (config / "order_complaints.json").write_text(
+                "{broken",
+                encoding="utf-8",
+            )
+            with self.assertRaises(EconomyPersistenceError):
+                ComplaintStore(root)
+
     def test_legacy_wallet_and_vip_data_migrate_without_becoming_runtime_authority(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
