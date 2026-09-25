@@ -1648,6 +1648,17 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ):
             self.assertIn(token, source)
 
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        for token in (
+            "TelegramInlineQuery",
+            "parse_inline_query_update",
+            "answer_inline_query",
+            "InlineRedirectHandler",
+            "inline_query",
+            "CAFE_OTAKU_INVITE_URL",
+        ):
+            self.assertIn(token, telegram)
+
         from bot_ia.interfaces.inline_router import InlineAbuseGuard
         guard = InlineAbuseGuard(limit=3, window_seconds=60)
         self.assertIsNone(guard.check("u1", official=False, now=0))
