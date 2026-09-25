@@ -97,7 +97,8 @@ from bot_ia.interfaces.hardening import sanitize_control_text, whitelist_tag
 from bot_ia.interfaces.order_support import ComplaintStore, new_order_id, order_destination
 from bot_ia.interfaces.schrodinger import LiveTarget, SchrodingerError, SchrodingerRouter
 from bot_ia.interfaces.telegram import TelegramApiClient, TelegramOutbound
-from bot_ia.interfaces.social_publish import build_publication, open_x_draft\nfrom bot_ia.interfaces.cafe_orders import (
+from bot_ia.interfaces.social_publish import build_publication, open_x_draft
+from bot_ia.interfaces.cafe_orders import (
     BOLDNESS_LEVELS,
     DEFAULT_OUTFITS,
     DEFAULT_POSES,
@@ -396,6 +397,9 @@ MATRIX_BOT_SPECS = (
 
 INITIAL_SETUP_MODE_ENV = "INITIAL_SETUP_MODE"
 
+WEB_PROFILE_DIR = Path(os.getenv("WEB_PROFILE_DIR", "./web_profile")).expanduser()
+PERSISTENT_WEB_PROVIDERS = frozenset({"gemini", "chatgpt", "copilot", "grok_claude"})
+
 LIGHTWEIGHT_CHROMIUM_ARGS = (
     "--disable-blink-features=AutomationControlled",
     "--hide-crash-restore-bubble",
@@ -617,8 +621,10 @@ class GeminiLobbyWorker(QObject):
         try:
             prompt = self.build_prompt()
             playwright = sync_playwright().start()
+            profile_root = WEB_PROFILE_DIR / self.bot_id
+            profile_root.mkdir(parents=True, exist_ok=True)
             context = playwright.chromium.launch_persistent_context(
-                self.browser_profile,
+                str(profile_root),
                 headless=self.headless,
                 args=self.browser_args,
             )
