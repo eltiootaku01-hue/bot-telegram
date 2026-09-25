@@ -78,7 +78,12 @@ class WaifuRegistry:
             _ensure_slots(record)
             record.progress = record_progress(record)
         payload = [asdict(record) for record in records]
-        payload.append({"__meta__": {"waitress_affinity": self._waitress_affinity}})
+        payload.append({
+            "__meta__": {
+                "waitress_affinity": self._waitress_affinity,
+                "interaction_transfers": getattr(self, "_interaction_transfers", {}),
+            }
+        })
         temporary = self.path.with_suffix(".json.tmp")
         temporary.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
@@ -92,6 +97,7 @@ class WaifuRegistry:
         self.path = self.root / "config" / "waifu_registry.json"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._waitress_affinity: dict[str, dict[str, int]] = {}
+        self._interaction_transfers: dict[str, list[dict[str, object]]] = {}
 
     def _load_affinity_meta(self, item: object) -> None:
         if not isinstance(item, dict):
@@ -114,6 +120,8 @@ class WaifuRegistry:
                     profile[maid] = 0
             result[str(user_id)] = profile
         self._waitress_affinity = result
+        transfers = meta.get("interaction_transfers")
+        self._interaction_transfers = transfers if isinstance(transfers, dict) else {}
 
     def _normalize_affinity_name(self, maid: str) -> str:
         value = str(maid or "").strip().casefold()
@@ -206,21 +214,14 @@ class WaifuRegistry:
         self._waitress_affinity[str(user_id)] = profile
         records = self.load()
         self._waitress_affinity[str(user_id)] = profile
-        payload = self._load_raw_payload(records)
-        meta = payload.setdefault("__interaction_transfers__", {})
-        if not isinstance(meta, dict):
-            meta = {}
-            payload["__interaction_transfers__"] = meta
-        entries = meta.setdefault(str(user_id), [])
-        if not isinstance(entries, list):
-            entries = []
-            meta[str(user_id)] = entries
+        entries = list(self._interaction_transfers.get(str(user_id), []))
         entries.append({
             "maid": name,
             "interaction_id": str(interaction_id),
             "points": max(0, int(points)),
         })
-        self._save_raw_payload(payload)
+        self._interaction_transfers[str(user_id)] = entries
+        self.save(records)
 
     def affinity_level(self, user_id: str, maid: str) -> int:
         name = self._normalize_affinity_name(maid)
