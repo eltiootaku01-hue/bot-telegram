@@ -350,6 +350,9 @@ class TelegramAdapter:
             _, field, value = parts
             if field == "noop":
                 return TelegramOutbound(callback.conversation_id, build_bebida_summary(self._bebida_flow.get(callback.user_id)), "bebida")
+            if field == "start":
+                self._bebida_flow.start(callback.user_id)
+                return TelegramOutbound(callback.conversation_id, "🥤 BEBIDA ESPECIAL · CAMI\\nEscribe /bebida <personaje> para fijar el personaje y luego elige el grado de exposición.", "bebida", ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)))
             order = self._bebida_flow.choose(callback.user_id, field, value)
             if field == "exposure":
                 return TelegramOutbound(callback.conversation_id, "🥤 Nivel guardado. Elige atrevimiento:", "bebida", ((("Suave", "bebida:boldness:Suave"), ("Atrevido", "bebida:boldness:Atrevido")), (("Máximo", "bebida:boldness:Máximo"),)))
