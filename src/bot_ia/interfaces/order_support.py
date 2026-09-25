@@ -164,6 +164,7 @@ class ComplaintStore:
                     complaint_id,
                     points_paid if action == "refund" else 0,
                     item["status"],
+                    balance_after=wallet_store.balance(user_id),
                 )
                 self._save(payload)
                 return self.get(complaint_id)  # type: ignore[return-value]
