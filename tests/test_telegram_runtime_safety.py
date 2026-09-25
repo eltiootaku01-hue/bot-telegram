@@ -49,6 +49,8 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
         client = TelegramApiClient("token", transport=transport)
 
         class Client:
+            token = "test_token"
+
             def get_updates(self, *, offset=None, timeout_seconds=25):
                 return (
                     {
@@ -85,6 +87,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
     def test_poller_does_not_advance_offset_when_delivery_fails(self) -> None:
         class Client:
             def __init__(self):
+                self.token = "test_token"
                 self.calls = 0
 
             def get_updates(self, *, offset=None, timeout_seconds=25):
@@ -119,6 +122,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
     def test_delivery_failure_stops_processing_later_updates_in_same_batch(self) -> None:
         class Client:
             def __init__(self):
+                self.token = "test_token"
                 self.sent = 0
 
             def get_updates(self, *, offset=None, timeout_seconds=25):
