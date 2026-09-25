@@ -1522,6 +1522,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         from bot_ia.interfaces.order_support import (
             ComplaintStore,
             OrderConfirmation,
+            OrderStore,
             order_destination,
         )
         from gui.waifu_registry import WaifuRegistry
@@ -1682,6 +1683,14 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertEqual("u-image", confirmation.user_id)
         self.assertEqual("XL", confirmation.resolution)
         self.assertIn("Character:", confirmation.prompt_en)
+
+        with TemporaryDirectory() as tmp:
+            order_store = OrderStore(Path(tmp))
+            order_store.save(confirmation)
+            restored = order_store.get("ORD-IMAGE-1")
+            self.assertIsNotNone(restored)
+            self.assertEqual("XL", restored.resolution)
+            self.assertEqual("Hyper Pop", restored.render_style)
 
         app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
         telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
