@@ -407,6 +407,7 @@ WEB_PROFILE_DIR = Path(os.getenv("WEB_PROFILE_DIR", "./web_profile")).expanduser
 PERSISTENT_WEB_PROVIDERS = frozenset({"gemini", "chatgpt", "copilot", "grok_claude"})
 
 LIGHTWEIGHT_CHROMIUM_ARGS = (
+    "--disable-features=WebAuthentication,WebAuthenticationUI",
     "--disable-blink-features=AutomationControlled",
     "--hide-crash-restore-bubble",
     "--disable-gpu",
@@ -709,6 +710,7 @@ class ManualBrowserSetupWorker(QObject):
     TIMEOUT_MS = 300_000
     POLL_INTERVAL_MS = 500
     MANUAL_CHROMIUM_ARGS = (
+        "--disable-features=WebAuthentication,WebAuthenticationUI",
         "--disable-blink-features=AutomationControlled",
         "--hide-crash-restore-bubble",
         "--no-first-run",
@@ -3631,9 +3633,41 @@ class CommandCenterWindow(QMainWindow):
         self.web_hint.setWordWrap(True)
         layout.addWidget(self.web_hint)
 
+        from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
         from PySide6.QtWebEngineWidgets import QWebEngineView
 
+        profile_spec = next(
+            spec for spec in MATRIX_BOT_SPECS
+            if spec.bot_id == self._selected_bot_id
+        )
+        self.web_browser_profile_path = Path(
+            profile_spec.browser_profile
+        ).expanduser().resolve()
+        self.web_browser_profile_path.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        self.web_engine_profile = QWebEngineProfile(
+            f"cafe_otaku_{profile_spec.bot_id}",
+            self,
+        )
+        self.web_engine_profile.setPersistentStoragePath(
+            str(self.web_browser_profile_path)
+        )
+        self.web_engine_profile.setCachePath(
+            str(self.web_browser_profile_path / "cache")
+        )
+        self.web_engine_profile.setPersistentCookiesPolicy(
+            QWebEngineProfile.ForcePersistentCookies
+        )
+
         self.web_view = QWebEngineView()
+        self.web_view.setPage(
+            QWebEnginePage(
+                self.web_engine_profile,
+                self.web_view,
+            )
+        )
         self.web_view.setSizePolicy(
             QSizePolicy.Expanding,
             QSizePolicy.Expanding,
@@ -3653,6 +3687,7 @@ class CommandCenterWindow(QMainWindow):
             self._web_queue = WebChatQueueManager(
                 self.web_view,
                 parent=self,
+                browser_profile=self.web_browser_profile_path,
             )
             self._web_queue.ticket_processed.connect(
                 self._on_web_ticket_processed
@@ -5979,6 +6014,11 @@ def _qt_main(app: QApplication) -> int:
 
 def main() -> int:
     load_dotenv(ROOT / ".env", override=False)
+    chromium_flags = os.getenv("QTWEBENGINE_CHROMIUM_FLAGS", "").strip()
+    webauthn_flags = "--disable-features=WebAuthentication,WebAuthenticationUI"
+    if webauthn_flags not in chromium_flags:
+        chromium_flags = f"{chromium_flags} {webauthn_flags}".strip()
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = chromium_flags
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Café Otaku · BOT-IA")
     app.setStyle("Fusion")
