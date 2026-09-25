@@ -95,6 +95,8 @@ from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text,
 from bot_ia.interfaces.cafe_immersion import TeaTimeScheduler
 from bot_ia.interfaces.hardening import sanitize_control_text, whitelist_tag
 from bot_ia.interfaces.order_support import ComplaintStore, new_order_id, order_destination
+from bot_ia.interfaces.schrodinger import LiveTarget, SchrodingerError, SchrodingerRouter
+from bot_ia.interfaces.telegram import TelegramApiClient, TelegramOutbound
 from bot_ia.interfaces.social_publish import build_publication, open_x_draft\nfrom bot_ia.interfaces.cafe_orders import (
     BOLDNESS_LEVELS,
     DEFAULT_OUTFITS,
@@ -2603,6 +2605,164 @@ class WaifuRegistryDialog(QDialog):
         self.records_view.setPlainText("\n".join(lines))
 
 
+class SchrodingerDialog(QDialog):
+    """Chat administrativo en vivo para intervención directa y overrides."""
+
+    def __init__(self, router: SchrodingerRouter, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.router = router
+        self.setWindowTitle("⚛ Schrödinger · Chat & Admin Override")
+        self.resize(820, 620)
+        root = QVBoxLayout(self)
+
+        root.addWidget(QLabel("Chats activos / destinos configurados"))
+        self.targets = QComboBox()
+        self._load_targets()
+        root.addWidget(self.targets)
+
+        self.transcript = QPlainTextEdit()
+        self.transcript.setReadOnly(True)
+        root.addWidget(self.transcript, 1)
+
+        self.message = QPlainTextEdit()
+        self.message.setPlaceholderText("Mensaje de texto...")
+        self.message.setMaximumHeight(120)
+        root.addWidget(self.message)
+
+        media_row = QHBoxLayout()
+        self.media = QLineEdit()
+        self.media.setPlaceholderText("Multimedia: URL o file_id")
+        media_row.addWidget(self.media, 1)
+        browse = QPushButton("📎 Ruta local")
+        browse.clicked.connect(self._pick_media)
+        media_row.addWidget(browse)
+        root.addLayout(media_row)
+
+        actions = QHBoxLayout()
+        send = QPushButton("⚛ Enviar")
+        send.clicked.connect(self._send)
+        actions.addWidget(send)
+        actions.addStretch(1)
+        for label, action in (
+            ("🕊 Perdonar / Unmute", "unmute"),
+            ("👢 Kick", "kick"),
+            ("🔨 Ban Permanent", "ban"),
+        ):
+            button = QPushButton(label)
+            button.clicked.connect(lambda _checked=False, a=action: self._moderate(a))
+            actions.addWidget(button)
+        root.addLayout(actions)
+
+        self.status = QLabel("Listo.")
+        root.addWidget(self.status)
+
+    def _load_targets(self) -> None:
+        self.targets.clear()
+        for item in os.getenv("SCHRODINGER_TARGETS", "").split(","):
+            parts = item.strip().split(":", 2)
+            if len(parts) >= 2 and parts[0].casefold() in {"telegram", "discord"}:
+                title = parts[2] if len(parts) == 3 else parts[1]
+                self.targets.addItem(
+                    f"{parts[0]} · {title}",
+                    LiveTarget(parts[0], parts[1], title),
+                )
+        if self.targets.count() == 0:
+            self.targets.addItem(
+                "Telegram · configurar SCHRODINGER_TARGETS",
+                LiveTarget("telegram", "", ""),
+            )
+
+    def _pick_media(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Seleccionar multimedia")
+        if path:
+            self.media.setText(path)
+
+    def _send(self) -> None:
+        try:
+            target = self.targets.currentData()
+            if not isinstance(target, LiveTarget):
+                raise SchrodingerError("No hay destino seleccionado")
+            text = self.message.toPlainText().strip()
+            media = self.media.text().strip() or None
+            self.router.send_text(target, text, media)
+            self.transcript.appendPlainText(
+                f"⚛ → [{target.platform}] {text or media}"
+            )
+            self.message.clear()
+            self.media.clear()
+            self.status.setText("🟢 Mensaje despachado.")
+        except Exception as error:
+            self.status.setText(f"🔴 {type(error).__name__}: {error}")
+
+    def _moderate(self, action: str) -> None:
+        user_id, ok = QInputDialog.getText(
+            self, "Override administrativo", "ID de usuario Discord:"
+        )
+        if not ok or not user_id.strip():
+            return
+        guild_id, ok = QInputDialog.getText(
+            self, "Override administrativo", "ID del servidor Discord:"
+        )
+        if not ok or not guild_id.strip():
+            return
+        try:
+            self.router.moderate(action, guild_id, user_id)
+            self.status.setText(f"🟢 Override aplicado: {action}")
+            self.transcript.appendPlainText(
+                f"⚛ ADMIN → {action} · {user_id}"
+            )
+        except Exception as error:
+            self.status.setText(f"🔴 {type(error).__name__}: {error}")
+
+
+def build_schrodinger_router() -> SchrodingerRouter:
+    """Construye adaptadores de Telegram/Discord desde variables de entorno."""
+    telegram_sender = None
+    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    if telegram_token:
+        client = TelegramApiClient(telegram_token)
+
+        def send_telegram(chat_id: str, text: str, media: str | None) -> object:
+            outbound = TelegramOutbound(
+                chat_id,
+                text,
+                route="schrodinger",
+                photo_file_id=media if media and not Path(media).exists() else None,
+            )
+            return client.send(outbound)
+
+        telegram_sender = send_telegram
+
+    discord_sender = None
+    discord_client = None
+    discord_token = os.getenv("DISCORD_BOT_TOKEN", "").strip()
+    if discord_token:
+        discord_client = DiscordGroupSetup(discord_token)
+
+        def send_discord(chat_id: str, text: str, media: str | None) -> object:
+            payload: dict[str, object] = {"content": text or ""}
+            if media:
+                payload["embeds"] = [{"image": {"url": media}}]
+            return discord_client.send_channel_message(chat_id, payload)
+
+        discord_sender = send_discord
+
+    def moderate(action: str, guild_id: str, user_id: str) -> object:
+        if discord_client is None:
+            raise SchrodingerError("DISCORD_BOT_TOKEN no está configurado")
+        if action == "unmute":
+            return discord_client.clear_timeout(guild_id, user_id)
+        if action == "kick":
+            return discord_client.kick_member(guild_id, user_id)
+        return discord_client.ban_member(guild_id, user_id)
+
+    return SchrodingerRouter(
+        telegram_sender=telegram_sender,
+        discord_sender=discord_sender,
+        moderation_action=moderate,
+    )
+
+
 class CommandCenterWindow(QMainWindow):
     """UI principal que conserva el runtime y backend existentes."""
 
@@ -2807,6 +2967,10 @@ class CommandCenterWindow(QMainWindow):
         self.statusBar().showMessage("No se pudo estructurar el grupo.", 10000)
         self._append_system("Group Setup ERROR: " + message)
 
+    def _open_schrodinger(self) -> None:
+        dialog = SchrodingerDialog(build_schrodinger_router(), self)
+        dialog.exec()
+
     def _activate_admin_mode(self, checked: bool = True) -> None:
         """Activa el modo admin y aprovisiona estructuras locales de forma idempotente."""
         if not checked:
@@ -2889,6 +3053,13 @@ class CommandCenterWindow(QMainWindow):
             lambda: self._set_page(2)
         )
         top_layout.addWidget(self.web_button)
+
+        self.schrodinger_button = QPushButton("⚛ Schrödinger")
+        self.schrodinger_button.setToolTip(
+            "Chat en vivo Telegram/Discord y anulación administrativa."
+        )
+        self.schrodinger_button.clicked.connect(self._open_schrodinger)
+        top_layout.addWidget(self.schrodinger_button)
 
         self.admin_button = QPushButton("👑 Soy Admin")
         self.admin_button.setCheckable(True)
