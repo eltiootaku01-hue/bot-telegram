@@ -1685,16 +1685,16 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
 
         app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
         telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        orders = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_orders.py").read_text(encoding="utf-8")
         for token in (
             "RESOLUTIONS",
             "RENDER_STYLES",
             'self.resolution = QComboBox()',
             'self.render_style = QComboBox()',
-            "1104x1824",
-            "944x1584",
-            "768x1280",
         ):
-            self.assertIn(token, app if token.startswith("self.") or token in {"RESOLUTIONS", "RENDER_STYLES"} else app + telegram)
+            self.assertIn(token, app)
+        for token in ("1104x1824", "944x1584", "768x1280", "classic anime style, cel shaded"):
+            self.assertIn(token, orders)
         for token in (
             "prompt_en=build_bebida_prompt(order)",
             "resolution=order.resolution",
@@ -1722,6 +1722,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn('"pedidos_admin"', group)
         self.assertIn('"#atencion-y-quejas"', group)
         self.assertIn('"atencion_quejas"', group)
+        self.assertIn('"#pedidos"', group)
 
 
 
