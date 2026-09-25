@@ -18,6 +18,8 @@ from bot_ia.librarian.models import CoverageStatus
 
 from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
+from .cafe_orders import BebidaOrderFlow, build_bebida_summary
+from gui.tutorials import build_tutorial_text
 
 
 class TelegramInputError(ValueError):
@@ -152,6 +154,7 @@ class TelegramAdapter:
     ) -> None:
         self._application = application
         self._tavern_manager = tavern_manager
+        self._bebida_flow = BebidaOrderFlow()
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
@@ -165,6 +168,24 @@ class TelegramAdapter:
                 "¡listo! ¿Qué quieres hacer?",
                 "local",
                 self.MAIN_MENU,
+            )
+        if command == "/tutorial":
+            return TelegramOutbound(
+                inbound.conversation_id,
+                build_tutorial_text(),
+                "tutorial",
+                ((("🥤 Pedir Bebida Especial", "bebida:start:")),),
+            )
+        if command == "/bebida":
+            argument = inbound.text.partition(" ")[2].strip()
+            order = self._bebida_flow.start(inbound.user_id, argument)
+            if argument:
+                self._bebida_flow.set_character(inbound.user_id, argument)
+            return TelegramOutbound(
+                inbound.conversation_id,
+                "🥤 BEBIDA ESPECIAL · CAMI\\n" + ("Personaje: " + argument if argument else "Primero escribe /bebida <personaje>") + "\\nElige grado de exposición:",
+                "bebida",
+                ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)),
             )
         if command == "/setup_group":
             try:
@@ -288,6 +309,21 @@ class TelegramAdapter:
             return TelegramOutbound(callback.conversation_id, "Autorización recibida para esta consulta. BOT-IA puede usar la API configurada sólo para esta petición.", "local", (("⬅️ Menú", "menu:main"),))
         if callback.data == "prompt:generate":
             return TelegramOutbound(callback.conversation_id, "Para generar el prompt exacto necesito que me envíes nuevamente la pregunta que quieres investigar. No se enviará a ninguna API desde este botón.", "local", (("⬅️ Menú", "menu:main"),))
+        if callback.data.startswith("bebida:"):
+            parts = callback.data.split(":", 2)
+            if len(parts) != 3:
+                raise TelegramInputError("invalid beverage callback")
+            _, field, value = parts
+            order = self._bebida_flow.choose(callback.user_id, field, value)
+            keyboard = ((("👤 Personaje: escribe /bebida <nombre>", "bebida:noop:noop"),),)
+            if field == "product_type":
+                return TelegramOutbound(callback.conversation_id, build_bebida_summary(order), "bebida", keyboard)
+            if field == "exposure":
+                return TelegramOutbound(callback.conversation_id, "🥤 Nivel guardado. Elige atrevimiento:", "bebida", ((("Suave", "bebida:boldness:Suave"), ("Atrevido", "bebida:boldness:Atrevido")), (("Máximo", "bebida:boldness:Máximo"),)))
+            if field == "boldness":
+                return TelegramOutbound(callback.conversation_id, "🥤 Elige producto:", "bebida", ((("Carta TCG", "bebida:product_type:Carta TCG"), ("Naipe", "bebida:product_type:Naipe")), (("Waifumon", "bebida:product_type:Waifumon"),)))
+        if callback.data == "tutorial:show":
+            return TelegramOutbound(callback.conversation_id, build_tutorial_text(), "tutorial")
         text = actions.get(callback.data)
         if text is None:
             raise TelegramInputError("unknown Telegram callback")
