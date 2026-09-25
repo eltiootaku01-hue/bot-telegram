@@ -36,6 +36,7 @@ class DiscordModerationHandler:
         text: str = "",
         image_tags: tuple[str, ...] = (),
         room_key: str = "general",
+        burst: bool = False,
     ) -> DiscordModerationResult:
         decision = moderate(text, room_key=room_key, image_tags=image_tags)
         if decision.action == "allow":
@@ -52,7 +53,7 @@ class DiscordModerationHandler:
             self._client.ban_member(guild_id, user_id)
             sanctioned = True
         elif self._strike_engine is not None:
-            record = self._strike_engine.evaluate(guild_id, user_id, decision.reason)
+            record = self._strike_engine.evaluate(guild_id, user_id, decision.reason, burst=burst)
             if record is not None:
                 strikes = record.strikes
                 action = self._strike_engine.action_for(record)
