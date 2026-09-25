@@ -700,7 +700,11 @@ class ManualBrowserSetupWorker(QObject):
             )
 
             deadline = time.monotonic() + self.TIMEOUT_MS / 1000
-            while time.monotonic() < deadline:
+            current_thread = QThread.currentThread()
+            while (
+                time.monotonic() < deadline
+                and not current_thread.isInterruptionRequested()
+            ):
                 try:
                     pages = context.pages
                     if not pages or all(
