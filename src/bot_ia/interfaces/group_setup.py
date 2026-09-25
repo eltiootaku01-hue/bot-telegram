@@ -291,6 +291,8 @@ class DiscordGroupSetup:
                     pass
         if not (permissions & 0x8 or permissions & 0x10):
             raise GroupSetupError("El bot necesita Administrador o Gestionar Canales en Discord")
+        if not (permissions & 0x8) and not (permissions & 0x10000000):
+            raise GroupSetupError("Para la bienvenida con rol Nakama, el bot necesita Gestionar Roles")
 
         expected_names = {name.lstrip("#") for name, _ in ROOMS}
         self.cleanup_managed_channels(guild_id, expected_names)
