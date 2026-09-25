@@ -327,6 +327,24 @@ class TelegramAdapter:
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
             return self.handle_callback(update)
+        message = update.get("message")
+        if isinstance(message, dict) and isinstance(message.get("successful_payment"), dict):
+            payment = message["successful_payment"]
+            user = message.get("from", {})
+            user_id = str(user.get("id", "")) if isinstance(user, dict) else ""
+            try:
+                profile = validate_donation_event(user_id, payment)
+            except (TypeError, ValueError):
+                return TelegramOutbound(
+                    str(message.get("chat", {}).get("id", "")),
+                    "⚠️ No se pudo validar la donación Stars. No se modificó el acceso VIP.",
+                    "vip_donation_error",
+                )
+            return TelegramOutbound(
+                str(message.get("chat", {}).get("id", "")),
+                f"✨ Gracias por apoyar voluntariamente al Café. VIP activado. Stars registradas: {profile.donated_stars}.",
+                "vip",
+            )
         inbound = parse_update(update)
         moderation = moderate(
             inbound.text,
