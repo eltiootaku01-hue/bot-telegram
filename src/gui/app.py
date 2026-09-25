@@ -33,7 +33,7 @@ from PySide6.QtCore import (
     Slot,
 )
 from PySide6.QtGui import QKeyEvent
-from core.config import DynamicConfigManager
+from core.config import DynamicConfigManager\nfrom .admin_provisioning import AdminProvisioner
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -1709,6 +1709,37 @@ class CommandCenterWindow(QMainWindow):
     # Ventana y layout
     # ------------------------------------------------------------------
 
+    def _activate_admin_mode(self, checked: bool = True) -> None:
+        """Activa el modo admin y aprovisiona estructuras locales de forma idempotente."""
+        if not checked:
+            self._admin_mode = False
+            self.statusBar().showMessage("Modo Administrador desactivado.", 5000)
+            return
+
+        try:
+            result = self.admin_provisioner.activate(self.config_manager)
+            self._admin_mode = True
+            self.admin_button.setChecked(True)
+            self.statusBar().showMessage(
+                "Modo Administrador activado: Paneles y temas estructurados correctamente.",
+                10000,
+            )
+            self._append_system(
+                "Modo Administrador activado: Paneles y temas estructurados correctamente. "
+                f"Paneles={len(result['panels'])} · Temas={len(result['themes'])}."
+            )
+            self.refresh_state()
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as error:
+            self._admin_mode = False
+            self.admin_button.setChecked(False)
+            self.statusBar().showMessage(
+                f"No se pudo aprovisionar el modo Administrador: {type(error).__name__}.",
+                10000,
+            )
+            self._append_system(
+                f"Error de aprovisionamiento administrador: {type(error).__name__}: {error}"
+            )
+
     def _configure_window(self) -> None:
         self.setStyleSheet(application_qss())
         self.setStatusBar(QStatusBar(self))
@@ -1753,6 +1784,14 @@ class CommandCenterWindow(QMainWindow):
             lambda: self._set_page(2)
         )
         top_layout.addWidget(self.web_button)
+
+        self.admin_button = QPushButton("👑 Soy Admin")
+        self.admin_button.setCheckable(True)
+        self.admin_button.setToolTip(
+            "Activa el aprovisionamiento local de paneles, temas y variables base."
+        )
+        self.admin_button.clicked.connect(self._activate_admin_mode)
+        top_layout.addWidget(self.admin_button)
 
         self.diagnostic_button = QPushButton("🔍 Diagnóstico")
         self.diagnostic_button.clicked.connect(
