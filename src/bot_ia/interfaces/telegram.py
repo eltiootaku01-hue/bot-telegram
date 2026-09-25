@@ -623,7 +623,7 @@ class TelegramAdapter:
                 setup = TelegramGroupSetup(os.getenv("TELEGRAM_BOT_TOKEN", ""))
                 result = setup.setup_chat(
                     inbound.conversation_id,
-                    GroupSetupStore(Path.cwd()),
+                    GroupSetupStore(PROJECT_ROOT),
                 )
                 summary = "\n".join(
                     f"• {room.name} → topic {room.external_id}"
