@@ -635,8 +635,6 @@ class _QueueWorker(QObject):
     @Slot()
     def stop(self) -> None:
         self._running = False
-        # No se libera aquí: el ticket activo debe cerrar/fallar por su
-        # ruta normal para evitar que dos navegadores compartan foco.
 
         if self._timeout_timer is not None:
             self._timeout_timer.stop()
@@ -644,6 +642,33 @@ class _QueueWorker(QObject):
         if self._circuit_timer is not None:
             self._circuit_timer.stop()
 
+        # Shutdown debe ser terminal: si este worker posee Mesa Única,
+        # la libera aquí aunque el ticket no haya alcanzado #terminado.
+        # Dejar el lock retenido durante el cierre puede bloquear futuras
+        # instancias del proceso o hacer imposible un reinicio limpio.
+        if self.current_ticket is not None:
+            ticket = self.current_ticket
+            ticket.status = "FAILED"
+            self.current_ticket = None
+            self.is_busy = False
+            self.awaiting_terminated = False
+            self.close_in_flight = False
+            if self._mesa_unica_acquired:
+                _WEB_MESA_UNICA.release()
+                self._mesa_unica_acquired = False
+            self.ticket_failed.emit(ticket, "QUEUE_STOPPED")
+            self.busy_changed.emit(False)
+
+        while True:
+            try:
+                pending = self.msg_queue.get_nowait()
+            except queue.Empty:
+                break
+            self._queued_ids.discard(pending.ticket_id)
+            pending.status = "FAILED"
+            self.ticket_failed.emit(pending, "QUEUE_STOPPED")
+
+        self._queued_ids.clear()
         self.stopped.emit()
 
     def _process_next(self) -> None:
