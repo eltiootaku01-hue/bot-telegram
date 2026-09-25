@@ -144,7 +144,8 @@ class LocalGameRouter:
             if player == 21:
                 return self._finish_blackjack(state, natural=True, user_id=user_id)
             return (
-                f"21 local · tus cartas: {', '.join(state.player_cards)} "
+                f"21 local · {waitress_dialogue(GAME_HOSTS['21'], 'role')} "
+                f"tus cartas: {', '.join(state.player_cards)} "
                 f"({player}). Dealer visible: {state.dealer_cards[0]}. "
                 "Escribe «carta» o «plantarse»."
             )
@@ -204,7 +205,7 @@ class LocalGameRouter:
             return (
                 f"UNO local · jugaste {state.top_card}. "
                 f"Te quedan {len(state.player_cards)} cartas. "
-                f"Anfitriona: {GAME_HOSTS['uno']}."
+                f"{waitress_dialogue(GAME_HOSTS['uno'], 'role')}"
             )
         return (
             f"UNO local · anfitriona: {GAME_HOSTS['uno']} · "
@@ -229,7 +230,8 @@ class LocalGameRouter:
             self._reward_game(user_id, "21")
         prefix = "¡21!" if natural or player == 21 else "21 local"
         return (
-            f"{prefix} · tú: {player} [{', '.join(state.player_cards)}] · "
+            f"{prefix} · {waitress_dialogue(GAME_HOSTS['21'], 'role')} "
+            f"tú: {player} [{', '.join(state.player_cards)}] · "
             f"dealer: {dealer} [{', '.join(state.dealer_cards)}] · {result}. "
             "Escribe «21 nuevo» para otra mano."
         )
