@@ -3381,9 +3381,17 @@ class CommandCenterWindow(QMainWindow):
         points = self.cafe_wallet.balance("local-user")
         QMessageBox.information(self, "☕ Puntos del Café", f"{economy_price_text()}\\n\\nSaldo local: {points} puntos.")
 
+    def _active_cafe_maid(self) -> str:
+        profile = BOT_MAP.get(self._selected_bot_id)
+        return profile.name if profile is not None else "Cami"
+
     def _run_local_gacha(self) -> None:
         try:
-            result = draw_gacha("local-user", self.cafe_wallet, maid="Cami")
+            result = draw_gacha(
+                "local-user",
+                self.cafe_wallet,
+                maid=self._active_cafe_maid(),
+            )
         except ValueError as error:
             QMessageBox.warning(self, "🎰 Gacha", str(error))
             return
