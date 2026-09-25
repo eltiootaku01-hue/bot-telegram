@@ -173,6 +173,17 @@ class DiscordGroupSetup:
         return tuple(removed)
 
 
+    def ensure_role(self, guild_id: str, name: str = "Nakama") -> str:
+        roles = self._request("GET", f"/guilds/{guild_id}/roles")
+        if isinstance(roles, list):
+            for role in roles:
+                if isinstance(role, dict) and str(role.get("name", "")).casefold() == name.casefold():
+                    return str(role.get("id"))
+        created = self._request("POST", f"/guilds/{guild_id}/roles", {"name": name, "mentionable": False})
+        if not isinstance(created, dict) or not created.get("id"):
+            raise GroupSetupError(f"Discord no devolvió rol {name}")
+        return str(created["id"])
+
     def list_webhooks(self, channel_id: str) -> list[dict[str, object]]:
         value = self._request("GET", f"/channels/{channel_id}/webhooks")
         return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
@@ -293,15 +304,14 @@ class DiscordGroupSetup:
                 "type": 0,
                 "topic": f"BOT-IA · {key}",
             }
-            if key in {ADMIN_ROOM_KEY, ORDERS_ROOM_KEY}:
-                # @everyone puede leer #pedidos pero no publicar; sólo bot y administradores publican.
+            if key in {ADMIN_ROOM_KEY, ORDERS_ROOM_KEY, "bienvenida"}:
                 send_bits = (1 << 11) | (1 << 12)
                 attach_bit = 1 << 15
-                overwrites = [
-                    {"id": guild_id, "type": 0, "deny": str(send_bits | attach_bit)},
-                ] if key == ORDERS_ROOM_KEY else [
-                    {"id": guild_id, "type": 0, "deny": str(1 << 10)},
-                ]
+                if key == ADMIN_ROOM_KEY:
+                    overwrites = [{"id": guild_id, "type": 0, "deny": str(1 << 10)}]
+                else:
+                    # Usuarios pueden leer, pero sólo bot/administradores publican.
+                    overwrites = [{"id": guild_id, "type": 0, "deny": str(send_bits | attach_bit)}]
                 for role in roles:
                     if not isinstance(role, dict):
                         continue
