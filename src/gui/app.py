@@ -13,6 +13,7 @@ import sqlite3
 import subprocess
 import sys
 import time
+import signal
 import traceback
 from contextlib import closing
 from urllib.error import HTTPError, URLError
@@ -5305,12 +5306,18 @@ class CommandCenterWindow(QMainWindow):
                 "telegram",
             ]
         try:
+            creationflags = (
+                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                if os.name == "nt"
+                else 0
+            )
             self._telegram_process = subprocess.Popen(
                 command,
                 cwd=str(ROOT),
                 env=env,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                creationflags=creationflags,
             )
             if button is not None:
                 button.setText("● Telegram iniciando…")
@@ -5390,7 +5397,17 @@ class CommandCenterWindow(QMainWindow):
             self._telegram_process is not None
             and self._telegram_process.poll() is None
         ):
-            self._telegram_process.terminate()
+            try:
+                if os.name == "nt" and hasattr(signal, "CTRL_BREAK_EVENT"):
+                    self._telegram_process.send_signal(signal.CTRL_BREAK_EVENT)
+                    self._telegram_process.wait(timeout=1.5)
+                else:
+                    self._telegram_process.terminate()
+                    self._telegram_process.wait(timeout=1.5)
+            except (OSError, subprocess.TimeoutExpired) as error:
+                self._log_error("Telegram graceful shutdown", error)
+                if self._telegram_process.poll() is None:
+                    self._telegram_process.kill()
 
         if (
             self._web_chat_process is not None
