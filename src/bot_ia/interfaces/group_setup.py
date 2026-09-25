@@ -11,6 +11,13 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from .telegram_room_routing import TelegramRoomRouter
+from .telegram_security import (
+    authorized_group_ids,
+    is_authorized_telegram_group,
+    require_authorized_group,
+)
+
 
 ROOMS = (
     ("#bienvenida", "bienvenida"),
@@ -464,6 +471,8 @@ class TelegramGroupSetup:
         return value
 
     def configure_authorized_bots(self, chat_id: str) -> tuple[int, ...]:
+        # Promotion is fail-closed: no allowlist = no automatic bot linking.
+        require_authorized_group(chat_id)
         promoted: list[int] = []
         current = self._call("getMe", {}).get("result")
         current_id = int(current["id"]) if isinstance(current, dict) and isinstance(current.get("id"), int) else None
@@ -502,6 +511,11 @@ class TelegramGroupSetup:
         chat_id = str(chat_id).strip()
         if not chat_id:
             raise GroupSetupError("chat_id es obligatorio")
+        if not is_authorized_telegram_group(chat_id):
+            raise GroupSetupError(
+                "Telegram setup rechazado: el chat no está en "
+                "AUTHORIZED_GROUP_ID/TELEGRAM_OFFICIAL_CHAT_IDS"
+            )
         me = self._call("getMe", {})
         bot_id = me.get("result", {}).get("id") if isinstance(me.get("result"), dict) else None
         if not isinstance(bot_id, int):
@@ -530,9 +544,16 @@ class TelegramGroupSetup:
             room = GroupRoom(name, key, str(topic_id))
             rooms.append(room)
             existing[key] = room
-        self.configure_authorized_bots(chat_id)
         result = GroupSetupResult("telegram", chat_id, tuple(rooms))
         store.save_target("telegram", chat_id, result.rooms)
+
+        # El provisioning es la única fuente de verdad del mapa de temas.
+        router = TelegramRoomRouter(
+            Path(store.path).parent / "telegram_rooms.sqlite3"
+        )
+        router.replace_chat_rooms(chat_id, result.rooms)
+
+        self.configure_authorized_bots(chat_id)
         return result
 
 
