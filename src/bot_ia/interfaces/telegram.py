@@ -216,14 +216,14 @@ class TelegramAdapter:
     ) -> None:
         self._application = application
         self._tavern_manager = tavern_manager
-        self._wallet_store = CafeWalletStore(Path.cwd())
-        self._waifu_registry = WaifuRegistry(Path.cwd())
+        self._wallet_store = CafeWalletStore(PROJECT_ROOT)
+        self._waifu_registry = WaifuRegistry(PROJECT_ROOT)
         self._bebida_flow = BebidaOrderFlow(
             allowed_tags=self._waifu_registry.danbooru_whitelist(),
         )
-        self._complaint_store = ComplaintStore(Path.cwd())
-        self._vip_store = VipStore(Path.cwd())
-        self._order_store = OrderStore(Path.cwd())
+        self._complaint_store = ComplaintStore(PROJECT_ROOT)
+        self._vip_store = VipStore(PROJECT_ROOT)
+        self._order_store = OrderStore(PROJECT_ROOT)
         self._pending_orders: dict[str, OrderConfirmation] = {}
         self._last_orders: dict[str, OrderConfirmation] = {}
         self._pending_attachments: dict[str, OrderConfirmation] = {}
