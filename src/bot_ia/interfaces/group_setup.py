@@ -171,6 +171,37 @@ class DiscordGroupSetup:
         return tuple(removed)
 
 
+    def list_webhooks(self, channel_id: str) -> list[dict[str, object]]:
+        value = self._request("GET", f"/channels/{channel_id}/webhooks")
+        return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+    def create_webhook(self, channel_id: str, name: str, *, avatar_data_uri: str | None = None) -> dict[str, object]:
+        payload: dict[str, object] = {"name": name[:80]}
+        if avatar_data_uri:
+            payload["avatar"] = avatar_data_uri
+        value = self._request("POST", f"/channels/{channel_id}/webhooks", payload)
+        if not isinstance(value, dict) or not value.get("id"):
+            raise GroupSetupError(f"Discord no devolvió webhook para {name}")
+        return value
+
+    def ensure_webhook(self, channel_id: str, name: str, *, avatar_data_uri: str | None = None) -> dict[str, object]:
+        for webhook in self.list_webhooks(channel_id):
+            if str(webhook.get("name", "")).casefold() == name.casefold():
+                return webhook
+        return self.create_webhook(channel_id, name, avatar_data_uri=avatar_data_uri)
+
+    def ensure_managed_webhooks(self, rooms: tuple[GroupRoom, ...]) -> dict[str, tuple[str, ...]]:
+        from .cafe_immersion import waitress_avatar_data_uri
+        result: dict[str, tuple[str, ...]] = {}
+        for room in rooms:
+            names = ("Cari", "Cami", "Sunna", "Chie") if room.key in {"general", "tcg_collection", "pedidos_sfw", "noticias_otaku"} else ("Scarlet", "Chloé")
+            ids: list[str] = []
+            for name in names:
+                hook = self.ensure_webhook(room.channel_id, name, avatar_data_uri=waitress_avatar_data_uri(name))
+                ids.append(str(hook.get("id")))
+            result[room.key] = tuple(ids)
+        return result
+
     def ban_member(self, guild_id: str, user_id: str, *, delete_message_seconds: int = 604800) -> None:
         self._request(
             "PUT",
@@ -262,6 +293,7 @@ class DiscordGroupSetup:
             existing[key] = room
         result = GroupSetupResult("discord", guild_id, tuple(rooms))
         store.save_target("discord", guild_id, result.rooms)
+        self.ensure_managed_webhooks(result.rooms)
         return result
 
 
