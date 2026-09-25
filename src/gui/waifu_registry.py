@@ -11,6 +11,8 @@ import re
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 
+from bot_ia.interfaces.cafe_economy import RARITY_PRICES
+
 
 @dataclass(slots=True)
 class CardSlot:
@@ -49,6 +51,16 @@ class WaifuRecord:
     assembled_path: str = ""
     progress: int = 0
     card_slots: list[CardSlot] = field(default_factory=list)
+
+
+def bebida_rarity_price_menu() -> str:
+    """Menú local de precios para clonación por rareza y pedido custom."""
+    return (
+        f"Bebida R: {RARITY_PRICES['R']} Puntos · "
+        f"Bebida SR: {RARITY_PRICES['SR']} Puntos · "
+        f"Bebida UR: {RARITY_PRICES['UR']} Puntos · "
+        f"Bebida Especial (Custom Prompt): {RARITY_PRICES['SPECIAL']} Puntos"
+    )
 
 
 class WaifuRegistry:
