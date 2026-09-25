@@ -32,11 +32,11 @@ class WaifuRecord:
     """Ficha local de una waifu preparada para una carta TCG."""
 
     name: str
-    danbooru_tag: str = ""
     personality: str
     appearance: str
     element: str
     cosplay_reference: str
+    danbooru_tag: str = ""
     card_category: str = "Waifu / TCG"
     card_number: str = ""
     card_suit: str = ""
