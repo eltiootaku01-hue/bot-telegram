@@ -50,6 +50,20 @@ def waitress_profile(maid: str) -> dict[str, str]:
     return dict(WAITRESS_PROFILES[normalize_maid(maid)])
 
 
+def waitress_exclusive_dialogue(maid: str, heart_level: int) -> str:
+    name = normalize_maid(maid)
+    level = max(0, int(heart_level))
+    if level < 3:
+        return ""
+    messages = {
+        "Cari": "💗 Cari: Maestro, gracias por confiar en mí. Esta atención especial queda entre nosotros.",
+        "Sunna": "💗 Sunna: Con este Heart Level ya tienes mi desafío especial: demuestra que puedes superar la mesa.",
+        "Cami": "💗 Cami: Tu afinidad desbloqueó mi receta especial. Vamos a cuidar cada detalle del próximo prompt.",
+        "Chie": "💗 Chie: Tu afinidad desbloqueó mi pregunta secreta. Prepárate para un debate isekai de nivel avanzado.",
+    }
+    return messages[name]
+
+
 def waitress_dialogue(maid: str, event: str = "greeting") -> str:
     name = normalize_maid(maid)
     profile = WAITRESS_PROFILES[name]
@@ -134,7 +148,7 @@ class TeaTimeScheduler:
             self._thread = threading.Thread(
                 target=self._run,
                 name="CafeOtakuTeaTime",
-                daemon=False,
+                daemon=True,
             )
             self._thread.start()
 
