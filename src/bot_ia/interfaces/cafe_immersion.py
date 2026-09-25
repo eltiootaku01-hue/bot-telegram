@@ -99,20 +99,20 @@ def analyze_telegram_comment(update: dict[str, object]) -> TelegramCommentDecisi
     """Detecta comentarios del grupo vinculado sin responder a otros bots ni a comandos."""
     message = update.get("message")
     if not isinstance(message, dict):
-        return TelegramCommentDecision(False, "")
+        return TelegramCommentDecision(False, "", None)
     chat = message.get("chat")
     sender = message.get("from")
     if not isinstance(chat, dict) or not isinstance(sender, dict):
-        return TelegramCommentDecision(False, "")
+        return TelegramCommentDecision(False, "", None)
     if bool(sender.get("is_bot")):
-        return TelegramCommentDecision(False, str(chat.get("id", "")))
+        return TelegramCommentDecision(False, str(chat.get("id", "")), None)
     text = str(message.get("text", "") or "").strip()
     if not text or text.startswith("/"):
-        return TelegramCommentDecision(False, str(chat.get("id", "")))
+        return TelegramCommentDecision(False, str(chat.get("id", "")), None)
     reply = message.get("reply_to_message")
     reply_id = reply.get("message_id") if isinstance(reply, dict) else None
     if not isinstance(reply_id, int) or reply_id <= 0:
-        return TelegramCommentDecision(False, str(chat.get("id", "")))
+        return TelegramCommentDecision(False, str(chat.get("id", "")), None)
     return TelegramCommentDecision(True, str(chat.get("id", "")), reply_id)
 
 
