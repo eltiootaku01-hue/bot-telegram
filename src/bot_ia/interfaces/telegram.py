@@ -19,7 +19,7 @@ from bot_ia.librarian.models import CoverageStatus
 from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
-from gui.tutorials import build_tutorial_text
+from .tutorials import build_tutorial_text
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
 from gui.tutorials import build_tutorial_text
 
