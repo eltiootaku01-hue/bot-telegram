@@ -1372,7 +1372,7 @@ class CommandCenterWindow(QMainWindow):
             self._on_web_state
         )
         self.signals.web_failed.connect(
-            self._on_web_failed
+            self._on_web_state
         )
         self.signals.web_state.connect(
             self._on_web_state
