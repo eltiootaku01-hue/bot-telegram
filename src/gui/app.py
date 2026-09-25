@@ -3062,6 +3062,13 @@ class CommandCenterWindow(QMainWindow):
     def _on_manual_setup_finished(self, text: str) -> None:
         self._finish_manual_setup_mode()
         self._append_system(f"🔑 {text}")
+        for bot_id, dialog in self._expanded_bot_dialogs.items():
+            provider_id = str(dialog.provider.currentData()).strip()
+            authenticated, detail = self._browser_auth_state(
+                bot_id,
+                provider_id,
+            )
+            dialog.set_connection_state(authenticated, detail)
 
     @Slot(str)
     def _on_manual_setup_failed(self, error: str) -> None:
