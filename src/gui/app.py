@@ -2428,24 +2428,6 @@ class CommandCenterWindow(QMainWindow):
             except TavernError as error:
                 self._append_system(self._friendly_tavern_error(error))
 
-    def _enable_manual_setup_mode(self) -> None:
-        try:
-            self.config_manager.set_values(
-                {INITIAL_SETUP_MODE_ENV: "true"}
-            )
-            self._refresh_config_dialog_fields()
-            self._append_system(
-                "🔑 INITIAL_SETUP_MODE activado. "
-                "La próxima cadena abrirá Chromium visible para completar "
-                "el inicio de sesión de los perfiles aislados."
-            )
-            self.manual_login_button.setEnabled(False)
-        except Exception as error:
-            self._log_error("Manual browser setup", error)
-            self._append_system(
-                "No se pudo activar el modo de inicio de sesión manual."
-            )
-
     def _start_matrix_chain(self, start_bot_id: str = "cari") -> None:
         if self._closing or self._matrix_dispatcher.is_running:
             return
