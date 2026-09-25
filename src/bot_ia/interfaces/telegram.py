@@ -629,7 +629,7 @@ class TelegramAdapter:
                     f"• {room.name} → topic {room.external_id}"
                     for room in result.rooms
                 )
-                feeds = GroupSetupStore(Path.cwd()).get_feeds("telegram", inbound.conversation_id)
+                feeds = GroupSetupStore(PROJECT_ROOT).get_feeds("telegram", inbound.conversation_id)
                 feed_text = "\n".join(f"• {name}: {url}" for name, url in feeds)
                 privacy_note = (
                     "\n\n⚠️ Telegram: #pedidos-admin se crea como tema del foro; "
