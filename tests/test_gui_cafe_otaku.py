@@ -1979,7 +1979,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("Texto original en español:", source)
         self.assertIn("Prompt optimizado en inglés:", source)
         self.assertIn("📎 Adjuntar / Subir imagen generada", source)
-        self.assertIn("route="order_delivery"", source)
+        self.assertIn('route="order_delivery"', source)
         self.assertIn("pending.user_id", source)
 
     def test_cross_platform_presence_and_transfer_contract(self):
