@@ -1382,9 +1382,15 @@ class TelegramPoller:
 
                 try:
                     moderation_outbound = self._moderate_raw_update(update)
-            comment_outbound = None if moderation_outbound is not None else self._comment_raw_update(update)
-            outbound = moderation_outbound if moderation_outbound is not None else comment_outbound if comment_outbound is not None else self._adapter.handle_update(update)
+                    comment_outbound = (
+                        None
+                        if moderation_outbound is not None
+                        else self._comment_raw_update(update)
+                    )
+                    if moderation_outbound is not None:
                         outbound = moderation_outbound
+                    elif comment_outbound is not None:
+                        outbound = comment_outbound
                     elif isinstance(update.get("message"), dict) and isinstance(update["message"].get("photo"), list):
                         outbound = self._adapter.handle_photo_update(update)
                     else:
