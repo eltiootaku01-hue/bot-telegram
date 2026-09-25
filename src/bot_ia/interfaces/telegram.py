@@ -19,7 +19,7 @@ from bot_ia.librarian.models import CoverageStatus
 from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
-from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text
+from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text
 from .tutorials import build_tutorial_text
 
 
@@ -145,6 +145,7 @@ class TelegramAdapter:
         (("✍️ Escribir novela", "menu:write"), ("📝 Editar texto", "menu:edit")),
         (("📚 Biblioteca", "menu:library"), ("🧭 Continuidad", "menu:continuity")),
         (("💡 Ideas", "menu:ideas"), ("❓ Ayuda", "menu:help")),
+        (("🍀 Pity", "pity:show"), ("☕ Puntos", "economy:show")),
     )
 
     def __init__(
@@ -173,13 +174,30 @@ class TelegramAdapter:
             )
         if command in {"/puntos", "/economia", "/precios"}:
             wallet = self._wallet_store.get(inbound.user_id)
-            return TelegramOutbound(inbound.conversation_id, economy_price_text() + f"\n\nSaldo de {inbound.user_id}: {wallet.points} puntos.", "economy")
+            return TelegramOutbound(
+                inbound.conversation_id,
+                economy_price_text() + f"\n\nSaldo de {inbound.user_id}: {wallet.points} puntos.",
+                "economy",
+                ((("🍀 Consultar Pity", "pity:show"),),),
+            )
+        if command == "/pity":
+            return TelegramOutbound(
+                inbound.conversation_id,
+                pity_text(inbound.user_id, self._wallet_store, maid="Cami"),
+                "pity",
+                ((("🎰 Gacha", "gacha:draw"), ("☕ Puntos", "economy:show")),),
+            )
         if command == "/gacha":
             try:
                 result = draw_gacha(inbound.user_id, self._wallet_store, maid="Cami")
             except ValueError as error:
                 return TelegramOutbound(inbound.conversation_id, f"🎰 Gacha: {error}", "gacha")
-            return TelegramOutbound(inbound.conversation_id, f"🎰 Resultado: {result.rarity}\n{result.consolation}\nCoste: {result.points_spent} puntos.", "gacha")
+            return TelegramOutbound(
+                inbound.conversation_id,
+                f"🎰 Resultado: {result.rarity}\n{result.consolation}\nCoste: {result.points_spent} puntos.",
+                "gacha",
+                ((("🍀 Ver Pity", "pity:show"),),),
+            )
         if command == "/tutorial":
             return TelegramOutbound(
                 inbound.conversation_id,
@@ -311,9 +329,40 @@ class TelegramAdapter:
             "menu:ideas": "Quiero ideas para continuar la novela usando la continuidad y personajes establecidos.",
         }
         if callback.data == "menu:help":
-            return TelegramOutbound(callback.conversation_id, "Escribe lo que necesitas; BOT-IA decide si basta la información local, si necesita consultar archivos o si conviene pedir autorización antes de usar una API.", "local", self.MAIN_MENU)
+            return TelegramOutbound(
+                callback.conversation_id,
+                "Escribe lo que necesitas; BOT-IA decide si basta la información local, si necesita consultar archivos o si conviene pedir autorización antes de usar una API.",
+                "local",
+                self.MAIN_MENU,
+            )
         if callback.data == "menu:main":
             return TelegramOutbound(callback.conversation_id, "Menú principal:", "local", self.MAIN_MENU)
+        if callback.data == "economy:show":
+            wallet = self._wallet_store.get(callback.user_id)
+            return TelegramOutbound(
+                callback.conversation_id,
+                economy_price_text() + f"\n\nSaldo: {wallet.points} puntos.",
+                "economy",
+                ((("🍀 Consultar Pity", "pity:show"),),),
+            )
+        if callback.data == "pity:show":
+            return TelegramOutbound(
+                callback.conversation_id,
+                pity_text(callback.user_id, self._wallet_store, maid="Cami"),
+                "pity",
+                ((("🎰 Gacha", "gacha:draw"), ("☕ Puntos", "economy:show")),),
+            )
+        if callback.data == "gacha:draw":
+            try:
+                result = draw_gacha(callback.user_id, self._wallet_store, maid="Cami")
+            except ValueError as error:
+                return TelegramOutbound(callback.conversation_id, f"🎰 Gacha: {error}", "gacha")
+            return TelegramOutbound(
+                callback.conversation_id,
+                f"🎰 Resultado: {result.rarity}\n{result.consolation}\nCoste: {result.points_spent} puntos.",
+                "gacha",
+                ((("🍀 Ver Pity", "pity:show"),),),
+            )
         if callback.data == "fallback:prompt":
             return TelegramOutbound(callback.conversation_id, "Puedo preparar un prompt para pegar en otra IA web sin enviar tu consulta a ninguna API desde BOT-IA.", "local", (("📋 Generar prompt", "prompt:generate"), ("⬅️ Menú", "menu:main")))
         if callback.data == "fallback:api":
@@ -325,31 +374,35 @@ class TelegramAdapter:
             if len(parts) != 3:
                 raise TelegramInputError("invalid beverage callback")
             _, field, value = parts
-            order = self._bebida_flow.choose(callback.user_id, field, value)
-            keyboard = ((("👤 Personaje: escribe /bebida <nombre>", "bebida:noop:noop"),),)
-            if field == "product_type":
-                return TelegramOutbound(callback.conversation_id, build_bebida_summary(order), "bebida", keyboard)
-            if field == "exposure":
-                return TelegramOutbound(callback.conversation_id, "🥤 Nivel guardado. Elige atrevimiento:", "bebida", ((("Suave", "bebida:boldness:Suave"), ("Atrevido", "bebida:boldness:Atrevido")), (("Máximo", "bebida:boldness:Máximo"),)))
-            if field == "boldness":
-                return TelegramOutbound(callback.conversation_id, "🥤 Elige producto:", "bebida", ((("Carta TCG", "bebida:product_type:Carta TCG"), ("Naipe", "bebida:product_type:Naipe")), (("Waifumon", "bebida:product_type:Waifumon"),)))
-        if callback.data == "tutorial:show":
-            return TelegramOutbound(callback.conversation_id, build_tutorial_text(), "tutorial")
-        if callback.data.startswith("bebida:"):
-            parts = callback.data.split(":", 2)
-            if len(parts) != 3:
-                raise TelegramInputError("invalid beverage callback")
-            _, field, value = parts
             if field == "noop":
-                return TelegramOutbound(callback.conversation_id, build_bebida_summary(self._bebida_flow.get(callback.user_id)), "bebida")
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    build_bebida_summary(self._bebida_flow.get(callback.user_id)),
+                    "bebida",
+                )
             if field == "start":
                 self._bebida_flow.start(callback.user_id)
-                return TelegramOutbound(callback.conversation_id, "🥤 BEBIDA ESPECIAL · CAMI\\nEscribe /bebida <personaje> para fijar el personaje y luego elige el grado de exposición.", "bebida", ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)))
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    "🥤 BEBIDA ESPECIAL · CAMI\nEscribe /bebida <personaje> para fijar el personaje y luego elige el grado de exposición.",
+                    "bebida",
+                    ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)),
+                )
             order = self._bebida_flow.choose(callback.user_id, field, value)
             if field == "exposure":
-                return TelegramOutbound(callback.conversation_id, "🥤 Nivel guardado. Elige atrevimiento:", "bebida", ((("Suave", "bebida:boldness:Suave"), ("Atrevido", "bebida:boldness:Atrevido")), (("Máximo", "bebida:boldness:Máximo"),)))
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    "🥤 Nivel guardado. Elige atrevimiento:",
+                    "bebida",
+                    ((("Suave", "bebida:boldness:Suave"), ("Atrevido", "bebida:boldness:Atrevido")), (("Máximo", "bebida:boldness:Máximo"),)),
+                )
             if field == "boldness":
-                return TelegramOutbound(callback.conversation_id, "🥤 Elige producto:", "bebida", ((("Carta TCG", "bebida:product_type:Carta TCG"), ("Naipe", "bebida:product_type:Naipe")), (("Waifumon", "bebida:product_type:Waifumon"),)))
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    "🥤 Elige producto:",
+                    "bebida",
+                    ((("Carta TCG", "bebida:product_type:Carta TCG"), ("Naipe", "bebida:product_type:Naipe")), (("Waifumon", "bebida:product_type:Waifumon"),)),
+                )
             return TelegramOutbound(callback.conversation_id, build_bebida_summary(order), "bebida")
         if callback.data == "tutorial:show":
             return TelegramOutbound(callback.conversation_id, build_tutorial_text(), "tutorial")
