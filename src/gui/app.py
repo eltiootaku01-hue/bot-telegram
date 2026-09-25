@@ -89,7 +89,7 @@ from .waifu_registry import (
 )
 from .mini_games import LocalGameRouter
 from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, GroupSetupStore, TelegramGroupSetup
-from bot_ia.interfaces.cafe_economy import (CafeWalletStore, GACHA_COST, economy_price_text, draw_gacha)
+from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text, draw_gacha, purchase_bebida_order)
 from bot_ia.interfaces.cafe_orders import (
     BOLDNESS_LEVELS,
     DEFAULT_OUTFITS,
@@ -100,6 +100,7 @@ from bot_ia.interfaces.cafe_orders import (
     build_bebida_prompt,
     build_bebida_summary,
     character_suggestions,
+    bebida_order_quote,
 )
 from bot_ia.interfaces.tutorials import build_tutorial_html, build_tutorial_text
 
@@ -1719,9 +1720,11 @@ class TutorialDialog(QDialog):
         root.addWidget(details, 1)
 class BebidaOrderDialog(QDialog):
     """Constructor local del pedido de Bebida Especial con Cami."""
-    def __init__(self, registry: WaifuRegistry, *, parent: QWidget | None = None) -> None:
+    def __init__(self, registry: WaifuRegistry, *, wallet_store: CafeWalletStore | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.registry = registry
+        self.wallet_store = wallet_store
+        self._prepared_order: BebidaOrder | None = None
         self.setWindowTitle("🥤 Bebida Especial · Cami")
         self.setMinimumSize(760, 620)
         root = QVBoxLayout(self)
@@ -1772,6 +1775,9 @@ class BebidaOrderDialog(QDialog):
         self.prepare = QPushButton("🥤 Preparar Pedido")
         self.prepare.clicked.connect(self._prepare)
         actions.addWidget(self.prepare)
+        self.purchase = QPushButton("☕ Comprar / Clonar")
+        self.purchase.clicked.connect(self._purchase)
+        actions.addWidget(self.purchase)
         tutorial = QPushButton("📚 Ver Tutorial")
         tutorial.clicked.connect(lambda: TutorialDialog(self).exec())
         actions.addWidget(tutorial)
@@ -1809,8 +1815,25 @@ class BebidaOrderDialog(QDialog):
             cosplay=self.cosplay.text(),
             product_type=self.product.currentText(),
         ).normalized()
-        self.summary.setPlainText(build_bebida_summary(order))
+        self._prepared_order = order
+        points = self.wallet_store.balance("local-user") if self.wallet_store else 0
+        quote = bebida_order_quote(order, existing_character=record is not None, points=points)
+        affordability = "Disponible" if quote.can_afford else "Saldo insuficiente"
+        self.summary.setPlainText(
+            build_bebida_summary(order)
+            + f"\n\nCosto: {quote.cost} Puntos del Café · {quote.kind} · {affordability}"
+        )
         self.prompt.setPlainText(build_bebida_prompt(order))
+
+    def _purchase(self) -> None:
+        if self._prepared_order is None or self.wallet_store is None:
+            return
+        record = self._find_record(self._prepared_order.character)
+        quote = purchase_bebida_order(self.wallet_store, "local-user", existing=record is not None)
+        if not quote.can_afford:
+            QMessageBox.warning(self, "☕ Puntos del Café", f"Necesitas {quote.cost} puntos para {quote.kind}.")
+            return
+        QMessageBox.information(self, "☕ Pedido confirmado", f"Pedido {quote.kind} confirmado por {quote.cost} puntos.")
 
 
 class WaifuRegistryDialog(QDialog):
