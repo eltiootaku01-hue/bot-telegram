@@ -1059,8 +1059,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             lora_tags="[AKI_LORA]",
         )
         self.assertEqual(["Aki", "aki_(anime)"], character_suggestions([record]))
-        flow = BebidaOrderFlow()
-        flow.start("user-1", "Aki")
+        flow = BebidaOrderFlow(["aki_(anime)"])
+        flow.start("user-1")
         flow.set_character("user-1", "Aki", "aki_(anime)")
         flow.choose("user-1", "exposure", "SFW")
         flow.choose("user-1", "boldness", "Atrevido")
@@ -1070,6 +1070,107 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertEqual(EXPOSURE_LEVELS[0], "SFW")
         self.assertIn("Atrevido", BOLDNESS_LEVELS)
         self.assertIn("Waifumon", PRODUCT_TYPES)
+
+    def test_hardening_mutex_and_input_sanitization(self):
+        import threading
+
+        from bot_ia.interfaces.hardening import (
+            MutexGuard,
+            sanitize_control_text,
+            whitelist_tag,
+        )
+        from bot_ia.interfaces.cafe_orders import BebidaOrder, BebidaOrderFlow
+
+        guard = MutexGuard()
+        self.assertTrue(guard.try_acquire("catch:user-1"))
+        self.assertFalse(guard.try_acquire("catch:user-1"))
+        guard.release("catch:user-1")
+        self.assertTrue(guard.try_acquire("catch:user-1"))
+        guard.release("catch:user-1")
+
+        results: list[bool] = []
+        acquired = threading.Event()
+        release = threading.Event()
+
+        def first_worker() -> None:
+            results.append(guard.try_acquire("catch:concurrent"))
+            acquired.set()
+            release.wait(1.0)
+            guard.release("catch:concurrent")
+
+        worker = threading.Thread(target=first_worker)
+        worker.start()
+        self.assertTrue(acquired.wait(1.0))
+        self.assertFalse(guard.try_acquire("catch:concurrent"))
+        release.set()
+        worker.join(1.0)
+        self.assertEqual([True], results)
+        self.assertTrue(guard.try_acquire("catch:concurrent"))
+        guard.release("catch:concurrent")
+
+        dirty = "  hola\\x00\\x1b\nusuario  "
+        clean = sanitize_control_text(dirty)
+        self.assertNotIn("\\x00", clean)
+        self.assertNotIn("\\x1b", clean)
+        self.assertEqual("hola usuario", clean)
+        self.assertEqual("aki_(anime)", whitelist_tag("aki_(anime)", ["aki_(anime)"]))
+        self.assertEqual("", whitelist_tag("forged_(anime)", ["aki_(anime)"]))
+
+        flow = BebidaOrderFlow(["aki_(anime)"])
+        flow.start("hard-user")
+        flow.set_character("hard-user", "Aki\\x00", "forged_(anime)")
+        self.assertEqual("", flow.get("hard-user").character_tag)
+        flow.set_character("hard-user", "Aki\\x00", "aki_(anime)")
+        order = flow.choose("hard-user", "exposure", "SFW")
+        safe = order.normalized()
+        self.assertEqual("aki_(anime)", safe.character_tag)
+        self.assertNotIn("\\x00", safe.character)
+
+        raw = BebidaOrder(
+            character="Aki",
+            character_tag="aki_(anime)",
+            pose="De pie\\x00",
+            outfit="Casual\\x1b",
+            cosplay="UR\\x00",
+        ).normalized()
+        self.assertNotIn("\\x00", raw.pose)
+        self.assertNotIn("\\x1b", raw.outfit)
+        self.assertNotIn("\\x00", raw.cosplay)
+
+    def test_hardening_shutdown_contract(self):
+        queue_source = (self.ROOT / "src" / "services" / "web_queue.py").read_text(encoding="utf-8")
+        app_source = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        telegram_source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        hardening_source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "hardening.py").read_text(encoding="utf-8")
+
+        for token in (
+            "MutexGuard",
+            "blocking=False",
+            "sanitize_control_text",
+            "whitelist_tag",
+        ):
+            self.assertIn(token, hardening_source)
+
+        for token in (
+            "_WEB_MESA_UNICA.release()",
+            '"QUEUE_STOPPED"',
+            "self.msg_queue.get_nowait()",
+        ):
+            self.assertIn(token, queue_source)
+
+        for token in (
+            "self._tea_scheduler.stop(timeout=2.0)",
+            "self._web_queue.shutdown()",
+            "await window.shutdown_async_engine()",
+        ):
+            self.assertIn(token, app_source)
+
+        for token in (
+            "self._callback_mutex",
+            "_callback_key",
+            "callback dropped by local mutex",
+        ):
+            self.assertIn(token, telegram_source)
 
     def test_bebida_gui_and_telegram_contract(self):
         app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
