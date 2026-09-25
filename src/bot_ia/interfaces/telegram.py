@@ -20,6 +20,8 @@ from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
 from gui.tutorials import build_tutorial_text
+from .cafe_orders import BebidaOrderFlow, build_bebida_summary
+from gui.tutorials import build_tutorial_text
 
 
 class TelegramInputError(ValueError):
@@ -155,6 +157,7 @@ class TelegramAdapter:
         self._application = application
         self._tavern_manager = tavern_manager
         self._bebida_flow = BebidaOrderFlow()
+        self._bebida_flow = BebidaOrderFlow()
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
@@ -184,6 +187,22 @@ class TelegramAdapter:
             return TelegramOutbound(
                 inbound.conversation_id,
                 "🥤 BEBIDA ESPECIAL · CAMI\\n" + ("Personaje: " + argument if argument else "Primero escribe /bebida <personaje>") + "\\nElige grado de exposición:",
+                "bebida",
+                ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)),
+            )
+        if command == "/tutorial":
+            return TelegramOutbound(
+                inbound.conversation_id,
+                build_tutorial_text(),
+                "tutorial",
+                ((("🥤 Pedir Bebida Especial", "bebida:start:")),),
+            )
+        if command == "/bebida":
+            argument = inbound.text.partition(" ")[2].strip()
+            self._bebida_flow.start(inbound.user_id, argument)
+            return TelegramOutbound(
+                inbound.conversation_id,
+                "🥤 BEBIDA ESPECIAL · CAMI\n" + ("Personaje: " + argument if argument else "Primero puedes responder con /bebida <personaje>") + "\nElige grado de exposición:",
                 "bebida",
                 ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)),
             )
@@ -322,6 +341,21 @@ class TelegramAdapter:
                 return TelegramOutbound(callback.conversation_id, "🥤 Nivel guardado. Elige atrevimiento:", "bebida", ((("Suave", "bebida:boldness:Suave"), ("Atrevido", "bebida:boldness:Atrevido")), (("Máximo", "bebida:boldness:Máximo"),)))
             if field == "boldness":
                 return TelegramOutbound(callback.conversation_id, "🥤 Elige producto:", "bebida", ((("Carta TCG", "bebida:product_type:Carta TCG"), ("Naipe", "bebida:product_type:Naipe")), (("Waifumon", "bebida:product_type:Waifumon"),)))
+        if callback.data == "tutorial:show":
+            return TelegramOutbound(callback.conversation_id, build_tutorial_text(), "tutorial")
+        if callback.data.startswith("bebida:"):
+            parts = callback.data.split(":", 2)
+            if len(parts) != 3:
+                raise TelegramInputError("invalid beverage callback")
+            _, field, value = parts
+            if field == "noop":
+                return TelegramOutbound(callback.conversation_id, build_bebida_summary(self._bebida_flow.get(callback.user_id)), "bebida")
+            order = self._bebida_flow.choose(callback.user_id, field, value)
+            if field == "exposure":
+                return TelegramOutbound(callback.conversation_id, "🥤 Nivel guardado. Elige atrevimiento:", "bebida", ((("Suave", "bebida:boldness:Suave"), ("Atrevido", "bebida:boldness:Atrevido")), (("Máximo", "bebida:boldness:Máximo"),)))
+            if field == "boldness":
+                return TelegramOutbound(callback.conversation_id, "🥤 Elige producto:", "bebida", ((("Carta TCG", "bebida:product_type:Carta TCG"), ("Naipe", "bebida:product_type:Naipe")), (("Waifumon", "bebida:product_type:Waifumon"),)))
+            return TelegramOutbound(callback.conversation_id, build_bebida_summary(order), "bebida")
         if callback.data == "tutorial:show":
             return TelegramOutbound(callback.conversation_id, build_tutorial_text(), "tutorial")
         text = actions.get(callback.data)
