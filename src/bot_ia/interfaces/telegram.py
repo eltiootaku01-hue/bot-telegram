@@ -187,6 +187,7 @@ class TelegramAdapter:
             allowed_tags=self._waifu_registry.danbooru_whitelist(),
         )
         self._complaint_store = ComplaintStore(Path.cwd())
+        self._vip_store = VipStore(Path.cwd())
         self._order_store = OrderStore(Path.cwd())
         self._pending_orders: dict[str, OrderConfirmation] = {}
         self._last_orders: dict[str, OrderConfirmation] = {}
@@ -351,6 +352,22 @@ class TelegramAdapter:
                 "¡listo! ¿Qué quieres hacer?",
                 "local",
                 self.MAIN_MENU,
+            )
+        if command == "/vip":
+            return TelegramOutbound(
+                inbound.conversation_id,
+                vip_status_text(inbound.user_id, self._vip_store),
+                "vip",
+                donation_keyboard(),
+            )
+        if command == "/donar":
+            return TelegramOutbound(
+                inbound.conversation_id,
+                "✨ Apoyar al Café es totalmente voluntario.\n"
+                "El acceso SFW y #cantina-18 no depende de ninguna donación.\n"
+                "Usa el flujo oficial de Telegram Stars para aportar si lo deseas.",
+                "vip_donation",
+                donation_keyboard(),
             )
         if command in {"/puntos", "/economia", "/precios"}:
             wallet = self._wallet_store.get(inbound.user_id)
@@ -628,6 +645,20 @@ class TelegramAdapter:
             )
         if callback.data == "menu:main":
             return TelegramOutbound(callback.conversation_id, "Menú principal:", "local", self.MAIN_MENU)
+        if callback.data == "vip:show":
+            return TelegramOutbound(
+                callback.conversation_id,
+                vip_status_text(callback.user_id, self._vip_store),
+                "vip",
+                donation_keyboard(),
+            )
+        if callback.data == "vip:donate":
+            return TelegramOutbound(
+                callback.conversation_id,
+                "✨ Apoyo voluntario. Elige el flujo oficial de donación de Telegram Stars. "
+                "No cambia tu acceso a los canales públicos.",
+                "vip_donation",
+            )
         if callback.data == "economy:show":
             wallet = self._wallet_store.get(callback.user_id)
             return TelegramOutbound(
