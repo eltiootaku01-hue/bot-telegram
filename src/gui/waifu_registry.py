@@ -122,6 +122,45 @@ class WaifuRegistry:
                 return name
         raise ValueError("Mesera inválida; usa Cari, Sunna, Cami o Chie.")
 
+    def record_complaint_balance(
+        self,
+        user_id: str,
+        complaint_id: str,
+        points_delta: int,
+        status: str,
+    ) -> None:
+        """Registra en waifu_registry.json el ajuste administrativo aplicado."""
+        self.load()
+        metadata_path = self.path
+        try:
+            payload = json.loads(metadata_path.read_text(encoding="utf-8")) if metadata_path.is_file() else []
+        except (OSError, json.JSONDecodeError):
+            payload = []
+        if not isinstance(payload, list):
+            payload = []
+        meta: dict[str, object] | None = None
+        for item in payload:
+            if isinstance(item, dict) and isinstance(item.get("__meta__"), dict):
+                meta = item["__meta__"]
+                break
+        if meta is None:
+            meta = {}
+            payload.append({"__meta__": meta})
+        balances = meta.setdefault("complaint_balances", {})
+        if not isinstance(balances, dict):
+            balances = {}
+            meta["complaint_balances"] = balances
+        current = balances.get(str(user_id), {})
+        if not isinstance(current, dict):
+            current = {}
+        current["balance_adjustment"] = int(current.get("balance_adjustment", 0)) + int(points_delta)
+        current["last_complaint_id"] = str(complaint_id)
+        current["last_status"] = str(status)
+        balances[str(user_id)] = current
+        temporary = self.path.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+        temporary.replace(self.path)
+
     def danbooru_whitelist(self) -> tuple[str, ...]:
         """Devuelve exclusivamente los tags Danbooru declarados en el registro local."""
         tags: list[str] = []
