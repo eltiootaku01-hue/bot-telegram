@@ -24,6 +24,22 @@ def test_debug_telegram_pipeline():
         except Exception:
             print("DEBUG_DIRECT_EXCEPTION")
             traceback.print_exc()
+        poller_probe = TelegramPoller(
+            TelegramApiClient("probe", transport=lambda *_: {"ok": True, "result": {"message_id": 1}}),
+            adapter,
+            sleeper=lambda _: None,
+        )
+        probe_update = _update()
+        for label, fn in (
+            ("sync", lambda: poller_probe._sync_authorized_bot_join(probe_update)),
+            ("moderate", lambda: poller_probe._moderate_raw_update(probe_update)),
+            ("comment", lambda: poller_probe._comment_raw_update(probe_update)),
+        ):
+            try:
+                print("DEBUG_HELPER", label, fn())
+            except Exception:
+                print("DEBUG_HELPER_EXCEPTION", label)
+                traceback.print_exc()
         logs=[]
         calls=[]
         batches=[[_update()]]
