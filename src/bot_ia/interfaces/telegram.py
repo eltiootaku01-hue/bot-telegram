@@ -19,6 +19,7 @@ from bot_ia.librarian.models import CoverageStatus
 from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
+from .hardening import MutexGuard
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text
 from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue
 from .cafe_rooms import sfw_transition, mature_game_message
@@ -159,9 +160,12 @@ class TelegramAdapter:
     ) -> None:
         self._application = application
         self._tavern_manager = tavern_manager
-        self._bebida_flow = BebidaOrderFlow()
         self._wallet_store = CafeWalletStore(Path.cwd())
         self._waifu_registry = WaifuRegistry(Path.cwd())
+        self._bebida_flow = BebidaOrderFlow(
+            allowed_tags=self._waifu_registry.danbooru_whitelist(),
+        )
+        self._callback_mutex = MutexGuard()
 
     def _active_maid(self, user_id: str) -> str:
         """Devuelve la mesera activa del turno local; Cami es el fallback."""
@@ -280,12 +284,27 @@ class TelegramAdapter:
                     + "\n➡️ Ve a #cantina-18 y habla con Scarlet o Chloé.",
                     "cantina_18",
                 )
-            order = self._bebida_flow.start(inbound.user_id, argument)
             if argument:
-                self._bebida_flow.set_character(inbound.user_id, argument)
+                tag = self._waifu_registry.resolve_danbooru_tag(argument)
+                if not tag:
+                    return TelegramOutbound(
+                        inbound.conversation_id,
+                        "🥤 Pedido rechazado: el personaje debe existir en la lista blanca local de tags Danbooru.",
+                        "bebida",
+                    )
+            self._bebida_flow.start(inbound.user_id)
+            if argument:
+                self._bebida_flow.set_character(inbound.user_id, argument, tag)
+            order = self._bebida_flow.get(inbound.user_id)
             return TelegramOutbound(
                 inbound.conversation_id,
-                "🥤 BEBIDA ESPECIAL · CAMI\\n" + ("Personaje: " + argument if argument else "Primero escribe /bebida <personaje>") + "\\nElige grado de exposición:",
+                "🥤 BEBIDA ESPECIAL · CAMI\\n"
+                + (
+                    "Personaje: " + order.character
+                    if order.character_tag
+                    else "Primero escribe /bebida <personaje>"
+                )
+                + "\\nElige grado de exposición:",
                 "bebida",
                 ((("SFW", "bebida:exposure:SFW"), ("Sugerente", "bebida:exposure:Sugerente")), (("NSFW", "bebida:exposure:NSFW"),)),
             )
@@ -771,6 +790,22 @@ class TelegramPoller:
                     auto_delete,
                 )
 
+    @staticmethod
+    def _callback_key(update: dict[str, object]) -> str:
+        callback = update.get("callback_query")
+        if not isinstance(callback, dict):
+            return ""
+        user = callback.get("from")
+        message = callback.get("message")
+        user_id = user.get("id") if isinstance(user, dict) else ""
+        chat = message.get("chat") if isinstance(message, dict) else None
+        chat_id = chat.get("id") if isinstance(chat, dict) else ""
+        message_id = message.get("message_id") if isinstance(message, dict) else ""
+        data = callback.get("data", "")
+        if user_id == "" or chat_id == "" or message_id == "" or not isinstance(data, str):
+            return ""
+        return f"telegram:button:{user_id}:{chat_id}:{message_id}:{data}"
+
     def run(self, *, max_cycles: int | None = None) -> PollingResult:
         if max_cycles is not None and max_cycles < 0:
             raise ValueError("max_cycles cannot be negative")
@@ -879,6 +914,13 @@ class TelegramPoller:
                     self._logger("telegram update skipped")
                     continue
 
+                callback_key = self._callback_key(update)
+                if callback_key and not self._callback_mutex.try_acquire(callback_key):
+                    self._offset = update_id + 1
+                    skipped += 1
+                    self._logger("telegram callback dropped by local mutex")
+                    continue
+
                 if self._outbox is not None:
                     try:
                         existing = self._outbox.get(update_id)
@@ -902,11 +944,15 @@ class TelegramPoller:
                 try:
                     outbound = self._adapter.handle_update(update)
                 except TelegramInputError:
+                    if callback_key:
+                        self._callback_mutex.release(callback_key)
                     self._offset = update_id + 1
                     skipped += 1
                     self._logger("telegram update rejected")
                     continue
                 except Exception as error:
+                    if callback_key:
+                        self._callback_mutex.release(callback_key)
                     self._offset = update_id + 1
                     skipped += 1
                     self._logger(
@@ -948,6 +994,8 @@ class TelegramPoller:
                         error.next_chunk_index,
                         tuple(message_ids),
                     )
+                    if callback_key:
+                        self._callback_mutex.release(callback_key)
                     self._logger(
                         "telegram response delivery deferred after partial send"
                     )
@@ -959,6 +1007,8 @@ class TelegramPoller:
                         0,
                         tuple(message_ids),
                     )
+                    if callback_key:
+                        self._callback_mutex.release(callback_key)
                     self._logger(
                         "telegram response delivery deferred for retry"
                     )
@@ -971,11 +1021,15 @@ class TelegramPoller:
                             self._logger("telegram outbox could not mark update failed")
                     self._offset = update_id + 1
                     skipped += 1
+                    if callback_key:
+                        self._callback_mutex.release(callback_key)
                     self._logger(
                         "telegram response delivery rejected"
                     )
                     continue
 
+                if callback_key:
+                    self._callback_mutex.release(callback_key)
                 self._offset = update_id + 1
                 processed += 1
                 sent += 1
