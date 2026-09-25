@@ -41,8 +41,9 @@ class InlineAbuseGuard:
         self._events[uid] = events
         return None
 
-    def is_blocked(self, user_id: str) -> bool:
-        return self._blocked_until.get(str(user_id), 0.0) > time.monotonic()
+    def is_blocked(self, user_id: str, *, now: float | None = None) -> bool:
+        current = time.monotonic() if now is None else float(now)
+        return self._blocked_until.get(str(user_id), 0.0) > current
 
 
 class InlineRedirectHandler:
