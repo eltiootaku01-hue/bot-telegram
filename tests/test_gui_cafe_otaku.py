@@ -1669,6 +1669,23 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertTrue(blocked.blocked)
         self.assertTrue(guard.is_blocked("u1", now=3))
 
+    def test_start_web_chat_accepts_qt_checked_bool_contract(self):
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        self.assertIn("def start_web_chat(self, button: QPushButton | bool | None = None)", app)
+        self.assertIn("if isinstance(button, bool) or button is None:", app)
+        self.assertIn("sender = self.sender()", app)
+        self.assertIn("isinstance(sender, QPushButton)", app)
+        self.assertNotIn("button.setText", app[app.index("def start_web_chat"):app.index("def start_telegram")])
+
+    def test_app_python_and_embedded_js_contract(self):
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        compile(app, "src/gui/app.py", "exec")
+        # Any future injected JavaScript must be delimited as a complete script;
+        # this contract prevents accidental Python string fragments being added.
+        for marker in ("runJavaScript(", "execute_script(", "page.evaluate("):
+            if marker in app:
+                self.assertNotIn("\\' +", app)
+
     def test_order_confirmation_and_complaint_refund_contract(self):
         from tempfile import TemporaryDirectory
         from bot_ia.interfaces.cafe_economy import CafeWalletStore
