@@ -1560,6 +1560,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             raw_registry = (root / "config" / "waifu_registry.json").read_text(encoding="utf-8")
             self.assertIn("complaint_balances", raw_registry)
             self.assertIn(complaint.complaint_id, raw_registry)
+            self.assertIn('"balance": 85', raw_registry)
 
             with self.assertRaises(ValueError):
                 store.resolve(
