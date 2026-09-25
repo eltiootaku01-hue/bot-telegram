@@ -12,11 +12,27 @@ from urllib.request import Request, urlopen
 
 
 ROOMS = (
-    ("📌 Anuncios / General", "announcements"),
-    ("🎴 Colección TCG", "tcg"),
-    ("🎮 Minijuegos (21 / UNO / PPT)", "games"),
-    ("💬 Zona de Meseras", "waitresses"),
+    ("#general", "general"),
+    ("#tcg-collection", "tcg_collection"),
+    ("#pedidos-sfw", "pedidos_sfw"),
+    ("#noticias-otaku", "noticias_otaku"),
+    ("#cantina-18", "cantina_18"),
+    ("#pedidos-nsfw", "pedidos_nsfw"),
+    ("#mesa-de-apuestas-21", "mesa_apuestas_21"),
+    ("#pedidos", "pedidos_admin"),
 )
+
+REPOST_FEEDS = (
+    ("📢 Publicaciones", "https://t.me/eltiootaku"),
+    ("🔞 Reposteo Yandere NSFW", "https://t.me/yandere_nsfw"),
+    ("🎨 Reposteo Danbooru SFW", "https://t.me/danbooru_sfw"),
+    ("🔞 Reposteo Danbooru NSFW", "https://t.me/danbooru_nsfw"),
+)
+
+SFW_ROOM_KEYS = frozenset({"general", "tcg_collection", "pedidos_sfw", "noticias_otaku"})
+MATURE_ROOM_KEYS = frozenset({"cantina_18", "pedidos_nsfw", "mesa_apuestas_21"})
+ADMIN_ROOM_KEY = "pedidos_admin"
+
 
 
 class GroupSetupError(RuntimeError):
@@ -51,14 +67,31 @@ class GroupSetupStore:
             return {}
         return value if isinstance(value, dict) else {}
 
-    def save_target(self, platform: str, target_id: str, rooms: tuple[GroupRoom, ...]) -> None:
+    def save_target(
+        self,
+        platform: str,
+        target_id: str,
+        rooms: tuple[GroupRoom, ...],
+        *,
+        feeds: tuple[tuple[str, str], ...] = REPOST_FEEDS,
+    ) -> None:
         payload = self.load()
         payload[f"{platform}:{target_id}"] = {
-            "rooms": [{"name": r.name, "key": r.key, "external_id": r.external_id} for r in rooms]
+            "rooms": [{"name": r.name, "key": r.key, "external_id": r.external_id} for r in rooms],
+            "feeds": [{"name": name, "url": url} for name, url in feeds],
         }
         temporary = self.path.with_suffix(".json.tmp")
         temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         temporary.replace(self.path)
+
+    def get_feeds(self, platform: str, target_id: str) -> tuple[tuple[str, str], ...]:
+        raw = self.load().get(f"{platform}:{target_id}", {})
+        items = raw.get("feeds", []) if isinstance(raw, dict) else []
+        return tuple(
+            (str(x["name"]), str(x["url"]))
+            for x in items
+            if isinstance(x, dict) and x.get("name") and x.get("url")
+        )
 
     def get_rooms(self, platform: str, target_id: str) -> tuple[GroupRoom, ...]:
         raw = self.load().get(f"{platform}:{target_id}", {})
@@ -235,6 +268,10 @@ class DiscordSetupCommand:
             )
         except GroupSetupError as error:
             return f"No se pudo estructurar Discord: {error}"
-        return "Estructura Discord preparada:\n" + "\n".join(
-            f"• {room.name} → canal {room.external_id}" for room in result.rooms
+        feeds = self.store.get_feeds("discord", guild_id)
+        return (
+            "Estructura Discord preparada:\n"
+            + "\n".join(f"• {room.name} → canal {room.external_id}" for room in result.rooms)
+            + "\n\nFeeds configurados:\n"
+            + "\n".join(f"• {name}: {url}" for name, url in feeds)
         )
