@@ -64,6 +64,23 @@ class WaitressPresenceManager:
         )
         return PresenceReply(True, message, presence.platform)
 
+    def route_interaction(
+        self,
+        waitress: str,
+        platform: Platform,
+        action: str,
+        interaction_id: str,
+        *,
+        transfer: object | None = None,
+    ) -> PresenceReply:
+        """Devuelve el aviso de encargado y registra la transferencia si está ocupada."""
+        reply = self.reply_for(waitress)
+        if reply.occupied:
+            self.transfer_interaction(waitress, interaction_id)
+            if callable(transfer):
+                transfer()
+        return reply
+
     def transfer_interaction(self, waitress: str, interaction_id: str) -> None:
         key = f"{waitress.casefold()}:{interaction_id}"
         with self._lock:
