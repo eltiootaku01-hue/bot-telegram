@@ -35,6 +35,18 @@ WAITRESS_PROFILES = {
         "greeting": "📚 Chie: Trae tu trivia o tu debate isekai. Yo preparo la mesa y las preguntas.",
         "tea": "📚 Chie: Hora del Té. ¡Que empiece el debate y que los puntos se dupliquen!",
     },
+    "Scarlet": {
+        "role": "Anfitriona de Cantina +18",
+        "focus": "21 / Blackjack y mesa de apuestas",
+        "greeting": "🍷 Scarlet: La mesa de la Cantina está preparada. Yo superviso el 21 y las apuestas.",
+        "tea": "🍷 Scarlet: Hora del Té en la Cantina. La mesa queda con recompensas dobles.",
+    },
+    "Chloé": {
+        "role": "Anfitriona de Cantina +18",
+        "focus": "Apuestas y pedidos NSFW",
+        "greeting": "🍷 Chloé: Bienvenido a la Cantina. Puedo ayudarte con la mesa de apuestas y los pedidos para adultos.",
+        "tea": "🍷 Chloé: La Hora del Té también llegó a la Cantina. Que empiece la partida.",
+    },
 }
 
 
