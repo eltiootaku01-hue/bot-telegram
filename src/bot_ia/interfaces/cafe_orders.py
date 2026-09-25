@@ -8,7 +8,7 @@ import re
 import unicodedata
 from typing import Iterable
 
-from .cafe_economy import ORDER_COST_HIGH, ORDER_COST_NORMAL, OrderQuote, quote_bebida_order
+from .cafe_economy import ORDER_COST_HIGH, ORDER_COST_NORMAL, RARITY_PRICES, OrderQuote, quote_bebida_order
 
 
 
@@ -162,8 +162,8 @@ def bebida_price_text() -> str:
     return (
         "☕ Puntos del Café: "
         f"R = {ORDER_COST_NORMAL}; "
-        f"SR = 35; "
-        f"UR = 100; "
-        f"Especial = 150."
+        f"SR = {RARITY_PRICES['SR']}; "
+        f"UR = {RARITY_PRICES['UR']}; "
+        f"Especial = {RARITY_PRICES['SPECIAL']}."
     )
 
