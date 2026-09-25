@@ -1118,24 +1118,24 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
 
         flow = BebidaOrderFlow(["aki_(anime)"])
         flow.start("hard-user")
-        flow.set_character("hard-user", "Aki\\x00", "forged_(anime)")
+        flow.set_character("hard-user", "Aki" + chr(0), "forged_(anime)")
         self.assertEqual("", flow.get("hard-user").character_tag)
-        flow.set_character("hard-user", "Aki\\x00", "aki_(anime)")
+        flow.set_character("hard-user", "Aki" + chr(0), "aki_(anime)")
         order = flow.choose("hard-user", "exposure", "SFW")
         safe = order.normalized()
         self.assertEqual("aki_(anime)", safe.character_tag)
-        self.assertNotIn("\\x00", safe.character)
+        self.assertNotIn(chr(0), safe.character)
 
         raw = BebidaOrder(
             character="Aki",
             character_tag="aki_(anime)",
-            pose="De pie\\x00",
-            outfit="Casual\\x1b",
-            cosplay="UR\\x00",
+            pose="De pie" + chr(0),
+            outfit="Casual" + chr(27),
+            cosplay="UR" + chr(0),
         ).normalized()
-        self.assertNotIn("\\x00", raw.pose)
-        self.assertNotIn("\\x1b", raw.outfit)
-        self.assertNotIn("\\x00", raw.cosplay)
+        self.assertNotIn(chr(0), raw.pose)
+        self.assertNotIn(chr(27), raw.outfit)
+        self.assertNotIn(chr(0), raw.cosplay)
 
     def test_hardening_shutdown_contract(self):
         queue_source = (self.ROOT / "src" / "services" / "web_queue.py").read_text(encoding="utf-8")
