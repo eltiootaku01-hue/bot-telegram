@@ -1593,6 +1593,52 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertEqual("REJECTED", rejected_result.status)
             self.assertEqual(85, wallet.balance("u-refund"))
 
+    def test_social_publication_and_dynamic_group_cleanup_contract(self):
+        social = (self.ROOT / "src" / "bot_ia" / "interfaces" / "social_publish.py").read_text(encoding="utf-8")
+        immersion = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+
+        for token in (
+            "class SocialPublication",
+            "build_hashtags",
+            "#AIArt",
+            "open_x_draft",
+            "https://x.com/intent/post?text=",
+        ):
+            self.assertIn(token, social)
+        for token in (
+            'QPushButton("🌐 Publicar en Redes")',
+            "build_publication(",
+            "open_x_draft(publication)",
+            "DISCORD_INVITE_URL",
+            "TELEGRAM_INVITE_URL",
+        ):
+            self.assertIn(token, app)
+        for token in (
+            "resolve_chat_title",
+            'key = "title" if network == "telegram" else "name"',
+            "chat_title: str | None = None",
+        ):
+            self.assertIn(token, immersion)
+        self.assertNotIn("☕ Café Otaku ·", immersion)
+        for token in (
+            "list_guild_channels",
+            "cleanup_managed_channels",
+            "delete_channel",
+            'topic.startswith("BOT-IA · ")',
+        ):
+            self.assertIn(token, group)
+
+    def test_social_publication_hashtag_contract(self):
+        from bot_ia.interfaces.social_publish import build_hashtags
+        tags = build_hashtags(character="Kuro", anime="One Neko Punch", outfit="Maid")
+        self.assertIn("#Kuro", tags)
+        self.assertIn("#OneNekoPunch", tags)
+        self.assertIn("#AIArt", tags)
+        self.assertIn("#Maid", tags)
+
+
     def test_order_confirmation_gui_and_telegram_contract(self):
         app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
         telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
