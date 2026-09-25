@@ -163,6 +163,11 @@ class SQLiteEconomyTests(unittest.TestCase):
             self.assertEqual(123, wallet.balance("wallet-user"))
             self.assertEqual(17, vip.get("vip-user").donated_stars)
 
+            reopened_wallet = CafeWalletStore(root)
+            reopened_vip = VipStore(root)
+            self.assertEqual(123, reopened_wallet.balance("wallet-user"))
+            self.assertEqual(17, reopened_vip.get("vip-user").donated_stars)
+
     def test_concurrent_debits_never_overdraft(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
