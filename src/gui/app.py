@@ -113,7 +113,7 @@ from bot_ia.interfaces.cafe_orders import (
     bebida_order_quote,
 )
 from bot_ia.interfaces.tutorials import build_tutorial_html, build_tutorial_text
-from bot_ia.interfaces.platform_health import probe_telegram, probe_discord
+from bot_ia.interfaces.platform_health import probe_telegram, probe_discord, probe_with_retry
 
 try:
     from qasync import QEventLoop
@@ -192,7 +192,7 @@ class PlatformHealthWorker(QRunnable):
 
     def run(self) -> None:
         for probe in (probe_telegram, probe_discord):
-            health = probe()
+            health = probe_with_retry(probe, retries=2, backoff_seconds=0.25)
             self.signals.result.emit(health.platform, health.ok, health.detail)
 
 
