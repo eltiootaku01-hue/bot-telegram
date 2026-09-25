@@ -603,6 +603,151 @@ class GeminiLobbyWorker(QObject):
                     _ = error
 
 
+class ManualBrowserSetupWorker(QObject):
+    """Abre un Chromium nativo para autenticación humana y persiste el perfil."""
+
+    finished = Signal(str)
+    failed = Signal(str)
+    status = Signal(str)
+
+    TIMEOUT_MS = 300_000
+    POLL_INTERVAL_MS = 500
+    MANUAL_CHROMIUM_ARGS = (
+        "--disable-blink-features=AutomationControlled",
+        "--hide-crash-restore-bubble",
+        "--no-first-run",
+    )
+
+    def __init__(
+        self,
+        bot_id: str,
+        browser_profile: str,
+        provider_id: str = "gemini",
+        provider_url: str = "",
+    ) -> None:
+        super().__init__()
+        self.bot_id = bot_id
+        self.browser_profile = browser_profile
+        self.provider_id = provider_id.strip().lower()
+        self.provider_url = provider_url.strip()
+
+    @property
+    def provider(self) -> ProviderWebSpec:
+        try:
+            return PROVIDER_WEB_SPECS[self.provider_id]
+        except KeyError as error:
+            raise ValueError(
+                f"{self.bot_id}: proveedor web no soportado: "
+                f"{self.provider_id!r}"
+            ) from error
+
+    @property
+    def start_url(self) -> str:
+        if self.provider_id == "gemini":
+            configured = os.getenv("BOT_IA_GEMINI_URL", "")
+        elif self.provider_id == "chatgpt":
+            configured = os.getenv("BOT_IA_CHATGPT_URL", "")
+        else:
+            configured = (
+                self.provider_url
+                or os.getenv("BOT_IA_GROK_CLAUDE_URL", "")
+            )
+        return configured.strip() or self.provider.default_url
+
+    def _persist_state(self, context, profile_path: Path) -> None:
+        state_path = profile_path / "storage_state.json"
+        try:
+            context.storage_state(
+                path=str(state_path),
+                indexed_db=True,
+            )
+        except TypeError:
+            # Compatibilidad con Playwright anterior a indexed_db.
+            context.storage_state(path=str(state_path))
+
+    @Slot()
+    def run(self) -> None:
+        playwright = None
+        context = None
+        profile_path = Path(self.browser_profile).resolve()
+        timed_out = False
+        closed_by_user = False
+
+        try:
+            profile_path.mkdir(parents=True, exist_ok=True)
+            playwright = sync_playwright().start()
+
+            # IMPORTANTE: headed + no_viewport mantiene una ventana nativa
+            # independiente del QWebEngineView de la GUI. No se instala
+            # ningún autenticador WebAuthn virtual: Google/Windows puede
+            # presentar el flujo real de passkey/security key.
+            context = playwright.chromium.launch_persistent_context(
+                str(profile_path),
+                headless=False,
+                no_viewport=True,
+                args=list(self.MANUAL_CHROMIUM_ARGS),
+            )
+            page = context.pages[0] if context.pages else context.new_page()
+            page.goto(
+                self.start_url,
+                wait_until="domcontentloaded",
+                timeout=30_000,
+            )
+            self.status.emit(
+                f"{self.bot_id}: Chromium externo abierto. "
+                "Completa correo, contraseña y 2FA/passkey; "
+                "cierra la ventana cuando termines."
+            )
+
+            deadline = time.monotonic() + self.TIMEOUT_MS / 1000
+            while time.monotonic() < deadline:
+                try:
+                    pages = context.pages
+                    if not pages or all(
+                        current_page.is_closed() for current_page in pages
+                    ):
+                        closed_by_user = True
+                        break
+                    page.wait_for_timeout(self.POLL_INTERVAL_MS)
+                except Exception:
+                    closed_by_user = True
+                    break
+            else:
+                timed_out = True
+
+            self._persist_state(context, profile_path)
+
+            if timed_out:
+                self.finished.emit(
+                    f"{self.bot_id}: tiempo de configuración agotado. "
+                    "Perfil persistido y Chromium cerrado."
+                )
+            elif closed_by_user:
+                self.finished.emit(
+                    f"{self.bot_id}: configuración manual finalizada. "
+                    "Perfil persistido y Chromium cerrado."
+                )
+            else:
+                self.finished.emit(
+                    f"{self.bot_id}: configuración manual finalizada."
+                )
+        except Exception as error:
+            self.failed.emit(
+                f"{self.bot_id}: {type(error).__name__}: {error}"
+            )
+        finally:
+            if context is not None:
+                try:
+                    context.close()
+                except Exception as error:
+                    _ = error
+            if playwright is not None:
+                try:
+                    playwright.stop()
+                except Exception as error:
+                    _ = error
+
+
 class SequentialChatDispatcher(QObject):
     """Inicialización serial: Cari → Cami → Sunna → Chie."""
 
@@ -1401,6 +1546,8 @@ class CommandCenterWindow(QMainWindow):
         self._config_dialog_fields: dict[str, dict[str, QLineEdit]] = {}
         self._diagnostic_thread: QThread | None = None
         self._diagnostic_worker: SystemDiagnosticWorker | None = None
+        self._manual_setup_thread: QThread | None = None
+        self._manual_setup_worker: ManualBrowserSetupWorker | None = None
         self._bot_credentials = {
             f"BOT_TOKEN_{profile.bot_id.upper()}": os.getenv(
                 f"BOT_TOKEN_{profile.bot_id.upper()}", ""
@@ -2440,28 +2587,139 @@ class CommandCenterWindow(QMainWindow):
             )
 
     def _enable_manual_setup_mode(self) -> None:
-        """Activa el modo de configuración visible para el próximo arranque web."""
-        os.environ[INITIAL_SETUP_MODE_ENV] = "true"
-        if self._matrix_chain_summary is not None:
-            self._matrix_chain_summary.setText(
-                "🔑 Modo de inicio de sesión manual ACTIVO · "
-                "la próxima cadena abrirá Chromium visible para completar "
-                "la autenticación antes de enviar el comando."
+        """Lanza el Chromium nativo de configuración para el perfil seleccionado."""
+        if self._manual_setup_thread is not None:
+            self._append_system(
+                "🔑 Ya hay una sesión de inicio manual en curso."
             )
+            return
+
+        target_id = (
+            self._selected_bot_id
+            if self._selected_bot_id in {
+                spec.bot_id for spec in MATRIX_BOT_SPECS
+            }
+            else MATRIX_INITIALIZATION_ORDER[0]
+        )
+        spec = next(
+            item for item in MATRIX_BOT_SPECS
+            if item.bot_id == target_id
+        )
+        widgets = self._matrix_widgets.get(target_id, {})
+        provider = widgets.get("provider")
+        provider_url_field = widgets.get("provider_url")
+        provider_id = (
+            str(provider.currentData()).strip().lower()
+            if isinstance(provider, QComboBox)
+            else spec.default_provider
+        )
+        provider_url = (
+            str(provider_url_field.text()).strip()
+            if isinstance(provider_url_field, QLineEdit)
+            else ""
+        )
+
+        try:
+            self.config_manager.set_values(
+                {INITIAL_SETUP_MODE_ENV: "true"}
+            )
+            os.environ[INITIAL_SETUP_MODE_ENV] = "true"
+
+            worker = ManualBrowserSetupWorker(
+                target_id,
+                spec.browser_profile,
+                provider_id,
+                provider_url,
+            )
+            thread = QThread(self)
+            worker.moveToThread(thread)
+            self._manual_setup_thread = thread
+            self._manual_setup_worker = worker
+
+            thread.started.connect(worker.run)
+            worker.status.connect(self._on_manual_setup_status)
+            worker.finished.connect(self._on_manual_setup_finished)
+            worker.failed.connect(self._on_manual_setup_failed)
+            worker.finished.connect(thread.quit)
+            worker.failed.connect(thread.quit)
+            worker.finished.connect(worker.deleteLater)
+            worker.failed.connect(worker.deleteLater)
+            thread.finished.connect(thread.deleteLater)
+            thread.finished.connect(self._clear_manual_setup_worker)
+
+            self._set_matrix_controls(False)
+            for button in (
+                getattr(self, "manual_login_button", None),
+                getattr(self, "lobby_manual_login_button", None),
+            ):
+                if isinstance(button, QPushButton):
+                    button.setText("🔑 Chromium Manual: ACTIVO")
+                    button.setEnabled(False)
+
+            self._append_system(
+                f"🔑 Abriendo Chromium nativo para {spec.display_name}. "
+                "La autenticación se realiza directamente en esa ventana; "
+                "no se usa el visor WebQueue."
+            )
+            thread.start()
+        except Exception as error:
+            self._log_error("Manual browser setup", error)
+            self._finish_manual_setup_mode()
+            self._append_system(
+                "No se pudo iniciar el Chromium externo de configuración."
+            )
+
+    @Slot(str)
+    def _on_manual_setup_status(self, text: str) -> None:
+        self._append_system(f"🔑 {text}")
+
+    @Slot(str)
+    def _on_manual_setup_finished(self, text: str) -> None:
+        self._finish_manual_setup_mode()
+        self._append_system(f"🔑 {text}")
+
+    @Slot(str)
+    def _on_manual_setup_failed(self, error: str) -> None:
+        self._finish_manual_setup_mode()
+        self._log_line(f"Manual browser setup: {error}")
+        self._append_system(
+            f"❌ Inicio de sesión manual: {error}"
+        )
+
+    def _finish_manual_setup_mode(self) -> None:
+        os.environ[INITIAL_SETUP_MODE_ENV] = "false"
+        try:
+            self.config_manager.set_values(
+                {INITIAL_SETUP_MODE_ENV: "false"}
+            )
+        except Exception as error:
+            self._log_error(
+                "Manual browser setup mode reset",
+                error,
+            )
+
+        self._set_matrix_controls(True)
         for button in (
             getattr(self, "manual_login_button", None),
             getattr(self, "lobby_manual_login_button", None),
         ):
             if isinstance(button, QPushButton):
-                button.setText("🔑 Sesión Manual: ACTIVA")
+                button.setText("🔑 Iniciar Sesión Manual")
+                button.setEnabled(True)
                 button.setToolTip(
-                    "INITIAL_SETUP_MODE está activo. "
-                    "La próxima cadena usará Chromium visible."
+                    "Abre Chromium nativo fuera de la GUI para "
+                    "configurar el perfil seleccionado."
                 )
-        self._append_system(
-            "🔑 Inicio de sesión manual activado. "
-            "Ejecuta la cadena desde el Lobby para abrir Chromium visible."
-        )
+
+        if self._matrix_chain_summary is not None:
+            self._matrix_chain_summary.setText(
+                "Modo manual finalizado. INITIAL_SETUP_MODE=false; "
+                "el uso diario vuelve al Chromium headless."
+            )
+
+    def _clear_manual_setup_worker(self) -> None:
+        self._manual_setup_thread = None
+        self._manual_setup_worker = None
 
     def _request_lobby_gemini(self) -> None:
         self._start_matrix_chain("cari")
@@ -3652,6 +3910,14 @@ class CommandCenterWindow(QMainWindow):
 
         if self._matrix_dispatcher.is_running:
             self._matrix_dispatcher.stop()
+
+        if self._manual_setup_thread is not None:
+            self._manual_setup_thread.requestInterruption()
+            self._manual_setup_thread.quit()
+            if self._manual_setup_thread.isRunning():
+                self._manual_setup_thread.wait(1_500)
+            self._manual_setup_thread = None
+            self._manual_setup_worker = None
 
         try:
             self.task_pool.waitForDone(2200)
