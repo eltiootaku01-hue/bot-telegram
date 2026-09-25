@@ -1635,6 +1635,87 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ):
             self.assertIn(token, support)
 
+    def test_image_order_resolution_style_and_admin_upload_contract(self):
+        from bot_ia.interfaces.cafe_orders import (
+            RESOLUTIONS,
+            RENDER_STYLES,
+            BebidaOrder,
+            build_bebida_prompt,
+            build_bebida_summary,
+        )
+        from bot_ia.interfaces.order_support import OrderConfirmation
+
+        self.assertEqual("1104x1824", RESOLUTIONS["XL"])
+        self.assertEqual("944x1584", RESOLUTIONS["L"])
+        self.assertEqual("768x1280", RESOLUTIONS["M"])
+        self.assertIn("classic anime style, cel shaded", RENDER_STYLES["Classic Anime"])
+        self.assertIn("retro glam anime, 90s anime aesthetic", RENDER_STYLES["Retro Glam Anime"])
+        self.assertIn("modern glam anime, detailed shading, soft lighting", RENDER_STYLES["Modern Glam Anime"])
+        self.assertIn("hyper pop style, neon lines, vibrant colors", RENDER_STYLES["Hyper Pop"])
+
+        order = BebidaOrder(
+            character="Kuro",
+            character_tag="kuro_(one_neko_punch)",
+            product_type="Imagen IA Personalizada",
+            resolution="XL",
+            render_style="Hyper Pop",
+        ).normalized()
+        summary = build_bebida_summary(order)
+        prompt = build_bebida_prompt(order)
+        self.assertIn("Resolución: XL (1104x1824)", summary)
+        self.assertIn("Estilo: Hyper Pop", summary)
+        self.assertIn("Resolution: XL (1104x1824)", prompt)
+        self.assertIn("hyper pop style, neon lines, vibrant colors", prompt)
+
+        confirmation = OrderConfirmation(
+            order_id="ORD-IMAGE-1",
+            user_id="u-image",
+            product_type="Imagen IA Personalizada",
+            destination="🖼️ Imagen IA Personalizada",
+            rarity="SPECIAL",
+            cost=150,
+            summary=summary,
+            resolution="XL",
+            render_style="Hyper Pop",
+            prompt_en=prompt,
+        )
+        self.assertEqual("u-image", confirmation.user_id)
+        self.assertEqual("XL", confirmation.resolution)
+        self.assertIn("Character:", confirmation.prompt_en)
+
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        for token in (
+            "RESOLUTIONS",
+            "RENDER_STYLES",
+            'self.resolution = QComboBox()',
+            'self.render_style = QComboBox()',
+            "1104x1824",
+            "944x1584",
+            "768x1280",
+        ):
+            self.assertIn(token, app if token.startswith("self.") or token in {"RESOLUTIONS", "RENDER_STYLES"} else app + telegram)
+        for token in (
+            "prompt_en=build_bebida_prompt(order)",
+            "resolution=order.resolution",
+            "render_style=order.render_style",
+            "_admin_order_followup",
+            "order:attach:",
+            "photo_file_id",
+            "sendPhoto",
+            "handle_photo_update",
+            "TELEGRAM_ADMIN_ORDERS_THREAD_ID",
+        ):
+            self.assertIn(token, telegram)
+
+    def test_admin_order_panel_preserves_spanish_and_english_prompt_contract(self):
+        source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        self.assertIn("Texto original en español:", source)
+        self.assertIn("Prompt optimizado en inglés:", source)
+        self.assertIn("📎 Adjuntar / Subir imagen generada", source)
+        self.assertIn("route="order_delivery"", source)
+        self.assertIn("pending.user_id", source)
+
     def test_group_setup_complaints_topics_contract(self):
         group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
         self.assertIn('"#pedidos-admin"', group)
