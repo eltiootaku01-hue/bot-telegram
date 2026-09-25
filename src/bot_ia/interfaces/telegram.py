@@ -21,6 +21,7 @@ from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary, build_bebida_prompt, RESOLUTIONS, RENDER_STYLES
 from .hardening import MutexGuard
 from .order_support import ComplaintStore, OrderConfirmation, OrderStore, new_order_id, order_destination
+from .inline_router import InlineRedirectHandler
 from .auto_moderation import moderate
 from .cafe_immersion import analyze_telegram_comment
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, purchase_bebida_order, quote_bebida_order
@@ -146,6 +147,36 @@ def parse_update(update: dict[str, object]) -> TelegramInbound:
     return TelegramInbound(user_id, chat_id, text, dict(metadata))
 
 
+@dataclass(frozen=True, slots=True)
+class TelegramInlineQuery:
+    query_id: str
+    user_id: str
+    chat_id: str | None
+    query: str
+
+
+def parse_inline_query_update(update: dict[str, object]) -> TelegramInlineQuery:
+    try:
+        inline = update["inline_query"]
+        sender = inline["from"]
+        query_id = inline["id"]
+        query = inline.get("query", "")
+        chat_type = inline.get("chat_type")
+    except (KeyError, TypeError) as error:
+        raise TelegramInputError("inline query is invalid") from error
+    if not isinstance(sender, dict):
+        raise TelegramInputError("inline sender is invalid")
+    user_id = str(sender.get("id", "")).strip()
+    if not user_id or not isinstance(query_id, str) or not query_id.strip():
+        raise TelegramInputError("inline identity is invalid")
+    return TelegramInlineQuery(
+        query_id.strip(),
+        user_id,
+        str(chat_type) if chat_type is not None else None,
+        str(query),
+    )
+
+
 def parse_callback_update(update: dict[str, object]) -> TelegramCallback:
     try:
         callback = update["callback_query"]
@@ -194,6 +225,14 @@ class TelegramAdapter:
         self._pending_orders: dict[str, OrderConfirmation] = {}
         self._last_orders: dict[str, OrderConfirmation] = {}
         self._pending_attachments: dict[str, OrderConfirmation] = {}
+        self._inline_handler = InlineRedirectHandler(
+            official_ids={
+                value.strip()
+                for value in os.getenv("TELEGRAM_OFFICIAL_CHAT_IDS", "").split(",")
+                if value.strip()
+            },
+            cafe_url=os.getenv("CAFE_OTAKU_INVITE_URL", "").strip(),
+        )
         self._callback_mutex = MutexGuard()
 
     def _active_maid(self, user_id: str) -> str:
@@ -1018,6 +1057,19 @@ class TelegramApiClient:
             },
         )
 
+    def answer_inline_query(self, query_id: str, result: dict[str, object]) -> dict[str, object]:
+        if not str(query_id).strip():
+            raise TelegramInputError("inline query id cannot be empty")
+        return self._call(
+            "answerInlineQuery",
+            {
+                "inline_query_id": str(query_id),
+                "results": [result],
+                "cache_time": 0,
+                "is_personal": True,
+            },
+        )
+
     def get_updates(self, *, offset: int | None = None, timeout_seconds: int = 25) -> tuple[dict[str, object], ...]:
         if offset is not None and offset < 0:
             raise TelegramInputError("Telegram offset cannot be negative")
@@ -1381,7 +1433,36 @@ class TelegramPoller:
                             break
 
                 try:
-                    moderation_outbound = self._moderate_raw_update(update)
+                    inline_query = update.get("inline_query")
+                    if isinstance(inline_query, dict):
+                        inline = parse_inline_query_update(update)
+                        result = self._inline_handler.handle(
+                            user_id=inline.user_id,
+                            query=inline.query,
+                            chat_id=inline.chat_id,
+                        )
+                        self._client.answer_inline_query(
+                            inline.query_id,
+                            {
+                                "type": "article",
+                                "id": "cafe-redirect",
+                                "title": "☕ Café Otaku",
+                                "description": result.text,
+                                "input_message_content": {"message_text": result.text},
+                                "reply_markup": {
+                                    "inline_keyboard": [[
+                                        {"text": result.button_label, "url": result.button_url}
+                                    ]]
+                                },
+                            },
+                        )
+                        outbound = TelegramOutbound(
+                            inline.chat_id or inline.user_id,
+                            result.text,
+                            "inline",
+                        )
+                    else:
+                        moderation_outbound = self._moderate_raw_update(update)
                     comment_outbound = (
                         None
                         if moderation_outbound is not None
