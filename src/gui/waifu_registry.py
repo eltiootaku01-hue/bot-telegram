@@ -3,10 +3,25 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import json
 from pathlib import Path
 import re
+
+
+@dataclass(slots=True)
+class CardSlot:
+    """Estado de una carta individual del tracker."""
+
+    name: str
+    rarity: str
+    image_path: str = ""
+    assembled_path: str = ""
+    complete: bool = False
+
+    @property
+    def progress(self) -> int:
+        return 100 if self.complete else (50 if self.image_path else 0)
 
 
 @dataclass(slots=True)
@@ -22,6 +37,7 @@ class WaifuRecord:
     image_path: str = ""
     assembled_path: str = ""
     progress: int = 0
+    card_slots: list[CardSlot] = field(default_factory=list)
 
 
 class WaifuRegistry:
@@ -65,11 +81,58 @@ class WaifuRegistry:
                                 _safe_progress(item.get("progress", 0)),
                             ),
                         ),
+                        card_slots=_load_slots(item.get("card_slots")),
                     )
                 )
         return records
 
+def _load_slots(value: object) -> list[CardSlot]:
+    defaults = [
+        CardSlot("Carta 1", "R"),
+        CardSlot("Carta 2", "SR"),
+        CardSlot("Cosplay UR", "UR"),
+    ]
+    if not isinstance(value, list):
+        return defaults
+    result: list[CardSlot] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()
+        rarity = str(item.get("rarity", "R")).strip().upper()
+        if name and rarity in {"R", "SR", "UR"}:
+            result.append(
+                CardSlot(
+                    name=name,
+                    rarity=rarity,
+                    image_path=str(item.get("image_path", "")).strip(),
+                    assembled_path=str(
+                        item.get("assembled_path", "")
+                    ).strip(),
+                    complete=bool(item.get("complete", False)),
+                )
+            )
+    return result or defaults
+
+
+def _ensure_slots(record: WaifuRecord) -> None:
+    if not record.card_slots:
+        record.card_slots = [
+            CardSlot("Carta 1", "R"),
+            CardSlot("Carta 2", "SR"),
+            CardSlot("Cosplay UR", "UR"),
+        ]
+
+
+def record_progress(record: WaifuRecord) -> int:
+    _ensure_slots(record)
+    return round(sum(slot.progress for slot in record.card_slots) / len(record.card_slots))
+
+
     def save(self, records: list[WaifuRecord]) -> None:
+        for record in records:
+            _ensure_slots(record)
+            record.progress = record_progress(record)
         payload = [asdict(record) for record in records]
         temporary = self.path.with_suffix(".json.tmp")
         temporary.write_text(
@@ -110,6 +173,19 @@ def generate_tcg_prompt(record: WaifuRecord) -> str:
         "no card border. The character asset must be easy to separate "
         "from the background and place inside a TCG card frame."
     )
+
+
+def frame_candidates(root: Path, rarity: str, element: str) -> list[Path]:
+    """Devuelve marcos elemento-específicos y el fallback por rareza."""
+    rarity = rarity.strip().upper()
+    element_slug = slugify(element).casefold()
+    frame_dir = Path(root) / "assets" / "tcg_frames"
+    return [
+        frame_dir / f"frame_{rarity}_{element_slug}.svg",
+        frame_dir / f"frame_{rarity}_{element_slug}.png",
+        frame_dir / f"frame_{rarity}.svg",
+        frame_dir / f"frame_{rarity}.png",
+    ]
 
 
 def slugify(value: str) -> str:
