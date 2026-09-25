@@ -32,7 +32,7 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtGui import QKeyEvent, QPainter, QPixmap
+from PySide6.QtGui import QColor, QFont, QKeyEvent, QPainter, QPixmap
 from core.config import DynamicConfigManager
 from .admin_provisioning import AdminProvisioner
 from PySide6.QtWidgets import (
@@ -73,7 +73,15 @@ from bot_ia.runtime import RuntimeComponents, build_runtime
 from .gui_bridge import WorkerSignals
 from .styles import application_qss
 from .widgets import BotTile, CardFrame, PillButton, SectionHeader
-from .waifu_registry import WaifuRecord, WaifuRegistry, generate_tcg_prompt, slugify
+from .waifu_registry import (
+    CardSlot,
+    WaifuRecord,
+    WaifuRegistry,
+    frame_candidates,
+    generate_tcg_prompt,
+    record_progress,
+    slugify,
+)
 
 try:
     from qasync import QEventLoop
@@ -1675,6 +1683,12 @@ class WaifuRegistryDialog(QDialog):
         self.records = self.registry.load()
         self.image_path = ""
         self.assembled_path = ""
+        self.card_slots = [
+            CardSlot("Carta 1", "R"),
+            CardSlot("Carta 2", "SR"),
+            CardSlot("Cosplay UR", "UR"),
+        ]
+        self.selected_slot_index = 0
         self.setWindowTitle("🎴 Registro de Waifus · TCG")
         self.setMinimumSize(920, 700)
         self.resize(1080, 780)
@@ -1713,6 +1727,13 @@ class WaifuRegistryDialog(QDialog):
         self.cosplay = QComboBox()
         self.cosplay.addItems(("SR", "UR"))
         form.addWidget(self.cosplay, 4, 1)
+        form.addWidget(QLabel("Slot de carta"), 5, 0)
+        self.card_slot = QComboBox()
+        self.card_slot.addItems(
+            ("Carta 1 · R", "Carta 2 · SR", "Cosplay UR · UR")
+        )
+        self.card_slot.currentIndexChanged.connect(self._select_slot)
+        form.addWidget(self.card_slot, 5, 1)
         root.addLayout(form)
 
         actions = QHBoxLayout()
@@ -1760,7 +1781,56 @@ class WaifuRegistryDialog(QDialog):
         self.records_view.setReadOnly(True)
         self.records_view.setPlaceholderText("Registro guardado...")
         root.addWidget(self.records_view, 1)
+
+        self.slot_status = QPlainTextEdit()
+        self.slot_status.setReadOnly(True)
+        self.slot_status.setMaximumHeight(100)
+        self.slot_status.setPlaceholderText("Tracker de cartas...")
+        root.addWidget(self.slot_status)
+
         self._refresh_records()
+        self._refresh_slot_status()
+
+    def _select_slot(self, index: int) -> None:
+        self.selected_slot_index = max(0, min(index, len(self.card_slots) - 1))
+        slot = self.card_slots[self.selected_slot_index]
+        self.image_path = slot.image_path
+        self.assembled_path = slot.assembled_path
+        self.progress.setValue(slot.progress)
+        if self.image_path:
+            pixmap = QPixmap(self.image_path)
+            if not pixmap.isNull():
+                self.image_label.setPixmap(
+                    pixmap.scaled(
+                        220,
+                        220,
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation,
+                    )
+                )
+                self.image_label.setText("")
+        self._refresh_slot_status()
+
+    def _refresh_slot_status(self) -> None:
+        lines = []
+        for slot in self.card_slots:
+            state = "COMPLETA" if slot.complete else "PENDIENTE"
+            lines.append(
+                f"{slot.name} [{slot.rarity}] · {slot.progress}% · {state}"
+            )
+        self.slot_status.setPlainText("\n".join(lines))
+        self.progress.setValue(
+            record_progress(
+                WaifuRecord(
+                    name=self.name.text().strip(),
+                    personality=self.personality.text().strip(),
+                    appearance=self.appearance.text().strip(),
+                    element=str(self.element.currentText()).strip(),
+                    cosplay_reference=str(self.cosplay.currentText()).strip(),
+                    card_slots=self.card_slots,
+                )
+            )
+        )
 
     def _current_record(self) -> WaifuRecord:
         return WaifuRecord(
@@ -1773,6 +1843,7 @@ class WaifuRegistryDialog(QDialog):
             image_path=self.image_path,
             assembled_path=self.assembled_path,
             progress=self.progress.value(),
+            card_slots=self.card_slots,
         )
 
     def _generate(self) -> None:
@@ -1810,8 +1881,14 @@ class WaifuRegistryDialog(QDialog):
             self.image_label.setText("")
         else:
             self.image_label.setText(f"Imagen seleccionada: {self.image_path}")
+        slot = self.card_slots[self.selected_slot_index]
+        slot.image_path = self.image_path
+        slot.complete = False
         self.progress.setValue(max(self.progress.value(), 50))
-        self.status.setText("Sprite cargado. Ya puede ensamblarse en una carta.")
+        self._refresh_slot_status()
+        self.status.setText(
+            f"Sprite cargado para {slot.name}. Ya puede ensamblarse en una carta."
+        )
 
     def _save(self) -> None:
         record = self._current_record()
@@ -1839,36 +1916,51 @@ class WaifuRegistryDialog(QDialog):
             existing.assembled_path = (
                 record.assembled_path or existing.assembled_path
             )
-            existing.progress = max(existing.progress, record.progress)
+            existing.card_slots = record.card_slots
+            existing.progress = record.progress
         self.registry.save(self.records)
         self._refresh_records()
         self.status.setText("Waifu registrada en config/waifu_registry.json.")
 
     def _assemble(self) -> None:
+        slot = self.card_slots[self.selected_slot_index]
         if not self.image_path:
             self.status.setText(
-                "Primero usa «+ Subir Imagen» para elegir el sprite."
+                f"Primero usa «+ Subir Imagen» para {slot.name}."
             )
             return
+
         sprite = QPixmap(self.image_path)
         if sprite.isNull():
             self.status.setText("No se pudo leer el sprite seleccionado.")
             return
 
+        rarity = slot.rarity
         element = str(self.element.currentText()).strip()
         name = self.name.text().strip() or "Waifu"
+        frame_path = next(
+            (path for path in frame_candidates(
+                self.registry.root, rarity, element
+            ) if path.is_file()),
+            None,
+        )
+        if frame_path is None:
+            self.status.setText(
+                f"No existe un marco {rarity} en assets/tcg_frames."
+            )
+            return
+
         out_dir = self.registry.root / "artifacts" / "tcg_cards"
         out_dir.mkdir(parents=True, exist_ok=True)
-        output = out_dir / f"{slugify(name)}_{slugify(element)}.png"
+        output = out_dir / (
+            f"{slugify(name)}_{slugify(slot.name)}_"
+            f"{slugify(element)}_{rarity}.png"
+        )
 
         canvas = QPixmap(768, 1024)
-        canvas.fill(Qt.white)
+        canvas.fill(Qt.transparent)
         painter = QPainter(canvas)
         try:
-            painter.drawRect(6, 6, 756, 1012)
-            painter.drawRect(24, 24, 720, 110)
-            painter.drawText(42, 66, f"{name} · {element}")
-            painter.drawText(42, 94, f"Cosplay {self.cosplay.currentText()}")
             fitted = sprite.scaled(
                 690,
                 790,
@@ -1877,8 +1969,26 @@ class WaifuRegistryDialog(QDialog):
             )
             x = (768 - fitted.width()) // 2
             painter.drawPixmap(x, 150, fitted)
-            painter.drawRect(24, 150, 720, 790)
-            painter.drawText(42, 980, "BOT-IA · TCG LOCAL")
+
+            frame = QPixmap(str(frame_path))
+            if frame.isNull():
+                self.status.setText(
+                    f"No se pudo cargar el marco: {frame_path.name}"
+                )
+                return
+            painter.drawPixmap(0, 0, frame.scaled(
+                768, 1024, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
+            ))
+
+            painter.setPen(QColor(255, 255, 255))
+            painter.setFont(QFont("Georgia", 28, QFont.Bold))
+            painter.drawText(42, 62, name)
+
+            painter.setFont(QFont("Georgia", 18, QFont.Bold))
+            painter.drawText(42, 94, f"{rarity} · {element}")
+
+            painter.setFont(QFont("Georgia", 14))
+            painter.drawText(42, 990, "BOT-IA · TCG LOCAL")
         finally:
             painter.end()
 
@@ -1886,9 +1996,14 @@ class WaifuRegistryDialog(QDialog):
             self.status.setText("No se pudo guardar la carta ensamblada.")
             return
 
+        slot.assembled_path = str(output)
+        slot.complete = True
         self.assembled_path = str(output)
         self.progress.setValue(100)
-        self.status.setText(f"Carta ensamblada localmente: {output}")
+        self._refresh_slot_status()
+        self.status.setText(
+            f"{slot.name} ensamblada con marco {rarity}: {output}"
+        )
         self._save()
 
     def _refresh_records(self) -> None:
