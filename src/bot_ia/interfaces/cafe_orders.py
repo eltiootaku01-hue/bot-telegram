@@ -9,6 +9,7 @@ import unicodedata
 from typing import Iterable
 
 from .cafe_economy import ORDER_COST_HIGH, ORDER_COST_NORMAL, RARITY_PRICES, OrderQuote, quote_bebida_order
+from .hardening import sanitize_control_text, whitelist_tag
 
 
 
@@ -38,25 +39,30 @@ class BebidaOrder:
         product = self.product_type if self.product_type in PRODUCT_TYPES else "Carta TCG"
         return replace(
             self,
-            character=self.character.strip(),
+            character=sanitize_control_text(self.character, max_length=128),
             character_tag=normalize_danbooru_tag(self.character_tag or self.character),
             exposure=exposure,
             boldness=boldness,
-            pose=self.pose.strip() or "De pie",
-            outfit=self.outfit.strip() or "Casual",
-            cosplay=self.cosplay.strip(),
+            pose=sanitize_free_text(self.pose) or "De pie",
+            outfit=sanitize_free_text(self.outfit) or "Casual",
+            cosplay=sanitize_free_text(self.cosplay)[:128],
             product_type=product,
         )
 
 
 def normalize_danbooru_tag(value: str) -> str:
-    """Convierte nombres locales a tag seguro; no inventa el sitio/fandom."""
-    value = str(value or "").strip()
+    """Normaliza sintaxis de tag; la whitelist se aplica por separado."""
+    value = sanitize_control_text(value, max_length=128)
     if not value:
         return ""
     value = re.sub(r"\s+", "_", value)
     value = re.sub(r"[^A-Za-z0-9_()'\-]+", "", value)
     return value.lower()
+
+
+def sanitize_free_text(value: str, *, max_length: int = 128) -> str:
+    """Sanitiza texto libre sin permitir caracteres de control."""
+    return sanitize_control_text(value, max_length=max_length)
 
 
 def character_suggestions(records: Iterable[object], query: str = "") -> list[str]:
@@ -114,13 +120,23 @@ def build_bebida_prompt(order: BebidaOrder) -> str:
 class BebidaOrderFlow:
     """Estado mínimo por usuario para el asistente interactivo de Telegram."""
 
-    def __init__(self) -> None:
+    def __init__(self, allowed_tags: Iterable[str] = ()) -> None:
         self._orders: dict[str, BebidaOrder] = {}
+        self._allowed_tags = tuple(
+            tag.strip()
+            for tag in allowed_tags
+            if str(tag).strip()
+        )
+
+    def _resolve_tag(self, value: str) -> str:
+        return whitelist_tag(value, self._allowed_tags)
 
     def start(self, user_id: str, character: str = "") -> BebidaOrder:
-        order = BebidaOrder(character=character.strip())
+        order = BebidaOrder()
         self._orders[str(user_id)] = order
-        return order
+        if character:
+            self.set_character(user_id, character)
+        return self.get(user_id)
 
     def get(self, user_id: str) -> BebidaOrder:
         return self._orders.setdefault(str(user_id), BebidaOrder())
@@ -140,7 +156,15 @@ class BebidaOrderFlow:
         return updated
 
     def set_character(self, user_id: str, character: str, tag: str = "") -> BebidaOrder:
-        updated = replace(self.get(user_id), character=character.strip(), character_tag=tag.strip())
+        safe_character = sanitize_control_text(character, max_length=128)
+        resolved_tag = self._resolve_tag(tag or safe_character)
+        if not resolved_tag:
+            return self.get(user_id)
+        updated = replace(
+            self.get(user_id),
+            character=safe_character,
+            character_tag=resolved_tag,
+        ).normalized()
         self._orders[str(user_id)] = updated
         return updated
 
