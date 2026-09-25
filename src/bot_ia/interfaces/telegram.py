@@ -610,7 +610,7 @@ class TelegramAdapter:
                 waitress_dialogue(self._active_maid(inbound.user_id), "role"),
                 "cafe",
             )
-        if command in {"/21", "/blackjack", "/apuestas", "/apuesta"}:
+        if command == "/21" or command in {"/blackjack", "/apuestas", "/apuesta"}:
             return TelegramOutbound(
                 inbound.conversation_id,
                 mature_game_message(command.lstrip("/")),
