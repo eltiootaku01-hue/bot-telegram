@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""VIP opcional y economía pasiva: nunca bloquea el acceso SFW/Cantina."""
+"""VIP opcional y economía pasiva sobre la base SQLite compartida."""
 
 from __future__ import annotations
 
@@ -7,6 +7,9 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 from typing import Literal
+
+from bot_ia.paths import ECONOMY_DB_PATH, PROJECT_ROOT
+from bot_ia.persistence.economy import EconomyDatabase, EconomyPersistenceError
 
 
 VIP_ROLE = "Padrino del Café"
@@ -26,52 +29,150 @@ class VipProfile:
 
 
 class VipStore:
-    """Registro local idempotente para concesiones manuales o donaciones voluntarias."""
+    """Registro VIP compartido entre procesos mediante SQLite WAL."""
 
-    def __init__(self, root: Path) -> None:
-        self.path = Path(root) / "config" / "cafe_vip.json"
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+    LEGACY_FILENAME = "cafe_vip.json"
+    MIGRATION_KEY = "legacy:cafe_vip:v1"
 
-    def _load(self) -> dict[str, dict[str, object]]:
-        try:
-            value = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return {}
-        return value if isinstance(value, dict) else {}
+    def __init__(self, root: Path | str | None = None) -> None:
+        self.root = Path(root).expanduser().resolve() if root is not None else PROJECT_ROOT
+        self.path = ECONOMY_DB_PATH if root is None else self.root / "config" / "bot_ia_economy.sqlite3"
+        self.legacy_path = self.root / "config" / self.LEGACY_FILENAME
+        self.db = EconomyDatabase(self.path)
+        self._migrate_legacy()
 
-    def _save(self, data: dict[str, dict[str, object]]) -> None:
-        tmp = self.path.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        tmp.replace(self.path)
+    def _migrate_legacy(self) -> None:
+        with self.db.transaction(immediate=True) as connection:
+            migrated = connection.execute(
+                "SELECT value FROM schema_meta WHERE key = ?",
+                (self.MIGRATION_KEY,),
+            ).fetchone()
+            if migrated is not None:
+                return
 
-    def get(self, user_id: str) -> VipProfile:
-        item = self._load().get(str(user_id), {})
+            if self.legacy_path.is_file():
+                try:
+                    payload = json.loads(
+                        self.legacy_path.read_text(encoding="utf-8")
+                    )
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+                    raise EconomyPersistenceError(
+                        f"Persistencia heredada corrupta: {self.legacy_path}"
+                    ) from error
+                if not isinstance(payload, dict):
+                    raise EconomyPersistenceError(
+                        f"Formato heredado inválido: {self.legacy_path}"
+                    )
+
+                for user_id, value in payload.items():
+                    if not isinstance(value, dict):
+                        raise EconomyPersistenceError(
+                            f"Registro VIP heredado inválido para {user_id!r}"
+                        )
+                    try:
+                        vip = 1 if bool(value.get("vip", False)) else 0
+                        source = str(value.get("source", ""))
+                        donated_stars = max(
+                            0,
+                            int(value.get("donated_stars", 0)),
+                        )
+                    except (TypeError, ValueError) as error:
+                        raise EconomyPersistenceError(
+                            f"Registro VIP heredado inválido para {user_id!r}"
+                        ) from error
+                    connection.execute(
+                        """
+                        INSERT OR IGNORE INTO vip(
+                            user_id, vip, source, donated_stars
+                        ) VALUES (?, ?, ?, ?)
+                        """,
+                        (
+                            str(user_id),
+                            vip,
+                            source,
+                            donated_stars,
+                        ),
+                    )
+
+            connection.execute(
+                """
+                INSERT OR REPLACE INTO schema_meta(key, value)
+                VALUES (?, ?)
+                """,
+                (self.MIGRATION_KEY, "complete"),
+            )
+
+    @staticmethod
+    def _from_row(user_id: str, row: tuple[object, ...] | None) -> VipProfile:
+        if row is None:
+            return VipProfile(str(user_id))
         return VipProfile(
             str(user_id),
-            bool(item.get("vip", False)),
-            str(item.get("source", "")),
-            max(0, int(item.get("donated_stars", 0))),
+            bool(int(row[0])),
+            str(row[1]),
+            max(0, int(row[2])),
         )
 
+    def get(self, user_id: str) -> VipProfile:
+        with self.db.transaction() as connection:
+            row = connection.execute(
+                """
+                SELECT vip, source, donated_stars
+                FROM vip
+                WHERE user_id = ?
+                """,
+                (str(user_id),),
+            ).fetchone()
+            return self._from_row(str(user_id), row)
+
     def grant_manual(self, user_id: str) -> VipProfile:
-        return self._grant(user_id, "manual", 0)
+        with self.db.transaction(immediate=True) as connection:
+            connection.execute(
+                """
+                INSERT INTO vip(user_id, vip, source, donated_stars)
+                VALUES (?, 1, 'manual', 0)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    vip = 1,
+                    source = 'manual',
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (str(user_id),),
+            )
+            row = connection.execute(
+                """
+                SELECT vip, source, donated_stars
+                FROM vip WHERE user_id = ?
+                """,
+                (str(user_id),),
+            ).fetchone()
+            return self._from_row(str(user_id), row)
 
     def record_stars(self, user_id: str, stars: int) -> VipProfile:
         stars = max(0, int(stars))
         if stars <= 0:
             raise ValueError("La donación de Stars debe ser positiva")
-        profile = self.get(user_id)
-        return self._grant(user_id, "telegram_stars", profile.donated_stars + stars)
-
-    def _grant(self, user_id: str, source: str, donated_stars: int) -> VipProfile:
-        data = self._load()
-        data[str(user_id)] = {
-            "vip": True,
-            "source": source,
-            "donated_stars": donated_stars,
-        }
-        self._save(data)
-        return self.get(user_id)
+        with self.db.transaction(immediate=True) as connection:
+            connection.execute(
+                """
+                INSERT INTO vip(
+                    user_id, vip, source, donated_stars
+                ) VALUES (?, 1, 'telegram_stars', ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    vip = 1,
+                    source = 'telegram_stars',
+                    donated_stars = vip.donated_stars + excluded.donated_stars,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (str(user_id), stars),
+            )
+            row = connection.execute(
+                """
+                SELECT vip, source, donated_stars
+                FROM vip WHERE user_id = ?
+                """,
+                (str(user_id),),
+            ).fetchone()
+            return self._from_row(str(user_id), row)
 
     def is_vip(self, user_id: str) -> bool:
         return self.get(user_id).vip
@@ -100,17 +201,25 @@ def vip_status_text(user_id: str, store: VipStore) -> str:
     return vip_policy_text() + "\n\nEstado: no VIP. Si quieres apoyar, usa /donar."
 
 
-def validate_donation_event(user_id: str, payload: dict[str, object]) -> VipProfile:
-    """Valida un evento ya confirmado por Telegram; no convierte texto del usuario en pago."""
+def validate_donation_event(
+    user_id: str,
+    payload: dict[str, object],
+) -> VipProfile:
+    """Valida un evento ya confirmado por Telegram y escribe en la DB única."""
     if str(payload.get("currency", "")).upper() != "XTR":
         raise ValueError("La donación de Telegram Stars debe usar XTR")
     amount = int(payload.get("total_amount", 0))
     if amount <= 0:
         raise ValueError("Pago Stars inválido")
-    return VipStore(Path.cwd()).record_stars(user_id, amount)
+    return VipStore(PROJECT_ROOT).record_stars(
+        user_id,
+        amount,
+    )
 
 
-def discord_vip_permission_overwrite(role_id: str) -> dict[str, object]:
+def discord_vip_permission_overwrite(
+    role_id: str,
+) -> dict[str, object]:
     # Ver canal + leer historial + adjuntar archivos; no altera los canales públicos.
     return {
         "id": str(role_id),
