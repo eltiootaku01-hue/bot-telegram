@@ -92,6 +92,7 @@ from .mini_games import LocalGameRouter
 from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text, draw_gacha, pity_text, purchase_bebida_order)
 from bot_ia.interfaces.cafe_immersion import TeaTimeScheduler
+from bot_ia.interfaces.hardening import sanitize_control_text, whitelist_tag
 from bot_ia.interfaces.cafe_orders import (
     BOLDNESS_LEVELS,
     DEFAULT_OUTFITS,
@@ -1829,6 +1830,17 @@ class BebidaOrderDialog(QDialog):
         record = self._find_record(self.character.currentText())
         target = self.target_rarity.currentText()
         target_key = "SPECIAL" if target == "Especial" else target
+        allowed_tag = whitelist_tag(
+            record.danbooru_tag if record is not None else "",
+            self.registry.danbooru_whitelist(),
+        )
+        if record is None or not allowed_tag:
+            self.summary.setPlainText(
+                "Pedido bloqueado: selecciona un personaje de la lista blanca local de tags Danbooru."
+            )
+            self.prompt.setPlainText("")
+            self._prepared_order = None
+            return
         if target_key != "SPECIAL" and not self._record_supports_rarity(record, target_key):
             self.summary.setPlainText(
                 f"Pedido bloqueado: la carta objetivo {target_key} no existe en el registro local."
@@ -1838,8 +1850,8 @@ class BebidaOrderDialog(QDialog):
             return
 
         order = BebidaOrder(
-            character=self.character.currentText(),
-            character_tag=record.danbooru_tag if record else self.character.currentText(),
+            character=sanitize_control_text(record.name, max_length=128),
+            character_tag=allowed_tag,
             exposure=self.exposure.currentText(),
             boldness=self.boldness.currentText(),
             pose=self.pose.currentText(),
@@ -1867,6 +1879,17 @@ class BebidaOrderDialog(QDialog):
         if self._prepared_order is None or self.wallet_store is None:
             return
         record = self._find_record(self._prepared_order.character)
+        allowed_tag = whitelist_tag(
+            record.danbooru_tag if record is not None else "",
+            self.registry.danbooru_whitelist(),
+        )
+        if record is None or not allowed_tag:
+            QMessageBox.warning(
+                self,
+                "☕ Pedido rechazado",
+                "El personaje ya no pertenece a la lista blanca local de tags Danbooru.",
+            )
+            return
         target = self.target_rarity.currentText()
         target_key = "SPECIAL" if target == "Especial" else target
         if target_key != "SPECIAL" and not self._record_supports_rarity(record, target_key):
