@@ -45,6 +45,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QInputDialog,
     QMainWindow,
     QMessageBox,
     QPlainTextEdit,
@@ -85,6 +86,7 @@ from .waifu_registry import (
     slugify,
 )
 from .mini_games import LocalGameRouter
+from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, GroupSetupStore, TelegramGroupSetup
 
 try:
     from qasync import QEventLoop
@@ -145,6 +147,8 @@ class GuiSignals(QObject):
     web_result = Signal(str, str)
     web_failed = Signal(str, str)
     web_state = Signal(str)
+    group_setup_finished = Signal(str)
+    group_setup_failed = Signal(str)
 
 
 class ApplicationTask(QRunnable):
@@ -2262,6 +2266,8 @@ class CommandCenterWindow(QMainWindow):
         self._telegram_poll_timer.timeout.connect(
             self._refresh_telegram_process
         )
+        self.signals.group_setup_finished.connect(self._on_group_setup_finished)
+        self.signals.group_setup_failed.connect(self._on_group_setup_failed)
 
         self._configure_window()
         self._build_layout()
@@ -2279,6 +2285,43 @@ class CommandCenterWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Ventana y layout
     # ------------------------------------------------------------------
+
+    def _open_group_setup(self) -> None:
+        platform, ok = QInputDialog.getItem(self, "Estructurar Grupo", "Plataforma:", ("Telegram", "Discord"), 0, False)
+        if not ok:
+            return
+        target, ok = QInputDialog.getText(self, "Estructurar Grupo", "ID del grupo / guild:")
+        if not ok or not target.strip():
+            return
+        self.group_setup_button.setEnabled(False)
+        class SetupTask(QRunnable):
+            def __init__(self, window, platform_name, target_id):
+                super().__init__()
+                self.window, self.platform_name, self.target_id = window, platform_name, target_id
+            @Slot()
+            def run(self):
+                try:
+                    store = GroupSetupStore(ROOT)
+                    if self.platform_name == "Telegram":
+                        result = TelegramGroupSetup(os.getenv("TELEGRAM_BOT_TOKEN", "")).setup_chat(self.target_id, store)
+                    else:
+                        result = DiscordGroupSetup(os.getenv("DISCORD_BOT_TOKEN", "")).setup_guild(self.target_id, store)
+                    summary = "\n".join(f"• {room.name} → {room.external_id}" for room in result.rooms)
+                    self.window.signals.group_setup_finished.emit(f"{result.platform}: estructura lista.\n{summary}")
+                except (GroupSetupError, Exception) as error:
+                    self.window.signals.group_setup_failed.emit(f"{type(error).__name__}: {error}")
+        self._group_setup_task = SetupTask(self, platform, target.strip())
+        self._thread_pool.start(self._group_setup_task)
+
+    def _on_group_setup_finished(self, message: str) -> None:
+        self.group_setup_button.setEnabled(True)
+        self.statusBar().showMessage("Estructura de grupo creada/verificada.", 10000)
+        self._append_system("Group Setup OK:\n" + message)
+
+    def _on_group_setup_failed(self, message: str) -> None:
+        self.group_setup_button.setEnabled(True)
+        self.statusBar().showMessage("No se pudo estructurar el grupo.", 10000)
+        self._append_system("Group Setup ERROR: " + message)
 
     def _activate_admin_mode(self, checked: bool = True) -> None:
         """Activa el modo admin y aprovisiona estructuras locales de forma idempotente."""
@@ -2363,6 +2406,10 @@ class CommandCenterWindow(QMainWindow):
         )
         self.admin_button.clicked.connect(self._activate_admin_mode)
         top_layout.addWidget(self.admin_button)
+
+        self.group_setup_button = QPushButton("🛠 Estructurar Grupo")
+        self.group_setup_button.clicked.connect(self._open_group_setup)
+        top_layout.addWidget(self.group_setup_button)
 
         self.diagnostic_button = QPushButton("🔍 Diagnóstico")
         self.diagnostic_button.clicked.connect(
