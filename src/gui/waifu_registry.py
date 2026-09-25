@@ -47,6 +47,19 @@ class WaifuRecord:
 class WaifuRegistry:
     """Persistencia JSON local, sin WebQueue ni proveedor externo."""
 
+    def save(self, records: list[WaifuRecord]) -> None:
+        for record in records:
+            _ensure_slots(record)
+            record.progress = record_progress(record)
+        payload = [asdict(record) for record in records]
+        temporary = self.path.with_suffix(".json.tmp")
+        temporary.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        temporary.replace(self.path)
+
+
     def __init__(self, root: Path) -> None:
         self.root = Path(root)
         self.path = self.root / "config" / "waifu_registry.json"
@@ -134,20 +147,10 @@ def _ensure_slots(record: WaifuRecord) -> None:
 
 def record_progress(record: WaifuRecord) -> int:
     _ensure_slots(record)
-    return round(sum(slot.progress for slot in record.card_slots) / len(record.card_slots))
-
-
-    def save(self, records: list[WaifuRecord]) -> None:
-        for record in records:
-            _ensure_slots(record)
-            record.progress = record_progress(record)
-        payload = [asdict(record) for record in records]
-        temporary = self.path.with_suffix(".json.tmp")
-        temporary.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
-        temporary.replace(self.path)
+    return round(
+        sum(slot.progress for slot in record.card_slots)
+        / len(record.card_slots)
+    )
 
 
 def _safe_progress(value: object) -> int:
