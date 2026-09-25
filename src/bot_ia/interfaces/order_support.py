@@ -47,6 +47,52 @@ class ComplaintRecord:
     created_at: str = ""
 
 
+class OrderStore:
+    """Registro persistente de pedidos confirmados para despacho seguro."""
+
+    def __init__(self, root: Path) -> None:
+        self.path = Path(root) / "config" / "orders.json"
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.RLock()
+
+    def _load(self) -> list[dict[str, object]]:
+        try:
+            value = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return []
+        return value if isinstance(value, list) else []
+
+    def _save(self, items: list[dict[str, object]]) -> None:
+        temporary = self.path.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps(items, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        temporary.replace(self.path)
+
+    def save(self, order: OrderConfirmation) -> None:
+        with self._lock:
+            items = self._load()
+            items = [item for item in items if str(item.get("order_id")) != order.order_id]
+            items.append(asdict(order))
+            self._save(items)
+
+    def get(self, order_id: str) -> OrderConfirmation | None:
+        with self._lock:
+            for item in self._load():
+                if str(item.get("order_id")) == str(order_id):
+                    return OrderConfirmation(
+                        order_id=str(item.get("order_id", "")),
+                        user_id=str(item.get("user_id", "")),
+                        product_type=str(item.get("product_type", "")),
+                        destination=str(item.get("destination", "")),
+                        rarity=str(item.get("rarity", "")),
+                        cost=max(0, int(item.get("cost", 0))),
+                        summary=str(item.get("summary", "")),
+                        resolution=str(item.get("resolution", "L")),
+                        render_style=str(item.get("render_style", "Classic Anime")),
+                        prompt_en=str(item.get("prompt_en", "")),
+                    )
+        return None
+
+
 class ComplaintStore:
     """Persistencia atómica y anti-doble-resolución para reclamos."""
 
