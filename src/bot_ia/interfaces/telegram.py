@@ -20,6 +20,7 @@ from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary, build_bebida_prompt, RESOLUTIONS, RENDER_STYLES
 from .hardening import MutexGuard
+from .xp_audit import PassiveXPTracker, AuditBus
 from .order_support import ComplaintStore, OrderConfirmation, OrderStore, new_order_id, order_destination
 from .inline_router import InlineRedirectHandler
 from .auto_moderation import moderate
@@ -234,6 +235,8 @@ class TelegramAdapter:
             cafe_url=os.getenv("CAFE_OTAKU_INVITE_URL", "").strip(),
         )
         self._callback_mutex = MutexGuard()
+        self._xp_tracker = PassiveXPTracker(Path.cwd() / "config" / "nakama_xp.sqlite3")
+        self._audit_bus = AuditBus()
 
     def _active_maid(self, user_id: str) -> str:
         """Devuelve la mesera activa del turno local; Cami es el fallback."""
@@ -406,6 +409,7 @@ class TelegramAdapter:
                 "vip",
             )
         inbound = parse_update(update)
+        self._xp_tracker.record_message(inbound.user_id, "telegram")
         comment = analyze_telegram_comment(update)
         if comment.should_reply:
             return TelegramOutbound(
