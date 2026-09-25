@@ -1,0 +1,332 @@
+from dataclasses import dataclass
+
+from sqlalchemy import desc, func, select, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.identity import BotIdentity
+from app.core.time import utc_now
+from app.db.world_models import WorldCatalogEntry, WorldUsageStat
+
+
+@dataclass(frozen=True, slots=True)
+class WorldInsight:
+    hot: list[tuple[str, int]]
+    cold: list[tuple[str, int]]
+    unseen: list[tuple[str, str]]
+
+
+class WorldService:
+    """Small, deterministic observation layer for Ciudad Animals.
+
+    It stores aggregates instead of raw chat text. A future AI curator can read
+    these aggregates and suggest world changes without becoming the runtime brain.
+    """
+
+    async def observe(
+        self,
+        session: AsyncSession,
+        *,
+        bot_identity: BotIdentity | str,
+        entry_type: str,
+        entry_key: str,
+        scope_type: str = "world",
+        scope_id: str = "global",
+        delta: int = 1,
+    ) -> WorldUsageStat:
+        if not entry_type.strip() or not entry_key.strip():
+            raise ValueError("World observations require entry_type and entry_key")
+        if delta <= 0:
+            raise ValueError("World observation delta must be positive")
+
+        identity = str(bot_identity)
+        now = utc_now()
+        filters = (
+            WorldUsageStat.bot_identity == identity,
+            WorldUsageStat.scope_type == scope_type,
+            WorldUsageStat.scope_id == scope_id,
+            WorldUsageStat.entry_type == entry_type,
+            WorldUsageStat.entry_key == entry_key,
+        )
+
+        # Update-first makes repeated observations atomic at the row level and
+        # avoids the lost-update window of SELECT -> mutate -> flush. If two bot
+        # processes observe a never-seen key at the same time, the unique index
+        # arbitrates the first insert and the loser retries as an update.
+        result = await session.execute(
+            update(WorldUsageStat)
+            .where(*filters)
+            .values(
+                count=WorldUsageStat.count + delta,
+                last_seen_at=now,
+            )
+        )
+        if result.rowcount:
+            return await session.scalar(select(WorldUsageStat).where(*filters))  # type: ignore[return-value]
+
+        try:
+            async with session.begin_nested():
+                stat = WorldUsageStat(
+                    bot_identity=identity,
+                    scope_type=scope_type,
+                    scope_id=scope_id,
+                    entry_type=entry_type,
+                    entry_key=entry_key,
+                    count=delta,
+                    first_seen_at=now,
+                    last_seen_at=now,
+                )
+                session.add(stat)
+                await session.flush()
+        except IntegrityError:
+            result = await session.execute(
+                update(WorldUsageStat)
+                .where(*filters)
+                .values(
+                    count=WorldUsageStat.count + delta,
+                    last_seen_at=now,
+                )
+            )
+            if not result.rowcount:
+                raise
+
+        return await session.scalar(select(WorldUsageStat).where(*filters))  # type: ignore[return-value]
+
+    async def usage_count(
+        self,
+        session: AsyncSession,
+        *,
+        bot_identity: BotIdentity | str,
+        entry_type: str,
+        entry_key: str,
+        scope_type: str = "world",
+        scope_id: str = "global",
+    ) -> int:
+        """Return the durable aggregate count for one world signal."""
+        row = await session.scalar(
+            select(WorldUsageStat.count).where(
+                WorldUsageStat.bot_identity == str(bot_identity),
+                WorldUsageStat.entry_type == entry_type,
+                WorldUsageStat.entry_key == entry_key,
+                WorldUsageStat.scope_type == scope_type,
+                WorldUsageStat.scope_id == scope_id,
+            )
+        )
+        return int(row or 0)
+
+    async def observe_action(
+        self,
+        session: AsyncSession,
+        *,
+        bot_identity: BotIdentity | str,
+        action_key: str,
+        user_id: int,
+        chat_id: int | None = None,
+    ) -> None:
+        """Record one action at world, user and optional user+chat scope."""
+        await self.observe(
+            session,
+            bot_identity=bot_identity,
+            entry_type="action",
+            entry_key=action_key,
+        )
+        await self.observe(
+            session,
+            bot_identity=bot_identity,
+            entry_type="action",
+            entry_key=action_key,
+            scope_type="user",
+            scope_id=str(user_id),
+        )
+        if chat_id is not None:
+            await self.observe(
+                session,
+                bot_identity=bot_identity,
+                entry_type="action",
+                entry_key=action_key,
+                scope_type="user_chat",
+                scope_id=f"{user_id}:{chat_id}",
+            )
+    async def seed_catalog(self, session: AsyncSession) -> None:
+        """Ensure all approved world entries exist before the first observation."""
+        from app.characters.repertoire import REPERTOIRE
+        from app.services.world_catalog import WORLD_CATALOG
+
+        for item in WORLD_CATALOG:
+            await self.register_catalog_entry(
+                session,
+                bot_identity=item.bot_identity,
+                entry_type=item.entry_type,
+                entry_key=item.entry_key,
+                label=item.label,
+                priority=item.priority,
+            )
+        for scene in REPERTOIRE:
+            await self.register_catalog_entry(
+                session,
+                bot_identity=scene.speaker,
+                entry_type="scene",
+                entry_key=scene.key,
+                label=scene.text,
+                priority=scene.weight,
+            )
+
+    async def register_catalog_entry(
+        self,
+        session: AsyncSession,
+        *,
+        bot_identity: BotIdentity | str,
+        entry_type: str,
+        entry_key: str,
+        label: str,
+        priority: int = 0,
+        enabled: bool = True,
+    ) -> WorldCatalogEntry:
+        identity = str(bot_identity)
+        filters = (
+            WorldCatalogEntry.bot_identity == identity,
+            WorldCatalogEntry.entry_type == entry_type,
+            WorldCatalogEntry.entry_key == entry_key,
+        )
+        result = await session.execute(
+            update(WorldCatalogEntry)
+            .where(*filters)
+            .values(
+                label=label,
+                priority=priority,
+                enabled=enabled,
+                updated_at=utc_now(),
+            )
+        )
+        if result.rowcount:
+            return await session.scalar(select(WorldCatalogEntry).where(*filters))  # type: ignore[return-value]
+
+        try:
+            async with session.begin_nested():
+                entry = WorldCatalogEntry(
+                    bot_identity=identity,
+                    entry_type=entry_type,
+                    entry_key=entry_key,
+                    label=label,
+                    priority=priority,
+                    enabled=enabled,
+                )
+                session.add(entry)
+                await session.flush()
+        except IntegrityError:
+            result = await session.execute(
+                update(WorldCatalogEntry)
+                .where(*filters)
+                .values(
+                    label=label,
+                    priority=priority,
+                    enabled=enabled,
+                    updated_at=utc_now(),
+                )
+            )
+            if not result.rowcount:
+                raise
+
+        return await session.scalar(select(WorldCatalogEntry).where(*filters))  # type: ignore[return-value]
+
+    async def clear_user_statistics(
+        self,
+        session: AsyncSession,
+        *,
+        user_id: int,
+        bot_identity: BotIdentity | str | None = None,
+        chat_id: int | None = None,
+    ) -> int:
+        """Delete only the requesting user's user-scoped world statistics."""
+        from sqlalchemy import delete, or_
+
+        user_scope = or_(
+            (
+                (WorldUsageStat.scope_type == "user")
+                & (WorldUsageStat.scope_id == str(user_id))
+            ),
+            (
+                (WorldUsageStat.scope_type == "user_chat")
+                & (WorldUsageStat.scope_id.like(f"{user_id}:%"))
+            ),
+        )
+        conditions = [user_scope]
+        if bot_identity is not None:
+            conditions.append(WorldUsageStat.bot_identity == str(bot_identity))
+        if chat_id is not None:
+            conditions.append(WorldUsageStat.scope_type == "user_chat")
+            conditions.append(WorldUsageStat.scope_id == f"{user_id}:{chat_id}")
+
+        result = await session.execute(delete(WorldUsageStat).where(*conditions))
+        return int(result.rowcount or 0)
+
+    async def user_summary(
+        self,
+        session: AsyncSession,
+        *,
+        bot_identity: BotIdentity | str,
+        user_id: int,
+        chat_id: int | None = None,
+        limit: int = 20,
+    ) -> list[WorldUsageStat]:
+        scope_id = str(user_id) if chat_id is None else f"{user_id}:{chat_id}"
+        result = await session.scalars(
+            select(WorldUsageStat)
+            .where(
+                WorldUsageStat.bot_identity == str(bot_identity),
+                WorldUsageStat.scope_type == ("user" if chat_id is None else "user_chat"),
+                WorldUsageStat.scope_id == scope_id,
+            )
+            .order_by(desc(WorldUsageStat.count), desc(WorldUsageStat.last_seen_at))
+            .limit(limit)
+        )
+        return list(result)
+
+    async def insights(
+        self,
+        session: AsyncSession,
+        *,
+        bot_identity: BotIdentity | str,
+        limit: int = 10,
+    ) -> WorldInsight:
+        identity = str(bot_identity)
+        hot_rows = await session.execute(
+            select(WorldUsageStat.entry_key, func.sum(WorldUsageStat.count).label("uses"))
+            .where(
+                WorldUsageStat.bot_identity == identity,
+                WorldUsageStat.scope_type == "world",
+            )
+            .group_by(WorldUsageStat.entry_key)
+            .order_by(desc("uses"), WorldUsageStat.entry_key.asc())
+            .limit(limit)
+        )
+        hot = [(key, int(uses)) for key, uses in hot_rows.all()]
+
+        cold_rows = await session.execute(
+            select(WorldUsageStat.entry_key, func.sum(WorldUsageStat.count).label("uses"))
+            .where(
+                WorldUsageStat.bot_identity == identity,
+                WorldUsageStat.scope_type == "world",
+            )
+            .group_by(WorldUsageStat.entry_key)
+            .order_by(func.sum(WorldUsageStat.count).asc(), WorldUsageStat.entry_key.asc())
+            .limit(limit)
+        )
+        cold = [(key, int(uses)) for key, uses in cold_rows.all()]
+
+        used_keys = select(WorldUsageStat.entry_key).where(
+            WorldUsageStat.bot_identity == identity,
+            WorldUsageStat.scope_type == "world",
+        )
+        unseen_rows = await session.execute(
+            select(WorldCatalogEntry.entry_key, WorldCatalogEntry.label)
+            .where(
+                WorldCatalogEntry.bot_identity == identity,
+                WorldCatalogEntry.enabled.is_(True),
+                ~WorldCatalogEntry.entry_key.in_(used_keys),
+            )
+            .order_by(desc(WorldCatalogEntry.priority), WorldCatalogEntry.entry_key.asc())
+            .limit(limit)
+        )
+        unseen = [(key, label) for key, label in unseen_rows.all()]
+        return WorldInsight(hot=hot, cold=cold, unseen=unseen)

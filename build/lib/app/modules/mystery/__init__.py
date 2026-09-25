@@ -1,0 +1,1 @@
+"""Cami mystery game module."""

@@ -1,0 +1,643 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+import threading
+import uuid
+import re
+from collections.abc import Callable
+from pathlib import Path
+from urllib.parse import urljoin
+
+from aiohttp import web
+from aiogram import Bot
+from pydantic import ValidationError
+from sqlalchemy import select
+
+from app.api.dtos import (
+    CombatActionDTO,
+    CombatAssetContractDTO,
+    CombatFighterDTO,
+    CombatInitDTO,
+    InvoiceRequestDTO,
+    SpriteAssetDTO,
+    TurnResultDTO,
+)
+from app.api.tma_auth import TmaAuthContext, TmaAuthError, init_data_from_request, validate_init_data
+from app.api.tma_payments import TmaStarsService
+from app.core.access import is_authorized_community
+from app.core.config import Settings
+from app.core.identity import BotIdentity
+from app.db.database import Database
+from app.db.community_models import SetupSession
+from app.db.models import GameCollection, GameItemInventory, GameProfile
+from app.game.catalog import CHARACTERS, get_character
+from app.game.card_definitions import (
+    CardDefinitionService,
+    safe_card_filename,
+    validate_image_bytes,
+)
+from app.game.java_engine import WaifuMonJavaEngine
+
+logger = logging.getLogger(__name__)
+
+TMA_API_VERSION = "1.0"
+SPRITE_SIZE = 128
+SPRITE_POSES = ("idle", "attack", "hit")
+DEFAULT_FRONTEND_BASE = "https://eltiootaku01-hue.github.io/bot-telegram"
+
+
+def _origins(settings: Settings) -> frozenset[str]:
+    return frozenset(
+        origin.strip().rstrip("/")
+        for origin in settings.tma_allowed_origins.split(",")
+        if origin.strip()
+    )
+
+
+def _json_error(status: int, code: str, message: str) -> web.Response:
+    return web.json_response({"error": code, "message": message}, status=status)
+
+
+def _asset_base(settings: Settings) -> str:
+    base = settings.tma_frontend_base_url.strip() or DEFAULT_FRONTEND_BASE
+    return base.rstrip("/") + "/"
+
+
+def _asset_urls(settings: Settings, character_id: str) -> tuple[str, SpriteAssetDTO]:
+    base = _asset_base(settings)
+    card = urljoin(base, f"assets/production/cards/{character_id}--normal.jpg")
+    sprites = SpriteAssetDTO(
+        idle=urljoin(base, f"assets/production/sprites/{character_id}_idle.png"),
+        attack=urljoin(base, f"assets/production/sprites/{character_id}_attack.png"),
+        hit=urljoin(base, f"assets/production/sprites/{character_id}_hit.png"),
+    )
+    return card, sprites
+
+
+def _fighter(settings: Settings, character_id: str, *, team: str, level: int = 1) -> CombatFighterDTO:
+    character = get_character(character_id)
+    card_url, sprites = _asset_urls(settings, character.id)
+    return CombatFighterDTO(
+        id=character.id,
+        name=character.name,
+        anime=character.anime,
+        rarity=character.rarity.value,
+        level=max(1, min(30, int(level))),
+        team=team,
+        card_url=card_url,
+        sprites=sprites,
+    )
+
+
+class TmaCombatService:
+    def __init__(
+        self,
+        database: Database,
+        settings: Settings,
+        engine: WaifuMonJavaEngine | None,
+    ) -> None:
+        self.database = database
+        self.settings = settings
+        self.engine = engine
+        self._owns_engine = engine is None
+
+    def _engine_client(self) -> WaifuMonJavaEngine:
+        if self.engine is None:
+            self.engine = WaifuMonJavaEngine()
+        return self.engine
+
+    def close(self) -> None:
+        if self._owns_engine and self.engine is not None:
+            self.engine.close()
+            self.engine = None
+
+    async def community_id(self) -> int:
+        async with self.database.session() as session:
+            setup = await session.scalar(
+                select(SetupSession.chat_id)
+                .where(
+                    SetupSession.bot_identity == BotIdentity.CHIE.value,
+                    SetupSession.status == "configured",
+                )
+                .order_by(SetupSession.id.desc())
+            )
+        if setup is None:
+            raise web.HTTPConflict(
+                text='{"error":"COMMUNITY_NOT_CONFIGURED","message":"No hay una comunidad configurada."}',
+                content_type="application/json",
+            )
+        chat_id = int(setup)
+        if not is_authorized_community(self.settings, chat_id):
+            raise web.HTTPForbidden(
+                text='{"error":"COMMUNITY_NOT_AUTHORIZED","message":"La comunidad configurada no está autorizada."}',
+                content_type="application/json",
+            )
+        return chat_id
+
+    async def init(self, context: TmaAuthContext) -> CombatInitDTO:
+        community_id = await self.community_id()
+        async with self.database.session() as session:
+            profile = await session.scalar(
+                select(GameProfile).where(
+                    GameProfile.user_id == context.user.id,
+                    GameProfile.chat_id == community_id,
+                )
+            )
+            profile_id = profile.id if profile is not None else None
+            owned_rows = []
+            premium_tickets = 0
+            coins = profile.coins if profile is not None else 0
+            if profile_id is not None:
+                owned_rows = list(
+                    await session.scalars(
+                        select(GameCollection)
+                        .where(GameCollection.profile_id == profile_id)
+                        .order_by(GameCollection.level.desc(), GameCollection.character_id.asc())
+                        .limit(3)
+                    )
+                )
+                ticket_row = await session.scalar(
+                    select(GameItemInventory).where(
+                        GameItemInventory.profile_id == profile_id,
+                        GameItemInventory.item_key == "premium_ticket",
+                    )
+                )
+                premium_tickets = ticket_row.quantity if ticket_row is not None else 0
+
+        team = [
+            _fighter(self.settings, row.character_id, team="player", level=row.level)
+            for row in owned_rows
+            if row.character_id in CHARACTERS
+        ]
+        if not team:
+            # Deterministic tutorial fighter; it is explicitly marked as demo.
+            team = [_fighter(self.settings, "taiga", team="player", level=1)]
+
+        opponent_ids = [
+            character_id
+            for character_id in sorted(CHARACTERS)
+            if character_id not in {fighter.id for fighter in team}
+        ]
+        opponents = [
+            _fighter(self.settings, character_id, team="enemy", level=1)
+            for character_id in opponent_ids[:3]
+        ]
+        if not opponents:
+            opponents = [_fighter(self.settings, team[0].id, team="enemy", level=1)]
+
+        return CombatInitDTO(
+            contract_version=TMA_API_VERSION,
+            player_id=context.user.id,
+            community_id=community_id,
+            premium_tickets=premium_tickets,
+            coins=coins,
+            asset_contract=CombatAssetContractDTO(
+                card_directory=f"{_asset_base(self.settings)}assets/production/cards/",
+                sprite_directory=f"{_asset_base(self.settings)}assets/production/sprites/",
+                sprite_size=SPRITE_SIZE,
+                sprite_poses=list(SPRITE_POSES),
+                card_pattern="<character-id>--normal.jpg",
+                sprite_pattern="<character-id>_<idle|attack|hit>.png",
+                cut_in_duration_ms=1500,
+            ),
+            team=team,
+            opponents=opponents,
+        )
+
+    async def action(self, context: TmaAuthContext, dto: CombatActionDTO) -> TurnResultDTO:
+        community_id = await self.community_id()
+        async with self.database.session() as session:
+            profile_id = await session.scalar(
+                select(GameProfile.id).where(
+                    GameProfile.user_id == context.user.id,
+                    GameProfile.chat_id == community_id,
+                )
+            )
+            owned_row = None
+            has_any_collection = False
+            if profile_id is not None:
+                owned_row = await session.scalar(
+                    select(GameCollection)
+                    .where(
+                        GameCollection.profile_id == profile_id,
+                        GameCollection.character_id == dto.attacker_id,
+                    )
+                    .limit(1)
+                )
+                has_any_collection = (
+                    await session.scalar(
+                        select(GameCollection.id)
+                        .where(GameCollection.profile_id == profile_id)
+                        .limit(1)
+                    )
+                ) is not None
+
+        tutorial_allowed = dto.attacker_id == "taiga" and not has_any_collection
+        if owned_row is None and not tutorial_allowed:
+            raise web.HTTPForbidden(
+                text='{"error":"ATTACKER_NOT_OWNED","message":"El atacante no pertenece al equipo del jugador."}',
+                content_type="application/json",
+            )
+        if dto.attacker_id not in CHARACTERS or dto.defender_id not in CHARACTERS:
+            raise web.HTTPBadRequest(
+                text='{"error":"UNKNOWN_FIGHTER","message":"Combatiente inválido."}',
+                content_type="application/json",
+            )
+
+        attacker = _fighter(
+            self.settings,
+            dto.attacker_id,
+            team="player",
+            level=int(owned_row.level) if owned_row is not None else 1,
+        )
+        defender = _fighter(self.settings, dto.defender_id, team="enemy")
+        server_key = f"tma:{context.user.id}:{community_id}:{dto.idempotency_key}"
+        result = await self._engine_client().combat_async(
+            attacker={
+                "id": attacker.id,
+                "name": attacker.name,
+                "rarity": attacker.rarity,
+                "level": attacker.level,
+                "element_type": get_character(attacker.id).element.value,
+                "power_score": get_character(attacker.id).power_score,
+            },
+            defender={
+                "id": defender.id,
+                "name": defender.name,
+                "rarity": defender.rarity,
+                "level": defender.level,
+                "element_type": get_character(defender.id).element.value,
+                "power_score": get_character(defender.id).power_score,
+            },
+            action=dto.action,
+            turn_id=dto.turn_id,
+            player_id=context.user.id,
+            community_id=community_id,
+            idempotency_key=server_key,
+        )
+        return TurnResultDTO(
+            contract_version=TMA_API_VERSION,
+            request_id=uuid.uuid4().hex,
+            turn_id=dto.turn_id,
+            attacker=result.attacker,
+            defender=result.defender,
+            action=result.action.key,
+            damage=result.damage,
+            critical=result.critical,
+            defender_hp=result.defender_hp,
+            defender_max_hp=100,
+            state_version=result.state_version,
+            event_ids=list(result.event_ids),
+            reward_ids=list(result.reward_ids),
+        )
+
+
+COMBAT_SERVICE_KEY = web.AppKey("combat_service", TmaCombatService)
+SETTINGS_KEY = web.AppKey("settings", Settings)
+DATABASE_KEY = web.AppKey("database", Database)
+STARS_SERVICE_KEY = web.AppKey("stars_service", TmaStarsService)
+TMA_CONTEXT_KEY = web.RequestKey("tma_context", TmaAuthContext)
+CARD_SERVICE_KEY = web.AppKey("card_service", CardDefinitionService)
+
+
+class TmaApiServer:
+    """Non-blocking aiohttp server owned by Bot Manager."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        database: Database | None = None,
+        engine: WaifuMonJavaEngine | None = None,
+    ) -> None:
+        self.settings = settings
+        self.database = database
+        self.engine = engine
+        self._thread: threading.Thread | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._stop_event: asyncio.Event | None = None
+        self._ready = threading.Event()
+        self._error: BaseException | None = None
+
+    def start(self) -> None:
+        if self._thread is not None and self._thread.is_alive():
+            return
+        self._ready.clear()
+        self._error = None
+        self._thread = threading.Thread(
+            target=self._thread_main,
+            name="tma-api-server",
+            daemon=True,
+        )
+        self._thread.start()
+        if not self._ready.wait(timeout=5):
+            raise RuntimeError("TMA API server did not become ready")
+        if self._error is not None:
+            raise RuntimeError(f"TMA API server failed to start: {self._error}") from self._error
+
+    def stop(self) -> None:
+        loop = self._loop
+        stop_event = self._stop_event
+        thread = self._thread
+        if loop is not None and stop_event is not None:
+            loop.call_soon_threadsafe(stop_event.set)
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=5)
+        self._thread = None
+        self._loop = None
+        self._stop_event = None
+
+    def _thread_main(self) -> None:
+        loop = asyncio.new_event_loop()
+        self._loop = loop
+        asyncio.set_event_loop(loop)
+        self._stop_event = asyncio.Event()
+        try:
+            loop.run_until_complete(self._serve())
+        except BaseException as exc:
+            self._error = exc
+            self._ready.set()
+            logger.exception("TMA API server stopped with an error")
+        finally:
+            loop.close()
+            self._loop = None
+
+    async def _serve(self) -> None:
+        database = self.database or Database(self.settings.database_url)
+        await database.create_schema()
+        engine = self.engine
+        app = create_tma_app(self.settings, database, engine)
+
+        runner = web.AppRunner(app, access_log=logger)
+        await runner.setup()
+        site = web.TCPSite(runner, host=self.settings.tma_api_host, port=self.settings.tma_api_port)
+        await site.start()
+        self._ready.set()
+        logger.info("TMA API listening on %s:%s", self.settings.tma_api_host, self.settings.tma_api_port)
+
+        assert self._stop_event is not None
+        try:
+            await self._stop_event.wait()
+        finally:
+            await runner.cleanup()
+            app[COMBAT_SERVICE_KEY].close()
+            if self.database is None:
+                await database.close()
+
+
+def create_tma_app(
+    settings: Settings,
+    database: Database,
+    engine: WaifuMonJavaEngine | None,
+    *,
+    invoice_bot_factory: Callable[[str], Bot] | None = None,
+) -> web.Application:
+    combat_service = TmaCombatService(database, settings, engine)
+    app = web.Application(
+        middlewares=[_tma_middleware(settings)],
+        client_max_size=max(1_048_576, settings.card_upload_max_bytes + 1_048_576),
+    )
+    app[SETTINGS_KEY] = settings
+    app[DATABASE_KEY] = database
+    app[COMBAT_SERVICE_KEY] = combat_service
+    app[STARS_SERVICE_KEY] = TmaStarsService(settings, bot_factory=invoice_bot_factory)
+    app[CARD_SERVICE_KEY] = CardDefinitionService(settings)
+    app.router.add_get("/api/combat/init", _combat_init)
+    app.router.add_post("/api/combat/action", _combat_action)
+    app.router.add_post("/api/store/invoice", _create_invoice)
+    app.router.add_get("/api/admin/cards", _admin_cards)
+    app.router.add_post("/api/admin/cards", _create_card)
+    app.router.add_get("/api/cards/assets/{filename}", _card_asset)
+    return app
+
+
+def _tma_middleware(settings: Settings):
+    @web.middleware
+    async def middleware(request: web.Request, handler):
+        if request.path.startswith("/api/cards/assets/"):
+            response = await handler(request)
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            return response
+        origin = request.headers.get("Origin")
+        allowed_origins = _origins(settings)
+        if origin and origin.rstrip("/") not in allowed_origins:
+            return _json_error(403, "ORIGIN_NOT_ALLOWED", "Origen no autorizado.")
+        if request.method == "OPTIONS":
+            response = web.Response(status=204)
+        else:
+            try:
+                init_data = init_data_from_request(request)
+                context = validate_init_data(
+                    init_data,
+                    settings.token_for(settings.tma_bot_identity.value),
+                    max_age_seconds=settings.tma_init_data_max_age_seconds,
+                )
+            except (TmaAuthError, ValueError):
+                return _json_error(401, "INVALID_TMA_AUTH", "Telegram initData no es válida.")
+            request[TMA_CONTEXT_KEY] = context
+            response = await handler(request)
+
+        if origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Vary"] = "Origin"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Telegram-Init-Data, Authorization"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
+
+    return middleware
+
+
+async def _combat_init(request: web.Request) -> web.Response:
+    result = await request.app[COMBAT_SERVICE_KEY].init(request[TMA_CONTEXT_KEY])
+    return web.json_response(result.model_dump(mode="json"))
+
+
+async def _combat_action(request: web.Request) -> web.Response:
+    try:
+        payload = await request.json()
+        dto = CombatActionDTO.model_validate(payload)
+    except (ValueError, ValidationError):
+        return _json_error(400, "INVALID_BODY", "Cuerpo JSON de combate inválido.")
+    try:
+        result = await request.app[COMBAT_SERVICE_KEY].action(request[TMA_CONTEXT_KEY], dto)
+    except web.HTTPException as exc:
+        return exc
+    except ValueError as exc:
+        return _json_error(409, "ENGINE_REJECTED", str(exc))
+    except RuntimeError:
+        logger.exception("WaifuMon Java engine failed")
+        return _json_error(503, "ENGINE_UNAVAILABLE", "El motor de combate no está disponible.")
+    return web.json_response(result.model_dump(mode="json"))
+
+
+async def _create_invoice(request: web.Request) -> web.Response:
+    try:
+        dto = InvoiceRequestDTO.model_validate(await request.json())
+    except (ValueError, ValidationError):
+        return _json_error(400, "INVALID_BODY", "Producto inválido.")
+
+    try:
+        response = await request.app[STARS_SERVICE_KEY].create_invoice_link(
+            request[TMA_CONTEXT_KEY],
+            product=dto.product,
+        )
+    except RuntimeError as exc:
+        return _json_error(503, "PAYMENTS_UNAVAILABLE", str(exc))
+    except ValueError as exc:
+        return _json_error(400, "INVALID_PRODUCT", str(exc))
+    return web.json_response(response.model_dump(mode="json"))
+
+
+def _require_admin(request: web.Request) -> TmaAuthContext:
+    context = request[TMA_CONTEXT_KEY]
+    settings = request.app[SETTINGS_KEY]
+    if not settings.admin_user_id or context.user.id != settings.admin_user_id:
+        raise web.HTTPForbidden(
+            text='{"error":"ADMIN_REQUIRED","message":"Solo el administrador configurado puede gestionar cartas."}',
+            content_type="application/json",
+        )
+    return context
+
+
+async def _admin_cards(request: web.Request) -> web.Response:
+    _require_admin(request)
+    service = request.app[CARD_SERVICE_KEY]
+    async with request.app[DATABASE_KEY].session() as session:
+        cards = await service.active_definitions(session)
+    return web.json_response(
+        {
+            "cards": [
+                {
+                    "id": card.id,
+                    "character_id": card.character_id,
+                    "character_name": card.character_name,
+                    "anime_origin": card.anime_origin,
+                    "rarity": card.rarity,
+                    "image_url": card.image_url,
+                    "image_endpoint": f"/api/cards/assets/{card.image_url.rsplit("/", 1)[-1]}",
+                    "source_provider": card.source_provider,
+                    "collection_points": card.collection_points,
+                    "active": card.active,
+                }
+                for card in cards
+            ]
+        }
+    )
+
+
+async def _create_card(request: web.Request) -> web.Response:
+    _require_admin(request)
+    settings = request.app[SETTINGS_KEY]
+    character_name = ""
+    character_id = ""
+    anime_origin = ""
+    rarity = ""
+    source_provider = "IA (PixAI/Midjourney)"
+    collection_points_raw = "150"
+    image_data: bytes | None = None
+    image_filename = "card"
+    image_content_type = ""
+
+    try:
+        reader = await request.multipart()
+        async for part in reader:
+            if part.name in {"image", "card-image"} and part.filename:
+                image_filename = part.filename
+                image_content_type = part.headers.get("Content-Type", "").split(";")[0].lower()
+                image_data = await part.read(decode=False)
+                continue
+            value = (await part.text()).strip()
+            if part.name == "character-name":
+                character_name = value
+            elif part.name == "character-id":
+                character_id = value
+            elif part.name == "anime-origin":
+                anime_origin = value
+            elif part.name == "rarity":
+                rarity = value.upper()
+            elif part.name == "source-provider":
+                source_provider = value or source_provider
+            elif part.name == "collection-points":
+                collection_points_raw = value or "0"
+    except (ValueError, web.HTTPBadRequest) as exc:
+        return _json_error(400, "INVALID_MULTIPART", f"Formulario inválido: {exc}")
+
+    if image_data is None:
+        return _json_error(400, "IMAGE_REQUIRED", "La imagen de la carta es obligatoria.")
+    if len(image_data) > settings.card_upload_max_bytes:
+        return _json_error(413, "IMAGE_TOO_LARGE", "La imagen supera el tamaño máximo permitido.")
+    try:
+        validate_image_bytes(image_data, image_content_type)
+        collection_points = int(collection_points_raw)
+    except ValueError as exc:
+        return _json_error(400, "INVALID_CARD", str(exc))
+
+    filename = safe_card_filename(image_filename, image_content_type)
+    asset_dir = Path(settings.card_assets_dir).resolve()
+    asset_dir.mkdir(parents=True, exist_ok=True)
+    target = (asset_dir / filename).resolve()
+    if target.parent != asset_dir:
+        return _json_error(400, "INVALID_IMAGE_NAME", "Nombre de archivo inválido.")
+
+    await asyncio.to_thread(target.write_bytes, image_data)
+    service = request.app[CARD_SERVICE_KEY]
+    try:
+        async with request.app[DATABASE_KEY].session(write=True) as session:
+            card = await service.create_definition(
+                session,
+                character_name=character_name,
+                character_id=character_id or None,
+                anime_origin=anime_origin,
+                rarity=rarity,
+                source_provider=source_provider,
+                collection_points=collection_points,
+                image_filename=filename,
+            )
+    except (ValueError, RuntimeError) as exc:
+        try:
+            target.unlink(missing_ok=True)
+        except OSError:
+            logger.exception("Could not remove rejected card asset %s", target)
+        return _json_error(400, "CARD_CREATE_FAILED", str(exc))
+
+    return web.json_response(
+        {
+            "id": card.id,
+            "character_id": card.character_id,
+            "character_name": card.character_name,
+            "anime_origin": card.anime_origin,
+            "rarity": card.rarity,
+            "image_url": card.image_url,
+            "source_provider": card.source_provider,
+            "collection_points": card.collection_points,
+            "active": card.active,
+        },
+        status=201,
+    )
+
+
+async def _card_asset(request: web.Request) -> web.Response:
+    filename = request.match_info["filename"]
+    if (
+        "/" in filename
+        or "\\" in filename
+        or filename in {"", ".", ".."}
+        or not re.fullmatch(r"[A-Za-z0-9_-]+\.(?:jpg|png|webp)", filename, re.IGNORECASE)
+    ):
+        return _json_error(400, "INVALID_ASSET", "Asset inválido.")
+    root = Path(request.app[SETTINGS_KEY].card_assets_dir).resolve()
+    target = (root / filename).resolve()
+    if target.parent != root or not target.is_file():
+        raise web.HTTPNotFound()
+    content_type = {
+        ".jpg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }[target.suffix.lower()]
+    data = await asyncio.to_thread(target.read_bytes)
+    return web.Response(body=data, content_type=content_type)

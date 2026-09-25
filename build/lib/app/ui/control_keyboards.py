@@ -1,0 +1,207 @@
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+
+def chie_start_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="🚀 Empezar a trabajar", callback_data="chie:setup:start"))
+    return builder.as_markup()
+
+
+def chie_setup_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="📌 Ya me agregaste de admin", callback_data="chie:setup:check"))
+    builder.row(InlineKeyboardButton(text="❌ Cancelar", callback_data="chie:setup:cancel"))
+    return builder.as_markup()
+
+
+def command_hub_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="👋 Comunidad", callback_data="chie:hub:community"),
+        InlineKeyboardButton(text="🎮 Juegos", callback_data="chie:hub:games"),
+    )
+    builder.row(
+        InlineKeyboardButton(text="📰 Contenido", callback_data="chie:hub:content"),
+        InlineKeyboardButton(text="💰 Puntos", callback_data="chie:hub:points"),
+    )
+    builder.row(InlineKeyboardButton(text="🎨 Pedir imagen", callback_data="chie:request:start"))
+    builder.row(InlineKeyboardButton(text="⚙️ Configuración", callback_data="chie:hub:config"))
+    return builder.as_markup()
+
+
+def chie_request_cancel_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="❌ Cancelar pedido", callback_data="chie:request:cancel"))
+    return builder.as_markup()
+
+
+def rare_approval_keyboard(approval_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✅ Aprobar",
+            callback_data=f"admin:rare:approve:{approval_id}",
+        ),
+        InlineKeyboardButton(
+            text="❌ Rechazar",
+            callback_data=f"admin:rare:reject:{approval_id}",
+        ),
+    )
+    return builder.as_markup()
+
+
+def world_proposal_keyboard(proposal_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✅ Aceptar idea",
+            callback_data=f"chie:world-proposal:accept:{proposal_id}",
+        ),
+        InlineKeyboardButton(
+            text="❌ Rechazar idea",
+            callback_data=f"chie:world-proposal:reject:{proposal_id}",
+        ),
+    )
+    return builder.as_markup()
+
+
+
+def gift_delivery_recovery_keyboard(drop_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✅ Confirmar publicación",
+            callback_data=f"admin:gift:confirm:{drop_id}",
+        ),
+        InlineKeyboardButton(
+            text="🔁 Reencolar",
+            callback_data=f"admin:gift:requeue:{drop_id}",
+        ),
+    )
+    return builder.as_markup()
+
+def tio_operator_request_keyboard(request_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="📋 Ver contexto",
+            callback_data=f"tio:request:view:{request_id}",
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="📝 Recibido",
+            callback_data=f"tio:request:ack:{request_id}",
+        ),
+        InlineKeyboardButton(
+            text="✅ Resuelto",
+            callback_data=f"tio:request:resolve:{request_id}",
+        ),
+    )
+    return builder.as_markup()
+
+
+def tio_operator_resolve_keyboard(request_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="📋 Ver contexto",
+            callback_data=f"tio:request:view:{request_id}",
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="✅ Resuelto",
+            callback_data=f"tio:request:resolve:{request_id}",
+        ),
+    )
+    return builder.as_markup()
+
+
+def tio_operator_history_keyboard(
+    request_ids: list[int],
+    *,
+    page: int = 1,
+    has_previous: bool = False,
+    has_next: bool = False,
+) -> InlineKeyboardMarkup:
+    """Compact history list with deterministic previous/next navigation."""
+    if page <= 0:
+        raise ValueError("history page must be positive")
+
+    builder = InlineKeyboardBuilder()
+    for request_id in request_ids:
+        builder.add(
+            InlineKeyboardButton(
+                text=f"📋 #{request_id}",
+                callback_data=f"tio:request:view:{request_id}",
+            )
+        )
+    builder.adjust(4)
+
+    navigation: list[InlineKeyboardButton] = []
+    if has_previous:
+        navigation.append(
+            InlineKeyboardButton(
+                text="⬅️ Anteriores",
+                callback_data=f"tio:history:page:{page - 1}",
+            )
+        )
+    if has_next:
+        navigation.append(
+            InlineKeyboardButton(
+                text="Siguientes ➡️",
+                callback_data=f"tio:history:page:{page + 1}",
+            )
+        )
+    if navigation:
+        builder.row(*navigation)
+
+    return builder.as_markup()
+
+
+def command_hub_detail_keyboard() -> InlineKeyboardMarkup:
+    """Navigation controls for a Chie hub section."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="⬅️ Panel principal", callback_data="chie:hub:home"),
+        InlineKeyboardButton(text="📖 Ayuda de Chie", callback_data="help:chie:commands"),
+    )
+    return builder.as_markup()
+
+def chie_human_verification_keyboard(user_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="🤖 Sí, soy un bot",
+            callback_data=f"chie:verify:yes:{user_id}",
+        ),
+        InlineKeyboardButton(
+            text="👤 No, soy una persona",
+            callback_data=f"chie:verify:no:{user_id}",
+        ),
+    )
+    return builder.as_markup()
+
+
+def world_event_recovery_keyboard(event_id: int) -> InlineKeyboardMarkup:
+    """Operator controls for an ambiguous world-event delivery."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="📋 Ver evento",
+            callback_data=f"world:recovery:view:{event_id}",
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🔁 Reencolar",
+            callback_data=f"world:recovery:retry:{event_id}",
+        ),
+        InlineKeyboardButton(
+            text="❌ Cancelar",
+            callback_data=f"world:recovery:cancel:{event_id}",
+        ),
+    )
+    return builder.as_markup()

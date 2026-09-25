@@ -1,0 +1,315 @@
+from __future__ import annotations
+
+import hashlib
+from html import escape
+
+from aiogram import F
+from aiogram.filters import Command
+from aiogram.types import CallbackQuery, Message
+
+from app.core.identity import BotIdentity
+from app.core.config import Settings
+from app.core.module import BotModule
+from app.core.time import utc_now, world_now
+from app.db.database import Database
+from app.db.models import Chat
+from app.services.cafe_events import CafeEventService
+from app.services.cafe_context import CafeContextService
+from app.services.world import WorldService
+from app.ui.cafe_keyboards import cafe_menu_keyboard
+
+
+CAFE_MENU: tuple[tuple[str, str], ...] = (
+    ("☕ Café y bebidas", "Jugos, café y una mesa tranquila para quedarse un rato."),
+    ("📚 Anime y manga", "Cari puede charlar y derivar consultas al personaje adecuado."),
+    ("🎮 Zona de juegos", "Sunna mantiene la zona de juegos y WaifuMon."),
+    ("📦 Archivo y publicaciones", "Cami mantiene el material y las publicaciones."),
+    ("📋 Recepción y reglas", "Chie organiza avisos, permisos y coordinación."),
+    ("🧠 Trivia", "Cari mantiene la trivia de anime de la comunidad."),
+    ("🎨 Pedidos", "La comunidad puede usar puntos para solicitar material mediante Chie."),
+)
+
+
+DAILY_RECOMMENDATIONS: tuple[tuple[str, str], ...] = (
+    ("Sword Art Online", "Una opción para una sesión de acción y aventura."),
+    ("Frieren", "Una opción para una sesión tranquila y contemplativa."),
+    ("SPY x FAMILY", "Una opción ligera para compartir en grupo."),
+    ("Kaguya-sama: Love Is War", "Una opción para una tarde de comedia y juegos."),
+    ("Violet Evergarden", "Una opción para una sesión más emotiva."),
+)
+
+
+class CafeModule(BotModule):
+    """Deterministic Café Otaku host surface owned by Cari."""
+
+    name = "cafe"
+
+    def __init__(
+        self,
+        database: Database,
+        timezone_name: str = "America/Argentina/Buenos_Aires",
+        settings: Settings | None = None,
+    ) -> None:
+        super().__init__()
+        self.database = database
+        self.settings = settings or Settings(bot_world_timezone=timezone_name)
+        self.timezone_name = self.settings.bot_world_timezone
+        self.world = WorldService()
+        self.events = CafeEventService()
+        self.context = CafeContextService()
+
+    def setup(self) -> None:
+        self.router.message.register(self.cafe, Command("cafe"))
+        self.router.message.register(self.cafe, Command("menu"))
+        self.router.message.register(self.recommendation, Command("recomendacion"))
+        self.router.callback_query.register(
+            self.recommendation_callback,
+            F.data == "cafe:recommendation",
+        )
+        self.router.callback_query.register(
+            self.cafe_menu_callback,
+            F.data == "cafe:menu",
+        )
+        self.router.callback_query.register(
+            self.event_callback,
+            F.data == "cafe:event:open",
+        )
+        self.router.message.register(self.event_command, Command("evento"))
+        self.router.callback_query.register(
+            self.context_callback,
+            F.data == "cafe:context:open",
+        )
+        self.router.message.register(self.context_command, Command("momento"))
+
+    async def _observe(self, action_key: str, message: Message) -> None:
+        if message.from_user is None:
+            return
+        try:
+            async with self.database.session() as session:
+                await self.world.observe_action(
+                    session,
+                    bot_identity=BotIdentity.CARI,
+                    action_key=action_key,
+                    user_id=message.from_user.id,
+                    chat_id=message.chat.id,
+                )
+        except Exception:
+            # World telemetry is intentionally non-critical to the user-facing path.
+            return
+
+    async def cafe(self, message: Message) -> None:
+        lines = [
+            "☕ <b>Café Otaku</b>",
+            "",
+            "Bienvenido. Este es el punto de encuentro de Ciudad Animals.",
+            "",
+            "<b>Disponible ahora:</b>",
+        ]
+        lines.extend(f"• <b>{escape(name)}</b> — {escape(description)}" for name, description in CAFE_MENU)
+        lines.extend(
+            (
+                "",
+                "🎀 Podés usar <code>/recomendacion</code> para pedir una recomendación del día.",
+                "🎮 Los juegos y WaifuMon se abren desde Sunna.",
+                "🌤️ <code>/momento</code> muestra una escena contextual según el estado del Café.",
+                "📚 El archivo de material se consulta con Cami.",
+            )
+        )
+        await message.answer(
+            "\n".join(lines),
+            reply_markup=cafe_menu_keyboard(self.settings),
+        )
+        await self._observe("cafe_menu", message)
+
+    async def cafe_menu_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None:
+            await callback.answer("No pude abrir el Café.", show_alert=True)
+            return
+        lines = [
+            "☕ <b>Café Otaku</b>",
+            "",
+            "Bienvenido. Este es el punto de encuentro de Ciudad Animals.",
+            "",
+            "<b>Disponible ahora:</b>",
+        ]
+        lines.extend(
+            f"• <b>{escape(name)}</b> — {escape(description)}"
+            for name, description in CAFE_MENU
+        )
+        lines.extend(
+            (
+                "",
+                "🎀 <code>/recomendacion</code> — recomendación del día.",
+                "📖 <code>/historia</code> — arco narrativo del Café.",
+                "🌤️ <code>/momento</code> — escena contextual.",
+            )
+        )
+        await callback.message.edit_text(
+            "\n".join(lines),
+            reply_markup=cafe_menu_keyboard(self.settings),
+        )
+        if callback.from_user is not None:
+            await self._observe("cafe_menu", callback.message)
+
+        await callback.answer()
+
+    async def recommendation_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None or callback.from_user is None:
+            await callback.answer("No pude abrir la recomendación.", show_alert=True)
+            return
+        await self.recommendation(callback.message)
+        await callback.answer()
+
+
+    async def context_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None or callback.from_user is None:
+            await callback.answer("No pude abrir el momento.", show_alert=True)
+            return
+        await self.context_command(callback.message, user_id=callback.from_user.id)
+        await callback.answer()
+
+    async def context_command(
+        self,
+        message: Message,
+        *,
+        user_id: int | None = None,
+    ) -> None:
+        async with self.database.session() as session:
+            moment = await self.context.moment(
+                session,
+                chat_id=message.chat.id,
+                timezone_name=self.timezone_name,
+            )
+
+        await message.answer(
+            f"🌤️ <b>{moment.speaker.value.title()}</b>\n\n"
+            f"{moment.text}\n\n"
+            "Momento contextual del Café; refleja el estado actual y no modifica el canon."
+        )
+
+        actor_id = user_id or (message.from_user.id if message.from_user else 0)
+        if actor_id == 0:
+            return
+        try:
+            async with self.database.session() as session:
+                await self.world.observe_action(
+                    session,
+                    bot_identity=moment.speaker,
+                    action_key="context_moment",
+                    user_id=actor_id,
+                    chat_id=message.chat.id,
+                )
+        except Exception:
+            pass
+    async def event_callback(self, callback: CallbackQuery) -> None:
+        if callback.message is None or callback.from_user is None:
+            await callback.answer("No pude abrir el evento.", show_alert=True)
+            return
+        await self.event_command(callback.message, user_id=callback.from_user.id)
+        await callback.answer()
+
+    async def event_command(self, message: Message, *, user_id: int | None = None) -> None:
+        day_key = world_now(self.timezone_name).date().isoformat()
+        async with self.database.session(write=True) as session:
+            await self.events.expire_old(session, chat_id=message.chat.id)
+            started = await self.events.start_event(
+                session,
+                chat_id=message.chat.id,
+                day_key=day_key,
+            )
+            already_published = (
+                started.round.status == "published"
+                and started.round.message_id is not None
+            )
+            claimed = False if already_published else await self.events.claim_publication(
+                session,
+                round_id=started.round.id,
+            )
+
+        if already_published:
+            await message.answer(
+                "☀️ El evento de hoy ya fue publicado. Podés consultar el Café cuando quieras."
+            )
+            await self._observe_event_action(
+                message,
+                user_id=user_id,
+                action_key="daily_event_view",
+            )
+            return
+
+        if not claimed:
+            await message.answer(
+                "☀️ El evento de hoy ya se está publicando o quedó registrado."
+            )
+            await self._observe_event_action(
+                message,
+                user_id=user_id,
+                action_key="daily_event_view",
+            )
+            return
+
+        event_text = (
+            f"☀️ <b>Evento del Café — {escape(started.event.title)}</b>\n\n"
+            f"{escape(started.event.text)}\n\n"
+            "Este evento es cotidiano y no añade hechos al canon."
+        )
+
+        try:
+            sent = await message.answer(event_text)
+        except Exception:
+            async with self.database.session(write=True) as session:
+                await self.events.fail_publication(
+                    session,
+                    round_id=started.round.id,
+                )
+            raise
+
+        async with self.database.session(write=True) as session:
+            await self.events.mark_published(
+                session,
+                round_id=started.round.id,
+                message_id=sent.message_id,
+            )
+            chat = await session.get(Chat, message.chat.id)
+            if chat is not None:
+                chat.last_social_event_at = utc_now()
+        await self._observe_event_action(
+            message,
+            user_id=user_id,
+            action_key="daily_event_open",
+        )
+
+    async def _observe_event_action(
+        self,
+        message: Message,
+        *,
+        user_id: int | None,
+        action_key: str,
+    ) -> None:
+        if user_id is None:
+            await self._observe(action_key, message)
+            return
+        try:
+            async with self.database.session() as session:
+                await self.world.observe_action(
+                    session,
+                    bot_identity=BotIdentity.CARI,
+                    action_key=action_key,
+                    user_id=user_id,
+                    chat_id=message.chat.id,
+                )
+        except Exception:
+            pass
+
+    async def recommendation(self, message: Message) -> None:
+        day_key = world_now(self.timezone_name).date().isoformat()
+        digest = hashlib.sha256(f"{day_key}:{message.chat.id}".encode("utf-8")).digest()
+        index = int.from_bytes(digest[:8], "big") % len(DAILY_RECOMMENDATIONS)
+        title, description = DAILY_RECOMMENDATIONS[index]
+        await message.answer(
+            "☕ <b>Recomendación de Cari</b>\n\n"
+            f"🎬 <b>{escape(title)}</b>\n"
+            f"{escape(description)}\n\n"
+            "Sin spoilers y sin cambiar el catálogo del proyecto."
+        )
+        await self._observe("daily_recommendation", message)

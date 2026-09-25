@@ -1,0 +1,7 @@
+[console_scripts]
+bot-manager = app.launcher:main
+card-vault = app.card_vault.server:main
+command-center = src.gui.main:main
+command-center-service = src.service.command_center_service:main
+community-telegram-multibot = app.multibot.main:main
+vault-admin = src.admin.vault_admin:main
