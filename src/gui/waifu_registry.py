@@ -184,6 +184,7 @@ def generate_tcg_prompt(record: WaifuRecord) -> str:
     category = record.card_category.strip() or "Waifu / TCG"
     lora_tags = normalize_lora_tags(record.lora_tags)
     lora_line = f"LoRA tags: {lora_tags}.\\n" if lora_tags else ""
+    danbooru_line = f"Danbooru character tag: {record.danbooru_tag.strip()}.\\n" if record.danbooru_tag.strip() else ""
     card_line = ""
     if category.casefold() in {"póker", "poker", "cartas de juego"}:
         number = record.card_number.strip() or "A"
@@ -201,6 +202,7 @@ def generate_tcg_prompt(record: WaifuRecord) -> str:
         "TCG / GAME CARD ART\\n"
         f"Category: {category}.\\n"
         f"Character: {name}.\\n"
+        f"{danbooru_line}"
         f"Personality / trope: {personality}.\\n"
         f"Appearance: {appearance}.\\n"
         f"Element: {element}.\\n"
