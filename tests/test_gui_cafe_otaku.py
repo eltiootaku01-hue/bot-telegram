@@ -1808,6 +1808,19 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn('key in {ADMIN_ROOM_KEY, ORDERS_ROOM_KEY}', source)
         self.assertIn('"permission_overwrites"', source)
 
+    def test_discord_webhook_avatar_contract(self):
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        immersion = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+        self.assertIn("def list_webhooks", group)
+        self.assertIn("def create_webhook", group)
+        self.assertIn("def ensure_webhook", group)
+        self.assertIn("ensure_managed_webhooks", group)
+        self.assertIn("waitress_avatar_data_uri", group)
+        for token in ("assets", "avatars", "cari.png", "cami.png", "sunna.png", "chie.png", "scarlet.png", "chloe.png", "default.png"):
+            self.assertIn(token, immersion)
+        self.assertIn("data:image/png;base64,", immersion)
+
+
     def test_group_setup_complaints_topics_contract(self):
         group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
         self.assertIn('"#pedidos-admin"', group)
