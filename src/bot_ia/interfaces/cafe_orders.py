@@ -106,3 +106,40 @@ def build_bebida_prompt(order: BebidaOrder) -> str:
         f"Product type: {item.product_type}.\n"
         "Use the selected metadata exactly; do not invent character identity."
     )
+
+
+class BebidaOrderFlow:
+    """Estado mínimo por usuario para el asistente interactivo de Telegram."""
+
+    def __init__(self) -> None:
+        self._orders: dict[str, BebidaOrder] = {}
+
+    def start(self, user_id: str, character: str = "") -> BebidaOrder:
+        order = BebidaOrder(character=character.strip())
+        self._orders[str(user_id)] = order
+        return order
+
+    def get(self, user_id: str) -> BebidaOrder:
+        return self._orders.setdefault(str(user_id), BebidaOrder())
+
+    def choose(self, user_id: str, field: str, value: str) -> BebidaOrder:
+        current = self.get(user_id)
+        allowed = {
+            "exposure": EXPOSURE_LEVELS,
+            "boldness": BOLDNESS_LEVELS,
+            "product_type": PRODUCT_TYPES,
+        }
+        values = allowed.get(field)
+        if values is None or value not in values:
+            return current
+        updated = replace(current, **{field: value})
+        self._orders[str(user_id)] = updated
+        return updated
+
+    def set_character(self, user_id: str, character: str, tag: str = "") -> BebidaOrder:
+        updated = replace(self.get(user_id), character=character.strip(), character_tag=tag.strip())
+        self._orders[str(user_id)] = updated
+        return updated
+
+    def clear(self, user_id: str) -> None:
+        self._orders.pop(str(user_id), None)
