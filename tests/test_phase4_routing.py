@@ -151,6 +151,53 @@ class Phase4RoutingTests(unittest.TestCase):
         ):
             self.assertFalse(is_authorized_admin_destination("-100555"))
 
+    def test_admin_followup_is_suppressed_for_non_private_destination(self) -> None:
+        class Complaint:
+            complaint_id = "CMP-1"
+            user_id = "u1"
+            order_id = "ORD-1"
+            product_type = "Carta TCG"
+            points_paid = 35
+            text = "motivo"
+
+        adapter = object.__new__(TelegramAdapter)
+        with patch.dict(
+            os.environ,
+            {
+                "AUTHORIZED_GROUP_ID": "-100123",
+                "TELEGRAM_OFFICIAL_CHAT_IDS": "-100123",
+                "TELEGRAM_ADMIN_CHAT_ID": "-100123",
+                "TELEGRAM_ADMIN_CHAT_PRIVATE": "true",
+            },
+            clear=False,
+        ):
+            self.assertIsNone(adapter._admin_followup(Complaint()))
+
+        with patch.dict(
+            os.environ,
+            {
+                "AUTHORIZED_GROUP_ID": "-100123",
+                "TELEGRAM_ADMIN_CHAT_ID": "-100555",
+                "TELEGRAM_ADMIN_CHAT_PRIVATE": "false",
+            },
+            clear=False,
+        ):
+            self.assertIsNone(adapter._admin_followup(Complaint()))
+
+        with patch.dict(
+            os.environ,
+            {
+                "AUTHORIZED_GROUP_ID": "-100123",
+                "TELEGRAM_ADMIN_CHAT_ID": "-100555",
+                "TELEGRAM_ADMIN_CHAT_PRIVATE": "true",
+            },
+            clear=False,
+        ):
+            followup = adapter._admin_followup(Complaint())
+            self.assertIsNotNone(followup)
+            self.assertEqual("-100555", followup.chat_id)
+
+
     def test_provisioning_publishes_room_map(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
