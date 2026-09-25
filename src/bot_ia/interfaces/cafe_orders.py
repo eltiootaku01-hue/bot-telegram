@@ -8,7 +8,6 @@ import re
 import unicodedata
 from typing import Iterable
 
-from gui.waifu_registry import WaifuRecord
 
 
 EXPOSURE_LEVELS = ("SFW", "Sugerente", "NSFW")
@@ -58,7 +57,7 @@ def normalize_danbooru_tag(value: str) -> str:
     return value.lower()
 
 
-def character_suggestions(records: Iterable[WaifuRecord], query: str = "") -> list[str]:
+def character_suggestions(records: Iterable[object], query: str = "") -> list[str]:
     """Sugerencias deterministas desde el registro local, sin red ni tags inventados."""
     query = normalize_danbooru_tag(query)
     candidates: list[str] = []
