@@ -189,6 +189,7 @@ def generate_tcg_prompt(record: WaifuRecord) -> str:
         f"Appearance: {appearance}.\\n"
         f"Element: {element}.\\n"
         f"Cosplay reference tier: {cosplay}.\\n"
+        f"{card_line}"
         f"{lora_line}\\n"
         "Create a clean full-body character sprite suitable for a trading "
         "card game. Preserve a clear silhouette, readable costume details, "
