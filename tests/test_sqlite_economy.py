@@ -46,23 +46,28 @@ class SQLiteEconomyTests(unittest.TestCase):
             import sqlite3
 
             connection = sqlite3.connect(wallet.path)
-            mode = connection.execute(
-                "PRAGMA journal_mode"
-            ).fetchone()[0]
-            application_id = connection.execute(
-                "PRAGMA application_id"
-            ).fetchone()[0]
-            version = connection.execute(
-                "PRAGMA user_version"
-            ).fetchone()[0]
-            tables = {
-                row[0]
-                for row in connection.execute(
-                    "SELECT name FROM sqlite_master "
-                    "WHERE type='table'"
-                )
-            }
-            connection.close()
+            try:
+                mode = connection.execute(
+                    "PRAGMA journal_mode"
+                ).fetchone()[0]
+                application_id = connection.execute(
+                    "PRAGMA application_id"
+                ).fetchone()[0]
+                version = connection.execute(
+                    "PRAGMA user_version"
+                ).fetchone()[0]
+                tables = {
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT name FROM sqlite_master "
+                        "WHERE type='table'"
+                    )
+                }
+            finally:
+                # SQLite WAL keeps -wal/-shm resources tied to live
+                # connections. Release the handle even if an assertion or
+                # metadata query fails so Windows can remove the temp tree.
+                connection.close()
 
             self.assertEqual("wal", str(mode).lower())
             self.assertNotEqual(0, application_id)
