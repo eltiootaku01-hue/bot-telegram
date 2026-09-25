@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Economía local del Café: puntos, precios, gacha y pity."""
+"""Economía local del Café: puntos, precios, gacha y pity sobre SQLite WAL."""
 
 from __future__ import annotations
 
@@ -8,6 +8,9 @@ import json
 from pathlib import Path
 from random import SystemRandom
 from typing import Callable
+
+from bot_ia.paths import ECONOMY_DB_PATH, PROJECT_ROOT
+from bot_ia.persistence.economy import EconomyDatabase, EconomyPersistenceError
 
 
 POINTS_STARTING_BALANCE = 50
@@ -31,64 +34,146 @@ class CafeWallet:
     pity_ur: int = 0
 
 
+@dataclass(frozen=True, slots=True)
+class GachaResult:
+    rarity: str
+    points_spent: int
+    consolation: str
+    pity_sr: int
+    pity_ur: int
+    affinity_bonus: bool = False
+
+
 class CafeWalletStore:
-    """Perfil local JSON: puntos y contadores de pity, sin red."""
+    """Store económico compartido entre procesos mediante una única DB SQLite WAL."""
 
-    def __init__(self, root: Path):
-        self.root = Path(root)
-        self.path = self.root / "config" / "cafe_wallets.json"
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+    LEGACY_FILENAME = "cafe_wallets.json"
+    MIGRATION_KEY = "legacy:cafe_wallets:v1"
 
-    def _load(self) -> dict[str, dict[str, int]]:
-        if not self.path.is_file():
-            return {}
-        try:
-            payload = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return {}
-        if not isinstance(payload, dict):
-            return {}
-        result: dict[str, dict[str, int]] = {}
-        for key, value in payload.items():
-            if isinstance(value, dict):
+    def __init__(self, root: Path | str | None = None) -> None:
+        self.root = Path(root).expanduser().resolve() if root is not None else PROJECT_ROOT
+        self.path = ECONOMY_DB_PATH if root is None else self.root / "config" / "bot_ia_economy.sqlite3"
+        self.legacy_path = self.root / "config" / self.LEGACY_FILENAME
+        self.db = EconomyDatabase(self.path)
+        self._migrate_legacy()
+
+    def _migrate_legacy(self) -> None:
+        with self.db.transaction(immediate=True) as connection:
+            migrated = connection.execute(
+                "SELECT value FROM schema_meta WHERE key = ?",
+                (self.MIGRATION_KEY,),
+            ).fetchone()
+            if migrated is not None:
+                return
+
+            if self.legacy_path.is_file():
                 try:
-                    result[str(key)] = {
-                        "points": max(0, int(value.get("points", POINTS_STARTING_BALANCE))),
-                        "pity_sr": max(0, int(value.get("pity_sr", 0))),
-                        "pity_ur": max(0, int(value.get("pity_ur", 0))),
-                    }
-                except (TypeError, ValueError):
-                    continue
-            else:
-                # Migración compatible con el formato anterior: user_id -> puntos.
-                try:
-                    result[str(key)] = {
-                        "points": max(0, int(value)),
-                        "pity_sr": 0,
-                        "pity_ur": 0,
-                    }
-                except (TypeError, ValueError):
-                    continue
-        return result
+                    payload = json.loads(
+                        self.legacy_path.read_text(encoding="utf-8")
+                    )
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+                    raise EconomyPersistenceError(
+                        f"Persistencia heredada corrupta: {self.legacy_path}"
+                    ) from error
+                if not isinstance(payload, dict):
+                    raise EconomyPersistenceError(
+                        f"Formato heredado inválido: {self.legacy_path}"
+                    )
 
-    def _save(self, data: dict[str, dict[str, int]]) -> None:
-        temporary = self.path.with_suffix(".json.tmp")
-        temporary.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
+                for user_id, value in payload.items():
+                    try:
+                        if isinstance(value, dict):
+                            points = max(
+                                0,
+                                int(
+                                    value.get(
+                                        "points",
+                                        POINTS_STARTING_BALANCE,
+                                    )
+                                ),
+                            )
+                            pity_sr = max(
+                                0,
+                                int(value.get("pity_sr", 0)),
+                            )
+                            pity_ur = max(
+                                0,
+                                int(value.get("pity_ur", 0)),
+                            )
+                        else:
+                            points = max(0, int(value))
+                            pity_sr = 0
+                            pity_ur = 0
+                    except (TypeError, ValueError) as error:
+                        raise EconomyPersistenceError(
+                            f"Registro heredado inválido para usuario {user_id!r}"
+                        ) from error
+
+                    connection.execute(
+                        """
+                        INSERT OR IGNORE INTO wallet(
+                            user_id, points, pity_sr, pity_ur
+                        ) VALUES (?, ?, ?, ?)
+                        """,
+                        (str(user_id), points, pity_sr, pity_ur),
+                    )
+
+            connection.execute(
+                """
+                INSERT OR REPLACE INTO schema_meta(key, value)
+                VALUES (?, ?)
+                """,
+                (self.MIGRATION_KEY, "complete"),
+            )
+
+    @staticmethod
+    def _from_row(user_id: str, row: tuple[object, ...] | None) -> CafeWallet:
+        if row is None:
+            return CafeWallet(
+                str(user_id),
+                POINTS_STARTING_BALANCE,
+                0,
+                0,
+            )
+        return CafeWallet(
+            str(user_id),
+            max(0, int(row[0])),
+            max(0, int(row[1])),
+            max(0, int(row[2])),
         )
-        temporary.replace(self.path)
+
+    def _get_with_connection(
+        self,
+        connection,
+        user_id: str,
+    ) -> CafeWallet:
+        row = connection.execute(
+            "SELECT points, pity_sr, pity_ur FROM wallet WHERE user_id = ?",
+            (str(user_id),),
+        ).fetchone()
+        return self._from_row(str(user_id), row)
+
+    @staticmethod
+    def _ensure_wallet(connection, user_id: str) -> None:
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO wallet(
+                user_id, points, pity_sr, pity_ur
+            ) VALUES (?, ?, 0, 0)
+            """,
+            (str(user_id), POINTS_STARTING_BALANCE),
+        )
 
     def get(self, user_id: str) -> CafeWallet:
-        data = self._load()
-        key = str(user_id)
-        profile = data.get(key, {})
-        return CafeWallet(
-            key,
-            profile.get("points", POINTS_STARTING_BALANCE),
-            profile.get("pity_sr", 0),
-            profile.get("pity_ur", 0),
-        )
+        try:
+            with self.db.transaction() as connection:
+                return self._get_with_connection(connection, str(user_id))
+        except (OSError, ValueError, TypeError, EconomyPersistenceError):
+            raise
+        except Exception as error:
+            raise EconomyPersistenceError(
+                f"No se pudo leer wallet de {user_id!r}"
+            ) from error
 
     def balance(self, user_id: str) -> int:
         return self.get(user_id).points
@@ -97,42 +182,81 @@ class CafeWalletStore:
         wallet = self.get(user_id)
         return wallet.pity_sr, wallet.pity_ur
 
-    def _write_profile(self, user_id: str, profile: dict[str, int]) -> CafeWallet:
-        data = self._load()
-        key = str(user_id)
-        data[key] = {
-            "points": max(0, int(profile.get("points", POINTS_STARTING_BALANCE))),
-            "pity_sr": max(0, int(profile.get("pity_sr", 0))),
-            "pity_ur": max(0, int(profile.get("pity_ur", 0))),
-        }
-        self._save(data)
-        return self.get(key)
-
     def credit(self, user_id: str, amount: int) -> CafeWallet:
         amount = max(0, int(amount))
-        wallet = self.get(user_id)
-        return self._write_profile(
-            user_id,
-            {
-                "points": wallet.points + amount,
-                "pity_sr": wallet.pity_sr,
-                "pity_ur": wallet.pity_ur,
-            },
+        with self.db.transaction(immediate=True) as connection:
+            self._ensure_wallet(connection, str(user_id))
+            connection.execute(
+                """
+                UPDATE wallet
+                SET points = points + ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+                """,
+                (amount, str(user_id)),
+            )
+            return self._get_with_connection(connection, str(user_id))
+
+    def credit_in_transaction(
+        self,
+        connection,
+        user_id: str,
+        amount: int,
+    ) -> CafeWallet:
+        """Acredita usando la transacción del llamador."""
+        amount = max(0, int(amount))
+        self._ensure_wallet(connection, str(user_id))
+        connection.execute(
+            """
+            UPDATE wallet
+            SET points = points + ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ?
+            """,
+            (amount, str(user_id)),
         )
+        return self._get_with_connection(connection, str(user_id))
 
     def debit(self, user_id: str, amount: int) -> CafeWallet:
         amount = max(0, int(amount))
-        wallet = self.get(user_id)
-        if wallet.points < amount:
-            raise ValueError("Puntos del Café insuficientes")
-        return self._write_profile(
-            user_id,
-            {
-                "points": wallet.points - amount,
-                "pity_sr": wallet.pity_sr,
-                "pity_ur": wallet.pity_ur,
-            },
+        with self.db.transaction(immediate=True) as connection:
+            self._ensure_wallet(connection, str(user_id))
+            cursor = connection.execute(
+                """
+                UPDATE wallet
+                SET points = points - ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+                  AND points >= ?
+                """,
+                (amount, str(user_id), amount),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError("Puntos del Café insuficientes")
+            return self._get_with_connection(connection, str(user_id))
+
+    def debit_in_transaction(
+        self,
+        connection,
+        user_id: str,
+        amount: int,
+    ) -> CafeWallet:
+        """Descuenta de forma atómica usando la transacción del llamador."""
+        amount = max(0, int(amount))
+        self._ensure_wallet(connection, str(user_id))
+        cursor = connection.execute(
+            """
+            UPDATE wallet
+            SET points = points - ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ?
+              AND points >= ?
+            """,
+            (amount, str(user_id), amount),
         )
+        if cursor.rowcount != 1:
+            raise ValueError("Puntos del Café insuficientes")
+        return self._get_with_connection(connection, str(user_id))
 
     def reward_game(
         self,
@@ -146,35 +270,147 @@ class CafeWalletStore:
             return self.get(user_id)
         if multiplier < 1:
             raise ValueError("game reward multiplier must be positive")
-        amount = GAME_REWARDS.get(str(game).casefold(), 0) * int(multiplier)
+        amount = GAME_REWARDS.get(
+            str(game).casefold(),
+            0,
+        ) * int(multiplier)
         return self.credit(user_id, amount)
 
-    def boost_pity_sr(self, user_id: str, amount: int = 1) -> CafeWallet:
-        """Aplica un pequeño avance de afinidad sin superar el umbral de garantía."""
+    def boost_pity_sr(
+        self,
+        user_id: str,
+        amount: int = 1,
+    ) -> CafeWallet:
+        """Avanza pity SR de forma atómica sin superar el límite de garantía."""
         amount = max(0, int(amount))
-        wallet = self.get(user_id)
-        pity_sr = min(PITY_SR_LIMIT - 1, wallet.pity_sr + amount)
-        return self._write_profile(
-            user_id,
-            {
-                "points": wallet.points,
-                "pity_sr": pity_sr,
-                "pity_ur": wallet.pity_ur,
-            },
-        )
+        with self.db.transaction(immediate=True) as connection:
+            self._ensure_wallet(connection, str(user_id))
+            connection.execute(
+                """
+                UPDATE wallet
+                SET pity_sr = MIN(?, pity_sr + ?),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+                """,
+                (PITY_SR_LIMIT - 1, amount, str(user_id)),
+            )
+            return self._get_with_connection(connection, str(user_id))
 
-    def record_gacha(self, user_id: str, rarity: str) -> CafeWallet:
-        wallet = self.get(user_id)
-        pity_sr = 0 if rarity in {"SR", "UR"} else wallet.pity_sr
-        pity_ur = 0 if rarity == "UR" else wallet.pity_ur
-        return self._write_profile(
-            user_id,
-            {
-                "points": wallet.points,
-                "pity_sr": pity_sr,
-                "pity_ur": pity_ur,
-            },
-        )
+    def record_gacha(
+        self,
+        user_id: str,
+        rarity: str,
+    ) -> CafeWallet:
+        rarity = str(rarity).strip().upper()
+        with self.db.transaction(immediate=True) as connection:
+            self._ensure_wallet(connection, str(user_id))
+            wallet = self._get_with_connection(connection, str(user_id))
+            pity_sr = (
+                0
+                if rarity in {"SR", "UR"}
+                else wallet.pity_sr
+            )
+            pity_ur = (
+                0
+                if rarity == "UR"
+                else wallet.pity_ur
+            )
+            connection.execute(
+                """
+                UPDATE wallet
+                SET pity_sr = ?,
+                    pity_ur = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+                """,
+                (pity_sr, pity_ur, str(user_id)),
+            )
+            return self._get_with_connection(connection, str(user_id))
+
+    def draw_gacha(
+        self,
+        user_id: str,
+        *,
+        roll: Callable[[], int] | None = None,
+        maid: str = "Cami",
+        affinity_level: int = 0,
+    ) -> GachaResult:
+        """Lanza Gacha completo en una sola transacción BEGIN IMMEDIATE."""
+        with self.db.transaction(immediate=True) as connection:
+            self._ensure_wallet(connection, str(user_id))
+            wallet = self._get_with_connection(connection, str(user_id))
+            if wallet.points < GACHA_COST:
+                raise ValueError(
+                    "Puntos del Café insuficientes para el Gacha"
+                )
+
+            next_sr = wallet.pity_sr + 1
+            next_ur = wallet.pity_ur + 1
+
+            if next_ur >= PITY_UR_LIMIT:
+                rarity = "UR"
+            elif next_sr >= PITY_SR_LIMIT:
+                rarity = "SR"
+            else:
+                value = int(
+                    (roll or (lambda: _RANDOM.randrange(100)))()
+                ) % 100
+                if value < 70:
+                    rarity = "R"
+                elif value < 95:
+                    rarity = "SR"
+                else:
+                    rarity = "UR"
+
+            pity_sr = 0 if rarity in {"SR", "UR"} else next_sr
+            pity_ur = 0 if rarity == "UR" else next_ur
+            affinity_bonus = (
+                rarity == "R"
+                and int(affinity_level) >= 5
+            )
+            if affinity_bonus:
+                pity_sr = min(
+                    PITY_SR_LIMIT - 1,
+                    pity_sr + 1,
+                )
+
+            cursor = connection.execute(
+                """
+                UPDATE wallet
+                SET points = points - ?,
+                    pity_sr = ?,
+                    pity_ur = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+                  AND points >= ?
+                """,
+                (
+                    GACHA_COST,
+                    pity_sr,
+                    pity_ur,
+                    str(user_id),
+                    GACHA_COST,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise EconomyPersistenceError(
+                    "El saldo cambió mientras se resolvía el Gacha"
+                )
+
+            consolation = maid_consolation(maid, rarity)
+            if affinity_bonus:
+                consolation += (
+                    " ❤️ Afinidad Lv.5+: ganas +1 progreso hacia "
+                    "la garantía SR."
+                )
+            return GachaResult(
+                rarity,
+                GACHA_COST,
+                consolation,
+                pity_sr,
+                pity_ur,
+                affinity_bonus,
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -214,25 +450,25 @@ def purchase_bebida_order(
     existing: bool | None = None,
     target_rarity: str | None = None,
 ) -> OrderQuote:
-    quote = quote_bebida_order(
-        existing=existing,
-        target_rarity=target_rarity,
-        points=store.balance(user_id),
+    target = (
+        "R"
+        if target_rarity is None and existing
+        else "SPECIAL"
+        if target_rarity is None
+        else normalize_target_rarity(target_rarity)
     )
-    if not quote.can_afford:
-        return quote
-    store.debit(user_id, quote.cost)
-    return quote
-
-
-@dataclass(frozen=True, slots=True)
-class GachaResult:
-    rarity: str
-    points_spent: int
-    consolation: str
-    pity_sr: int
-    pity_ur: int
-    affinity_bonus: bool = False
+    cost = RARITY_PRICES[target]
+    kind = "clonación" if target != "SPECIAL" else "personalizada"
+    try:
+        store.debit(user_id, cost)
+    except ValueError:
+        return OrderQuote(
+            cost,
+            kind,
+            target,
+            False,
+        )
+    return OrderQuote(cost, kind, target, True)
 
 
 def draw_gacha(
@@ -243,44 +479,11 @@ def draw_gacha(
     maid: str = "Cami",
     affinity_level: int = 0,
 ) -> GachaResult:
-    if store.balance(user_id) < GACHA_COST:
-        raise ValueError("Puntos del Café insuficientes para el Gacha")
-
-    wallet = store.get(user_id)
-    next_sr = wallet.pity_sr + 1
-    next_ur = wallet.pity_ur + 1
-
-    if next_ur >= PITY_UR_LIMIT:
-        rarity = "UR"
-    elif next_sr >= PITY_SR_LIMIT:
-        rarity = "SR"
-    else:
-        value = int((roll or (lambda: _RANDOM.randrange(100)))()) % 100
-        if value < 70:
-            rarity = "R"
-        elif value < 95:
-            rarity = "SR"
-        else:
-            rarity = "UR"
-
-    store.debit(user_id, GACHA_COST)
-    updated = store.record_gacha(user_id, rarity)
-    affinity_bonus = rarity == "R" and int(affinity_level) >= 5
-    if affinity_bonus:
-        updated = store.boost_pity_sr(user_id, 1)
-        consolation = (
-            maid_consolation(maid, rarity)
-            + " ❤️ Afinidad Lv.5+: ganas +1 progreso hacia la garantía SR."
-        )
-    else:
-        consolation = maid_consolation(maid, rarity)
-    return GachaResult(
-        rarity,
-        GACHA_COST,
-        consolation,
-        updated.pity_sr,
-        updated.pity_ur,
-        affinity_bonus,
+    return store.draw_gacha(
+        user_id,
+        roll=roll,
+        maid=maid,
+        affinity_level=affinity_level,
     )
 
 
@@ -288,20 +491,37 @@ def maid_consolation(maid: str, rarity: str) -> str:
     name = maid.strip() or "Cami"
     if rarity == "R":
         if name.casefold() == "cari":
-            return f"☕ {name}: ¡No te desanimes! Esta R es sólo el comienzo. Guarda tus puntos y vuelve a intentarlo."
-        return f"☕ {name}: ¡Ánimo, maestro! Salió una R, pero tu próxima oportunidad puede traer algo especial."
+            return (
+                f"☕ {name}: ¡No te desanimes! Esta R es sólo el comienzo. "
+                "Guarda tus puntos y vuelve a intentarlo."
+            )
+        return (
+            f"☕ {name}: ¡Ánimo, maestro! Salió una R, pero tu próxima "
+            "oportunidad puede traer algo especial."
+        )
     if rarity == "SR":
-        return f"✨ {name}: ¡Buena tirada! Una SR ya es una pieza destacada de la colección."
-    return f"🌟 {name}: ¡UR! Esta tirada fue excepcional. Guárdala en tu colección."
+        return (
+            f"✨ {name}: ¡Buena tirada! Una SR ya es una pieza destacada "
+            "de la colección."
+        )
+    return (
+        f"🌟 {name}: ¡UR! Esta tirada fue excepcional. "
+        "Guárdala en tu colección."
+    )
 
 
-def pity_text(user_id: str, store: CafeWalletStore, maid: str = "Cami") -> str:
+def pity_text(
+    user_id: str,
+    store: CafeWalletStore,
+    maid: str = "Cami",
+) -> str:
     wallet = store.get(user_id)
     name = maid.strip() or "Cami"
     return (
-        f"☕ {name}: llevas {wallet.pity_sr}/{PITY_SR_LIMIT} tiradas hacia tu SR "
-        f"y {wallet.pity_ur}/{PITY_UR_LIMIT} tiradas hacia tu UR.\n"
-        "El contador SR se reinicia con SR/UR; el contador UR se reinicia con UR."
+        f"☕ {name}: llevas {wallet.pity_sr}/{PITY_SR_LIMIT} tiradas hacia "
+        f"tu SR y {wallet.pity_ur}/{PITY_UR_LIMIT} tiradas hacia tu UR.\n"
+        "El contador SR se reinicia con SR/UR; el contador UR se reinicia "
+        "con UR."
     )
 
 
@@ -311,7 +531,8 @@ def economy_price_text() -> str:
         f"• Bebida R / clonación R: {RARITY_PRICES['R']} puntos\n"
         f"• Bebida SR / clonación SR: {RARITY_PRICES['SR']} puntos\n"
         f"• Bebida UR / clonación UR: {RARITY_PRICES['UR']} puntos\n"
-        f"• Bebida Especial (Custom Prompt): {RARITY_PRICES['SPECIAL']} puntos\n"
+        f"• Bebida Especial (Custom Prompt): "
+        f"{RARITY_PRICES['SPECIAL']} puntos\n"
         f"• Gacha: {GACHA_COST} puntos\n"
         f"• Victoria 21: +{GAME_REWARDS['21']} puntos\n"
         f"• Victoria UNO: +{GAME_REWARDS['uno']} puntos\n"
