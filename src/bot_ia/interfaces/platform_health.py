@@ -6,6 +6,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import os
+import time
+from collections.abc import Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -36,6 +38,23 @@ def _probe(url: str, token: str) -> tuple[bool, str]:
     if isinstance(value, dict) and value.get("id"):
         return True, "conectado"
     return False, "respuesta no válida"
+
+
+def probe_with_retry(
+    probe: Callable[[], PlatformHealth],
+    *,
+    retries: int = 2,
+    backoff_seconds: float = 0.25,
+) -> PlatformHealth:
+    """Reintenta fuera del hilo GUI; el último estado se devuelve sin lanzar."""
+    attempts = max(0, int(retries)) + 1
+    last = PlatformHealth("unknown", False, "sin comprobar")
+    for index in range(attempts):
+        last = probe()
+        if last.ok or index + 1 >= attempts:
+            return last
+        time.sleep(max(0.0, float(backoff_seconds)))
+    return last
 
 
 def probe_telegram() -> PlatformHealth:
