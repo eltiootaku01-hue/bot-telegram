@@ -43,6 +43,33 @@ class StrikeRecord:
     updated_at: str
 
 
+class BurstGate:
+    """Rate gate O(1) para ráfagas; no duerme ni bloquea el event loop."""
+
+    def __init__(self, *, max_events: int = 15, window_seconds: float = 15.0, clock: Callable[[], float] = time.monotonic) -> None:
+        self.max_events = max(1, int(max_events))
+        self.window_seconds = float(window_seconds)
+        self._clock = clock
+        self._events: dict[str, list[float]] = {}
+        self._lock = threading.Lock()
+
+    def allow(self, key: str) -> bool:
+        now = self._clock()
+        safe_key = str(key)
+        with self._lock:
+            values = [stamp for stamp in self._events.get(safe_key, ()) if now - stamp < self.window_seconds]
+            if len(values) >= self.max_events:
+                self._events[safe_key] = values
+                return False
+            values.append(now)
+            self._events[safe_key] = values
+            return True
+
+    def clear(self, key: str) -> None:
+        with self._lock:
+            self._events.pop(str(key), None)
+
+
 class WelcomeGate:
     """Cooldown real: durante 15 s cualquier nuevo input se ignora."""
 
