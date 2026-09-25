@@ -27,6 +27,7 @@ class EconomyDatabase:
         self._initialize()
 
     def connect(self) -> sqlite3.Connection:
+        connection: sqlite3.Connection | None = None
         try:
             connection = sqlite3.connect(
                 self.path,
@@ -38,15 +39,18 @@ class EconomyDatabase:
             connection.execute("PRAGMA foreign_keys=ON")
             mode = str(connection.execute("PRAGMA journal_mode=WAL").fetchone()[0]).lower()
             if mode != "wal":
-                connection.close()
                 raise EconomyPersistenceError(
                     f"No se pudo activar WAL en {self.path}"
                 )
             connection.execute("PRAGMA synchronous=NORMAL")
             return connection
         except EconomyPersistenceError:
+            if connection is not None:
+                connection.close()
             raise
         except (OSError, sqlite3.DatabaseError) as error:
+            if connection is not None:
+                connection.close()
             raise EconomyPersistenceError(
                 f"No se pudo abrir la base SQLite de BOT-IA: {self.path}"
             ) from error
