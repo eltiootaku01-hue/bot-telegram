@@ -2172,6 +2172,72 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("class BurstGate", community)
         self.assertIn("REQUIRED_PLATFORM_ENV", schrodinger)
 
+    def test_cami_guard_superadmin_content_contract(self):
+        from bot_ia.interfaces.cami_guard import (
+            DEFAULT_REACTIONS,
+            is_superadmin,
+            scan_cami_guard,
+        )
+        from bot_ia.interfaces.cafe_immersion import supervise_admin_publication
+
+        clean = scan_cami_guard(
+            "¡Meme de bienvenida al Café!",
+            username="@tiootakuu",
+            content_kind="meme",
+        )
+        self.assertEqual("allow_react", clean.action)
+        self.assertEqual(DEFAULT_REACTIONS, clean.reactions)
+        self.assertFalse(clean.alert_admin)
+        self.assertTrue(clean.strike_exempt)
+
+        image_sensitive = scan_cami_guard(
+            "Nueva publicación",
+            image_tags=("nsfw",),
+            username="tiootakuu",
+        )
+        self.assertEqual("spoiler_redirect", image_sensitive.action)
+        self.assertTrue(image_sensitive.spoiler)
+        self.assertEqual("#cantina-18", image_sensitive.target_room)
+        self.assertTrue(image_sensitive.strike_exempt)
+
+        unsafe = supervise_admin_publication(
+            "Anuncio: https://phishing.example/login",
+            username="@tiootakuu",
+        )
+        self.assertEqual("delete_alert", unsafe.action)
+        self.assertTrue(unsafe.alert_admin)
+        self.assertTrue(unsafe.strike_exempt)
+
+        ordinary = scan_cami_guard("texto normal", username="cliente")
+        self.assertEqual("allow", ordinary.action)
+        self.assertFalse(ordinary.strike_exempt)
+        self.assertTrue(is_superadmin(username="@tiootakuu"))
+
+    def test_cami_guard_gui_alert_contract(self):
+        source = (self.ROOT / "src" / "gui" / "incidents_panel.py").read_text(encoding="utf-8")
+        guard = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cami_guard.py").read_text(encoding="utf-8")
+        immersion = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+        for token in (
+            "record_cami_guard_alert",
+            'kind="Cami Guard"',
+            "CAMI-",
+            "self.refresh()",
+        ):
+            self.assertIn(token, source)
+        for token in (
+            "SENSITIVE_IMAGE_TAGS",
+            "BLOCKED_LINK_HOSTS",
+            "DEFAULT_REACTIONS",
+            "spoiler_redirect",
+            "delete_alert",
+            "alert_admin",
+            "strike_exempt",
+            "is_superadmin",
+        ):
+            self.assertIn(token, guard)
+        self.assertIn("supervise_admin_publication", immersion)
+        self.assertIn("superadmin_is_immune", immersion)
+
 
 if __name__ == "__main__":
     unittest.main()
