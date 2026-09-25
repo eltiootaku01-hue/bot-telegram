@@ -22,6 +22,7 @@ from .cafe_orders import BebidaOrderFlow, build_bebida_summary, build_bebida_pro
 from .hardening import MutexGuard
 from .order_support import ComplaintStore, OrderConfirmation, OrderStore, new_order_id, order_destination
 from .auto_moderation import moderate
+from .cafe_immersion import analyze_telegram_comment
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, purchase_bebida_order, quote_bebida_order
 from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue, supervise_admin_publication
 from .superadmin import is_superadmin
@@ -84,6 +85,7 @@ class TelegramOutbound:
     keyboard: tuple[tuple[tuple[str, str], ...], ...] = ()
     auto_delete_seconds: int | None = None
     message_thread_id: int | None = None
+    reply_to_message_id: int | None = None
     followups: tuple["TelegramOutbound", ...] = ()
     photo_file_id: str | None = None
 
@@ -96,6 +98,8 @@ class TelegramOutbound:
             payload = {"chat_id": self.chat_id, "text": self.text}
         if self.message_thread_id is not None:
             payload["message_thread_id"] = int(self.message_thread_id)
+        if self.reply_to_message_id is not None:
+            payload["reply_parameters"] = {"message_id": int(self.reply_to_message_id)}
         if self.keyboard:
             payload["reply_markup"] = {"inline_keyboard": [[{"text": label, "callback_data": data} for label, data in row] for row in self._normalized_keyboard()]}
         return payload
@@ -1088,6 +1092,18 @@ class TelegramPoller:
                     auto_delete,
                 )
 
+    def _comment_raw_update(self, update: dict[str, object]) -> TelegramOutbound | None:
+        decision = analyze_telegram_comment(update)
+        if not decision.should_reply:
+            return None
+        return TelegramOutbound(
+            decision.chat_id,
+            decision.text,
+            "comments",
+            reply_to_message_id=decision.reply_to_message_id,
+            auto_delete_seconds=30,
+        )
+
     def _moderate_raw_update(self, update: dict[str, object]) -> TelegramOutbound | None:
         message = update.get("message")
         if not isinstance(message, dict):
@@ -1306,7 +1322,8 @@ class TelegramPoller:
 
                 try:
                     moderation_outbound = self._moderate_raw_update(update)
-                    if moderation_outbound is not None:
+            comment_outbound = None if moderation_outbound is not None else self._comment_raw_update(update)
+            outbound = moderation_outbound if moderation_outbound is not None else comment_outbound if comment_outbound is not None else self._adapter.handle_update(update)
                         outbound = moderation_outbound
                     elif isinstance(update.get("message"), dict) and isinstance(update["message"].get("photo"), list):
                         outbound = self._adapter.handle_photo_update(update)
