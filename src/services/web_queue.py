@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
+from PySide6.QtCore import QEvent, QObject, QThread, QTimer, Signal, Slot
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -1041,6 +1041,13 @@ class WebChatQueueManager(QObject):
 
         self._bridge = _WebQueueBridge()
 
+        # Recuperar el foco tras cerrar diálogos/ventanas auxiliares que
+        # hayan robado el teclado al visor web.
+        from PySide6.QtWidgets import QApplication
+        app_instance = QApplication.instance()
+        if app_instance is not None:
+            app_instance.installEventFilter(self)
+
         # Qt permite un solo QWebChannel por página. Si la GUI ya
         # tiene uno, lo reutilizamos para no romper otros bridges.
         existing_channel = self.web_view.page().webChannel()
@@ -1194,6 +1201,11 @@ class WebChatQueueManager(QObject):
     # ------------------------------------------------------------------
     # WEB / DOM / QWEBCHANNEL
     # ------------------------------------------------------------------
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if event.type() in {QEvent.Close, QEvent.Hide} and watched is not self.web_view:
+            self._restore_web_focus()
+        return super().eventFilter(watched, event)
 
     @Slot()
     def _restore_web_focus(self) -> None:
