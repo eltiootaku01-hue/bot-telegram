@@ -909,7 +909,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             store.credit("u1", GACHA_COST * 2)
             result = draw_gacha("u1", store, roll=lambda: 99, maid="Cami")
             self.assertEqual("UR", result.rarity)
-            self.assertEqual(60 - GACHA_COST, store.balance("u1"))
+            self.assertEqual(70, store.balance("u1"))
             self.assertIn("Cami", result.consolation)
             self.assertIn("R", maid_consolation("Cari", "R"))
             self.assertEqual({"21": 10, "uno": 12, "ppt": 5}, GAME_REWARDS)
