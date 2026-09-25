@@ -86,10 +86,11 @@ from .waifu_registry import (
     normalize_lora_tags,
     record_progress,
     slugify,
+    bebida_rarity_price_menu,
 )
 from .mini_games import LocalGameRouter
 from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, GroupSetupStore, TelegramGroupSetup
-from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text, draw_gacha, purchase_bebida_order)
+from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text, draw_gacha, pity_text, purchase_bebida_order)
 from bot_ia.interfaces.cafe_orders import (
     BOLDNESS_LEVELS,
     DEFAULT_OUTFITS,
@@ -1770,6 +1771,15 @@ class BebidaOrderDialog(QDialog):
         self.product = QComboBox()
         self.product.addItems(PRODUCT_TYPES)
         form.addWidget(self.product, 6, 1)
+        form.addWidget(QLabel("Rareza objetivo"), 7, 0)
+        self.target_rarity = QComboBox()
+        self.target_rarity.addItems(("R", "SR", "UR", "Especial"))
+        self.target_rarity.setCurrentText("R")
+        form.addWidget(self.target_rarity, 7, 1)
+        price_label = QLabel(bebida_rarity_price_menu())
+        price_label.setWordWrap(True)
+        price_label.setObjectName("Muted")
+        form.addWidget(price_label, 8, 0, 1, 2)
         root.addLayout(form)
         actions = QHBoxLayout()
         self.prepare = QPushButton("🥤 Preparar Pedido")
@@ -1803,8 +1813,29 @@ class BebidaOrderDialog(QDialog):
             return
         self.character.setCurrentText(record.name)
         self.cosplay.setText(record.cosplay_reference)
+        if record.cosplay_reference in {"R", "SR", "UR"}:
+            self.target_rarity.setCurrentText(record.cosplay_reference)
+
+    @staticmethod
+    def _record_supports_rarity(record: WaifuRecord | None, rarity: str) -> bool:
+        if record is None:
+            return False
+        if record.cosplay_reference.casefold() == rarity.casefold():
+            return True
+        return any(slot.rarity.casefold() == rarity.casefold() for slot in record.card_slots)
+
     def _prepare(self) -> None:
         record = self._find_record(self.character.currentText())
+        target = self.target_rarity.currentText()
+        target_key = "SPECIAL" if target == "Especial" else target
+        if target_key != "SPECIAL" and not self._record_supports_rarity(record, target_key):
+            self.summary.setPlainText(
+                f"Pedido bloqueado: la carta objetivo {target_key} no existe en el registro local."
+            )
+            self.prompt.setPlainText("")
+            self._prepared_order = None
+            return
+
         order = BebidaOrder(
             character=self.character.currentText(),
             character_tag=record.danbooru_tag if record else self.character.currentText(),
@@ -1817,11 +1848,17 @@ class BebidaOrderDialog(QDialog):
         ).normalized()
         self._prepared_order = order
         points = self.wallet_store.balance("local-user") if self.wallet_store else 0
-        quote = bebida_order_quote(order, existing_character=record is not None, points=points)
+        quote = bebida_order_quote(
+            order,
+            existing_character=target_key != "SPECIAL",
+            points=points,
+            target_rarity=target_key,
+        )
         affordability = "Disponible" if quote.can_afford else "Saldo insuficiente"
         self.summary.setPlainText(
             build_bebida_summary(order)
-            + f"\n\nCosto: {quote.cost} Puntos del Café · {quote.kind} · {affordability}"
+            + f"\n\nRareza objetivo: {quote.rarity}"
+            + f"\nCosto exacto: {quote.cost} Puntos del Café · {quote.kind} · {affordability}"
         )
         self.prompt.setPlainText(build_bebida_prompt(order))
 
@@ -1829,11 +1866,33 @@ class BebidaOrderDialog(QDialog):
         if self._prepared_order is None or self.wallet_store is None:
             return
         record = self._find_record(self._prepared_order.character)
-        quote = purchase_bebida_order(self.wallet_store, "local-user", existing=record is not None)
-        if not quote.can_afford:
-            QMessageBox.warning(self, "☕ Puntos del Café", f"Necesitas {quote.cost} puntos para {quote.kind}.")
+        target = self.target_rarity.currentText()
+        target_key = "SPECIAL" if target == "Especial" else target
+        if target_key != "SPECIAL" and not self._record_supports_rarity(record, target_key):
+            QMessageBox.warning(
+                self,
+                "☕ Pedido rechazado",
+                f"La carta objetivo {target_key} no está disponible en el registro local.",
+            )
             return
-        QMessageBox.information(self, "☕ Pedido confirmado", f"Pedido {quote.kind} confirmado por {quote.cost} puntos.")
+        quote = purchase_bebida_order(
+            self.wallet_store,
+            "local-user",
+            existing=target_key != "SPECIAL",
+            target_rarity=target_key,
+        )
+        if not quote.can_afford:
+            QMessageBox.warning(
+                self,
+                "☕ Puntos del Café",
+                f"Necesitas exactamente {quote.cost} puntos para {quote.kind} {quote.rarity}.",
+            )
+            return
+        QMessageBox.information(
+            self,
+            "☕ Pedido confirmado",
+            f"Pedido {quote.kind} {quote.rarity} confirmado por {quote.cost} puntos.",
+        )
 
 
 class WaifuRegistryDialog(QDialog):
@@ -2657,6 +2716,10 @@ class CommandCenterWindow(QMainWindow):
         self.gacha_button = QPushButton("🎰 Gacha")
         self.gacha_button.clicked.connect(self._run_local_gacha)
         top_layout.addWidget(self.gacha_button)
+
+        self.pity_button = QPushButton("🍀 Pity")
+        self.pity_button.clicked.connect(self._show_pity)
+        top_layout.addWidget(self.pity_button)
 
         self.group_setup_button = QPushButton("🛠 Estructurar Grupo")
         self.group_setup_button.clicked.connect(self._open_group_setup)
