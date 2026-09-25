@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from random import SystemRandom
 import re
 
+from bot_ia.interfaces.cafe_economy import CafeWalletStore
+
 
 _RANDOM = SystemRandom()
 PPT_CHOICES = ("piedra", "papel", "tijera")
@@ -59,7 +61,8 @@ class BlackjackState:
 class LocalGameRouter:
     """Router de juegos sin red; mantiene estado aislado por usuario y mesera."""
 
-    def __init__(self) -> None:
+    def __init__(self, wallet_store: CafeWalletStore | None = None) -> None:
+        self._wallet_store = wallet_store
         self._blackjack: dict[tuple[str, str], BlackjackState] = {}
         self._uno: dict[tuple[str, str], UnoState] = {}
 
@@ -223,7 +226,7 @@ class LocalGameRouter:
                 return PPT_ALIASES[normalized]
         return None
 
-    def _ppt_response(self, message: str) -> str | None:
+    def _ppt_response(self, message: str, user_id: str = "anonymous") -> str | None:
         choice = self._parse_ppt(message)
         if choice is None:
             return None
@@ -238,11 +241,13 @@ class LocalGameRouter:
             result = "ganaste"
         else:
             result = "perdiste"
+        if result == "ganaste" and self._wallet_store is not None:
+            self._wallet_store.reward_game(user_id, "ppt", won=True)
         return f"PPT local · anfitriona: {GAME_HOSTS['ppt']} · tú: {choice} · mesera: {bot} · {result}."
 
     def route(self, message: str, user_id: str, bot_id: str) -> str | None:
         normalized = " ".join(message.casefold().strip().split())
-        ppt = self._ppt_response(normalized)
+        ppt = self._ppt_response(normalized, user_id)
         if ppt is not None:
             return ppt
         if any(token in normalized for token in ("21", "blackjack", "black jack")):
@@ -252,7 +257,7 @@ class LocalGameRouter:
             action = " ".join(action.split())
             return self._blackjack_response(user_id, bot_id, action or "nuevo")
         if any(token in normalized for token in ("piedra", "papel", "tijera")):
-            return self._ppt_response(normalized)
+            return self._ppt_response(normalized, user_id)
         if any(token in normalized for token in ("uno", "juego de cartas")):
             action = normalized.replace("uno", " ").strip() or "nuevo"
             return self._uno_response(user_id, bot_id, action)
