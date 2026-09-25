@@ -3,6 +3,7 @@ from pathlib import Path
 import ast
 import importlib
 import unittest
+from unittest.mock import patch
 
 
 class CafeOtakuGuiContractTests(unittest.TestCase):

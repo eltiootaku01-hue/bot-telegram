@@ -2626,6 +2626,9 @@ class CommandCenterWindow(QMainWindow):
                 for profile in BOT_PROFILES
             }
             self._refresh_config_dialog_fields()
+            self.manual_login_button.setEnabled(
+                _initial_setup_mode() is False
+            )
             self.refresh_state()
             self._append_system(
                 "🔄 Configuración de fábrica restaurada desde .env.example."
