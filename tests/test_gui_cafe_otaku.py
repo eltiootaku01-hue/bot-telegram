@@ -10,6 +10,44 @@ from unittest.mock import patch
 class CafeOtakuGuiContractTests(unittest.TestCase):
     ROOT = Path(__file__).resolve().parents[1]
 
+    def test_browser_style_tabs_and_incidents_panel_contract(self):
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        panel = (self.ROOT / "src" / "gui" / "incidents_panel.py").read_text(encoding="utf-8")
+
+        for token in (
+            "QTabWidget",
+            'self.main_tabs.addTab(web_tab, "🌐 Navegador Web")',
+            'self.main_tabs.addTab(self._build_schrodinger_tab(), "⚛ Chat Schrödinger")',
+            'self.main_tabs.addTab(self._build_orders_tab(), "🎴 Pedidos & Hashtags")',
+            'self.main_tabs.addTab(self.incidents_panel, "🛡 Incidencias & Moderación")',
+            "self.main_tabs.currentChanged.connect(self._on_main_tab_changed)",
+            "setWindowState(self.windowState() | Qt.WindowMaximized)",
+            "def _build_schrodinger_tab",
+            "def _build_orders_tab",
+        ):
+            self.assertIn(token, app)
+
+        for token in (
+            "class IncidentStore",
+            "class IncidentsPanel",
+            "Errores",
+            "Queja / Reembolso",
+            "Aislamiento / Incidente",
+            "ID único:",
+            "Perdones previos:",
+            "Nivel de confianza:",
+            "Fecha de registro en el bot:",
+            "Regla/error roto:",
+            "def _forgive",
+            "def _refund",
+            "def _reject",
+            "✅ Perdonar",
+            "💸 Aceptar Reembolso",
+            "❌ Rechazar / Ban Permanent",
+            "ComplaintStore",
+        ):
+            self.assertIn(token, panel)
+
     def test_gui_package_and_qss_are_present(self):
         package = self.ROOT / "src" / "gui" / "__init__.py"
         app = self.ROOT / "src" / "gui" / "app.py"
