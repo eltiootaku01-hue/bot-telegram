@@ -94,6 +94,7 @@ from .mini_games import LocalGameRouter
 from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text, draw_gacha, pity_text, purchase_bebida_order, quote_bebida_order)
 from bot_ia.interfaces.cafe_immersion import TeaTimeScheduler
+from bot_ia.interfaces.cafe_vip import VipStore, vip_policy_text, vip_status_text
 from bot_ia.interfaces.hardening import sanitize_control_text, whitelist_tag
 from bot_ia.interfaces.order_support import ComplaintStore, new_order_id, order_destination
 from bot_ia.interfaces.schrodinger import LiveTarget, SchrodingerError, SchrodingerRouter
@@ -2939,6 +2940,15 @@ class CommandCenterWindow(QMainWindow):
         label.setText(f"🟢 {platform}" if ok else f"🔴 {platform}")
         label.setToolTip(detail)
 
+    def _show_vip_support(self) -> None:
+        status = vip_status_text(DESKTOP_USER, VipStore(ROOT))
+        QMessageBox.information(
+            self,
+            "✨ Apoyar al Café",
+            status + "\n\n" + vip_policy_text() + "\n\n"
+            + "La concesión VIP se realiza manualmente o mediante un pago voluntario verificado.",
+        )
+
     def _open_group_setup(self) -> None:
         platform, ok = QInputDialog.getItem(self, "Estructurar Grupo", "Plataforma:", ("Telegram", "Discord"), 0, False)
         if not ok:
@@ -3081,6 +3091,11 @@ class CommandCenterWindow(QMainWindow):
         self.points_button = QPushButton("☕ Puntos del Café")
         self.points_button.clicked.connect(self._show_cafe_economy)
         top_layout.addWidget(self.points_button)
+
+        self.vip_button = QPushButton("✨ Apoyar al Café")
+        self.vip_button.setToolTip("Apoyo voluntario; no bloquea SFW ni Cantina +18.")
+        self.vip_button.clicked.connect(self._show_vip_support)
+        top_layout.addWidget(self.vip_button)
 
         self.gacha_button = QPushButton("🎰 Gacha")
         self.gacha_button.clicked.connect(self._run_local_gacha)
