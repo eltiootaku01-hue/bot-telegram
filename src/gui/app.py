@@ -2727,6 +2727,10 @@ class CommandCenterWindow(QMainWindow):
         self.pity_button.clicked.connect(self._show_pity)
         top_layout.addWidget(self.pity_button)
 
+        self.affinity_button = QPushButton("💝 Afinidad")
+        self.affinity_button.clicked.connect(self._show_affinity)
+        top_layout.addWidget(self.affinity_button)
+
         self.group_setup_button = QPushButton("🛠 Estructurar Grupo")
         self.group_setup_button.clicked.connect(self._open_group_setup)
         top_layout.addWidget(self.group_setup_button)
@@ -3391,12 +3395,30 @@ class CommandCenterWindow(QMainWindow):
         profile = BOT_MAP.get(self._selected_bot_id)
         return profile.name if profile is not None else "Cami"
 
+    def _show_pity(self) -> None:
+        maid = self._active_cafe_maid()
+        QMessageBox.information(
+            self,
+            "🍀 Pity",
+            pity_text("local-user", self.cafe_wallet, maid=maid),
+        )
+
+    def _show_affinity(self) -> None:
+        summary = self.waifu_registry.affinity_summary("local-user")
+        QMessageBox.information(
+            self,
+            "💝 Afinidad",
+            f"❤️ Afinidad del Café Otaku:\n{summary}",
+        )
+
     def _run_local_gacha(self) -> None:
+        maid = self._active_cafe_maid()
         try:
             result = draw_gacha(
                 "local-user",
                 self.cafe_wallet,
-                maid=self._active_cafe_maid(),
+                maid=maid,
+                affinity_level=self.waifu_registry.affinity_level("local-user", maid),
             )
         except ValueError as error:
             QMessageBox.warning(self, "🎰 Gacha", str(error))
