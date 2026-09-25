@@ -28,6 +28,9 @@ class OrderConfirmation:
     rarity: str
     cost: int
     summary: str
+    resolution: str = "L"
+    render_style: str = "Classic Anime"
+    prompt_en: str = ""
 
 
 @dataclass(frozen=True, slots=True)
