@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 import os
 import time
@@ -65,6 +65,7 @@ class TelegramInbound:
     user_id: str
     conversation_id: str
     text: str
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,7 +128,10 @@ def parse_update(update: dict[str, object]) -> TelegramInbound:
     text = text.strip()
     if len(text) > MAX_INBOUND_TEXT_CHARS:
         raise TelegramInputError("message text is too long")
-    return TelegramInbound(user_id, chat_id, text)
+    metadata = update.get("metadata")
+    if not isinstance(metadata, dict):
+        metadata = {}
+    return TelegramInbound(user_id, chat_id, text, dict(metadata))
 
 
 def parse_callback_update(update: dict[str, object]) -> TelegramCallback:
