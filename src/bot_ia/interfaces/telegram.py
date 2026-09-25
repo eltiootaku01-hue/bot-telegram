@@ -24,6 +24,7 @@ from .order_support import ComplaintStore, OrderConfirmation, OrderStore, new_or
 from .auto_moderation import moderate
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, purchase_bebida_order, quote_bebida_order
 from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue
+from .superadmin import is_superadmin
 from .cafe_rooms import sfw_transition, mature_game_message
 from gui.waifu_registry import WaifuRegistry
 from .tutorials import build_tutorial_text
@@ -1109,7 +1110,7 @@ class TelegramPoller:
             return None
         try:
             self._client.delete_message(chat_id, message_id)
-            if decision.action == "ban":
+            if decision.action == "ban" and not is_superadmin(str(user_id), str(sender.get("username", ""))):
                 self._client.ban_chat_member(chat_id, str(user_id))
         except (TelegramTransportError, TelegramApiError, TelegramInputError) as error:
             self._logger(f"telegram moderation action failed: {error}")
