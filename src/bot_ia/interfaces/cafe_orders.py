@@ -15,7 +15,7 @@ from .hardening import sanitize_control_text, whitelist_tag
 
 EXPOSURE_LEVELS = ("SFW", "Sugerente", "NSFW")
 BOLDNESS_LEVELS = ("Suave", "Atrevido", "Máximo")
-PRODUCT_TYPES = ("Carta TCG", "Naipe", "Waifumon")
+PRODUCT_TYPES = ("Carta TCG", "Naipe", "Waifumon", "Imagen IA Personalizada")
 DEFAULT_POSES = ("De pie", "Acción dinámica", "Retrato", "Pose cosplay")
 DEFAULT_OUTFITS = ("Uniforme", "Casual", "Fantasia", "Cosplay")
 
