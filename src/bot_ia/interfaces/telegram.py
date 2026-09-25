@@ -300,9 +300,17 @@ class TelegramAdapter:
                     f"• {room.name} → topic {room.external_id}"
                     for room in result.rooms
                 )
+                feeds = GroupSetupStore(Path.cwd()).get_feeds("telegram", inbound.conversation_id)
+                feed_text = "\n".join(f"• {name}: {url}" for name, url in feeds)
+                privacy_note = (
+                    "\n\n⚠️ Telegram: #pedidos se crea como tema del foro; "
+                    "Telegram no permite permisos privados por tema. Para privacidad real usa un chat/canal admin separado."
+                )
                 return TelegramOutbound(
                     inbound.conversation_id,
-                    "Estructura Telegram preparada:\n" + summary,
+                    "Estructura Telegram preparada:\n" + summary
+                    + "\n\nFeeds configurados:\n" + feed_text
+                    + privacy_note,
                     "admin_setup",
                 )
             except GroupSetupError as error:
