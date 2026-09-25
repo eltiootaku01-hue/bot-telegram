@@ -21,6 +21,14 @@ from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore, TelegramO
 from .telegram_event_ledger import TelegramEventLedger, TelegramEventLedgerError
 from .telegram_instance_lock import TelegramInstanceAlreadyRunning, TelegramInstanceLock
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
+from .telegram_room_routing import TelegramRoomRouter, TelegramRoomRoutingError
+from .telegram_security import (
+    authorized_group_ids,
+    is_authorized_admin_destination,
+    is_authorized_telegram_forum_route,
+    is_authorized_telegram_group,
+    require_authorized_group,
+)
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary, build_bebida_prompt, RESOLUTIONS, RENDER_STYLES
 from .hardening import MutexGuard
 from .xp_audit import PassiveXPTracker, AuditBus
@@ -215,6 +223,7 @@ class TelegramAdapter:
         application: BotApplication,
         *,
         tavern_manager: WaitressSessionManager | None = None,
+        room_router: TelegramRoomRouter | None = None,
     ) -> None:
         self._application = application
         self._tavern_manager = tavern_manager
@@ -225,6 +234,9 @@ class TelegramAdapter:
         )
         self._complaint_store = ComplaintStore(PROJECT_ROOT)
         self._vip_store = VipStore(PROJECT_ROOT)
+        self._room_router = room_router or TelegramRoomRouter(
+            PROJECT_ROOT / "config" / "telegram_rooms.sqlite3"
+        )
         self._order_store = OrderStore(PROJECT_ROOT)
         self._pending_orders: dict[str, OrderConfirmation] = {}
         self._last_orders: dict[str, OrderConfirmation] = {}
@@ -258,7 +270,60 @@ class TelegramAdapter:
         raw = os.getenv("TELEGRAM_ADMIN_USER_IDS", "")
         return frozenset(part.strip() for part in raw.split(",") if part.strip())
 
-    def _sync_authorized_bot_join(self, update: dict[str, object]) -> None:
+    def room_key_for_update(self, update: dict[str, object]) -> str:
+        """Resuelve la sala real del update sin inventar "general" en un foro."""
+        message = update.get("message")
+        if not isinstance(message, dict):
+            raise TelegramInputError("update sin mensaje Telegram")
+        chat = message.get("chat")
+        if not isinstance(chat, dict):
+            raise TelegramInputError("mensaje sin chat Telegram")
+        chat_id = str(chat.get("id", "")).strip()
+        if not chat_id:
+            raise TelegramInputError("chat_id Telegram vacío")
+
+        chat_type = str(chat.get("type", "")).strip().lower()
+        thread_raw = message.get("message_thread_id")
+        is_topic = bool(message.get("is_topic_message"))
+        thread_id: int | None = None
+        if thread_raw is not None:
+            try:
+                thread_id = int(thread_raw)
+            except (TypeError, ValueError) as error:
+                raise TelegramInputError(
+                    "message_thread_id Telegram inválido"
+                ) from error
+
+        if chat_type in {"group", "supergroup"}:
+            if not is_authorized_telegram_group(chat_id):
+                raise TelegramInputError(
+                    "chat Telegram fuera de la allowlist autorizada"
+                )
+
+        if thread_id is not None or is_topic:
+            if thread_id is None:
+                raise TelegramInputError(
+                    "mensaje de topic sin message_thread_id"
+                )
+            if not is_authorized_telegram_forum_route(chat_id, thread_id):
+                raise TelegramInputError(
+                    "topic Telegram fuera de AUTHORIZED_FORUM_ID"
+                )
+            try:
+                room_key = self._room_router.resolve(chat_id, thread_id)
+            except TelegramRoomRoutingError as error:
+                raise TelegramInputError(
+                    "no se pudo consultar el mapa autoritativo de salas"
+                ) from error
+            if not room_key:
+                raise TelegramInputError(
+                    f"topic Telegram no registrado: {chat_id}:{thread_id}"
+                )
+            return room_key
+
+        return "general"
+
+    def _sync_authorized_bot_join(self, update: dict[str, object]) -> None
         message = update.get("message")
         if not isinstance(message, dict):
             return
@@ -272,6 +337,11 @@ class TelegramAdapter:
         token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
         if not chat_id or not token:
             return
+        if not is_authorized_telegram_group(chat_id):
+            self._logger(
+                f"telegram bot role sync denied for unauthorized chat {chat_id}"
+            )
+            return
         try:
             TelegramGroupSetup(token).configure_authorized_bots(chat_id)
         except GroupSetupError as error:
@@ -279,7 +349,7 @@ class TelegramAdapter:
 
     def _admin_followup(self, complaint) -> TelegramOutbound | None:
         admin_chat = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "").strip()
-        if not admin_chat:
+        if not is_authorized_admin_destination(admin_chat):
             return None
         thread_raw = os.getenv("TELEGRAM_ADMIN_THREAD_ID", "").strip()
         try:
@@ -413,6 +483,19 @@ class TelegramAdapter:
                 "vip",
             )
         inbound = parse_update(update)
+        room_key = self.room_key_for_update(update)
+        inbound = TelegramInbound(
+            inbound.user_id,
+            inbound.conversation_id,
+            inbound.text,
+            {
+                **inbound.metadata,
+                "room_key": room_key,
+                "message_thread_id": update.get("message", {}).get("message_thread_id")
+                if isinstance(update.get("message"), dict)
+                else None,
+            },
+        )
         self._xp_tracker.record_message(inbound.user_id, "telegram")
 
         # Explicit Telegram commands must never be intercepted by the
