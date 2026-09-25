@@ -348,6 +348,15 @@ class TelegramAdapter:
                 "vip",
             )
         inbound = parse_update(update)
+        comment = analyze_telegram_comment(update)
+        if comment.should_reply:
+            return TelegramOutbound(
+                inbound.conversation_id,
+                comment.text,
+                "cari_comments",
+                reply_to_message_id=comment.reply_to_message_id,
+                auto_delete_seconds=30,
+            )
         moderation = moderate(
             inbound.text,
             room_key=str(inbound.metadata.get("room_key", "general")),
