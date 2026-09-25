@@ -151,6 +151,25 @@ class DiscordGroupSetup:
 
     def delete_message(self, channel_id: str, message_id: str) -> None:
         self._request("DELETE", f"/channels/{channel_id}/messages/{message_id}")
+    def list_guild_channels(self, guild_id: str) -> list[dict[str, object]]:
+        value = self._request("GET", f"/guilds/{guild_id}/channels")
+        return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+    def delete_channel(self, channel_id: str) -> None:
+        self._request("DELETE", f"/channels/{channel_id}")
+
+    def cleanup_managed_channels(self, guild_id: str, expected_names: set[str]) -> tuple[str, ...]:
+        """Elimina sólo canales previamente marcados como gestionados por BOT-IA."""
+        removed: list[str] = []
+        for channel in self.list_guild_channels(guild_id):
+            topic = str(channel.get("topic", ""))
+            name = str(channel.get("name", ""))
+            channel_id = str(channel.get("id", ""))
+            if topic.startswith("BOT-IA · ") and name not in expected_names and channel_id:
+                self.delete_channel(channel_id)
+                removed.append(name)
+        return tuple(removed)
+
 
     def ban_member(self, guild_id: str, user_id: str, *, delete_message_seconds: int = 604800) -> None:
         self._request(
@@ -188,6 +207,8 @@ class DiscordGroupSetup:
         if not (permissions & 0x8 or permissions & 0x10):
             raise GroupSetupError("El bot necesita Administrador o Gestionar Canales en Discord")
 
+        expected_names = {name.lstrip("#") for name, _ in ROOMS}
+        self.cleanup_managed_channels(guild_id, expected_names)
         existing = {r.key: r for r in store.get_rooms("discord", guild_id)}
         rooms: list[GroupRoom] = list(existing.values())
         for name, key in ROOMS:
