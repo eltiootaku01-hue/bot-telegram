@@ -82,6 +82,14 @@ class SchrodingerRouter:
         return self.moderation_action(action, guild_id.strip(), user_id.strip())
 
 
+REQUIRED_PLATFORM_ENV = ("DISCORD_BOT_TOKEN", "DISCORD_CLIENT_ID", "SCHRODINGER_BOT_TOKEN")
+
+
+def platform_env_status() -> dict[str, bool]:
+    """Comprueba presencia, nunca expone valores secretos."""
+    return {name: bool(os.getenv(name, "").strip()) for name in REQUIRED_PLATFORM_ENV}
+
+
 def build_schrodinger_token_hint() -> str:
     """Texto de configuración para .env; nunca devuelve el secreto."""
     return "SCHRODINGER_BOT_TOKEN=" + ("configured" if os.getenv("SCHRODINGER_BOT_TOKEN") else "")
