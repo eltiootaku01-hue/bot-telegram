@@ -10,6 +10,7 @@ from bot_ia.core.waitress_session_manager import (
     FAVORITE_DURATION_SECONDS,
     STANDARD_DURATION_SECONDS,
     InsufficientBalanceError,
+    SessionConflictError,
     WaitressSessionManager,
 )
 from bot_ia.providers.prompt_builder import (

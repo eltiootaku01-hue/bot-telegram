@@ -545,9 +545,9 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             encoding="utf-8"
         )
         for token in (
-            'QPushButton("👑 Soy Admin")',
+            'economy_menu.addAction("👑 Soy Adm")',
             "self.admin_button.setCheckable(True)",
-            "self.admin_button.clicked.connect(self._activate_admin_mode)",
+            "self.admin_button.triggered.connect(self._activate_admin_mode)",
             "self.admin_provisioner = AdminProvisioner(ROOT)",
             "self.admin_provisioner.activate(self.config_manager)",
             "BOT_IA_ADMIN_MODE",

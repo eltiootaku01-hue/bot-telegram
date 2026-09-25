@@ -411,8 +411,17 @@ class TelegramAdapter:
             )
         inbound = parse_update(update)
         self._xp_tracker.record_message(inbound.user_id, "telegram")
-        comment = analyze_telegram_comment(update)
-        if comment.should_reply:
+
+        # Explicit Telegram commands must never be intercepted by the
+        # comment/reply detector. Command handling remains the authoritative
+        # path below, while ordinary replies may enter the comment flow.
+        command_candidate = inbound.text.casefold().split()[0]
+        comment = (
+            None
+            if command_candidate.startswith("/")
+            else analyze_telegram_comment(update)
+        )
+        if comment is not None and comment.should_reply:
             return TelegramOutbound(
                 inbound.conversation_id,
                 comment.text,
@@ -1165,6 +1174,7 @@ class TelegramPoller:
         self._client, self._adapter, self._config = client, adapter, config or PollingConfig()
         self._sleeper, self._logger, self._running, self._offset = sleeper, logger or (lambda _: None), True, None
         self._outbox = outbox_store
+        self._callback_mutex = MutexGuard()
         self._pending_delivery: tuple[int, TelegramOutbound, int, tuple[int, ...]] | None = None
 
     @property
@@ -1457,7 +1467,13 @@ class TelegramPoller:
                             break
 
                 try:
-                    self._sync_authorized_bot_join(update)
+                    sync_authorized_bot_join = getattr(
+                        self._adapter,
+                        "_sync_authorized_bot_join",
+                        None,
+                    )
+                    if callable(sync_authorized_bot_join):
+                        sync_authorized_bot_join(update)
                     outbound: TelegramOutbound | None = None
                     moderation_outbound: TelegramOutbound | None = None
                     inline_query = update.get("inline_query")
@@ -1513,12 +1529,17 @@ class TelegramPoller:
                 except Exception as error:
                     if callback_key:
                         self._callback_mutex.release(callback_key)
-                    self._offset = update_id + 1
-                    skipped += 1
+
+                    # Internal logic/database failures are retriable. Never
+                    # acknowledge the update in this case: keeping the offset
+                    # unchanged lets Telegram redeliver the same update.
+                    errors += 1
                     self._logger(
-                        f"telegram update processing failed: {type(error).__name__}"
+                        f"telegram update processing failed: {type(error).__name__}; "
+                        "offset preserved for retry"
                     )
-                    continue
+                    self._sleeper(max(self._config.retry_delay_seconds, 0.1))
+                    break
 
                 try:
                     message_ids: list[int] = []
