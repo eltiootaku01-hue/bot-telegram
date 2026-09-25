@@ -1141,6 +1141,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         queue_source = (self.ROOT / "src" / "services" / "web_queue.py").read_text(encoding="utf-8")
         app_source = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
         telegram_source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        main_source = (self.ROOT / "src" / "src" / "bot_ia" / "__main__.py").read_text(encoding="utf-8") if (self.ROOT / "src" / "src" / "bot_ia" / "__main__.py").is_file() else (self.ROOT / "src" / "bot_ia" / "__main__.py").read_text(encoding="utf-8")
         hardening_source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "hardening.py").read_text(encoding="utf-8")
 
         for token in (
@@ -1171,6 +1172,13 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "callback dropped by local mutex",
         ):
             self.assertIn(token, telegram_source)
+
+        for token in (
+            "signal.signal(signal.SIGTERM, request_stop)",
+            "poller.stop()",
+            "SIGBREAK",
+        ):
+            self.assertIn(token, main_source)
 
     def test_bebida_gui_and_telegram_contract(self):
         app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
