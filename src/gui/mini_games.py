@@ -124,7 +124,7 @@ class LocalGameRouter:
                     f"({player}). Te pasaste. Escribe «21 nuevo» para reiniciar."
                 )
             if player == 21:
-                return self._finish_blackjack(state, natural=True)
+                return self._finish_blackjack(state, natural=True, user_id=user_id)
             return (
                 f"21 local · tus cartas: {', '.join(state.player_cards)} "
                 f"({player}). Dealer visible: {state.dealer_cards[0]}. "
@@ -132,7 +132,7 @@ class LocalGameRouter:
             )
 
         if action in {"plantarse", "plantar", "stand", "paso", "estado"}:
-            return self._finish_blackjack(state, natural=False)
+            return self._finish_blackjack(state, natural=False, user_id=user_id)
 
         return (
             "21 local: usa «21 nuevo», «carta» o «plantarse». "
@@ -181,6 +181,8 @@ class LocalGameRouter:
             state.player_cards.remove(candidates[0])
             if not state.player_cards:
                 state.finished = True
+                if self._wallet_store is not None:
+                    self._wallet_store.reward_game(user_id, "uno", won=True)
                 return f"UNO local · ¡ganaste! Anfitriona: {GAME_HOSTS['uno']}."
             return (
                 f"UNO local · jugaste {state.top_card}. "
@@ -192,7 +194,7 @@ class LocalGameRouter:
             "usa «UNO nuevo», «robar» o «UNO jugar»."
         )
 
-    def _finish_blackjack(self, state: BlackjackState, *, natural: bool) -> str:
+    def _finish_blackjack(self, state: BlackjackState, *, natural: bool, user_id: str) -> str:
         player = self._score(state.player_cards)
         while self._score(state.dealer_cards) < 17:
             state.dealer_cards.append(_RANDOM.choice(self._deck()))
@@ -206,6 +208,8 @@ class LocalGameRouter:
             result = "empate"
         else:
             result = "perdiste"
+        if result == "ganaste" and self._wallet_store is not None:
+            self._wallet_store.reward_game(user_id, "21", won=True)
         prefix = "¡21!" if natural or player == 21 else "21 local"
         return (
             f"{prefix} · tú: {player} [{', '.join(state.player_cards)}] · "
