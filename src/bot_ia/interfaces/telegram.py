@@ -20,7 +20,7 @@ from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary, build_bebida_prompt, RESOLUTIONS, RENDER_STYLES
 from .hardening import MutexGuard
-from .order_support import ComplaintStore, OrderConfirmation, new_order_id, order_destination
+from .order_support import ComplaintStore, OrderConfirmation, OrderStore, new_order_id, order_destination
 from .auto_moderation import moderate
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, purchase_bebida_order, quote_bebida_order
 from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue
@@ -182,6 +182,7 @@ class TelegramAdapter:
             allowed_tags=self._waifu_registry.danbooru_whitelist(),
         )
         self._complaint_store = ComplaintStore(Path.cwd())
+        self._order_store = OrderStore(Path.cwd())
         self._pending_orders: dict[str, OrderConfirmation] = {}
         self._last_orders: dict[str, OrderConfirmation] = {}
         self._pending_attachments: dict[str, OrderConfirmation] = {}
@@ -264,9 +265,9 @@ class TelegramAdapter:
     def _order_attach(self, callback: TelegramCallback, order_id: str) -> TelegramOutbound:
         if callback.user_id not in self._admin_ids():
             return TelegramOutbound(callback.conversation_id, "⛔ Acción reservada al equipo administrativo.", "admin")
-        for order in self._last_orders.values():
-            if order.order_id == order_id:
-                self._pending_attachments[callback.user_id] = order
+        order = self._order_store.get(order_id)
+        if order is not None:
+            self._pending_attachments[callback.user_id] = order
                 return TelegramOutbound(
                     callback.conversation_id,
                     f"📎 Pedido {order_id} listo. Envía ahora la imagen generada como foto a este chat.",
@@ -773,6 +774,7 @@ class TelegramAdapter:
                 return TelegramOutbound(callback.conversation_id, "❌ Saldo insuficiente al confirmar. No se descontaron puntos.", "bebida")
             self._pending_orders.pop(callback.user_id, None)
             self._last_orders[callback.user_id] = pending
+            self._order_store.save(pending)
             admin_followup = self._admin_order_followup(pending)
             return TelegramOutbound(
                 callback.conversation_id,
