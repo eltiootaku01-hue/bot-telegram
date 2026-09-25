@@ -26,6 +26,7 @@ from .cafe_immersion import analyze_telegram_comment
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, purchase_bebida_order, quote_bebida_order
 from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue, supervise_admin_publication
 from .superadmin import is_superadmin
+from .cafe_vip import VipStore, donation_keyboard, vip_policy_text, vip_status_text, validate_donation_event
 from .cafe_rooms import sfw_transition, mature_game_message
 from gui.waifu_registry import WaifuRegistry
 from .tutorials import build_tutorial_text
