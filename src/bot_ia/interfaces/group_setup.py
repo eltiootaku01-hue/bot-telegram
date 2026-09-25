@@ -19,7 +19,8 @@ ROOMS = (
     ("#cantina-18", "cantina_18"),
     ("#pedidos-nsfw", "pedidos_nsfw"),
     ("#mesa-de-apuestas-21", "mesa_apuestas_21"),
-    ("#pedidos", "pedidos_admin"),
+    ("#pedidos-admin", "pedidos_admin"),
+    ("#atencion-y-quejas", "atencion_quejas"),
 )
 
 REPOST_FEEDS = (
