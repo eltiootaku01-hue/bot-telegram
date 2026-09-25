@@ -146,52 +146,72 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertIn(f"BOT_TOKEN_{bot_id}=", source)
 
 
-    def test_multi_bot_matrix_and_sequential_dispatcher_contract(self):
+    def test_multi_provider_isolation_and_lightweight_chromium_contract(self):
         source = (
             self.ROOT / "src" / "gui" / "app.py"
         ).read_text(encoding="utf-8")
 
         for token in (
-            "class MatrixBotSpec:",
-            "class SequentialChatDispatcher(QObject):",
-            "MATRIX_BOT_SPECS = (",
-            '"cari",',
-            '"sunna",',
-            '"cami",',
-            '"chie",',
-            '"./browser_data/bot_1"',
-            '"./browser_data/bot_2"',
-            '"./browser_data/bot_3"',
-            '"./browser_data/bot_4"',
-            '"SYSTEM PROMPT / DIRECTIVA DE ACTUACIÓN:"',
-            '"COMANDO DE LOBBY:"',
-            "class GeminiLobbyWorker(QObject):",
+            "class ProviderWebSpec:",
+            "PROVIDER_WEB_SPECS = {",
+            '"gemini": ProviderWebSpec(',
+            '"chatgpt": ProviderWebSpec(',
+            '"grok_claude": ProviderWebSpec(',
+            "MATRIX_INITIALIZATION_ORDER =",
+            '"./browser_data/cari"',
+            '"./browser_data/cami"',
+            '"./browser_data/sunna"',
+            '"./browser_data/chie"',
+            'provider.addItem("Google Gemini", "gemini")',
+            'provider.addItem("OpenAI ChatGPT", "chatgpt")',
+            'provider.addItem("Grok / Claude", "grok_claude")',
+            "BOT_IA_GROK_CLAUDE_URL",
+            "new_chat_selectors",
+            "response_selectors",
+            "LIGHTWEIGHT_CHROMIUM_ARGS",
+            '"--disable-gpu"',
+            '"--disable-dev-shm-usage"',
+            '"--no-first-run"',
+            '"--disable-extensions"',
+            '"--renderer-process-limit=2"',
+            '"--disable-features=Translate,BackForwardCache"',
+            "PLAYWRIGHT_SINGLE_PROCESS",
             "chromium.launch_persistent_context(",
             "headless=False",
-            '"--disable-blink-features=AutomationControlled"',
-            '"--hide-crash-restore-bubble"',
-            '"--no-sandbox"',
-            '"div[contenteditable=\\'true\\']"',
-            '"model-response"',
-            "thread.started.connect(worker.run)",
-            "worker.finished.connect(thread.quit)",
-            "worker.failed.connect(thread.quit)",
-            "worker.finished.connect(worker.deleteLater)",
-            "worker.failed.connect(worker.deleteLater)",
+            "worker.ready.connect(self._on_bot_ready)",
             "thread.finished.connect(thread.deleteLater)",
             "self._start_next()",
-            "⛓ Ejecutar cadena 4 bots",
-            "QGridLayout",
         ):
             self.assertIn(token, source)
 
-        matrix_ids = [
-            spec.bot_id
-            for spec in __import__("gui.app", fromlist=["MATRIX_BOT_SPECS"]).MATRIX_BOT_SPECS
-        ]
+        module = __import__(
+            "gui.app",
+            fromlist=[
+                "MATRIX_BOT_SPECS",
+                "MATRIX_INITIALIZATION_ORDER",
+                "PROVIDER_WEB_SPECS",
+            ],
+        )
         self.assertEqual(
             ["cari", "sunna", "cami", "chie"],
-            matrix_ids,
+            [spec.bot_id for spec in module.MATRIX_BOT_SPECS],
+        )
+        self.assertEqual(
+            ("cari", "cami", "sunna", "chie"),
+            module.MATRIX_INITIALIZATION_ORDER,
+        )
+        self.assertEqual(
+            {"gemini", "chatgpt", "grok_claude"},
+            set(module.PROVIDER_WEB_SPECS),
+        )
+        self.assertEqual(
+            [
+                "./browser_data/cari",
+                "./browser_data/sunna",
+                "./browser_data/cami",
+                "./browser_data/chie",
+            ],
+            [spec.browser_profile for spec in module.MATRIX_BOT_SPECS],
         )
 
     def test_async_qt_entrypoint_and_shutdown_contract_are_present(self):

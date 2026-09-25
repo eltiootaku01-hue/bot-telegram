@@ -157,83 +157,201 @@ class ApplicationTask(QRunnable):
             )
 
 
-class MatrixBotSpec:
-    """Configuración fija de una instancia del Lobby 2x2."""
+@dataclass(frozen=True, slots=True)
+class ProviderWebSpec:
+    """Configuración web de un proveedor de chat para la matriz."""
 
-    def __init__(
-        self,
-        bot_id: str,
-        display_name: str,
-        browser_profile: str,
-        row: int,
-        column: int,
-        default_system_prompt: str,
-    ) -> None:
-        self.bot_id = bot_id
-        self.display_name = display_name
-        self.browser_profile = browser_profile
-        self.row = row
-        self.column = column
-        self.default_system_prompt = default_system_prompt
+    provider_id: str
+    display_name: str
+    default_url: str
+    new_chat_selectors: tuple[str, ...]
+    input_selectors: tuple[str, ...]
+    response_selectors: tuple[str, ...]
+
+
+PROVIDER_WEB_SPECS = {
+    "gemini": ProviderWebSpec(
+        "gemini",
+        "Google Gemini",
+        "https://gemini.google.com/app",
+        (
+            "button[aria-label*='Nuevo chat']",
+            "button[aria-label*='New chat']",
+            "a[aria-label*='Nuevo chat']",
+            "a[aria-label*='New chat']",
+            "button:has-text('Nuevo chat')",
+            "button:has-text('New chat')",
+        ),
+        (
+            "div[contenteditable='true']",
+            "textarea[aria-label*='prompt']",
+            "rich-textarea div.ql-editor",
+        ),
+        (
+            "model-response",
+            "message-content .markdown",
+            ".model-response-text",
+            "div[data-test-id='conversation-turn']",
+        ),
+    ),
+    "chatgpt": ProviderWebSpec(
+        "chatgpt",
+        "OpenAI ChatGPT",
+        "https://chatgpt.com/",
+        (
+            "button[data-testid='create-new-chat-button']",
+            "a[aria-label*='New chat']",
+            "button[aria-label*='New chat']",
+            "a[aria-label*='Nuevo chat']",
+            "button[aria-label*='Nuevo chat']",
+            "button:has-text('New chat')",
+            "button:has-text('Nuevo chat')",
+        ),
+        (
+            "#prompt-textarea",
+            "textarea[placeholder*='Message']",
+            "div[contenteditable='true']",
+        ),
+        (
+            "[data-message-author-role='assistant']",
+            "article[data-testid^='conversation-turn'] "
+            "[data-message-author-role='assistant']",
+            "div[data-testid^='conversation-turn']",
+        ),
+    ),
+    "grok_claude": ProviderWebSpec(
+        "grok_claude",
+        "Grok / Claude",
+        "https://grok.com/",
+        (
+            "button[aria-label*='New chat']",
+            "button[aria-label*='New conversation']",
+            "button[title*='New chat']",
+            "button[title*='New conversation']",
+            "a[aria-label*='New chat']",
+            "button:has-text('New chat')",
+            "button:has-text('New conversation')",
+            "button:has-text('Nuevo chat')",
+        ),
+        (
+            "textarea",
+            "div[contenteditable='true']",
+        ),
+        (
+            "[data-message-author-role='assistant']",
+            "[data-testid*='assistant']",
+            "[data-content='ai-message']",
+            ".message-content",
+        ),
+    ),
+}
+
+
+MATRIX_INITIALIZATION_ORDER = (
+    "cari",
+    "cami",
+    "sunna",
+    "chie",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class MatrixBotSpec:
+    """Configuración aislada de cada cuadrante de la matriz."""
+
+    bot_id: str
+    display_name: str
+    browser_profile: str
+    row: int
+    column: int
+    default_system_prompt: str
+    default_provider: str = "gemini"
 
 
 MATRIX_BOT_SPECS = (
     MatrixBotSpec(
         "cari",
         "Cari",
-        "./browser_data/bot_1",
+        "./browser_data/cari",
         0,
         0,
         "Actúa como Cari, anfitriona del Café Otaku. "
-        "Sigue primero esta directiva y después ejecuta el comando recibido.",
+        "Temas: bienvenida, atención, coordinación del lobby y tono cálido. "
+        "Aplica esta directiva antes de ejecutar cualquier comando.",
     ),
     MatrixBotSpec(
         "sunna",
         "Sunna",
-        "./browser_data/bot_2",
+        "./browser_data/sunna",
         0,
         1,
         "Actúa como Sunna, responsable de lore y trivia del Café Otaku. "
-        "Sigue primero esta directiva y después ejecuta el comando recibido.",
+        "Temas: continuidad, datos del universo, trivia y precisión contextual. "
+        "Aplica esta directiva antes de ejecutar cualquier comando.",
     ),
     MatrixBotSpec(
         "cami",
         "Cami",
-        "./browser_data/bot_3",
+        "./browser_data/cami",
         1,
         0,
         "Actúa como Cami, moderadora del Café Otaku. "
-        "Sigue primero esta directiva y después ejecuta el comando recibido.",
+        "Temas: orden de conversación, moderación, seguridad y coordinación. "
+        "Aplica esta directiva antes de ejecutar cualquier comando.",
     ),
     MatrixBotSpec(
         "chie",
         "Chie",
-        "./browser_data/bot_4",
+        "./browser_data/chie",
         1,
         1,
         "Actúa como Chie, gestora de XP del Café Otaku. "
-        "Sigue primero esta directiva y después ejecuta el comando recibido.",
+        "Temas: progreso, XP, recompensas y seguimiento de actividad. "
+        "Aplica esta directiva antes de ejecutar cualquier comando.",
     ),
 )
 
 
+LIGHTWEIGHT_CHROMIUM_ARGS = (
+    "--disable-blink-features=AutomationControlled",
+    "--hide-crash-restore-bubble",
+    "--no-sandbox",
+    "--disable-gpu",
+    "--disable-dev-shm-usage",
+    "--no-first-run",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-component-update",
+    "--renderer-process-limit=2",
+    "--disable-features=Translate,BackForwardCache",
+)
+
+
+def _lightweight_browser_args() -> list[str]:
+    """Devuelve flags ligeros; --single-process queda como opt-in."""
+    args = list(LIGHTWEIGHT_CHROMIUM_ARGS)
+    if os.getenv("PLAYWRIGHT_SINGLE_PROCESS", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        args.append("--single-process")
+    return args
+
+
 class GeminiLobbyWorker(QObject):
-    """Worker Playwright síncrono para una única sesión persistente."""
+    """Worker síncrono de Playwright para un perfil web aislado."""
 
     finished = Signal(str)
     failed = Signal(str)
+    ready = Signal(str)
 
-    GEMINI_URL = "https://gemini.google.com"
-    INPUT_SELECTOR = "div[contenteditable='true']"
-    RESPONSE_SELECTOR = "model-response"
+    CONTEXT_ACK_TOKEN = "CONTEXTO_LISTO"
     TIMEOUT_MS = 30_000
+    NEW_CHAT_TIMEOUT_MS = 8_000
     POLL_INTERVAL_MS = 100
     STABLE_POLLS = 2
-    BROWSER_ARGS = (
-        "--disable-blink-features=AutomationControlled",
-        "--hide-crash-restore-bubble",
-        "--no-sandbox",
-    )
 
     def __init__(
         self,
@@ -241,12 +359,43 @@ class GeminiLobbyWorker(QObject):
         browser_profile: str,
         system_prompt: str,
         command: str,
+        provider_id: str = "gemini",
+        provider_url: str = "",
     ) -> None:
         super().__init__()
         self.bot_id = bot_id
         self.browser_profile = browser_profile
         self.system_prompt = system_prompt.strip()
         self.command = command.strip()
+        self.provider_id = provider_id.strip().lower()
+        self.provider_url = provider_url.strip()
+
+    @property
+    def provider(self) -> ProviderWebSpec:
+        try:
+            return PROVIDER_WEB_SPECS[self.provider_id]
+        except KeyError as error:
+            raise ValueError(
+                f"{self.bot_id}: proveedor web no soportado: {self.provider_id!r}"
+            ) from error
+
+    @property
+    def start_url(self) -> str:
+        provider = self.provider
+        if self.provider_id == "gemini":
+            configured = os.getenv("BOT_IA_GEMINI_URL", "")
+        elif self.provider_id == "chatgpt":
+            configured = os.getenv("BOT_IA_CHATGPT_URL", "")
+        else:
+            configured = (
+                self.provider_url
+                or os.getenv("BOT_IA_GROK_CLAUDE_URL", "")
+            )
+        return configured.strip() or provider.default_url
+
+    @property
+    def browser_args(self) -> list[str]:
+        return _lightweight_browser_args()
 
     def build_prompt(self) -> str:
         if not self.system_prompt:
@@ -258,28 +407,58 @@ class GeminiLobbyWorker(QObject):
                 f"{self.bot_id}: el comando no puede estar vacío."
             )
         return (
-            "SYSTEM PROMPT / DIRECTIVA DE ACTUACIÓN:\n"
+            "PERSONALIDAD / DIRECTIVA DE ACTUACIÓN:\n"
             f"{self.system_prompt}\n\n"
+            "REGLA DE INICIALIZACIÓN:\n"
+            "Comprende y aplica la personalidad y los temas anteriores antes "
+            "de ejecutar el comando. Confirma que el contexto fue aceptado "
+            f"incluyendo exactamente la etiqueta {self.CONTEXT_ACK_TOKEN} "
+            "en tu respuesta.\n\n"
             "COMANDO DE LOBBY:\n"
             f"{self.command}"
         )
 
-    def _wait_for_visible(self, page, selector: str, timeout_ms: int):
+    def _wait_for_visible(
+        self,
+        page,
+        selectors: tuple[str, ...],
+        timeout_ms: int,
+    ):
         deadline = time.monotonic() + timeout_ms / 1000
-        locator = page.locator(selector)
-
         while time.monotonic() < deadline:
-            count = locator.count()
-            for index in range(count):
-                candidate = locator.nth(index)
+            for selector in selectors:
+                locator = page.locator(selector)
                 try:
-                    if candidate.is_visible():
-                        return candidate
+                    count = locator.count()
                 except Exception as error:
                     _ = error
+                    continue
+                for index in range(count):
+                    candidate = locator.nth(index)
+                    try:
+                        if candidate.is_visible():
+                            return candidate
+                    except Exception as error:
+                        _ = error
             page.wait_for_timeout(self.POLL_INTERVAL_MS)
+        raise TimeoutError(
+            f"{self.bot_id}: no apareció un selector visible de "
+            f"{self.provider.display_name}."
+        )
 
-        raise TimeoutError(f"No apareció el selector visible: {selector}")
+    def _open_new_chat(self, page) -> None:
+        new_chat = self._wait_for_visible(
+            page,
+            self.provider.new_chat_selectors,
+            self.NEW_CHAT_TIMEOUT_MS,
+        )
+        new_chat.click()
+        page.wait_for_timeout(500)
+        self._wait_for_visible(
+            page,
+            self.provider.input_selectors,
+            self.NEW_CHAT_TIMEOUT_MS,
+        )
 
     def _read_response(
         self,
@@ -290,102 +469,111 @@ class GeminiLobbyWorker(QObject):
         deadline = time.monotonic() + self.TIMEOUT_MS / 1000
         previous_text = baseline_text
         stable_polls = 0
+        response_selector = ", ".join(self.provider.response_selectors)
 
         while time.monotonic() < deadline:
-            responses = page.locator(self.RESPONSE_SELECTOR)
+            responses = page.locator(response_selector)
             count = responses.count()
-
             if count:
                 current_text = (
                     responses.nth(count - 1).inner_text()
                 ).strip()
                 is_new = count > baseline_count
                 changed = bool(current_text) and current_text != baseline_text
-
                 if current_text and (is_new or changed):
                     if current_text == previous_text:
                         stable_polls += 1
                     else:
                         stable_polls = 0
                     previous_text = current_text
-
                     if stable_polls >= self.STABLE_POLLS:
                         return current_text
-
             page.wait_for_timeout(self.POLL_INTERVAL_MS)
 
         raise TimeoutError(
-            f"{self.bot_id}: Gemini no produjo una respuesta estable a tiempo."
+            f"{self.bot_id}: {self.provider.display_name} no produjo "
+            "una respuesta estable a tiempo."
         )
 
     @Slot()
     def run(self) -> None:
+        context = None
+        playwright = None
         try:
             prompt = self.build_prompt()
-            with sync_playwright() as playwright:
-                context = playwright.chromium.launch_persistent_context(
-                    self.browser_profile,
-                    headless=False,
-                    args=list(self.BROWSER_ARGS),
+            playwright = sync_playwright().start()
+            context = playwright.chromium.launch_persistent_context(
+                self.browser_profile,
+                headless=False,
+                args=self.browser_args,
+            )
+            page = context.new_page()
+            page.goto(
+                self.start_url,
+                wait_until="domcontentloaded",
+                timeout=self.TIMEOUT_MS,
+            )
+            self._open_new_chat(page)
+
+            response_selector = ", ".join(
+                self.provider.response_selectors
+            )
+            response_locator = page.locator(response_selector)
+            baseline_count = response_locator.count()
+            baseline_text = ""
+            if baseline_count:
+                baseline_text = (
+                    response_locator.nth(baseline_count - 1)
+                    .inner_text()
+                    .strip()
                 )
-                try:
-                    page = (
-                        context.pages[0]
-                        if context.pages
-                        else context.new_page()
-                    )
-                    page.goto(
-                        self.GEMINI_URL,
-                        wait_until="domcontentloaded",
-                        timeout=self.TIMEOUT_MS,
-                    )
 
-                    input_locator = self._wait_for_visible(
-                        page,
-                        self.INPUT_SELECTOR,
-                        self.TIMEOUT_MS,
-                    )
+            input_locator = self._wait_for_visible(
+                page,
+                self.provider.input_selectors,
+                self.TIMEOUT_MS,
+            )
+            input_locator.fill(prompt)
+            input_locator.press("Enter")
 
-                    response_locator = page.locator(
-                        self.RESPONSE_SELECTOR
-                    )
-                    baseline_count = response_locator.count()
-                    baseline_text = ""
-                    if baseline_count:
-                        baseline_text = (
-                            response_locator.nth(baseline_count - 1)
-                            .inner_text()
-                            .strip()
-                        )
-
-                    input_locator.fill(prompt)
-                    input_locator.press("Enter")
-
-                    response_text = self._read_response(
-                        page,
-                        baseline_count,
-                        baseline_text,
-                    )
-                finally:
-                    try:
-                        context.close()
-                    except Exception as error:
-                        _ = error
+            response_text = self._read_response(
+                page,
+                baseline_count,
+                baseline_text,
+            )
+            if self.CONTEXT_ACK_TOKEN.casefold() not in response_text.casefold():
+                raise RuntimeError(
+                    f"{self.bot_id}: el modelo no confirmó el contexto "
+                    f"con {self.CONTEXT_ACK_TOKEN}."
+                )
 
             self.finished.emit(response_text)
+            self.ready.emit(self.bot_id)
         except Exception as error:
             self.failed.emit(
                 f"{self.bot_id}: {type(error).__name__}: {error}"
             )
+        finally:
+            if context is not None:
+                try:
+                    context.close()
+                except Exception as error:
+                    _ = error
+            if playwright is not None:
+                try:
+                    playwright.stop()
+                except Exception as error:
+                    _ = error
 
 
 class SequentialChatDispatcher(QObject):
-    """Ejecuta las cuatro sesiones de Gemini en cadena determinista."""
+    """Inicialización serial: Cari → Cami → Sunna → Chie."""
 
     finished = Signal(dict)
     failed = Signal(str)
     bot_started = Signal(str)
     bot_finished = Signal(str, str)
+    bot_ready = Signal(str)
     bot_failed = Signal(str, str)
 
     def __init__(
@@ -395,23 +583,34 @@ class SequentialChatDispatcher(QObject):
     ) -> None:
         super().__init__(parent)
         self.specs = tuple(specs)
+        self._spec_by_id = {spec.bot_id: spec for spec in self.specs}
+        self._order = tuple(
+            bot_id
+            for bot_id in MATRIX_INITIALIZATION_ORDER
+            if bot_id in self._spec_by_id
+        )
         self._index = 0
         self._command = ""
         self._system_prompts: dict[str, str] = {}
+        self._providers: dict[str, str] = {}
+        self._provider_urls: dict[str, str] = {}
         self._results: dict[str, str] = {}
         self._errors: dict[str, str] = {}
         self._active_thread: QThread | None = None
         self._active_worker: GeminiLobbyWorker | None = None
         self._stopping = False
+        self._chain_running = False
 
     @property
     def is_running(self) -> bool:
-        return self._active_thread is not None and self._active_thread.isRunning()
+        return self._chain_running
 
     def start(
         self,
         command: str,
         system_prompts: dict[str, str],
+        providers: dict[str, str] | None = None,
+        provider_urls: dict[str, str] | None = None,
         *,
         start_bot_id: str = "cari",
     ) -> bool:
@@ -423,29 +622,38 @@ class SequentialChatDispatcher(QObject):
             self.failed.emit("El comando del Lobby no puede estar vacío.")
             return False
 
-        indexes = [
-            index
-            for index, spec in enumerate(self.specs)
-            if spec.bot_id == start_bot_id
-        ]
-        if not indexes:
+        if start_bot_id not in self._order:
             self.failed.emit(
                 f"No existe el bot de matriz solicitado: {start_bot_id}."
             )
             return False
 
-        self._index = indexes[0]
+        self._index = self._order.index(start_bot_id)
         self._command = command
         self._system_prompts = {
-            spec.bot_id: system_prompts.get(
-                spec.bot_id,
-                spec.default_system_prompt,
+            bot_id: system_prompts.get(
+                bot_id,
+                self._spec_by_id[bot_id].default_system_prompt,
             ).strip()
-            for spec in self.specs
+            for bot_id in self._order
+        }
+        raw_providers = providers or {}
+        self._providers = {
+            bot_id: raw_providers.get(
+                bot_id,
+                self._spec_by_id[bot_id].default_provider,
+            ).strip().lower()
+            for bot_id in self._order
+        }
+        raw_urls = provider_urls or {}
+        self._provider_urls = {
+            bot_id: raw_urls.get(bot_id, "").strip()
+            for bot_id in self._order
         }
         self._results = {}
         self._errors = {}
         self._stopping = False
+        self._chain_running = True
         self._start_next()
         return True
 
@@ -453,41 +661,50 @@ class SequentialChatDispatcher(QObject):
         if self._stopping:
             return
 
-        if self._index >= len(self.specs):
+        if self._index >= len(self._order):
+            self._chain_running = False
             self.finished.emit(
                 {
                     "ok": not self._errors,
                     "command": self._command,
+                    "order": list(self._order),
                     "results": dict(self._results),
                     "errors": dict(self._errors),
                 }
             )
             return
 
-        spec = self.specs[self._index]
+        bot_id = self._order[self._index]
+        spec = self._spec_by_id[bot_id]
         worker = GeminiLobbyWorker(
-            spec.bot_id,
+            bot_id,
             spec.browser_profile,
             self._system_prompts.get(
-                spec.bot_id,
+                bot_id,
                 spec.default_system_prompt,
             ),
             self._command,
+            self._providers.get(
+                bot_id,
+                spec.default_provider,
+            ),
+            self._provider_urls.get(bot_id, ""),
         )
         thread = QThread(self)
         worker.moveToThread(thread)
 
-        self.bot_started.emit(spec.bot_id)
+        self.bot_started.emit(bot_id)
         thread.started.connect(worker.run)
         worker.finished.connect(
-            lambda response, bot_id=spec.bot_id: self._on_bot_finished(
-                bot_id,
+            lambda response, current_bot=bot_id: self._on_bot_finished(
+                current_bot,
                 response,
             )
         )
+        worker.ready.connect(self._on_bot_ready)
         worker.failed.connect(
-            lambda error, bot_id=spec.bot_id: self._on_bot_failed(
-                bot_id,
+            lambda error, current_bot=bot_id: self._on_bot_failed(
+                current_bot,
                 error,
             )
         )
@@ -497,9 +714,9 @@ class SequentialChatDispatcher(QObject):
         worker.failed.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
         thread.finished.connect(
-            lambda bot_id=spec.bot_id, current_thread=thread, current_worker=worker:
+            lambda current_bot=bot_id, current_thread=thread, current_worker=worker:
             self._on_thread_finished(
-                bot_id,
+                current_bot,
                 current_thread,
                 current_worker,
             )
@@ -512,6 +729,9 @@ class SequentialChatDispatcher(QObject):
     def _on_bot_finished(self, bot_id: str, response: str) -> None:
         self._results[bot_id] = response
         self.bot_finished.emit(bot_id, response)
+
+    def _on_bot_ready(self, bot_id: str) -> None:
+        self.bot_ready.emit(bot_id)
 
     def _on_bot_failed(self, bot_id: str, error: str) -> None:
         self._errors[bot_id] = error
@@ -528,21 +748,39 @@ class SequentialChatDispatcher(QObject):
         if self._active_worker is worker:
             self._active_worker = None
 
-        self._index += 1
         if self._stopping:
             return
 
+        if bot_id in self._errors:
+            self._chain_running = False
+            self.finished.emit(
+                {
+                    "ok": False,
+                    "command": self._command,
+                    "order": list(self._order),
+                    "results": dict(self._results),
+                    "errors": dict(self._errors),
+                }
+            )
+            return
+
+        self._index += 1
         QTimer.singleShot(0, self._start_next)
 
     def stop(self) -> None:
         self._stopping = True
+        self._chain_running = False
         thread = self._active_thread
         if thread is None:
+            self._active_worker = None
             return
+
         thread.requestInterruption()
         thread.quit()
         if thread.isRunning():
             thread.wait(1_000)
+        self._active_thread = None
+        self._active_worker = None
 
 
 class SystemDiagnosticWorker(QObject):
@@ -1356,7 +1594,8 @@ class CommandCenterWindow(QMainWindow):
         layout.addLayout(matrix_header)
 
         self._matrix_chain_summary = QLabel(
-            "Orden: Cari → Sunna → Cami → Chie · perfiles Playwright aislados."
+            "Matriz: Cari · Sunna · Cami · Chie · "
+            "inicialización secuencial: Cari → Cami → Sunna → Chie."
         )
         self._matrix_chain_summary.setObjectName("Muted")
         self._matrix_chain_summary.setWordWrap(True)
@@ -1394,6 +1633,40 @@ class CommandCenterWindow(QMainWindow):
             profile_label.setWordWrap(True)
             panel_layout.addWidget(profile_label)
 
+            provider_row = QHBoxLayout()
+            provider_row.addWidget(QLabel("Proveedor web"))
+            provider = QComboBox()
+            provider.addItem("Google Gemini", "gemini")
+            provider.addItem("OpenAI ChatGPT", "chatgpt")
+            provider.addItem("Grok / Claude", "grok_claude")
+            provider.setCurrentIndex(
+                max(
+                    0,
+                    provider.findData(spec.default_provider),
+                )
+            )
+            provider_row.addWidget(provider, 1)
+            panel_layout.addLayout(provider_row)
+
+            provider_url = QLineEdit()
+            provider_url.setPlaceholderText(
+                "URL personalizada para Grok / Claude"
+            )
+            provider_url.setText(
+                os.getenv(
+                    "BOT_IA_GROK_CLAUDE_URL",
+                    "",
+                ).strip()
+            )
+            provider_url.setVisible(spec.default_provider == "grok_claude")
+            provider.currentIndexChanged.connect(
+                lambda index, field=provider_url:
+                field.setVisible(
+                    provider.itemData(index) == "grok_claude"
+                )
+            )
+            panel_layout.addWidget(provider_url)
+
             system_prompt = QPlainTextEdit(spec.default_system_prompt)
             system_prompt.setPlaceholderText(
                 "System Prompt / Directiva de Actuación"
@@ -1421,6 +1694,8 @@ class CommandCenterWindow(QMainWindow):
                 "status": status,
                 "system_prompt": system_prompt,
                 "log": log,
+                "provider": provider,
+                "provider_url": provider_url,
                 "start_button": start_button,
             }
             matrix_grid.addWidget(
@@ -1961,6 +2236,18 @@ class CommandCenterWindow(QMainWindow):
             ).strip()
             for bot_id, widgets in self._matrix_widgets.items()
         }
+        providers = {
+            bot_id: str(
+                widgets["provider"].currentData()
+            ).strip().lower()
+            for bot_id, widgets in self._matrix_widgets.items()
+        }
+        provider_urls = {
+            bot_id: str(
+                widgets["provider_url"].text()
+            ).strip()
+            for bot_id, widgets in self._matrix_widgets.items()
+        }
 
         for bot_id, widgets in self._matrix_widgets.items():
             widgets["status"].setText(
@@ -1975,6 +2262,8 @@ class CommandCenterWindow(QMainWindow):
         self._matrix_dispatcher.start(
             command,
             system_prompts,
+            providers,
+            provider_urls,
             start_bot_id=start_bot_id,
         )
 
@@ -1998,10 +2287,13 @@ class CommandCenterWindow(QMainWindow):
         widgets = self._matrix_widgets.get(bot_id)
         if widgets is None:
             return
-        widgets["status"].setText("⏳ Procesando…")
+        widgets["status"].setText("⏳ Inicializando personalidad…")
         log = widgets["log"]
         log.appendPlainText(
-            "Directiva inyectada antes del comando."
+            f"Proveedor seleccionado: {widgets['provider'].currentText()}"
+        )
+        log.appendPlainText(
+            "Perfil aislado abierto; solicitando un chat nuevo…"
         )
 
     @Slot(str, str)
@@ -2013,7 +2305,7 @@ class CommandCenterWindow(QMainWindow):
         widgets = self._matrix_widgets.get(bot_id)
         if widgets is None:
             return
-        widgets["status"].setText("✅ Finalizado")
+        widgets["status"].setText("🟡 Contexto recibido")
         widgets["log"].appendPlainText(
             response.strip() or "Respuesta vacía."
         )
@@ -2023,6 +2315,16 @@ class CommandCenterWindow(QMainWindow):
             speaker,
             response,
             "bot",
+        )
+
+    @Slot(str)
+    def _on_matrix_bot_ready(self, bot_id: str) -> None:
+        widgets = self._matrix_widgets.get(bot_id)
+        if widgets is None:
+            return
+        widgets["status"].setText("✅ Listo / Chat creado")
+        widgets["log"].appendPlainText(
+            "CONTEXTO_LISTO confirmado. Se habilita el siguiente turno."
         )
 
     @Slot(str, str)
@@ -2188,6 +2490,9 @@ class CommandCenterWindow(QMainWindow):
             "COZE_API_TOKEN",
             "COZE_BOT_ID",
             "GEMINI_API_KEY",
+            "BOT_IA_GEMINI_URL",
+            "BOT_IA_CHATGPT_URL",
+            "BOT_IA_GROK_CLAUDE_URL",
             "OLLAMA_BASE_URL",
             "TELEGRAM_BOT_TOKEN",
         )
