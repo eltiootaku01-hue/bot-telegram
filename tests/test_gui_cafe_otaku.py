@@ -803,5 +803,72 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("UNO local", draw)
         self.assertNotIn("WebQueue", draw)
 
+
+    def test_waifumon_stats_card_contract(self):
+        registry = (
+            self.ROOT / "src" / "gui" / "waifu_registry.py"
+        ).read_text(encoding="utf-8")
+        app = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+        for token in (
+            "card_hp",
+            "card_attack",
+            "card_type",
+            "Waifumon / Ficha de Stats",
+            "Waifumon stats:",
+            "matching Waifumon stats-card template",
+        ):
+            self.assertIn(token, registry)
+        for token in (
+            "Waifumon / Ficha de Stats",
+            'QLabel("HP")',
+            'QLabel("Ataque")',
+            'QLabel("Tipo")',
+            "def _draw_waifumon_stats_template",
+            '"HP", record.card_hp',
+            '"ATAQUE", record.card_attack',
+            '"ELEMENTO", record.element',
+            '"TIPO", record.card_type',
+        ):
+            self.assertIn(token, app)
+
+    def test_waifumon_stats_persist_and_prompt(self):
+        import tempfile
+        from pathlib import Path
+        from gui.waifu_registry import (
+            WaifuRecord,
+            WaifuRegistry,
+            generate_tcg_prompt,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            record = WaifuRecord(
+                name="Aki",
+                personality="valiente",
+                appearance="cabello plateado",
+                element="Fuego",
+                cosplay_reference="UR",
+                card_category="Waifumon / Ficha de Stats",
+                card_hp="120",
+                card_attack="80",
+                card_type="Guerrero",
+            )
+            record.prompt = generate_tcg_prompt(record)
+            registry = WaifuRegistry(Path(temp_dir))
+            registry.save([record])
+            loaded = registry.load()[0]
+            self.assertEqual("120", loaded.card_hp)
+            self.assertEqual("80", loaded.card_attack)
+            self.assertEqual("Guerrero", loaded.card_type)
+            self.assertIn(
+                "Waifumon stats: HP 120, Attack 80, Element Fuego, Type Guerrero.",
+                loaded.prompt,
+            )
+            self.assertIn(
+                "matching Waifumon stats-card template",
+                loaded.prompt,
+            )
+
 if __name__ == "__main__":
     unittest.main()
