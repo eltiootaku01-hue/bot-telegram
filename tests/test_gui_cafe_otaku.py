@@ -1161,7 +1161,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         )
         self.assertFalse(scheduler.is_active(now=now[0] + TEA_TIME_DURATION_SECONDS + 1))
         self.assertEqual(1, scheduler.multiplier(now=now[0] + TEA_TIME_DURATION_SECONDS + 1))
-        self.assertIn("Heart", waitress_exclusive_dialogue("Cami", 3))
+        self.assertIn("afinidad", waitress_exclusive_dialogue("Cami", 3))
 
     def test_tea_time_doubles_local_game_rewards(self):
         from tempfile import TemporaryDirectory
