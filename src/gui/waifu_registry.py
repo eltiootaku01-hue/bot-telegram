@@ -152,7 +152,9 @@ class WaifuRegistry:
         for waitress in WAITRESS_IDS:
             profile.setdefault(waitress, 0)
         self._waitress_affinity[str(user_id)] = profile
-        self.save(self.load())
+        records = self.load()
+        self._waitress_affinity[str(user_id)] = profile
+        self.save(records)
         return name, charged, profile[name]
 
     def load(self) -> list[WaifuRecord]:
