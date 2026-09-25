@@ -1939,6 +1939,69 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("data:image/png;base64,", immersion)
 
 
+    def test_optional_vip_economy_contract(self):
+        from tempfile import TemporaryDirectory
+        from bot_ia.interfaces.cafe_vip import (
+            DONATION_BUTTON,
+            VIP_DISCORD_ROLE,
+            VIP_ROOM_KEY,
+            VipStore,
+            donation_keyboard,
+            vip_policy_text,
+        )
+
+        self.assertEqual("VIP", VIP_DISCORD_ROLE)
+        self.assertEqual("zona_reservada", VIP_ROOM_KEY)
+        self.assertEqual("✨ Apoyar al Café", DONATION_BUTTON)
+        self.assertIn("100% gratuito", vip_policy_text())
+        self.assertIn("#cantina-18", vip_policy_text())
+
+        with TemporaryDirectory() as tmp:
+            store = VipStore(Path(tmp))
+            self.assertFalse(store.is_vip("u1"))
+            manual = store.grant_manual("u1")
+            self.assertTrue(manual.vip)
+            self.assertEqual("manual", manual.source)
+
+            donated = store.record_stars("u2", 10)
+            self.assertTrue(donated.vip)
+            self.assertEqual(10, donated.donated_stars)
+
+            self.assertEqual(donation_keyboard(), ((("✨ Apoyar al Café", "vip:donate"),),))
+
+    def test_vip_discord_setup_and_telegram_contract(self):
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        gui = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        vip = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_vip.py").read_text(encoding="utf-8")
+
+        for token in (
+            '"#zona-reservada"',
+            '"zona_reservada"',
+            'ensure_role(guild_id, "VIP"',
+            "color=0xFFD700",
+            "permission_overwrites",
+        ):
+            self.assertIn(token, group)
+        for token in (
+            'command == "/donar"',
+            'command == "/vip"',
+            'callback.data == "vip:donate"',
+            "successful_payment",
+            "validate_donation_event",
+            "VipStore",
+        ):
+            self.assertIn(token, telegram)
+        self.assertIn('QPushButton("✨ Apoyar al Café")', gui)
+        for token in (
+            "El acceso a SFW y #cantina-18 sigue siendo 100% gratuito.",
+            "telegram_stars",
+            "record_stars",
+            "grant_manual",
+            "VIP_DISCORD_ROLE",
+        ):
+            self.assertIn(token, vip)
+
     def test_group_setup_complaints_topics_contract(self):
         group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
         self.assertIn('"#pedidos-admin"', group)
