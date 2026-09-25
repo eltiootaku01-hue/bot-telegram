@@ -1137,6 +1137,86 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertNotIn(chr(27), raw.outfit)
         self.assertNotIn(chr(0), raw.cosplay)
 
+    def test_schrodinger_router_contract(self):
+        import os
+        from bot_ia.interfaces.schrodinger import LiveTarget, SchrodingerError, SchrodingerRouter
+
+        sent = []
+        moderation = []
+
+        def tg(chat_id, text, media):
+            sent.append(("telegram", chat_id, text, media))
+            return True
+
+        def dc(chat_id, text, media):
+            sent.append(("discord", chat_id, text, media))
+            return True
+
+        def mod(action, guild_id, user_id):
+            moderation.append((action, guild_id, user_id))
+            return True
+
+        os.environ["SCHRODINGER_BOT_TOKEN"] = "test-token"
+        router = SchrodingerRouter(
+            telegram_sender=tg,
+            discord_sender=dc,
+            moderation_action=mod,
+        )
+        router.send_text(
+            LiveTarget("telegram", "-100", "Café"),
+            "Hola",
+            "photo-file-id",
+        )
+        router.send_text(
+            LiveTarget("discord", "123", "Servidor"),
+            "Buenas",
+            "https://example.invalid/image.png",
+        )
+        self.assertEqual(sent[0], ("telegram", "-100", "Hola", "photo-file-id"))
+        self.assertEqual(sent[1], ("discord", "123", "Buenas", "https://example.invalid/image.png"))
+
+        router.moderate("unmute", "guild", "user")
+        router.moderate("kick", "guild", "user")
+        router.moderate("ban", "guild", "user")
+        self.assertEqual(
+            moderation,
+            [("unmute", "guild", "user"), ("kick", "guild", "user"), ("ban", "guild", "user")],
+        )
+        self.assertEqual(router.token(), "test-token")
+
+        with self.assertRaises(SchrodingerError):
+            router.send_text(LiveTarget("matrix", "1"), "x")
+
+    def test_schrodinger_gui_and_env_contract(self):
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        env = (self.ROOT / ".env.example").read_text(encoding="utf-8")
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        module = (self.ROOT / "src" / "bot_ia" / "interfaces" / "schrodinger.py").read_text(encoding="utf-8")
+
+        for token in (
+            "class SchrodingerDialog",
+            "⚛ Schrödinger",
+            "Perdonar / Unmute",
+            "Kick",
+            "Ban Permanent",
+            "SCHRODINGER_TARGETS",
+            "build_schrodinger_router",
+            "TelegramApiClient",
+            "send_channel_message",
+        ):
+            self.assertIn(token, app)
+
+        self.assertIn("SCHRODINGER_BOT_TOKEN=", env)
+        self.assertIn("clear_timeout", group)
+        for token in (
+            "class SchrodingerRouter",
+            "SCHRODINGER_BOT_TOKEN",
+            "LiveTarget",
+            "send_text",
+            "moderate",
+        ):
+            self.assertIn(token, module)
+
     def test_auto_moderation_priority_and_cari_suggestions(self):
         from bot_ia.interfaces.auto_moderation import (
             CANTINA_REDIRECT_MESSAGE,
