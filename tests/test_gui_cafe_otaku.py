@@ -287,7 +287,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             module.MATRIX_INITIALIZATION_ORDER,
         )
         self.assertEqual(
-            {"gemini", "chatgpt", "grok_claude"},
+            {"gemini", "chatgpt", "copilot", "grok_claude"},
             set(module.PROVIDER_WEB_SPECS),
         )
         self.assertEqual(
@@ -517,6 +517,75 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "MESA_UNICA_TIMEOUT",
         ):
             self.assertIn(token, source)
+
+    def test_local_autonomy_for_cari_and_cami_avoids_webqueue(self):
+        source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+        for token in (
+            "def _try_local_bot_response(self, message: str) -> bool:",
+            'if bot_id not in {"cari", "cami"}:',
+            "respuesta local; WebQueue omitido",
+            "if self._try_local_bot_response(message):",
+        ):
+            self.assertIn(token, source)
+
+    def test_waifu_registry_and_tcg_prompt_contract(self):
+        source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+        registry = (
+            self.ROOT / "src" / "gui" / "waifu_registry.py"
+        ).read_text(encoding="utf-8")
+        for token in (
+            "🎴 Registro de Waifus",
+            "🎴 Waifu / TCG",
+            'QPushButton("Generar Prompt")',
+            'QPushButton("+ Subir Imagen")',
+            'QPushButton("🃏 Ensamblar Carta")',
+            "QProgressBar",
+            "WaifuRegistry(ROOT)",
+            "config/waifu_registry.json",
+            "artifacts",
+        ):
+            self.assertIn(token, source)
+        for token in (
+            "class WaifuRecord",
+            "class WaifuRegistry",
+            "def generate_tcg_prompt",
+            "isolated, simple white background",
+            "no frame, no card border",
+            "cosplay_reference",
+            "progress",
+        ):
+            self.assertIn(token, registry)
+
+    def test_waifu_registry_persistence_and_prompt_generation(self):
+        import tempfile
+        from pathlib import Path
+        from gui.waifu_registry import (
+            WaifuRecord,
+            WaifuRegistry,
+            generate_tcg_prompt,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            registry = WaifuRegistry(root)
+            record = WaifuRecord(
+                name="Aki",
+                personality="tsundere",
+                appearance="silver hair, red eyes, armored dress",
+                element="Fuego",
+                cosplay_reference="UR",
+            )
+            record.prompt = generate_tcg_prompt(record)
+            registry.save([record])
+            loaded = registry.load()
+            self.assertEqual(1, len(loaded))
+            self.assertEqual("Aki", loaded[0].name)
+            self.assertIn("isolated, simple white background", loaded[0].prompt)
+            self.assertIn("no frame, no card border", loaded[0].prompt)
 
     def test_manual_authentication_persists_provider_profile_state(self):
         source = (
