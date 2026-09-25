@@ -1,10 +1,18 @@
 # -*- coding: utf-8 -*-
 import unittest
+import tempfile
+from pathlib import Path
 
+from bot_ia.interfaces.telegram_event_ledger import TelegramEventLedger
 from bot_ia.interfaces.telegram import TelegramApiClient, TelegramOutbound, TelegramPoller, PollingConfig
 
 
 class TelegramRuntimeSafetyTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._ledger_tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ledger_tmp.cleanup)
+        self.event_ledger = TelegramEventLedger(Path(self._ledger_tmp.name) / "events.sqlite3")
+
     def test_long_messages_are_split_for_telegram(self) -> None:
         calls = []
 
@@ -63,6 +71,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
         poller = TelegramPoller(
             Client(),
             Adapter(),
+            event_ledger=self.event_ledger,
             sleeper=lambda _: None,
         )
         result = poller.run(max_cycles=1)
@@ -98,6 +107,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
         poller = TelegramPoller(
             client,
             Adapter(),
+            event_ledger=self.event_ledger,
             config=PollingConfig(max_consecutive_failures=1),
             sleeper=lambda _: None,
         )
