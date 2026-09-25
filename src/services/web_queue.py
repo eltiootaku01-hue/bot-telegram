@@ -2,6 +2,7 @@
 import json
 import queue
 import re
+import threading
 from dataclasses import dataclass
 from typing import Any
 
@@ -435,6 +436,10 @@ class _WebQueueBridge(QObject):
         )
 
 
+# Mesa Única: todos los WebChatQueueManager del proceso comparten
+# una sola sección crítica durante el ciclo completo de ticket.
+_WEB_MESA_UNICA = threading.Lock()
+
 class _QueueWorker(QObject):
     """Estado FIFO y temporización ejecutados en QThread."""
 
@@ -474,6 +479,7 @@ class _QueueWorker(QObject):
         self._circuit_timer: QTimer | None = None
         self._running = True
         self._queued_ids: set[str] = set()
+        self._mesa_unica_acquired = False
 
     @Slot()
     def start(self) -> None:
@@ -629,6 +635,8 @@ class _QueueWorker(QObject):
     @Slot()
     def stop(self) -> None:
         self._running = False
+        # No se libera aquí: el ticket activo debe cerrar/fallar por su
+        # ruta normal para evitar que dos navegadores compartan foco.
 
         if self._timeout_timer is not None:
             self._timeout_timer.stop()
@@ -652,6 +660,22 @@ class _QueueWorker(QObject):
             ticket.ticket_id
         )
 
+        # La espera ocurre únicamente en el worker, nunca en la GUI.
+        # El ticket conserva el orden FIFO de esta WebQueue.
+        acquired = _WEB_MESA_UNICA.acquire(
+            timeout=max(1.0, self.timeout_ms / 1000)
+        )
+        if not acquired:
+            ticket.status = "FAILED"
+            self.ticket_failed.emit(
+                ticket,
+                "MESA_UNICA_TIMEOUT",
+            )
+            self.busy_changed.emit(False)
+            QTimer.singleShot(0, self._process_next)
+            return
+
+        self._mesa_unica_acquired = True
         ticket.status = "PROCESSING"
         self.current_ticket = ticket
         self.is_busy = True
@@ -705,6 +729,9 @@ class _QueueWorker(QObject):
         self.is_busy = False
         self.awaiting_terminated = False
         self.close_in_flight = False
+        if self._mesa_unica_acquired:
+            _WEB_MESA_UNICA.release()
+            self._mesa_unica_acquired = False
 
         self.ticket_failed.emit(
             ticket,
@@ -736,6 +763,9 @@ class _QueueWorker(QObject):
         self.awaiting_terminated = False
         self.close_in_flight = False
         self.consecutive_failures = 0
+        if self._mesa_unica_acquired:
+            _WEB_MESA_UNICA.release()
+            self._mesa_unica_acquired = False
 
         self.ticket_finished.emit(ticket)
         self.busy_changed.emit(False)
