@@ -1522,12 +1522,17 @@ class TelegramPoller:
                 except Exception as error:
                     if callback_key:
                         self._callback_mutex.release(callback_key)
-                    self._offset = update_id + 1
-                    skipped += 1
+
+                    # Internal logic/database failures are retriable. Never
+                    # acknowledge the update in this case: keeping the offset
+                    # unchanged lets Telegram redeliver the same update.
+                    errors += 1
                     self._logger(
-                        f"telegram update processing failed: {type(error).__name__}"
+                        f"telegram update processing failed: {type(error).__name__}; "
+                        "offset preserved for retry"
                     )
-                    continue
+                    self._sleeper(max(self._config.retry_delay_seconds, 0.1))
+                    break
 
                 try:
                     message_ids: list[int] = []
