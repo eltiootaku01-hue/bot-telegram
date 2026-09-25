@@ -32,6 +32,7 @@ class WaifuRecord:
     """Ficha local de una waifu preparada para una carta TCG."""
 
     name: str
+    danbooru_tag: str = ""
     personality: str
     appearance: str
     element: str
@@ -86,6 +87,7 @@ class WaifuRegistry:
                 records.append(
                     WaifuRecord(
                         name=str(item.get("name", "")).strip(),
+                        danbooru_tag=str(item.get("danbooru_tag", "")).strip(),
                         personality=str(item.get("personality", "")).strip(),
                         appearance=str(item.get("appearance", "")).strip(),
                         element=str(item.get("element", "")).strip(),
