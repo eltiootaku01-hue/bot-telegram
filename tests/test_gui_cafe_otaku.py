@@ -300,6 +300,65 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             [spec.browser_profile for spec in module.MATRIX_BOT_SPECS],
         )
 
+    def test_expandable_bot_viewers_contract(self):
+        source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+
+        for token in (
+            "class BotExpandedDialog(QDialog):",
+            "self._expanded_bot_dialogs",
+            "tile.clicked_bot.connect(self._on_bot_tile_clicked)",
+            'QPushButton("🔍 Ampliar")',
+            "self._open_bot_expanded(bot_id)",
+            "dialog.show()",
+            "dialog.raise_()",
+            "dialog.activateWindow()",
+            "send_requested = Signal(str, str)",
+            "manual_requested = Signal(str)",
+            "start_requested = Signal(str)",
+            "dialog.history.setPlainText(log.toPlainText())",
+            "def _sync_expanded_bot(self, bot_id: str)",
+            "self._sync_expanded_bot(bot_id)",
+            "dialog.hide()",
+            "dialog.deleteLater()",
+        ):
+            self.assertIn(token, source)
+
+        self.assertEqual(
+            1,
+            source.count(
+                "def _enable_manual_setup_mode("
+            ),
+        )
+
+    def test_manual_login_uses_native_chromium_and_resets_to_headless(self):
+        source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+
+        for token in (
+            "class ManualBrowserSetupWorker(QObject):",
+            "headless=False",
+            "no_viewport=True",
+            "launch_persistent_context(",
+            "str(profile_path)",
+            'profile_path / "storage_state.json"',
+            "indexed_db=True",
+            "TIMEOUT_MS = 300_000",
+            "current_thread.isInterruptionRequested()",
+            'os.environ[INITIAL_SETUP_MODE_ENV] = "false"',
+            '{INITIAL_SETUP_MODE_ENV: "false"}',
+            "self._enable_manual_setup_mode(bot_id)",
+            "manual_requested.connect(",
+        ):
+            self.assertIn(token, source)
+
+        self.assertIn(
+            "browser_data/",
+            (self.ROOT / ".gitignore").read_text(encoding="utf-8"),
+        )
+
     def test_async_qt_entrypoint_and_shutdown_contract_are_present(self):
         source = (
             self.ROOT / "src" / "gui" / "app.py"
