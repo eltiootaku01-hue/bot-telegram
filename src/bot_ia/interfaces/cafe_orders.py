@@ -106,6 +106,7 @@ def build_bebida_prompt(order: BebidaOrder) -> str:
         f"Outfit: {item.outfit}.\n"
         f"Cosplay: {item.cosplay or 'none'}.\n"
         f"Product type: {item.product_type}.\n"
+        "simple white background, isolated.\n"
         "Use the selected metadata exactly; do not invent character identity."
     )
 
