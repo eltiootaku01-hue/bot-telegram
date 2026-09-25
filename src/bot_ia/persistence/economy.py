@@ -82,29 +82,32 @@ class EconomyDatabase:
                     )
                 connection.execute(f"PRAGMA application_id={APPLICATION_ID}")
                 connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
-                connection.executescript(
+                statements = (
                     """
                     CREATE TABLE IF NOT EXISTS schema_meta (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL
-                    );
-
+                    )
+                    """,
+                    """
                     CREATE TABLE IF NOT EXISTS wallet (
                         user_id TEXT PRIMARY KEY,
                         points INTEGER NOT NULL CHECK(points >= 0),
                         pity_sr INTEGER NOT NULL CHECK(pity_sr >= 0),
                         pity_ur INTEGER NOT NULL CHECK(pity_ur >= 0),
                         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    );
-
+                    )
+                    """,
+                    """
                     CREATE TABLE IF NOT EXISTS vip (
                         user_id TEXT PRIMARY KEY,
                         vip INTEGER NOT NULL CHECK(vip IN (0, 1)),
                         source TEXT NOT NULL DEFAULT '',
                         donated_stars INTEGER NOT NULL CHECK(donated_stars >= 0),
                         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    );
-
+                    )
+                    """,
+                    """
                     CREATE TABLE IF NOT EXISTS complaints (
                         complaint_id TEXT PRIMARY KEY,
                         user_id TEXT NOT NULL,
@@ -118,15 +121,19 @@ class EconomyDatabase:
                         created_at TEXT NOT NULL,
                         resolved_at TEXT,
                         points_adjustment INTEGER NOT NULL DEFAULT 0
-                    );
-
-                    CREATE INDEX IF NOT EXISTS idx_complaints_user
-                        ON complaints(user_id);
-
-                    CREATE INDEX IF NOT EXISTS idx_complaints_status
-                        ON complaints(status);
+                    )
+                    """,
                     """
+                    CREATE INDEX IF NOT EXISTS idx_complaints_user
+                        ON complaints(user_id)
+                    """,
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_complaints_status
+                        ON complaints(status)
+                    """,
                 )
+                for statement in statements:
+                    connection.execute(statement)
         except EconomyPersistenceError:
             raise
         except (OSError, sqlite3.DatabaseError) as error:
