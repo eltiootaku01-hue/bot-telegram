@@ -2466,6 +2466,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         blocked = guard.check("u1", official=False, now=3)
         self.assertTrue(blocked.blocked)
         self.assertTrue(guard.is_blocked("u1"))
+        self.assertFalse(guard.check("u1", official=False, now=64).blocked)
 
         handler = InlineRedirectHandler(official_ids={"-100"}, cafe_url="https://t.me/cafe")
         result = handler.handle(user_id="u2", chat_id="outside", query="hola")
