@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import re
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 
 
@@ -229,8 +230,8 @@ def crop_sprite_to_ratio(
         else source.scaled(
             max(1, round(width * scale)),
             max(1, round(height * scale)),
-            aspectMode=1,
-            transformMode=0,
+            Qt.KeepAspectRatio,
+            Qt.FastTransformation,
         )
     )
     pw, ph = probe.width(), probe.height()
