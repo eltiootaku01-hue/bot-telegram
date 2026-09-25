@@ -311,6 +311,20 @@ def frame_candidates(root: Path, rarity: str, element: str) -> list[Path]:
     rarity = rarity.strip().upper()
     element_slug = slugify(element).casefold()
     frame_dir = Path(root) / "assets" / "tcg_frames"
+    if rarity == "R":
+        # R es deliberadamente neutra: la ficha base no debe heredar colores elementales.
+        return [
+            frame_dir / "frame_R.svg",
+            frame_dir / "frame_R.png",
+        ]
+    if rarity == "UR":
+        # UR usa el marco dorado común; el elemento se resalta en el renderizador.
+        return [
+            frame_dir / "frame_UR.svg",
+            frame_dir / "frame_UR.png",
+            frame_dir / f"frame_UR_{element_slug}.svg",
+            frame_dir / f"frame_UR_{element_slug}.png",
+        ]
     return [
         frame_dir / f"frame_{rarity}_{element_slug}.svg",
         frame_dir / f"frame_{rarity}_{element_slug}.png",
