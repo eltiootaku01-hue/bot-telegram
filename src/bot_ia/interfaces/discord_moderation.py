@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from .auto_moderation import moderate, ModerationDecision
 from .group_setup import DiscordGroupSetup
 from .discord_community import ImmersiveStrikeEngine
+from .superadmin import is_superadmin
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +38,7 @@ class DiscordModerationHandler:
         image_tags: tuple[str, ...] = (),
         room_key: str = "general",
         burst: bool = False,
+        username: str = "",
     ) -> DiscordModerationResult:
         decision = moderate(text, room_key=room_key, image_tags=image_tags)
         if decision.action == "allow":
@@ -50,9 +52,10 @@ class DiscordModerationHandler:
         strikes = 0
         admin_actions = ()
         if decision.action == "ban":
-            self._client.ban_member(guild_id, user_id)
-            sanctioned = True
-        elif self._strike_engine is not None:
+            if not is_superadmin(user_id, username):
+                self._client.ban_member(guild_id, user_id)
+                sanctioned = True
+        elif self._strike_engine is not None and not is_superadmin(user_id, username):
             record = self._strike_engine.evaluate(guild_id, user_id, decision.reason, burst=burst)
             if record is not None:
                 strikes = record.strikes
