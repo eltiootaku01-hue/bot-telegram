@@ -20,6 +20,8 @@ from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text
+from .cafe_immersion import waitress_dialogue
+from gui.waifu_registry import WaifuRegistry
 from .tutorials import build_tutorial_text
 
 
@@ -158,6 +160,7 @@ class TelegramAdapter:
         self._tavern_manager = tavern_manager
         self._bebida_flow = BebidaOrderFlow()
         self._wallet_store = CafeWalletStore(Path.cwd())
+        self._waifu_registry = WaifuRegistry(Path.cwd())
 
     def _active_maid(self, user_id: str) -> str:
         """Devuelve la mesera activa del turno local; Cami es el fallback."""
@@ -167,6 +170,9 @@ class TelegramAdapter:
             if waitress_id:
                 return waitress_id.capitalize()
         return "Cami"
+
+    def _affinity_level(self, user_id: str, maid: str) -> int:
+        return self._waifu_registry.affinity_level(user_id, maid)
 
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
@@ -196,14 +202,57 @@ class TelegramAdapter:
                 "pity",
                 ((("🎰 Gacha", "gacha:draw"), ("☕ Puntos", "economy:show")),),
             )
-        if command == "/gacha":
+        if command == "/propina":
+            parts = inbound.text.split()
+            if len(parts) != 3:
+                return TelegramOutbound(
+                    inbound.conversation_id,
+                    "💝 Uso: /propina <Cari|Sunna|Cami|Chie> <puntos>.",
+                    "affinity",
+                )
             try:
-                result = draw_gacha(inbound.user_id, self._wallet_store, maid=self._active_maid(inbound.user_id))
+                maid, amount = parts[1], int(parts[2])
+                maid, charged, level = self._waifu_registry.tip_waitress(
+                    inbound.user_id,
+                    maid,
+                    amount,
+                    self._wallet_store,
+                )
+            except (ValueError, TypeError) as error:
+                return TelegramOutbound(inbound.conversation_id, f"💝 Propina: {error}", "affinity")
+            return TelegramOutbound(
+                inbound.conversation_id,
+                f"💝 {maid} recibió {charged} puntos de propina. Heart Level: {level}/10 ❤️\n"
+                f"{waitress_dialogue(maid, 'greeting')}",
+                "affinity",
+                (((("🍀 Ver afinidad", "affinity:show"),),),),
+            )
+        if command == "/afinidad":
+            return TelegramOutbound(
+                inbound.conversation_id,
+                f"❤️ Afinidad del Café Otaku:\n{self._waifu_registry.affinity_summary(inbound.user_id)}",
+                "affinity",
+            )
+        if command == "/mesera":
+            return TelegramOutbound(
+                inbound.conversation_id,
+                waitress_dialogue(self._active_maid(inbound.user_id), "role"),
+                "cafe",
+            )
+        if command == "/gacha":
+            maid = self._active_maid(inbound.user_id)
+            try:
+                result = draw_gacha(
+                    inbound.user_id,
+                    self._wallet_store,
+                    maid=maid,
+                    affinity_level=self._affinity_level(inbound.user_id, maid),
+                )
             except ValueError as error:
                 return TelegramOutbound(inbound.conversation_id, f"🎰 Gacha: {error}", "gacha")
             return TelegramOutbound(
                 inbound.conversation_id,
-                f"🎰 Resultado: {result.rarity}\n{result.consolation}\nCoste: {result.points_spent} puntos.",
+                f"{waitress_dialogue(maid, 'role')}\n🎰 Resultado: {result.rarity}\n{result.consolation}\nCoste: {result.points_spent} puntos.",
                 "gacha",
                 ((("🍀 Ver Pity", "pity:show"),),),
             )
@@ -361,14 +410,26 @@ class TelegramAdapter:
                 "pity",
                 ((("🎰 Gacha", "gacha:draw"), ("☕ Puntos", "economy:show")),),
             )
+        if callback.data == "affinity:show":
+            return TelegramOutbound(
+                callback.conversation_id,
+                f"❤️ Afinidad del Café Otaku:\n{self._waifu_registry.affinity_summary(callback.user_id)}",
+                "affinity",
+            )
         if callback.data == "gacha:draw":
+            maid = self._active_maid(callback.user_id)
             try:
-                result = draw_gacha(callback.user_id, self._wallet_store, maid=self._active_maid(callback.user_id))
+                result = draw_gacha(
+                    callback.user_id,
+                    self._wallet_store,
+                    maid=maid,
+                    affinity_level=self._affinity_level(callback.user_id, maid),
+                )
             except ValueError as error:
                 return TelegramOutbound(callback.conversation_id, f"🎰 Gacha: {error}", "gacha")
             return TelegramOutbound(
                 callback.conversation_id,
-                f"🎰 Resultado: {result.rarity}\n{result.consolation}\nCoste: {result.points_spent} puntos.",
+                f"{waitress_dialogue(maid, 'role')}\n🎰 Resultado: {result.rarity}\n{result.consolation}\nCoste: {result.points_spent} puntos.",
                 "gacha",
                 ((("🍀 Ver Pity", "pity:show"),),),
             )
