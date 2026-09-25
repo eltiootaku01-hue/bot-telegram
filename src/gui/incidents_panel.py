@@ -49,6 +49,52 @@ class IncidentStore:
         self.path = Path(root) / "config" / "incidents.json"
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
+    def record_cami_guard_alert(
+        self,
+        *,
+        user_id: str,
+        reason: str,
+        detail: str,
+    ) -> IncidentRecord:
+        """Persiste una alerta preventiva para que aparezca en el panel."""
+        now = datetime.now(timezone.utc).isoformat()
+        record = IncidentRecord(
+            incident_id=f"CAMI-{int(datetime.now(timezone.utc).timestamp() * 1000)}",
+            kind="Cami Guard",
+            user_id=str(user_id),
+            rule_or_error=str(reason),
+            detail=str(detail),
+            created_at=now,
+            registered_at=now,
+        )
+        try:
+            payload = json.loads(self.incidents.path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+        items = payload.get("incidents")
+        if not isinstance(items, list):
+            items = []
+        items.append({
+            "incident_id": record.incident_id,
+            "kind": record.kind,
+            "user_id": record.user_id,
+            "rule_or_error": record.rule_or_error,
+            "detail": record.detail,
+            "created_at": record.created_at,
+            "forgiveness_count": record.forgiveness_count,
+            "trust_level": record.trust_level,
+            "registered_at": record.registered_at,
+        })
+        payload["incidents"] = items
+        self.incidents.path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        self.refresh()
+        return record
+
     def list(self) -> list[IncidentRecord]:
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
