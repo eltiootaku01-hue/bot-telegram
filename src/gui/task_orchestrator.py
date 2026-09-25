@@ -217,6 +217,11 @@ class TaskOrchestrator:
                     await self._process_item(item)
                 finally:
                     self.queue.task_done()
+        except asyncio.CancelledError:
+            # stop_worker() uses cancellation for prompt shutdown. Convert
+            # that control-flow cancellation into a clean task completion so
+            # callers awaiting the worker do not receive CancelledError.
+            return
         finally:
             self._running = False
             if (
