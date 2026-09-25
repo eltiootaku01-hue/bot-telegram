@@ -107,7 +107,21 @@ class GroupSetupStore:
     ) -> None:
         payload = self.load()
         payload[f"{platform}:{target_id}"] = {
-            "rooms": [{"name": r.name, "key": r.key, "external_id": r.external_id} for r in rooms],
+            "rooms": [
+                {
+                    "name": r.name,
+                    "key": r.key,
+                    "external_id": r.external_id,
+                }
+                for r in rooms
+            ],
+            # Publica también el mapa autoritativo para que el provisioning
+            # conserve explícitamente el vínculo thread -> room_key.
+            "room_map": {
+                str(r.external_id): r.key
+                for r in rooms
+                if str(r.external_id).strip() and str(r.key).strip()
+            },
             "feeds": [{"name": name, "url": url} for name, url in feeds],
         }
         temporary = self.path.with_suffix(".json.tmp")
