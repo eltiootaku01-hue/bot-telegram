@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 import json
+import os
 import queue
 import re
 import threading
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
+from PySide6.QtCore import QEvent, QObject, QThread, QTimer, Signal, Slot
 from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtWebEngineCore import QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
 
@@ -879,6 +882,7 @@ class WebChatQueueManager(QObject):
         timeout_seconds: int = 45,
         circuit_threshold: int = 3,
         circuit_cooldown_seconds: int = 10,
+        browser_profile: str | Path | None = None,
     ) -> None:
         super().__init__(parent)
 
@@ -898,6 +902,11 @@ class WebChatQueueManager(QObject):
             )
 
         self.web_view = web_view
+        self.browser_profile = Path(
+            browser_profile
+            or os.getenv("WEBQUEUE_BROWSER_PROFILE", "./browser_data/cari")
+        ).expanduser().resolve()
+        self.browser_profile.mkdir(parents=True, exist_ok=True)
         self.current_ticket: BotTicket | None = None
         self.is_busy = False
         self.protocol_initialized = False
@@ -918,6 +927,27 @@ class WebChatQueueManager(QObject):
         self._shutdown_watchdog.timeout.connect(
             self._on_shutdown_watchdog_timeout
         )
+
+        # El visor Qt usa exactamente el mismo perfil persistente que el
+        # Chromium de autenticación humana. Así las cookies de Google y del
+        # proveedor sobreviven al cambio de superficie sin segundo login.
+        web_profile = self.web_view.page().profile()
+        web_profile.setPersistentStoragePath(str(self.browser_profile))
+        web_profile.setCachePath(str(self.browser_profile / "cache"))
+        web_profile.setPersistentCookiesPolicy(
+            QWebEngineProfile.ForcePersistentCookies
+        )
+        self.web_view.loadFinished.connect(self._on_page_focus_restore)
+        self.web_view.urlChanged.connect(self._on_url_focus_restore)
+        self.web_view.page().windowCloseRequested.connect(
+            self._on_window_close_requested
+        )
+        app = self.web_view.window().windowHandle()
+        if app is not None:
+            app.destroyed.connect(self._restore_web_focus)
+        application = self.web_view.window().findChild(QObject)
+        if application is not None:
+            _ = application
 
         self._response_pattern = self._safe_compile(
             r'respuesta\s+a\s*\(\s*'
@@ -1171,6 +1201,40 @@ class WebChatQueueManager(QObject):
     # ------------------------------------------------------------------
     # WEB / DOM / QWEBCHANNEL
     # ------------------------------------------------------------------
+
+    @Slot()
+    def _restore_web_focus(self) -> None:
+        if self._shutdown_started:
+            return
+        QTimer.singleShot(0, self._focus_web_view)
+
+    @Slot()
+    def _focus_web_view(self) -> None:
+        if self._shutdown_started:
+            return
+        try:
+            self.web_view.setFocus()
+            self.web_view.activateWindow()
+        except RuntimeError:
+            return
+
+    @Slot()
+    def _on_window_close_requested(self) -> None:
+        self._restore_web_focus()
+
+    @Slot(bool)
+    def _on_page_focus_restore(self, ok: bool) -> None:
+        if ok:
+            self._restore_web_focus()
+
+    @Slot(object)
+    def _on_url_focus_restore(self, url: object) -> None:
+        try:
+            host = url.host().casefold()
+        except AttributeError:
+            host = ""
+        if host == "accounts.google.com" or host.endswith(".accounts.google.com"):
+            self._restore_web_focus()
 
     @Slot(bool)
     def _on_page_loaded(self, ok: bool) -> None:
