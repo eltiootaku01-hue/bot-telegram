@@ -2988,6 +2988,27 @@ class CommandCenterWindow(QMainWindow):
         self.send_button.setEnabled(True)
         return True
 
+    def _try_local_game_response(self, message: str) -> bool:
+        bot_id = self._selected_bot_id
+        response = self._mini_game_router.route(
+            message,
+            DESKTOP_USER,
+            bot_id,
+        )
+        if response is None:
+            return False
+        profile = BOT_MAP[bot_id]
+        self._append_message(profile.name, response, "bot")
+        dialog = self._expanded_bot_dialogs.get(bot_id)
+        if dialog is not None:
+            dialog.append_history(profile.name, response)
+            dialog.append_history("Sistema", "Mini-juego local; WebQueue omitido.")
+        self._append_system(
+            f"{profile.name}: mini-juego local; WebQueue omitido."
+        )
+        self.send_button.setEnabled(True)
+        return True
+
     def _send_expanded_bot_message(
         self,
         bot_id: str,
@@ -2996,6 +3017,8 @@ class CommandCenterWindow(QMainWindow):
         if bot_id not in BOT_MAP:
             return
         self.select_bot(bot_id)
+        if self._try_local_game_response(message):
+            return
         if self._try_local_bot_response(message):
             return
         self._send_web_persona(message)
@@ -3100,22 +3123,7 @@ class CommandCenterWindow(QMainWindow):
         self._send_web_persona(message)
 
     def _send_tavern(self, message: str) -> None:
-        local_game = self._mini_game_router.route(
-            message,
-            DESKTOP_USER,
-            self._selected_bot_id,
-        )
-        if local_game is not None:
-            profile = BOT_MAP[self._selected_bot_id]
-            self._append_message(profile.name, local_game, "bot")
-            dialog = self._expanded_bot_dialogs.get(self._selected_bot_id)
-            if dialog is not None:
-                dialog.append_history(profile.name, local_game)
-                dialog.append_history("Sistema", "Mini-juego local; WebQueue omitido.")
-            self._append_system(
-                f"{profile.name}: mini-juego local; WebQueue omitido."
-            )
-            self.send_button.setEnabled(True)
+        if self._try_local_game_response(message):
             self.refresh_state()
             return
 
