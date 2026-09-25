@@ -70,6 +70,17 @@ class DynamicConfigManager:
         self._refresh_runtime()
         return dict(self.values)
 
+    def ensure_defaults(self, values: Mapping[str, object]) -> dict[str, str]:
+        """Persiste sólo variables ausentes y conserva valores personalizados."""
+        missing = {
+            str(key): value
+            for key, value in values.items()
+            if not str(self.get(str(key), "")).strip()
+        }
+        if not missing:
+            return dict(self.values)
+        return self.set_values(missing)
+
     def reset_to_factory(self) -> dict[str, str]:
         """Reemplaza .env por .env.example y aplica esos valores inmediatamente."""
         if not self.example_path.is_file():
