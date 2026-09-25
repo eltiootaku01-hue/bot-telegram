@@ -94,7 +94,8 @@ from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, Gr
 from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text, draw_gacha, pity_text, purchase_bebida_order, quote_bebida_order)
 from bot_ia.interfaces.cafe_immersion import TeaTimeScheduler
 from bot_ia.interfaces.hardening import sanitize_control_text, whitelist_tag
-from bot_ia.interfaces.order_support import ComplaintStore, new_order_id, order_destination\nfrom bot_ia.interfaces.cafe_orders import (
+from bot_ia.interfaces.order_support import ComplaintStore, new_order_id, order_destination
+from bot_ia.interfaces.social_publish import build_publication, open_x_draft\nfrom bot_ia.interfaces.cafe_orders import (
     BOLDNESS_LEVELS,
     DEFAULT_OUTFITS,
     DEFAULT_POSES,
@@ -1807,6 +1808,9 @@ class BebidaOrderDialog(QDialog):
         self.complaint = QPushButton("📣 Queja / Reembolso")
         self.complaint.clicked.connect(self._complaint)
         actions.addWidget(self.complaint)
+        self.publish_social = QPushButton("🌐 Publicar en Redes")
+        self.publish_social.clicked.connect(self._publish_social)
+        actions.addWidget(self.publish_social)
         tutorial = QPushButton("📚 Ver Tutorial")
         tutorial.clicked.connect(lambda: TutorialDialog(self).exec())
         actions.addWidget(tutorial)
@@ -1973,6 +1977,36 @@ class BebidaOrderDialog(QDialog):
             f"Pedido {self._prepared_order_id} confirmado.\n"
             f"{destination}\n"
             f"{quote.kind} {quote.rarity} · {quote.cost} puntos.",
+        )
+
+    def _publish_social(self) -> None:
+        if self._prepared_order is None:
+            QMessageBox.warning(self, "🌐 Publicación", "Primero prepara el pedido.")
+            return
+        record = self._find_record(self._prepared_order.character)
+        if record is None:
+            QMessageBox.warning(self, "🌐 Publicación", "No se encontró la ficha del personaje.")
+            return
+        invite = os.getenv("DISCORD_INVITE_URL", "").strip() or os.getenv("TELEGRAM_INVITE_URL", "").strip()
+        if not invite:
+            QMessageBox.warning(
+                self,
+                "🌐 Publicación",
+                "Configura DISCORD_INVITE_URL o TELEGRAM_INVITE_URL antes de publicar.",
+            )
+            return
+        publication = build_publication(
+            character=record.name,
+            anime=record.cosplay_reference,
+            outfit=self._prepared_order.outfit,
+            prompt=build_bebida_prompt(self._prepared_order),
+            invite_url=invite,
+        )
+        open_x_draft(publication)
+        QMessageBox.information(
+            self,
+            "🌐 Borrador preparado",
+            "Se abrió X con el texto y hashtags preparados. La publicación sigue siendo manual.",
         )
 
     def _complaint(self) -> None:
