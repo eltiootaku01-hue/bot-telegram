@@ -61,6 +61,9 @@ enabled = false
                     captured["adapter"] = adapter
                     captured.update(kwargs)
 
+                def stop(self):
+                    captured["stopped"] = True
+
                 def run(self):
                     return SimpleNamespace(
                         polls=1,
