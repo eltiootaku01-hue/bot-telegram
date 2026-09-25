@@ -184,6 +184,13 @@ class DiscordGroupSetup:
             raise GroupSetupError(f"Discord no devolvió rol {name}")
         return str(created["id"])
 
+    def create_comment_thread(self, channel_id: str, message_id: str, *, name: str = "💬 Comentarios") -> dict[str, object]:
+        payload = {"name": name[:100], "type": 11, "auto_archive_duration": 1440}
+        value = self._request("POST", f"/channels/{channel_id}/messages/{message_id}/threads", payload)
+        if not isinstance(value, dict) or not value.get("id"):
+            raise GroupSetupError("Discord no devolvió el hilo de comentarios")
+        return value
+
     def list_webhooks(self, channel_id: str) -> list[dict[str, object]]:
         value = self._request("GET", f"/channels/{channel_id}/webhooks")
         return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
