@@ -5,6 +5,7 @@ import argparse
 import ipaddress
 import os
 from pathlib import Path
+import signal
 
 from bot_ia.config.dotenv import load_dotenv
 from bot_ia.core.application import ApplicationRequest
@@ -76,12 +77,45 @@ def _run_telegram(application, runtime) -> None:
     if not client.smoke_test():
         raise RuntimeError("Telegram getMe check failed")
     outbox_store = TelegramOutboxStore(runtime.memory_store.path)
-    result = TelegramPoller(
+    poller = TelegramPoller(
         client,
         TelegramProjectsAdapter(application, runtime),
         outbox_store=outbox_store,
-    ).run()
-    print("Telegram detenido:", f"polls={result.polls}", f"received={result.updates_received}", f"processed={result.updates_processed}", f"sent={result.responses_sent}", f"errors={result.transport_errors}")
+    )
+
+    def request_stop(_signum, _frame) -> None:
+        poller.stop()
+
+    previous_sigint = signal.getsignal(signal.SIGINT)
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+    previous_sigbreak = getattr(signal, "SIGBREAK", None)
+    previous_break_handler = (
+        signal.getsignal(previous_sigbreak)
+        if previous_sigbreak is not None
+        else None
+    )
+    signal.signal(signal.SIGINT, request_stop)
+    signal.signal(signal.SIGTERM, request_stop)
+    if previous_sigbreak is not None:
+        signal.signal(previous_sigbreak, request_stop)
+
+    try:
+        result = poller.run()
+    finally:
+        poller.stop()
+        signal.signal(signal.SIGINT, previous_sigint)
+        signal.signal(signal.SIGTERM, previous_sigterm)
+        if previous_sigbreak is not None and previous_break_handler is not None:
+            signal.signal(previous_sigbreak, previous_break_handler)
+
+    print(
+        "Telegram detenido:",
+        f"polls={result.polls}",
+        f"received={result.updates_received}",
+        f"processed={result.updates_processed}",
+        f"sent={result.responses_sent}",
+        f"errors={result.transport_errors}",
+    )
 
 
 def _web_security(project_root: Path, host: str) -> tuple[str | None, bool]:
