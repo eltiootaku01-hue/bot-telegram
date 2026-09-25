@@ -296,6 +296,7 @@ class DiscordGroupSetup:
         self.cleanup_managed_channels(guild_id, expected_names)
         existing = {r.key: r for r in store.get_rooms("discord", guild_id)}
         rooms: list[GroupRoom] = list(existing.values())
+        welcome_created_channel: str | None = None
         for name, key in ROOMS:
             if key in existing:
                 continue
@@ -344,6 +345,11 @@ class DiscordGroupSetup:
             room = GroupRoom(name, key, str(created["id"]))
             rooms.append(room)
             existing[key] = room
+            if key == "bienvenida":
+                welcome_created_channel = room.external_id
+        if welcome_created_channel:
+            self.ensure_role(guild_id, "Nakama")
+            self.welcome_message(welcome_created_channel)
         result = GroupSetupResult("discord", guild_id, tuple(rooms))
         store.save_target("discord", guild_id, result.rooms)
         self.ensure_managed_webhooks(result.rooms)
