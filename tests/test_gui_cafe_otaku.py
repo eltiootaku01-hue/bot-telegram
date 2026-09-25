@@ -2238,6 +2238,24 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("supervise_admin_publication", immersion)
         self.assertIn("superadmin_is_immune", immersion)
 
+    def test_cami_guard_telegram_superadmin_integration_contract(self):
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        immersion = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+        for token in (
+            "supervise_admin_publication",
+            "raw_tags = message.get(\"image_tags\", ())",
+            "cami_decision.action not in {\"allow\", \"allow_react\"}",
+            "self._client.delete_message(chat_id, message_id)",
+            "cami_decision.target_room or room_key",
+        ):
+            self.assertIn(token, telegram)
+        for token in (
+            "from .cami_guard import",
+            "def supervise_admin_publication(",
+            "def superadmin_is_immune(",
+        ):
+            self.assertIn(token, immersion)
+
 
 if __name__ == "__main__":
     unittest.main()
