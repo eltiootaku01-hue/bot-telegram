@@ -27,7 +27,7 @@ def sanitize_control_text(value: object, *, max_length: int = 512) -> str:
         character
         for character in text
         if ord(character) not in CONTROL_CHARACTERS
-        and unicodedata.category(character) not in {"Cc", "Cs"}
+        and unicodedata.category(character) not in {"Cc", "Cf", "Cs"}
     )
     text = re.sub(r"[ \t\n]+", " ", text).strip()
     return text[:max_length]
