@@ -34,7 +34,7 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtGui import QColor, QFont, QKeyEvent, QPainter, QPixmap, QPen
+from PySide6.QtGui import QAction, QColor, QFont, QKeyEvent, QPainter, QPixmap, QPen
 from core.config import DynamicConfigManager
 from .admin_provisioning import AdminProvisioner
 from PySide6.QtWidgets import (
@@ -50,6 +50,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QInputDialog,
     QMainWindow,
+    QMenu,
+    QToolButton,
     QMessageBox,
     QPlainTextEdit,
     QProgressBar,
@@ -399,6 +401,7 @@ MATRIX_BOT_SPECS = (
 
 
 INITIAL_SETUP_MODE_ENV = "INITIAL_SETUP_MODE"
+GOOGLE_LOGIN_URL = "https://accounts.google.com/"
 
 WEB_PROFILE_DIR = Path(os.getenv("WEB_PROFILE_DIR", "./web_profile")).expanduser()
 PERSISTENT_WEB_PROVIDERS = frozenset({"gemini", "chatgpt", "copilot", "grok_claude"})
@@ -760,6 +763,23 @@ class ManualBrowserSetupWorker(QObject):
             # Compatibilidad con Playwright anterior a indexed_db.
             context.storage_state(path=str(state_path))
 
+    @staticmethod
+    def _google_session_authenticated(context, page) -> bool:
+        """Valida una sesión Google real antes de habilitar el proveedor."""
+        try:
+            cookies = context.cookies(["https://accounts.google.com/"])
+        except Exception:
+            cookies = []
+        strong_cookie_names = {
+            "SID", "HSID", "SSID", "LSID", "SAPISID",
+            "__Secure-1PSID", "__Secure-3PSID",
+        }
+        return any(
+            str(cookie.get("name", "")).strip() in strong_cookie_names
+            and bool(str(cookie.get("value", "").strip()))
+            for cookie in cookies
+        )
+
     @Slot()
     def run(self) -> None:
         playwright = None
@@ -784,14 +804,15 @@ class ManualBrowserSetupWorker(QObject):
             )
             page = context.pages[0] if context.pages else context.new_page()
             page.goto(
-                self.start_url,
+                GOOGLE_LOGIN_URL,
                 wait_until="domcontentloaded",
                 timeout=30_000,
             )
             self.status.emit(
-                f"{self.bot_id}: Chromium externo abierto. "
+                f"{self.bot_id}: Google Login First activo. "
                 "Completa correo, contraseña y 2FA/passkey; "
-                "cierra la ventana cuando termines."
+                "la navegación al proveedor queda bloqueada hasta validar "
+                "la sesión de Google."
             )
 
             deadline = time.monotonic() + self.TIMEOUT_MS / 1000
@@ -815,6 +836,23 @@ class ManualBrowserSetupWorker(QObject):
                 timed_out = True
 
             self._persist_state(context, profile_path)
+
+            if not timed_out and not closed_by_user:
+                if self._google_session_authenticated(context, page):
+                    page.goto(
+                        self.start_url,
+                        wait_until="domcontentloaded",
+                        timeout=30_000,
+                    )
+                    self.status.emit(
+                        f"{self.bot_id}: Google autenticado. "
+                        f"Proveedor habilitado: {self.provider.display_name}."
+                    )
+                else:
+                    self.status.emit(
+                        f"{self.bot_id}: Google no quedó autenticado; "
+                        "se bloqueó la navegación al proveedor."
+                    )
 
             if timed_out:
                 self.finished.emit(
@@ -3057,79 +3095,70 @@ class CommandCenterWindow(QMainWindow):
             label.setObjectName("Muted")
             top_layout.addWidget(label)
 
-        self.operations_button = QPushButton("⚙ Panel")
-        self.operations_button.clicked.connect(
-            lambda: self._set_page(1)
-        )
-        top_layout.addWidget(self.operations_button)
+        # Header compacto: tres menús desplegables evitan clipping horizontal.
+        principal_menu = QMenu(self)
+        self.operations_button = principal_menu.addAction("⚙ Panel")
+        self.operations_button.triggered.connect(lambda: self._set_page(1))
+        telegram_action = principal_menu.addAction("📨 Telegram")
+        telegram_action.triggered.connect(lambda: self.start_telegram())
+        discord_action = principal_menu.addAction("💬 Discord")
+        discord_action.triggered.connect(self._start_platform_health_checks)
+        web_queue_action = principal_menu.addAction("🌐 Web Queue")
+        web_queue_action.triggered.connect(self._show_web_dialog)
+        chat_local_action = principal_menu.addAction("🖥 Chat local")
+        chat_local_action.triggered.connect(self.start_web_chat)
+        self.local_web_button = chat_local_action
+        self.web_button = web_queue_action
 
-        self.local_web_button = QPushButton("🌐 Chat local")
-        self.local_web_button.clicked.connect(self.start_web_chat)
-        top_layout.addWidget(self.local_web_button)
+        principal_button = QToolButton()
+        principal_button.setText("☕ Principal")
+        principal_button.setPopupMode(QToolButton.InstantPopup)
+        principal_button.setMenu(principal_menu)
+        principal_button.setToolTip("Panel, Telegram, Discord, Web Queue y Chat local.")
+        top_layout.addWidget(principal_button)
 
-        self.web_button = QPushButton("🌐 Web")
-        self.web_button.clicked.connect(
-            lambda: self._set_page(2)
-        )
-        top_layout.addWidget(self.web_button)
-
-        self.schrodinger_button = QPushButton("⚛ Schrödinger")
-        self.schrodinger_button.setToolTip(
-            "Chat en vivo Telegram/Discord y anulación administrativa."
-        )
-        self.schrodinger_button.clicked.connect(self._open_schrodinger)
-        top_layout.addWidget(self.schrodinger_button)
-
-        self.admin_button = QPushButton("👑 Soy Admin")
+        economy_menu = QMenu(self)
+        self.gacha_button = economy_menu.addAction("🎰 Gacha")
+        self.gacha_button.triggered.connect(self._run_local_gacha)
+        self.pity_button = economy_menu.addAction("🍀 Pity")
+        self.pity_button.triggered.connect(self._show_pity)
+        self.affinity_button = economy_menu.addAction("💝 Afinidad")
+        self.affinity_button.triggered.connect(self._show_affinity)
+        self.admin_button = economy_menu.addAction("👑 Soy Adm")
         self.admin_button.setCheckable(True)
-        self.admin_button.setToolTip(
-            "Activa el aprovisionamiento local de paneles, temas y variables base."
-        )
-        self.admin_button.clicked.connect(self._activate_admin_mode)
-        top_layout.addWidget(self.admin_button)
+        self.admin_button.setToolTip("Activa el aprovisionamiento local de paneles, temas y variables base.")
+        self.admin_button.triggered.connect(self._activate_admin_mode)
+        self.points_button = economy_menu.addAction("☕ Puntos")
+        self.points_button.triggered.connect(self._show_cafe_economy)
 
-        self.points_button = QPushButton("☕ Puntos del Café")
-        self.points_button.clicked.connect(self._show_cafe_economy)
-        top_layout.addWidget(self.points_button)
+        economy_button = QToolButton()
+        economy_button.setText("🎮 Economía y Usuario")
+        economy_button.setPopupMode(QToolButton.InstantPopup)
+        economy_button.setMenu(economy_menu)
+        top_layout.addWidget(economy_button)
 
-        self.vip_button = QPushButton("✨ Apoyar al Café")
+        tools_menu = QMenu(self)
+        self.diagnostic_button = tools_menu.addAction("🔍 Diagnóstico")
+        self.diagnostic_button.triggered.connect(self._show_diagnostic_dialog)
+        self.group_setup_button = tools_menu.addAction("🛠 Estructurar")
+        self.group_setup_button.triggered.connect(self._open_group_setup)
+        self.vip_button = tools_menu.addAction("✨ Apoyar")
         self.vip_button.setToolTip("Apoyo voluntario; no bloquea SFW ni Cantina +18.")
-        self.vip_button.clicked.connect(self._show_vip_support)
-        top_layout.addWidget(self.vip_button)
-
-        self.gacha_button = QPushButton("🎰 Gacha")
-        self.gacha_button.clicked.connect(self._run_local_gacha)
-        top_layout.addWidget(self.gacha_button)
-
-        self.pity_button = QPushButton("🍀 Pity")
-        self.pity_button.clicked.connect(self._show_pity)
-        top_layout.addWidget(self.pity_button)
-
-        self.affinity_button = QPushButton("💝 Afinidad")
-        self.affinity_button.clicked.connect(self._show_affinity)
-        top_layout.addWidget(self.affinity_button)
-
-        self.group_setup_button = QPushButton("🛠 Estructurar Grupo")
-        self.group_setup_button.clicked.connect(self._open_group_setup)
-        top_layout.addWidget(self.group_setup_button)
-
-        self.diagnostic_button = QPushButton("🔍 Diagnóstico")
-        self.diagnostic_button.clicked.connect(
-            self._show_diagnostic_dialog
-        )
-        top_layout.addWidget(self.diagnostic_button)
-
-        self.manual_login_button = QPushButton(
-            "🔑 Iniciar Sesión Manual"
-        )
+        self.vip_button.triggered.connect(self._show_vip_support)
+        self.schrodinger_button = tools_menu.addAction("⚛ Schrödinger")
+        self.schrodinger_button.triggered.connect(self._open_schrodinger)
+        self.manual_login_button = tools_menu.addAction("🔑 Iniciar Sesión Manual")
         self.manual_login_button.setToolTip(
-            "Activa INITIAL_SETUP_MODE para que la próxima cadena "
-            "abra Chromium visible y permita completar el inicio de sesión."
+            "Abre Chromium persistente primero en Google Login y sólo habilita "
+            "el proveedor después de validar la sesión."
         )
-        self.manual_login_button.clicked.connect(
-            self._enable_manual_setup_mode
-        )
-        top_layout.addWidget(self.manual_login_button)
+        self.manual_login_button.triggered.connect(self._enable_manual_setup_mode)
+
+        tools_button = QToolButton()
+        tools_button.setText("🛠 Herramientas y Diagnóstico")
+        tools_button.setPopupMode(QToolButton.InstantPopup)
+        tools_button.setMenu(tools_menu)
+        top_layout.addWidget(tools_button)
 
         root_layout.addWidget(top)
 
@@ -3405,12 +3434,9 @@ class CommandCenterWindow(QMainWindow):
             title_row.addWidget(status)
             panel_layout.addLayout(title_row)
 
-            profile_label = QLabel(
-                f"Sesión persistente · {spec.browser_profile}"
+            panel.setToolTip(
+                f"Sesión persistente: {spec.browser_profile}"
             )
-            profile_label.setObjectName("Muted")
-            profile_label.setWordWrap(True)
-            panel_layout.addWidget(profile_label)
 
             provider_row = QHBoxLayout()
             provider_row.addWidget(QLabel("Proveedor web"))
@@ -4585,7 +4611,7 @@ class CommandCenterWindow(QMainWindow):
                 getattr(self, "manual_login_button", None),
                 getattr(self, "lobby_manual_login_button", None),
             ):
-                if isinstance(button, QPushButton):
+                if isinstance(button, (QPushButton, QAction)):
                     button.setText("🔑 Chromium Manual: ACTIVO")
                     button.setEnabled(False)
 
