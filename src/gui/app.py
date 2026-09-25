@@ -787,15 +787,14 @@ class ManualBrowserSetupWorker(QObject):
         profile_path = Path(self.browser_profile).resolve()
         timed_out = False
         closed_by_user = False
+        provider_opened = False
 
         try:
             profile_path.mkdir(parents=True, exist_ok=True)
             playwright = sync_playwright().start()
 
-            # IMPORTANTE: headed + no_viewport mantiene una ventana nativa
-            # independiente del QWebEngineView de la GUI. No se instala
-            # ningún autenticador WebAuthn virtual: Google/Windows puede
-            # presentar el flujo real de passkey/security key.
+            # Google Login First: la primera navegación de toda sesión
+            # persistente es estrictamente accounts.google.com.
             context = playwright.chromium.launch_persistent_context(
                 str(profile_path),
                 headless=False,
@@ -811,8 +810,7 @@ class ManualBrowserSetupWorker(QObject):
             self.status.emit(
                 f"{self.bot_id}: Google Login First activo. "
                 "Completa correo, contraseña y 2FA/passkey; "
-                "la navegación al proveedor queda bloqueada hasta validar "
-                "la sesión de Google."
+                "el proveedor queda bloqueado hasta validar Google."
             )
 
             deadline = time.monotonic() + self.TIMEOUT_MS / 1000
@@ -828,6 +826,23 @@ class ManualBrowserSetupWorker(QObject):
                     ):
                         closed_by_user = True
                         break
+
+                    # En cuanto Google queda autenticado, y no antes,
+                    # habilitamos la navegación al proveedor solicitado.
+                    if (
+                        not provider_opened
+                        and self._google_session_authenticated(context, page)
+                    ):
+                        page.goto(
+                            self.start_url,
+                            wait_until="domcontentloaded",
+                            timeout=30_000,
+                        )
+                        provider_opened = True
+                        self.status.emit(
+                            f"{self.bot_id}: Google autenticado. "
+                            f"Proveedor habilitado: {self.provider.display_name}."
+                        )
                     page.wait_for_timeout(self.POLL_INTERVAL_MS)
                 except Exception:
                     closed_by_user = True
@@ -837,22 +852,11 @@ class ManualBrowserSetupWorker(QObject):
 
             self._persist_state(context, profile_path)
 
-            if not timed_out and not closed_by_user:
-                if self._google_session_authenticated(context, page):
-                    page.goto(
-                        self.start_url,
-                        wait_until="domcontentloaded",
-                        timeout=30_000,
-                    )
-                    self.status.emit(
-                        f"{self.bot_id}: Google autenticado. "
-                        f"Proveedor habilitado: {self.provider.display_name}."
-                    )
-                else:
-                    self.status.emit(
-                        f"{self.bot_id}: Google no quedó autenticado; "
-                        "se bloqueó la navegación al proveedor."
-                    )
+            if not provider_opened and not timed_out:
+                self.status.emit(
+                    f"{self.bot_id}: Google no quedó autenticado; "
+                    "se bloqueó la navegación al proveedor."
+                )
 
             if timed_out:
                 self.finished.emit(
@@ -883,6 +887,7 @@ class ManualBrowserSetupWorker(QObject):
                     playwright.stop()
                 except Exception as error:
                     _ = error
+
 
 
 class SequentialChatDispatcher(QObject):
