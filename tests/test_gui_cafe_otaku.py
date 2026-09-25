@@ -476,5 +476,64 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertIn(token, source)
 
 
+
+    def test_multilink_provider_status_and_usage_contract(self):
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        for token in (
+            'class BotExpandedDialog(QDialog):',
+            'provider_changed = Signal(str, str)',
+            'self.provider.addItem("Google Gemini", "gemini")',
+            'self.provider.addItem("OpenAI ChatGPT", "chatgpt")',
+            'self.provider.addItem("Microsoft Copilot", "copilot")',
+            'self.manual_button = QPushButton("🔑 Registrarse / Candado")',
+            'self.led.setText("🟢 Autenticado y Activo"',
+            'self.led.setText("🔴 Desconectado"',
+            'self._usage_seconds',
+            'self._usage_timer',
+            'storage_state.json',
+            'ROOT / "browser_data" / bot_id',
+            'def _browser_auth_state(',
+            'def _on_expanded_provider_changed(',
+            'provider_changed.connect(',
+            'provider_id=provider_id',
+        ):
+            self.assertIn(token, app)
+
+        self.assertIn('"copilot": ProviderWebSpec(', app)
+        self.assertIn('https://copilot.microsoft.com/', app)
+
+    def test_webqueue_single_seat_mutex_contract(self):
+        source = (
+            self.ROOT / "src" / "services" / "web_queue.py"
+        ).read_text(encoding="utf-8")
+        for token in (
+            "import threading",
+            "_WEB_MESA_UNICA = threading.Lock()",
+            "self._mesa_unica_acquired = False",
+            "_WEB_MESA_UNICA.acquire(",
+            "timeout=max(1.0, self.timeout_ms / 1000)",
+            "La espera ocurre únicamente en el worker, nunca en la GUI.",
+            "_WEB_MESA_UNICA.release()",
+            "MESA_UNICA_TIMEOUT",
+        ):
+            self.assertIn(token, source)
+
+    def test_manual_authentication_persists_provider_profile_state(self):
+        source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+        for token in (
+            'profile_path = Path(self.browser_profile).resolve()',
+            'context.storage_state(',
+            'path=str(state_path)',
+            'indexed_db=True',
+            'headless=False',
+            'no_viewport=True',
+            'provider_id=',
+            'BOT_IA_COPILOT_URL',
+        ):
+            self.assertIn(token, source)
+
+
 if __name__ == "__main__":
     unittest.main()
