@@ -1634,6 +1634,29 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertEqual("Scarlet", mature_game_host("blackjack"))
         self.assertEqual("Chloé", mature_game_host("apuestas"))
 
+    def test_inline_external_redirect_and_anti_abuse_contract(self):
+        source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "inline_router.py").read_text(encoding="utf-8")
+        for token in (
+            "class InlineAbuseGuard",
+            "class InlineRedirectHandler",
+            "3",
+            "60.0",
+            "Oh... ¿me seguiste hasta aquí?",
+            "☕ Ir al Café Otaku",
+            "Inline Abuse",
+            ">3 consultas Inline/minuto fuera de la comunidad",
+        ):
+            self.assertIn(token, source)
+
+        from bot_ia.interfaces.inline_router import InlineAbuseGuard
+        guard = InlineAbuseGuard(limit=3, window_seconds=60)
+        self.assertIsNone(guard.check("u1", official=False, now=0))
+        self.assertIsNone(guard.check("u1", official=False, now=1))
+        self.assertIsNone(guard.check("u1", official=False, now=2))
+        blocked = guard.check("u1", official=False, now=3)
+        self.assertTrue(blocked.blocked)
+        self.assertTrue(guard.is_blocked("u1"))
+
     def test_order_confirmation_and_complaint_refund_contract(self):
         from tempfile import TemporaryDirectory
         from bot_ia.interfaces.cafe_economy import CafeWalletStore
