@@ -128,6 +128,8 @@ class WaifuRegistry:
         complaint_id: str,
         points_delta: int,
         status: str,
+        *,
+        balance_after: int | None = None,
     ) -> None:
         """Registra en waifu_registry.json el ajuste administrativo aplicado."""
         self.load()
@@ -154,6 +156,8 @@ class WaifuRegistry:
         if not isinstance(current, dict):
             current = {}
         current["balance_adjustment"] = int(current.get("balance_adjustment", 0)) + int(points_delta)
+        if balance_after is not None:
+            current["balance"] = max(0, int(balance_after))
         current["last_complaint_id"] = str(complaint_id)
         current["last_status"] = str(status)
         balances[str(user_id)] = current
