@@ -588,6 +588,55 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertIn("isolated, simple white background", loaded[0].prompt)
             self.assertIn("no frame, no card border", loaded[0].prompt)
 
+    def test_tcg_frame_templates_and_card_tracker_contract(self):
+        registry_source = (
+            self.ROOT / "src" / "gui" / "waifu_registry.py"
+        ).read_text(encoding="utf-8")
+        gui_source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+        for token in (
+            "class CardSlot",
+            "card_slots",
+            "def frame_candidates",
+            "frame_{rarity}_{element_slug}.svg",
+            "frame_{rarity}.svg",
+            "def record_progress",
+        ):
+            self.assertIn(token, registry_source)
+        for token in (
+            "assets/tcg_frames",
+            "QPixmap",
+            "QPainter",
+            "QFont",
+            "self.card_slot",
+            "Carta 1 · R",
+            "Carta 2 · SR",
+            "Cosplay UR · UR",
+            "slot.complete = True",
+        ):
+            self.assertIn(token, gui_source)
+
+        frame_dir = self.ROOT / "assets" / "tcg_frames"
+        for rarity in ("R", "SR", "UR"):
+            self.assertTrue((frame_dir / f"frame_{rarity}.svg").is_file())
+
+    def test_card_slot_progress_is_derived_from_completion(self):
+        from gui.waifu_registry import CardSlot, WaifuRecord, record_progress
+
+        record = WaifuRecord(
+            name="Aki",
+            personality="tsundere",
+            appearance="silver hair",
+            element="Fuego",
+            cosplay_reference="UR",
+            card_slots=[
+                CardSlot("Carta 1", "R", complete=True),
+                CardSlot("Carta 2", "SR", image_path="sprite.png"),
+                CardSlot("Cosplay UR", "UR"),
+            ],
+        )
+        self.assertEqual(50, record_progress(record))
     def test_manual_authentication_persists_provider_profile_state(self):
         source = (
             self.ROOT / "src" / "gui" / "app.py"
