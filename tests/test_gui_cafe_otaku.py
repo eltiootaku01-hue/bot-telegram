@@ -914,6 +914,84 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertIn("R", maid_consolation("Cari", "R"))
             self.assertEqual({"21": 10, "uno": 12, "ppt": 5}, GAME_REWARDS)
 
+    def test_cafe_rarity_pricing_and_pity_contract(self):
+        from tempfile import TemporaryDirectory
+        from bot_ia.interfaces.cafe_economy import (
+            CafeWalletStore,
+            PITY_SR_LIMIT,
+            PITY_UR_LIMIT,
+            RARITY_PRICES,
+            draw_gacha,
+            pity_text,
+            quote_bebida_order,
+        )
+
+        self.assertEqual(
+            {"R": 10, "SR": 35, "UR": 100, "SPECIAL": 150},
+            RARITY_PRICES,
+        )
+        with TemporaryDirectory() as tmp:
+            store = CafeWalletStore(Path(tmp))
+            store.credit("pricing", 200)
+            for rarity, expected in (("R", 10), ("SR", 35), ("UR", 100)):
+                quote = quote_bebida_order(
+                    existing=True,
+                    target_rarity=rarity,
+                    points=200,
+                )
+                self.assertEqual(expected, quote.cost)
+                self.assertTrue(quote.can_afford)
+            special = quote_bebida_order(
+                existing=False,
+                target_rarity="SPECIAL",
+                points=200,
+            )
+            self.assertEqual(150, special.cost)
+
+            store.credit("pity", 600)
+            for _ in range(PITY_SR_LIMIT - 1):
+                result = draw_gacha("pity", store, roll=lambda: 0, maid="Cami")
+                self.assertEqual("R", result.rarity)
+            self.assertEqual(PITY_SR_LIMIT - 1, store.get("pity").pity_sr)
+            self.assertEqual(PITY_SR_LIMIT - 1, store.get("pity").pity_ur)
+
+            sr = draw_gacha("pity", store, roll=lambda: 0, maid="Cami")
+            self.assertEqual("SR", sr.rarity)
+            self.assertEqual(0, store.get("pity").pity_sr)
+            self.assertEqual(PITY_SR_LIMIT, store.get("pity").pity_ur)
+
+            for _ in range(PITY_UR_LIMIT - PITY_SR_LIMIT - 1):
+                draw_gacha("pity", store, roll=lambda: 0, maid="Cami")
+            self.assertEqual(PITY_UR_LIMIT - 1, store.get("pity").pity_ur)
+
+            ur = draw_gacha("pity", store, roll=lambda: 0, maid="Cami")
+            self.assertEqual("UR", ur.rarity)
+            self.assertEqual(0, store.get("pity").pity_ur)
+            self.assertEqual(0, store.get("pity").pity_sr)
+
+            message = pity_text("pity", store, maid="Cami")
+            self.assertIn("tiradas hacia tu SR", message)
+            self.assertIn("tiradas hacia tu UR", message)
+
+    def test_cafe_pity_and_price_gui_telegram_contract(self):
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        registry = (self.ROOT / "src" / "gui" / "waifu_registry.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        economy = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_economy.py").read_text(encoding="utf-8")
+        for token in (
+            "Bebida R: 10 Puntos",
+            "Bebida SR: 35 Puntos",
+            "Bebida UR: 100 Puntos",
+            "Bebida Especial (Custom Prompt): 150 Puntos",
+            "Rareza objetivo",
+            "target_rarity",
+            "🍀 Pity",
+            "pity_text",
+        ):
+            self.assertIn(token, app + registry + economy)
+        for token in ('"/pity"', '"pity:show"', '"gacha:draw"', "pity_text"):
+            self.assertIn(token, telegram)
+
     def test_mini_games_are_connected_to_cafe_wallet_contract(self):
         source = (self.ROOT / "src" / "gui" / "mini_games.py").read_text(encoding="utf-8")
         for token in (
