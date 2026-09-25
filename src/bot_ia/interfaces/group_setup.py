@@ -24,6 +24,7 @@ ROOMS = (
     ("#pedidos", "pedidos"),
     ("#pedidos-admin", "pedidos_admin"),
     ("#atencion-y-quejas", "atencion_quejas"),
+    ("#zona-reservada", "zona_reservada"),
 )
 
 REPOST_FEEDS = (
@@ -173,13 +174,17 @@ class DiscordGroupSetup:
         return tuple(removed)
 
 
-    def ensure_role(self, guild_id: str, name: str = "Nakama") -> str:
+    def ensure_role(self, guild_id: str, name: str = "Nakama", *, color: int = 0) -> str:
         roles = self._request("GET", f"/guilds/{guild_id}/roles")
         if isinstance(roles, list):
             for role in roles:
                 if isinstance(role, dict) and str(role.get("name", "")).casefold() == name.casefold():
                     return str(role.get("id"))
-        created = self._request("POST", f"/guilds/{guild_id}/roles", {"name": name, "mentionable": False})
+        created = self._request(
+            "POST",
+            f"/guilds/{guild_id}/roles",
+            {"name": name, "mentionable": False, "color": max(0, min(int(color), 0xFFFFFF))},
+        )
         if not isinstance(created, dict) or not created.get("id"):
             raise GroupSetupError(f"Discord no devolvió rol {name}")
         return str(created["id"])
@@ -369,6 +374,19 @@ class DiscordGroupSetup:
         result = GroupSetupResult("discord", guild_id, tuple(rooms))
         store.save_target("discord", guild_id, result.rooms)
         self.ensure_managed_webhooks(result.rooms)
+        vip_role_id = self.ensure_role(guild_id, "VIP", color=0xFFD700)
+        reserved = next((room for room in result.rooms if room.key == "zona_reservada"), None)
+        if reserved is not None:
+            self._request(
+                "PATCH",
+                f"/channels/{reserved.external_id}",
+                {
+                    "permission_overwrites": [
+                        {"id": guild_id, "type": 0, "deny": str(1 << 10)},
+                        {"id": vip_role_id, "type": 0, "allow": str((1 << 10) | (1 << 16))},
+                    ]
+                },
+            )
         return result
 
 
