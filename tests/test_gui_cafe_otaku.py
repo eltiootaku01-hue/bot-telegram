@@ -1174,6 +1174,16 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         mixed = moderate("loli porno explícito", room_key="pedidos_sfw")
         self.assertEqual("ban", mixed.action)
 
+    def test_discord_moderation_handler_contract(self):
+        source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "discord_moderation.py").read_text(encoding="utf-8")
+        for token in (
+            "class DiscordModerationHandler",
+            "self._client.delete_message",
+            "self._client.ban_member",
+            "moderate(",
+        ):
+            self.assertIn(token, source)
+
     def test_auto_moderation_integration_contract(self):
         moderation = (self.ROOT / "src" / "bot_ia" / "interfaces" / "auto_moderation.py").read_text(encoding="utf-8")
         telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
