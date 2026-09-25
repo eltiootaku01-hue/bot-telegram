@@ -6,6 +6,7 @@ from bot_ia.core.application import BotApplication, InMemorySessionStore
 from bot_ia.core.brain import LocalBrain
 from bot_ia.core.router import Router
 from bot_ia.interfaces.telegram import PollingConfig, TelegramAdapter, TelegramApiClient, TelegramPoller
+import traceback
 
 def _update(update_id=7, text="Hola"):
     return {"update_id": update_id, "message": {"from": {"id": 1}, "chat": {"id": 2}, "text": text}}
@@ -17,6 +18,12 @@ def test_debug_telegram_pipeline():
         reg.register(UniverseDefinition("one_neko_punch", "One Neko Punch", root / "data"))
         app = BotApplication(LocalBrain(reg), Router(), InMemorySessionStore(), default_universe_id="one_neko_punch")
         adapter = TelegramAdapter(app)
+        try:
+            direct = adapter.handle_update(_update()["message"] and _update())
+            print("DEBUG_DIRECT", direct)
+        except Exception:
+            print("DEBUG_DIRECT_EXCEPTION")
+            traceback.print_exc()
         logs=[]
         calls=[]
         batches=[[_update()]]
