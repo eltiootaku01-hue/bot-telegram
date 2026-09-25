@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
     QGridLayout,
+    QDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -1464,6 +1465,112 @@ class SystemDiagnosticWorker(QObject):
             )
 
 
+class BotExpandedDialog(QDialog):
+    """Visor ampliado tipo pestaña/ventana para una sesión individual."""
+
+    send_requested = Signal(str, str)
+    manual_requested = Signal(str)
+    start_requested = Signal(str)
+
+    def __init__(
+        self,
+        profile: BotProfile,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.bot_id = profile.bot_id
+        self.setWindowTitle(
+            f"{profile.avatar} {profile.name} · Visor ampliado"
+        )
+        self.setMinimumSize(980, 680)
+        self.resize(1180, 780)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(16, 16, 16, 16)
+        root.setSpacing(10)
+
+        header = QHBoxLayout()
+        title = QLabel(
+            f"{profile.avatar} {profile.name}"
+        )
+        title.setObjectName("PageTitle")
+        header.addWidget(title)
+        role = QLabel(profile.short_role)
+        role.setObjectName("Muted")
+        header.addWidget(role)
+        header.addStretch(1)
+
+        self.status = QLabel("En espera")
+        self.status.setObjectName("Muted")
+        header.addWidget(self.status)
+        root.addLayout(header)
+
+        controls = QHBoxLayout()
+        self.provider_label = QLabel("Proveedor: —")
+        controls.addWidget(self.provider_label)
+        controls.addStretch(1)
+
+        self.start_button = QPushButton("▶ Iniciar desde este bot")
+        self.start_button.clicked.connect(
+            lambda: self.start_requested.emit(self.bot_id)
+        )
+        controls.addWidget(self.start_button)
+
+        self.manual_button = QPushButton("🔑 Sesión Manual")
+        self.manual_button.clicked.connect(
+            lambda: self.manual_requested.emit(self.bot_id)
+        )
+        controls.addWidget(self.manual_button)
+        root.addLayout(controls)
+
+        self.history = QPlainTextEdit()
+        self.history.setReadOnly(True)
+        self.history.setPlaceholderText(
+            "Historial completo de actividad de este bot…"
+        )
+        root.addWidget(self.history, 1)
+
+        composer = QHBoxLayout()
+        self.input = QLineEdit()
+        self.input.setPlaceholderText(
+            "Escribe un mensaje para este bot…"
+        )
+        self.input.returnPressed.connect(self._emit_message)
+        composer.addWidget(self.input, 1)
+
+        send = QPushButton("Enviar")
+        send.clicked.connect(self._emit_message)
+        composer.addWidget(send)
+        root.addLayout(composer)
+
+    def _emit_message(self) -> None:
+        text = self.input.text().strip()
+        if not text:
+            return
+        self.input.clear()
+        self.append_history("Tú", text)
+        self.send_requested.emit(self.bot_id, text)
+
+    def set_provider(self, provider_id: str) -> None:
+        self.provider_label.setText(
+            f"Proveedor: {provider_id or '—'}"
+        )
+
+    def set_status(self, status: str) -> None:
+        self.status.setText(status)
+
+    def append_history(self, speaker: str, text: str) -> None:
+        clean = str(text).strip()
+        if clean:
+            self.history.appendPlainText(
+                f"{speaker}: {clean}"
+            )
+
+    def closeEvent(self, event: object) -> None:
+        self.hide()
+        event.accept()
+
+
 class CommandCenterWindow(QMainWindow):
     """UI principal que conserva el runtime y backend existentes."""
 
@@ -1560,6 +1667,7 @@ class CommandCenterWindow(QMainWindow):
         }
         self._matrix_dispatcher = SequentialChatDispatcher(parent=self)
         self._matrix_widgets: dict[str, dict[str, object]] = {}
+        self._expanded_bot_dialogs: dict[str, BotExpandedDialog] = {}
         self._matrix_chain_running = False
         self._matrix_chain_button: QPushButton | None = None
         self._matrix_chain_summary: QLabel | None = None
@@ -1715,7 +1823,7 @@ class CommandCenterWindow(QMainWindow):
                 profile.name,
                 profile.short_role,
             )
-            tile.clicked_bot.connect(self.select_bot)
+            tile.clicked_bot.connect(self._on_bot_tile_clicked)
             layout.addWidget(tile)
             self.bot_tiles[profile.bot_id] = tile
 
@@ -1898,6 +2006,13 @@ class CommandCenterWindow(QMainWindow):
             )
             panel_layout.addWidget(start_button)
 
+            expand_button = QPushButton("🔍 Ampliar")
+            expand_button.clicked.connect(
+                lambda _checked=False, bot_id=spec.bot_id:
+                self._open_bot_expanded(bot_id)
+            )
+            panel_layout.addWidget(expand_button)
+
             self._matrix_widgets[spec.bot_id] = {
                 "panel": panel,
                 "status": status,
@@ -1906,6 +2021,7 @@ class CommandCenterWindow(QMainWindow):
                 "provider": provider,
                 "provider_url": provider_url,
                 "start_button": start_button,
+                "expand_button": expand_button,
             }
             matrix_grid.addWidget(
                 panel,
@@ -2109,6 +2225,67 @@ class CommandCenterWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Chat
     # ------------------------------------------------------------------
+
+    def _on_bot_tile_clicked(self, bot_id: str) -> None:
+        self.select_bot(bot_id)
+        self._open_bot_expanded(bot_id)
+
+    def _open_bot_expanded(self, bot_id: str) -> None:
+        profile = BOT_MAP.get(bot_id)
+        if profile is None:
+            return
+
+        dialog = self._expanded_bot_dialogs.get(bot_id)
+        if dialog is None:
+            dialog = BotExpandedDialog(profile, self)
+            dialog.send_requested.connect(
+                self._send_expanded_bot_message
+            )
+            dialog.manual_requested.connect(
+                self._start_manual_setup_for_bot
+            )
+            dialog.start_requested.connect(
+                self._start_matrix_chain
+            )
+            self._expanded_bot_dialogs[bot_id] = dialog
+
+        widgets = self._matrix_widgets.get(bot_id, {})
+        provider = widgets.get("provider")
+        if isinstance(provider, QComboBox):
+            dialog.set_provider(
+                str(provider.currentData()).strip()
+            )
+
+        status = widgets.get("status")
+        if isinstance(status, QLabel):
+            dialog.set_status(status.text())
+
+        log = widgets.get("log")
+        if isinstance(log, QPlainTextEdit):
+            dialog.history.setPlainText(log.toPlainText())
+
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
+
+    def _send_expanded_bot_message(
+        self,
+        bot_id: str,
+        message: str,
+    ) -> None:
+        if bot_id not in BOT_MAP:
+            return
+        self.select_bot(bot_id)
+        self._send_web_persona(message)
+        dialog = self._expanded_bot_dialogs.get(bot_id)
+        if dialog is not None:
+            dialog.append_history("Sistema", "Mensaje enviado a WebQueue.")
+
+    def _start_manual_setup_for_bot(self, bot_id: str) -> None:
+        if bot_id not in BOT_MAP:
+            return
+        self.select_bot(bot_id)
+        self._enable_manual_setup_mode(bot_id)
 
     def select_bot(self, bot_id: str) -> None:
         if bot_id not in BOT_MAP:
@@ -2572,17 +2749,23 @@ class CommandCenterWindow(QMainWindow):
                 f"❌ No se pudo iniciar la cadena: {error}"
             )
 
-    def _enable_manual_setup_mode(self) -> None:
+    def _enable_manual_setup_mode(self, bot_id: str | None = None) -> None:
         """Lanza el Chromium nativo de configuración para el perfil seleccionado."""
+        for dialog in tuple(self._expanded_bot_dialogs.values()):
+            dialog.hide()
+            dialog.deleteLater()
+        self._expanded_bot_dialogs.clear()
+
         if self._manual_setup_thread is not None:
             self._append_system(
                 "🔑 Ya hay una sesión de inicio manual en curso."
             )
             return
 
+        requested_bot_id = bot_id or self._selected_bot_id
         target_id = (
-            self._selected_bot_id
-            if self._selected_bot_id in {
+            requested_bot_id
+            if requested_bot_id in {
                 spec.bot_id for spec in MATRIX_BOT_SPECS
             }
             else MATRIX_INITIALIZATION_ORDER[0]
@@ -2642,6 +2825,10 @@ class CommandCenterWindow(QMainWindow):
                     button.setText("🔑 Chromium Manual: ACTIVO")
                     button.setEnabled(False)
 
+            expanded = self._expanded_bot_dialogs.get(target_id)
+            if expanded is not None:
+                expanded.set_status("🔑 Chromium manual abierto")
+
             self._append_system(
                 f"🔑 Abriendo Chromium nativo para {spec.display_name}. "
                 "La autenticación se realiza directamente en esa ventana; "
@@ -2658,6 +2845,9 @@ class CommandCenterWindow(QMainWindow):
     @Slot(str)
     def _on_manual_setup_status(self, text: str) -> None:
         self._append_system(f"🔑 {text}")
+        for dialog in self._expanded_bot_dialogs.values():
+            if dialog.isVisible():
+                dialog.set_status("Configuración manual finalizada")
 
     @Slot(str)
     def _on_manual_setup_finished(self, text: str) -> None:
