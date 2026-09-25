@@ -229,6 +229,13 @@ class DiscordGroupSetup:
             {"communication_disabled_until": until_iso8601},
         )
 
+    def clear_timeout(self, guild_id: str, user_id: str) -> None:
+        self._request(
+            "PATCH",
+            f"/guilds/{guild_id}/members/{user_id}",
+            {"communication_disabled_until": None},
+        )
+
     def kick_member(self, guild_id: str, user_id: str) -> None:
         self._request("DELETE", f"/guilds/{guild_id}/members/{user_id}")
 
