@@ -172,6 +172,7 @@ class TelegramAdapter:
         (("📚 Biblioteca", "menu:library"), ("🧭 Continuidad", "menu:continuity")),
         (("💡 Ideas", "menu:ideas"), ("❓ Ayuda", "menu:help")),
         (("🍀 Pity", "pity:show"), ("☕ Puntos", "economy:show")),
+        (("✨ VIP / Apoyar", "vip:show"),),
     )
 
     def __init__(
