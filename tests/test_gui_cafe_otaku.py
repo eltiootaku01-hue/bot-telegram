@@ -883,6 +883,73 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("Fuego", html)
         self.assertIn("Waifumon", html)
 
+    def test_cafe_economy_wallet_pricing_and_gacha_contract(self):
+        from tempfile import TemporaryDirectory
+        from bot_ia.interfaces.cafe_economy import (
+            CafeWalletStore,
+            GACHA_COST,
+            GAME_REWARDS,
+            ORDER_COST_HIGH,
+            ORDER_COST_NORMAL,
+            draw_gacha,
+            maid_consolation,
+            quote_bebida_order,
+        )
+
+        with TemporaryDirectory() as tmp:
+            store = CafeWalletStore(Path(tmp))
+            self.assertEqual(50, store.balance("u1"))
+            store.credit("u1", 10)
+            self.assertEqual(60, store.balance("u1"))
+            self.assertEqual(ORDER_COST_NORMAL, quote_bebida_order(existing=True, points=60).cost)
+            self.assertEqual(ORDER_COST_HIGH, quote_bebida_order(existing=False, points=60).cost)
+            result = draw_gacha("u1", store, roll=lambda: 99, maid="Cami")
+            self.assertEqual("UR", result.rarity)
+            self.assertEqual(60 - GACHA_COST, store.balance("u1"))
+            self.assertIn("Cami", result.consolation)
+            self.assertIn("R", maid_consolation("Cari", "R"))
+            self.assertEqual({"21": 10, "uno": 12, "ppt": 5}, GAME_REWARDS)
+
+    def test_mini_games_are_connected_to_cafe_wallet_contract(self):
+        source = (self.ROOT / "src" / "gui" / "mini_games.py").read_text(encoding="utf-8")
+        for token in (
+            "CafeWalletStore",
+            "wallet_store",
+            "reward_game",
+            '"ppt"',
+            '"21"',
+            '"uno"',
+        ):
+            self.assertIn(token, source)
+
+    def test_bebida_prompt_pricing_and_purchase_contract(self):
+        source = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        orders = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_orders.py").read_text(encoding="utf-8")
+        economy = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_economy.py").read_text(encoding="utf-8")
+        for token in (
+            "Puntos del Café",
+            "Comprar / Clonar",
+            "purchase_bebida_order",
+            "bebida_order_quote",
+            "simple white background, isolated",
+        ):
+            self.assertIn(token, source + orders)
+        self.assertIn("ORDER_COST_HIGH", economy)
+        self.assertIn("ORDER_COST_NORMAL", economy)
+
+    def test_telegram_economy_commands_contract(self):
+        source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        for token in (
+            '"/puntos"',
+            '"/economia"',
+            '"/precios"',
+            'command == "/gacha"',
+            "CafeWalletStore",
+            "draw_gacha",
+            "economy_price_text",
+        ):
+            self.assertIn(token, source)
+
     def test_bebida_order_flow_and_local_autocomplete_contract(self):
         from bot_ia.interfaces.cafe_orders import (
             BOLDNESS_LEVELS,
