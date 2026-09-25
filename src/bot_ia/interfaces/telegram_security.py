@@ -52,18 +52,25 @@ def is_authorized_telegram_group(
     *,
     message_thread_id: int | None = None,
 ) -> bool:
+    """Valida únicamente la pertenencia del chat a la allowlist oficial."""
     clean_chat = str(chat_id).strip()
-    if not clean_chat:
-        return False
-    groups = authorized_group_ids()
-    if clean_chat not in groups:
-        return False
+    return bool(clean_chat and clean_chat in authorized_group_ids())
+
+
+def is_authorized_telegram_forum_route(
+    chat_id: str,
+    message_thread_id: int | None,
+) -> bool:
+    """Valida un par chat/topic cuando AUTHORIZED_FORUM_ID fue configurado."""
     forums = authorized_forum_routes()
     if not forums:
         return True
     if message_thread_id is None:
         return False
-    return (clean_chat, int(message_thread_id)) in forums
+    try:
+        return (str(chat_id).strip(), int(message_thread_id)) in forums
+    except (TypeError, ValueError):
+        return False
 
 
 def is_authorized_admin_destination(chat_id: str) -> bool:
