@@ -145,6 +145,55 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ):
             self.assertIn(f"BOT_TOKEN_{bot_id}=", source)
 
+
+    def test_multi_bot_matrix_and_sequential_dispatcher_contract(self):
+        source = (
+            self.ROOT / "src" / "gui" / "app.py"
+        ).read_text(encoding="utf-8")
+
+        for token in (
+            "class MatrixBotSpec:",
+            "class SequentialChatDispatcher(QObject):",
+            "MATRIX_BOT_SPECS = (",
+            '"cari",',
+            '"sunna",',
+            '"cami",',
+            '"chie",',
+            '"./browser_data/bot_1"',
+            '"./browser_data/bot_2"',
+            '"./browser_data/bot_3"',
+            '"./browser_data/bot_4"',
+            '"SYSTEM PROMPT / DIRECTIVA DE ACTUACIÓN:"',
+            '"COMANDO DE LOBBY:"',
+            "class GeminiLobbyWorker(QObject):",
+            "chromium.launch_persistent_context(",
+            "headless=False",
+            '"--disable-blink-features=AutomationControlled"',
+            '"--hide-crash-restore-bubble"',
+            '"--no-sandbox"',
+            '"div[contenteditable=\\'true\\']"',
+            '"model-response"',
+            "thread.started.connect(worker.run)",
+            "worker.finished.connect(thread.quit)",
+            "worker.failed.connect(thread.quit)",
+            "worker.finished.connect(worker.deleteLater)",
+            "worker.failed.connect(worker.deleteLater)",
+            "thread.finished.connect(thread.deleteLater)",
+            "self._start_next()",
+            "⛓ Ejecutar cadena 4 bots",
+            "QGridLayout",
+        ):
+            self.assertIn(token, source)
+
+        matrix_ids = [
+            spec.bot_id
+            for spec in __import__("gui.app", fromlist=["MATRIX_BOT_SPECS"]).MATRIX_BOT_SPECS
+        ]
+        self.assertEqual(
+            ["cari", "sunna", "cami", "chie"],
+            matrix_ids,
+        )
+
     def test_async_qt_entrypoint_and_shutdown_contract_are_present(self):
         source = (
             self.ROOT / "src" / "gui" / "app.py"

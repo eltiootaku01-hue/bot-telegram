@@ -157,14 +157,73 @@ class ApplicationTask(QRunnable):
             )
 
 
+class MatrixBotSpec:
+    """Configuración fija de una instancia del Lobby 2x2."""
+
+    def __init__(
+        self,
+        bot_id: str,
+        display_name: str,
+        browser_profile: str,
+        row: int,
+        column: int,
+        default_system_prompt: str,
+    ) -> None:
+        self.bot_id = bot_id
+        self.display_name = display_name
+        self.browser_profile = browser_profile
+        self.row = row
+        self.column = column
+        self.default_system_prompt = default_system_prompt
+
+
+MATRIX_BOT_SPECS = (
+    MatrixBotSpec(
+        "cari",
+        "Cari",
+        "./browser_data/bot_1",
+        0,
+        0,
+        "Actúa como Cari, anfitriona del Café Otaku. "
+        "Sigue primero esta directiva y después ejecuta el comando recibido.",
+    ),
+    MatrixBotSpec(
+        "sunna",
+        "Sunna",
+        "./browser_data/bot_2",
+        0,
+        1,
+        "Actúa como Sunna, responsable de lore y trivia del Café Otaku. "
+        "Sigue primero esta directiva y después ejecuta el comando recibido.",
+    ),
+    MatrixBotSpec(
+        "cami",
+        "Cami",
+        "./browser_data/bot_3",
+        1,
+        0,
+        "Actúa como Cami, moderadora del Café Otaku. "
+        "Sigue primero esta directiva y después ejecuta el comando recibido.",
+    ),
+    MatrixBotSpec(
+        "chie",
+        "Chie",
+        "./browser_data/bot_4",
+        1,
+        1,
+        "Actúa como Chie, gestora de XP del Café Otaku. "
+        "Sigue primero esta directiva y después ejecuta el comando recibido.",
+    ),
+)
+
+
 class GeminiLobbyWorker(QObject):
-    """Ejecuta una sesión persistente y sincrónica de Gemini fuera de la GUI."""
+    """Worker Playwright síncrono para una única sesión persistente."""
 
     finished = Signal(str)
     failed = Signal(str)
 
     GEMINI_URL = "https://gemini.google.com"
-    USER_DATA_DIR = "./browser_data"
     INPUT_SELECTOR = "div[contenteditable='true']"
     RESPONSE_SELECTOR = "model-response"
     TIMEOUT_MS = 30_000
@@ -176,9 +235,34 @@ class GeminiLobbyWorker(QObject):
         "--no-sandbox",
     )
 
-    def __init__(self, prompt: str) -> None:
+    def __init__(
+        self,
+        bot_id: str,
+        browser_profile: str,
+        system_prompt: str,
+        command: str,
+    ) -> None:
         super().__init__()
-        self.prompt = prompt.strip()
+        self.bot_id = bot_id
+        self.browser_profile = browser_profile
+        self.system_prompt = system_prompt.strip()
+        self.command = command.strip()
+
+    def build_prompt(self) -> str:
+        if not self.system_prompt:
+            raise ValueError(
+                f"{self.bot_id}: la directiva de actuación no puede estar vacía."
+            )
+        if not self.command:
+            raise ValueError(
+                f"{self.bot_id}: el comando no puede estar vacío."
+            )
+        return (
+            "SYSTEM PROMPT / DIRECTIVA DE ACTUACIÓN:\n"
+            f"{self.system_prompt}\n\n"
+            "COMANDO DE LOBBY:\n"
+            f"{self.command}"
+        )
 
     def _wait_for_visible(self, page, selector: str, timeout_ms: int):
         deadline = time.monotonic() + timeout_ms / 1000
@@ -212,7 +296,9 @@ class GeminiLobbyWorker(QObject):
             count = responses.count()
 
             if count:
-                current_text = responses.nth(count - 1).inner_text().strip()
+                current_text = (
+                    responses.nth(count - 1).inner_text()
+                ).strip()
                 is_new = count > baseline_count
                 changed = bool(current_text) and current_text != baseline_text
 
@@ -228,17 +314,17 @@ class GeminiLobbyWorker(QObject):
 
             page.wait_for_timeout(self.POLL_INTERVAL_MS)
 
-        raise TimeoutError("Gemini no produjo una respuesta estable a tiempo")
+        raise TimeoutError(
+            f"{self.bot_id}: Gemini no produjo una respuesta estable a tiempo."
+        )
 
     @Slot()
     def run(self) -> None:
         try:
-            if not self.prompt:
-                raise ValueError("El prompt del Lobby Gemini no puede estar vacío.")
-
+            prompt = self.build_prompt()
             with sync_playwright() as playwright:
                 context = playwright.chromium.launch_persistent_context(
-                    self.USER_DATA_DIR,
+                    self.browser_profile,
                     headless=False,
                     args=list(self.BROWSER_ARGS),
                 )
@@ -260,7 +346,9 @@ class GeminiLobbyWorker(QObject):
                         self.TIMEOUT_MS,
                     )
 
-                    response_locator = page.locator(self.RESPONSE_SELECTOR)
+                    response_locator = page.locator(
+                        self.RESPONSE_SELECTOR
+                    )
                     baseline_count = response_locator.count()
                     baseline_text = ""
                     if baseline_count:
@@ -270,7 +358,7 @@ class GeminiLobbyWorker(QObject):
                             .strip()
                         )
 
-                    input_locator.fill(self.prompt)
+                    input_locator.fill(prompt)
                     input_locator.press("Enter")
 
                     response_text = self._read_response(
@@ -287,8 +375,174 @@ class GeminiLobbyWorker(QObject):
             self.finished.emit(response_text)
         except Exception as error:
             self.failed.emit(
-                f"{type(error).__name__}: {error}"
+                f"{self.bot_id}: {type(error).__name__}: {error}"
             )
+
+
+class SequentialChatDispatcher(QObject):
+    """Ejecuta las cuatro sesiones de Gemini en cadena determinista."""
+
+    finished = Signal(dict)
+    failed = Signal(str)
+    bot_started = Signal(str)
+    bot_finished = Signal(str, str)
+    bot_failed = Signal(str, str)
+
+    def __init__(
+        self,
+        specs: tuple[MatrixBotSpec, ...] = MATRIX_BOT_SPECS,
+        parent: QObject | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.specs = tuple(specs)
+        self._index = 0
+        self._command = ""
+        self._system_prompts: dict[str, str] = {}
+        self._results: dict[str, str] = {}
+        self._errors: dict[str, str] = {}
+        self._active_thread: QThread | None = None
+        self._active_worker: GeminiLobbyWorker | None = None
+        self._stopping = False
+
+    @property
+    def is_running(self) -> bool:
+        return self._active_thread is not None and self._active_thread.isRunning()
+
+    def start(
+        self,
+        command: str,
+        system_prompts: dict[str, str],
+        *,
+        start_bot_id: str = "cari",
+    ) -> bool:
+        if self.is_running or self._stopping:
+            return False
+
+        command = command.strip()
+        if not command:
+            self.failed.emit("El comando del Lobby no puede estar vacío.")
+            return False
+
+        indexes = [
+            index
+            for index, spec in enumerate(self.specs)
+            if spec.bot_id == start_bot_id
+        ]
+        if not indexes:
+            self.failed.emit(
+                f"No existe el bot de matriz solicitado: {start_bot_id}."
+            )
+            return False
+
+        self._index = indexes[0]
+        self._command = command
+        self._system_prompts = {
+            spec.bot_id: system_prompts.get(
+                spec.bot_id,
+                spec.default_system_prompt,
+            ).strip()
+            for spec in self.specs
+        }
+        self._results = {}
+        self._errors = {}
+        self._stopping = False
+        self._start_next()
+        return True
+
+    def _start_next(self) -> None:
+        if self._stopping:
+            return
+
+        if self._index >= len(self.specs):
+            self.finished.emit(
+                {
+                    "ok": not self._errors,
+                    "command": self._command,
+                    "results": dict(self._results),
+                    "errors": dict(self._errors),
+                }
+            )
+            return
+
+        spec = self.specs[self._index]
+        worker = GeminiLobbyWorker(
+            spec.bot_id,
+            spec.browser_profile,
+            self._system_prompts.get(
+                spec.bot_id,
+                spec.default_system_prompt,
+            ),
+            self._command,
+        )
+        thread = QThread(self)
+        worker.moveToThread(thread)
+
+        self.bot_started.emit(spec.bot_id)
+        thread.started.connect(worker.run)
+        worker.finished.connect(
+            lambda response, bot_id=spec.bot_id: self._on_bot_finished(
+                bot_id,
+                response,
+            )
+        )
+        worker.failed.connect(
+            lambda error, bot_id=spec.bot_id: self._on_bot_failed(
+                bot_id,
+                error,
+            )
+        )
+        worker.finished.connect(thread.quit)
+        worker.failed.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        worker.failed.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(
+            lambda bot_id=spec.bot_id, current_thread=thread, current_worker=worker:
+            self._on_thread_finished(
+                bot_id,
+                current_thread,
+                current_worker,
+            )
+        )
+
+        self._active_thread = thread
+        self._active_worker = worker
+        thread.start()
+
+    def _on_bot_finished(self, bot_id: str, response: str) -> None:
+        self._results[bot_id] = response
+        self.bot_finished.emit(bot_id, response)
+
+    def _on_bot_failed(self, bot_id: str, error: str) -> None:
+        self._errors[bot_id] = error
+        self.bot_failed.emit(bot_id, error)
+
+    def _on_thread_finished(
+        self,
+        bot_id: str,
+        thread: QThread,
+        worker: GeminiLobbyWorker,
+    ) -> None:
+        if self._active_thread is thread:
+            self._active_thread = None
+        if self._active_worker is worker:
+            self._active_worker = None
+
+        self._index += 1
+        if self._stopping:
+            return
+
+        QTimer.singleShot(0, self._start_next)
+
+    def stop(self) -> None:
+        self._stopping = True
+        thread = self._active_thread
+        if thread is None:
+            return
+        thread.requestInterruption()
+        thread.quit()
+        if thread.isRunning():
+            thread.wait(1_000)
 
 
 class SystemDiagnosticWorker(QObject):
@@ -882,8 +1136,26 @@ class CommandCenterWindow(QMainWindow):
             ).strip()
             for profile in BOT_PROFILES
         }
-        self._gemini_thread: QThread | None = None
-        self._gemini_worker: GeminiLobbyWorker | None = None
+        self._matrix_dispatcher = SequentialChatDispatcher(parent=self)
+        self._matrix_widgets: dict[str, dict[str, object]] = {}
+        self._matrix_chain_running = False
+        self._matrix_chain_button: QPushButton | None = None
+        self._matrix_chain_summary: QLabel | None = None
+        self._matrix_dispatcher.bot_started.connect(
+            self._on_matrix_bot_started
+        )
+        self._matrix_dispatcher.bot_finished.connect(
+            self._on_matrix_bot_finished
+        )
+        self._matrix_dispatcher.bot_failed.connect(
+            self._on_matrix_bot_failed
+        )
+        self._matrix_dispatcher.finished.connect(
+            self._on_matrix_chain_finished
+        )
+        self._matrix_dispatcher.failed.connect(
+            self._on_matrix_chain_failed
+        )
         self._telegram_poll_timer = QTimer(self)
         self._telegram_poll_timer.setInterval(1000)
         self._telegram_poll_timer.timeout.connect(
@@ -1067,6 +1339,97 @@ class CommandCenterWindow(QMainWindow):
         )
         header.addWidget(self.chat_mode)
         layout.addLayout(header)
+
+        matrix_header = QHBoxLayout()
+        matrix_title = QLabel("🧩 Matriz 2×2 · 4 sesiones aisladas")
+        matrix_title.setObjectName("PageTitle")
+        matrix_header.addWidget(matrix_title)
+        matrix_header.addStretch(1)
+
+        self._matrix_chain_button = QPushButton(
+            "⛓ Ejecutar cadena 4 bots"
+        )
+        self._matrix_chain_button.clicked.connect(
+            lambda: self._start_matrix_chain("cari")
+        )
+        matrix_header.addWidget(self._matrix_chain_button)
+        layout.addLayout(matrix_header)
+
+        self._matrix_chain_summary = QLabel(
+            "Orden: Cari → Sunna → Cami → Chie · perfiles Playwright aislados."
+        )
+        self._matrix_chain_summary.setObjectName("Muted")
+        self._matrix_chain_summary.setWordWrap(True)
+        layout.addWidget(self._matrix_chain_summary)
+
+        matrix = QWidget()
+        matrix_grid = QGridLayout(matrix)
+        matrix_grid.setContentsMargins(0, 0, 0, 0)
+        matrix_grid.setSpacing(8)
+
+        for spec in MATRIX_BOT_SPECS:
+            panel = CardFrame()
+            panel.setObjectName(f"MatrixBot_{spec.bot_id}")
+            panel_layout = QVBoxLayout(panel)
+            panel_layout.setContentsMargins(8, 8, 8, 8)
+            panel_layout.setSpacing(5)
+
+            title_row = QHBoxLayout()
+            title = QLabel(
+                f"{BOT_MAP[spec.bot_id].avatar} {spec.display_name}"
+            )
+            title.setObjectName("PageTitle")
+            title_row.addWidget(title)
+            title_row.addStretch(1)
+
+            status = QLabel("En espera")
+            status.setObjectName("Muted")
+            title_row.addWidget(status)
+            panel_layout.addLayout(title_row)
+
+            profile_label = QLabel(
+                f"Sesión persistente · {spec.browser_profile}"
+            )
+            profile_label.setObjectName("Muted")
+            profile_label.setWordWrap(True)
+            panel_layout.addWidget(profile_label)
+
+            system_prompt = QPlainTextEdit(spec.default_system_prompt)
+            system_prompt.setPlaceholderText(
+                "System Prompt / Directiva de Actuación"
+            )
+            system_prompt.setMinimumHeight(48)
+            system_prompt.setMaximumHeight(78)
+            panel_layout.addWidget(system_prompt)
+
+            log = QPlainTextEdit()
+            log.setReadOnly(True)
+            log.setPlaceholderText("Estado y log del bot…")
+            log.setMinimumHeight(56)
+            log.setMaximumHeight(110)
+            panel_layout.addWidget(log, 1)
+
+            start_button = QPushButton("▶ Iniciar desde este bot")
+            start_button.clicked.connect(
+                lambda _checked=False, bot_id=spec.bot_id:
+                self._start_matrix_chain(bot_id)
+            )
+            panel_layout.addWidget(start_button)
+
+            self._matrix_widgets[spec.bot_id] = {
+                "panel": panel,
+                "status": status,
+                "system_prompt": system_prompt,
+                "log": log,
+                "start_button": start_button,
+            }
+            matrix_grid.addWidget(
+                panel,
+                spec.row,
+                spec.column,
+            )
+
+        layout.addWidget(matrix)
 
         self.chat_scroll = QScrollArea()
         self.chat_scroll.setWidgetResizable(True)
@@ -1581,70 +1944,139 @@ class CommandCenterWindow(QMainWindow):
             except TavernError as error:
                 self._append_system(self._friendly_tavern_error(error))
 
-    def _request_lobby_gemini(self) -> None:
-        if self._closing:
-            return
-        if (
-            self._gemini_thread is not None
-            and self._gemini_thread.isRunning()
-        ):
+    def _start_matrix_chain(self, start_bot_id: str = "cari") -> None:
+        if self._closing or self._matrix_dispatcher.is_running:
             return
 
-        prompt = self.input.toPlainText().strip()
-        if not prompt:
+        command = self.input.toPlainText().strip()
+        if not command:
             self._append_system(
-                "Escribe una pregunta para Gemini antes de iniciar la automatización."
+                "Escribe un comando en el Lobby antes de iniciar la matriz."
             )
             return
 
-        self.lobby_gemini.setEnabled(False)
-        self.lobby_gemini.setText("⏳ Procesando…")
+        system_prompts = {
+            bot_id: str(
+                widgets["system_prompt"].toPlainText()
+            ).strip()
+            for bot_id, widgets in self._matrix_widgets.items()
+        }
 
-        thread = QThread(self)
-        worker = GeminiLobbyWorker(prompt)
-        worker.moveToThread(thread)
+        for bot_id, widgets in self._matrix_widgets.items():
+            widgets["status"].setText(
+                "En cola"
+                if self._matrix_index(bot_id) >= self._matrix_index(start_bot_id)
+                else "No incluido"
+            )
+            widgets["log"].clear()
 
-        thread.started.connect(worker.run)
-        worker.finished.connect(self._gemini_done)
-        worker.failed.connect(self._gemini_failed)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
-        worker.failed.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(
-            lambda: self._cleanup_gemini_thread(thread, worker)
+        self._matrix_chain_running = True
+        self._set_matrix_controls(False)
+        self._matrix_dispatcher.start(
+            command,
+            system_prompts,
+            start_bot_id=start_bot_id,
         )
 
-        self._gemini_thread = thread
-        self._gemini_worker = worker
-        thread.start()
+    def _matrix_index(self, bot_id: str) -> int:
+        for index, spec in enumerate(MATRIX_BOT_SPECS):
+            if spec.bot_id == bot_id:
+                return index
+        return len(MATRIX_BOT_SPECS)
+
+    def _set_matrix_controls(self, enabled: bool) -> None:
+        if self._matrix_chain_button is not None:
+            self._matrix_chain_button.setEnabled(enabled)
+        self.lobby_gemini.setEnabled(enabled)
+        for widgets in self._matrix_widgets.values():
+            button = widgets.get("start_button")
+            if isinstance(button, QPushButton):
+                button.setEnabled(enabled)
+
+    @Slot(str)
+    def _on_matrix_bot_started(self, bot_id: str) -> None:
+        widgets = self._matrix_widgets.get(bot_id)
+        if widgets is None:
+            return
+        widgets["status"].setText("⏳ Procesando…")
+        log = widgets["log"]
+        log.appendPlainText(
+            "Directiva inyectada antes del comando."
+        )
+
+    @Slot(str, str)
+    def _on_matrix_bot_finished(
+        self,
+        bot_id: str,
+        response: str,
+    ) -> None:
+        widgets = self._matrix_widgets.get(bot_id)
+        if widgets is None:
+            return
+        widgets["status"].setText("✅ Finalizado")
+        widgets["log"].appendPlainText(
+            response.strip() or "Respuesta vacía."
+        )
+        profile = BOT_MAP.get(bot_id)
+        speaker = profile.name if profile is not None else bot_id
+        self._append_message(
+            speaker,
+            response,
+            "bot",
+        )
+
+    @Slot(str, str)
+    def _on_matrix_bot_failed(
+        self,
+        bot_id: str,
+        error: str,
+    ) -> None:
+        widgets = self._matrix_widgets.get(bot_id)
+        if widgets is None:
+            return
+        widgets["status"].setText("❌ Error")
+        widgets["log"].appendPlainText(error)
+
+    @Slot(dict)
+    def _on_matrix_chain_finished(
+        self,
+        report: dict,
+    ) -> None:
+        self._matrix_chain_running = False
+        self._set_matrix_controls(True)
+        ok = bool(report.get("ok", False))
+        if self._matrix_chain_summary is not None:
+            self._matrix_chain_summary.setText(
+                "✅ Cadena 4 bots completada."
+                if ok
+                else "⚠ Cadena completada con uno o más errores."
+            )
+
+    @Slot(str)
+    def _on_matrix_chain_failed(self, error: str) -> None:
+        self._matrix_chain_running = False
+        self._set_matrix_controls(True)
+        if self._matrix_chain_summary is not None:
+            self._matrix_chain_summary.setText(
+                f"❌ No se pudo iniciar la cadena: {error}"
+            )
+
+    def _request_lobby_gemini(self) -> None:
+        self._start_matrix_chain("cari")
 
     @Slot(str)
     def _gemini_done(self, response: str) -> None:
+        """Compatibilidad con el antiguo punto de entrada del Lobby."""
         self._append_message("Gemini", response, "bot")
-        self._set_gemini_idle()
+        self.lobby_gemini.setEnabled(True)
 
     @Slot(str)
     def _gemini_failed(self, error: str) -> None:
+        """Compatibilidad con el antiguo punto de entrada del Lobby."""
         self._append_system(
             f"❌ Gemini Lobby no pudo completar la consulta: {error}"
         )
-        self._set_gemini_idle()
-
-    def _set_gemini_idle(self) -> None:
         self.lobby_gemini.setEnabled(True)
-        self.lobby_gemini.setText("✨ Preguntar a Gemini")
-
-    def _cleanup_gemini_thread(
-        self,
-        thread: QThread,
-        worker: GeminiLobbyWorker,
-    ) -> None:
-        if self._gemini_thread is thread:
-            self._gemini_thread = None
-        if self._gemini_worker is worker:
-            self._gemini_worker = None
 
     def _save_dynamic_configuration(
         self,
@@ -2809,13 +3241,8 @@ class CommandCenterWindow(QMainWindow):
             self._diagnostic_thread.quit()
             self._diagnostic_thread.wait(1000)
 
-        if (
-            self._gemini_thread is not None
-            and self._gemini_thread.isRunning()
-        ):
-            self._gemini_thread.requestInterruption()
-            self._gemini_thread.quit()
-            self._gemini_thread.wait(1000)
+        if self._matrix_dispatcher.is_running:
+            self._matrix_dispatcher.stop()
 
         try:
             self.task_pool.waitForDone(2200)
