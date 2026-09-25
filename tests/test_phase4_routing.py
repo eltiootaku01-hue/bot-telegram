@@ -34,8 +34,14 @@ class Phase4RoutingTests(unittest.TestCase):
                 GroupRoom("#cantina-18", "cantina_18", "42"),
                 GroupRoom("#pedidos-nsfw", "pedidos_nsfw", "43"),
             )
-            GroupSetupStore(root).save_target("telegram", "-100123", rooms)
+            store = GroupSetupStore(root)
+            store.save_target("telegram", "-100123", rooms)
 
+            # GroupSetupStore owns the authoritative router database under
+            # config/, so the fixture must query that exact published map.
+            router = TelegramRoomRouter(
+                root / "config" / "telegram_rooms.sqlite3"
+            )
             adapter = self._adapter(router)
             with patch.dict(
                 os.environ,
