@@ -2915,7 +2915,7 @@ class CommandCenterWindow(QMainWindow):
             info = QLabel(
                 "PPT: escribe «piedra», «papel» o «tijera». "
                 "21: «21 nuevo», «carta» y «plantarse». "
-                "UNO queda registrado como catálogo de cartas."
+                "UNO: partida local. Mesa de juego: Chie. Todas las partidas evitan WebQueue."
             )
             info.setWordWrap(True)
             info.setObjectName("Muted")
@@ -2925,7 +2925,8 @@ class CommandCenterWindow(QMainWindow):
                 ("📄 Papel", "papel"),
                 ("✂️ Tijera", "tijera"),
                 ("🃏 21 nuevo", "21 nuevo"),
-                ("🎴 UNO", "UNO"),
+                ("🎴 UNO · Cami", "UNO nuevo"),
+                ("🎲 Mesa · Chie", "juego de mesa"),
             ):
                 button = QPushButton(label)
                 button.clicked.connect(
