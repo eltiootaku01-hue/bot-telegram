@@ -1867,6 +1867,118 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ):
             self.assertIn(token, source)
 
+    def test_discord_welcome_gate_and_strikes_contract(self):
+        from tempfile import TemporaryDirectory
+        from bot_ia.interfaces.discord_community import (
+            STRIKE_TIMEOUT_SECONDS,
+            WELCOME_COOLDOWN_SECONDS,
+            ImmersiveStrikeEngine,
+            StrikeStore,
+            WelcomeGate,
+            WelcomeDecision,
+            admin_strike_actions,
+            should_purge,
+            welcome_embed_payload,
+        )
+
+        self.assertEqual(15.0, WELCOME_COOLDOWN_SECONDS)
+        self.assertEqual(3600, STRIKE_TIMEOUT_SECONDS)
+        payload = welcome_embed_payload()
+        self.assertIn("Sé un buen nakama", payload["description"])
+        component_ids = {
+            component["custom_id"]
+            for row in payload["components"]
+            for component in row["components"]
+        }
+        self.assertEqual({"welcome:user", "welcome:bot"}, component_ids)
+
+        now = [100.0]
+        gate = WelcomeGate(clock=lambda: now[0])
+        self.assertTrue(gate.start("u1"))
+        self.assertFalse(gate.start("u1"))
+        self.assertTrue(gate.ignore_during_cooldown("u1"))
+        now[0] += 15.0
+        self.assertFalse(gate.ignore_during_cooldown("u1"))
+        self.assertTrue(gate.choose("u1", "usuario").grant_role)
+        self.assertTrue(gate.choose("u2", "bot").kick)
+
+        with TemporaryDirectory() as tmp:
+            store = StrikeStore(Path(tmp))
+            engine = ImmersiveStrikeEngine(store, superadmin="@tiootakuu")
+            first = engine.evaluate("g1", "u1", "severe_profanity")
+            second = engine.evaluate("g1", "u1", "severe_profanity")
+            third = engine.evaluate("g1", "u1", "spam", burst=True)
+            self.assertEqual("warn_delete", engine.action_for(first))
+            self.assertEqual("timeout", engine.action_for(second))
+            self.assertEqual("isolate", engine.action_for(third))
+            self.assertIn("Cari", engine.cari_message(third))
+            self.assertEqual("immune", engine.action_for(engine.evaluate("g1", "tiootakuu", "spam")))
+
+        self.assertTrue(should_purge(0, now=7 * 24 * 60 * 60))
+        self.assertEqual(0, should_purge(0, now=1))
+
+    def test_discord_welcome_setup_and_strike_source_contract(self):
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        community = (self.ROOT / "src" / "bot_ia" / "interfaces" / "discord_community.py").read_text(encoding="utf-8")
+        moderation = (self.ROOT / "src" / "bot_ia" / "interfaces" / "discord_moderation.py").read_text(encoding="utf-8")
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        health = (self.ROOT / "src" / "bot_ia" / "interfaces" / "platform_health.py").read_text(encoding="utf-8")
+
+        for token in (
+            '"#bienvenida"',
+            '"bienvenida"',
+            "ensure_role",
+            "welcome_message",
+            "send_channel_message",
+            "kick_member",
+            "add_role",
+            "apply_strike",
+        ):
+            self.assertIn(token, group)
+        for token in (
+            "WELCOME_COOLDOWN_SECONDS = 15.0",
+            "STRIKE_TIMEOUT_SECONDS",
+            "DiscordWelcomeHandler",
+            "DiscordStrikeHandler",
+            "admin_strike_actions",
+            "TRANSIENT_BOT_MESSAGE_SECONDS",
+            "WEEKLY_PURGE_SECONDS",
+            "SUPERADMIN_TELEGRAM",
+            "@tiootakuu",
+        ):
+            self.assertIn(token, community)
+        for token in (
+            "ImmersiveStrikeEngine",
+            "strike_store",
+            "burst: bool = False",
+            "timeout_member",
+            "admin_actions",
+        ):
+            self.assertIn(token, moderation)
+        for token in (
+            "PlatformHealthWorker",
+            "probe_telegram",
+            "probe_discord",
+            "🟢 Telegram",
+            "🔴 Telegram",
+            "🟢 Discord",
+            "🔴 Discord",
+        ):
+            self.assertIn(token, app)
+        self.assertIn("https://api.telegram.org", health)
+        self.assertIn("https://discord.com/api/v10/users/@me", health)
+
+    def test_welcome_rules_and_transient_cleanup_constants_contract(self):
+        from bot_ia.interfaces.discord_community import (
+            TRANSIENT_BOT_MESSAGE_SECONDS,
+            WEEKLY_PURGE_SECONDS,
+            WELCOME_RULES_TEXT,
+        )
+        self.assertGreaterEqual(TRANSIENT_BOT_MESSAGE_SECONDS, 10)
+        self.assertLessEqual(TRANSIENT_BOT_MESSAGE_SECONDS, 30)
+        self.assertEqual(7 * 24 * 60 * 60, WEEKLY_PURGE_SECONDS)
+        self.assertIn("Sé un buen nakama", WELCOME_RULES_TEXT)
+
 
 if __name__ == "__main__":
     unittest.main()
