@@ -32,20 +32,23 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtGui import QKeyEvent
-from core.config import DynamicConfigManager\nfrom .admin_provisioning import AdminProvisioner
+from PySide6.QtGui import QKeyEvent, QPainter, QPixmap
+from core.config import DynamicConfigManager
+from .admin_provisioning import AdminProvisioner
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QFrame,
     QGridLayout,
     QDialog,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
     QMessageBox,
     QPlainTextEdit,
+    QProgressBar,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -70,6 +73,7 @@ from bot_ia.runtime import RuntimeComponents, build_runtime
 from .gui_bridge import WorkerSignals
 from .styles import application_qss
 from .widgets import BotTile, CardFrame, PillButton, SectionHeader
+from .waifu_registry import WaifuRecord, WaifuRegistry, generate_tcg_prompt, slugify
 
 try:
     from qasync import QEventLoop
@@ -1544,6 +1548,9 @@ class BotExpandedDialog(QDialog):
         self.manual_button = QPushButton("🔑 Registrarse / Candado")
         self.manual_button.clicked.connect(lambda: self.manual_requested.emit(self.bot_id))
         controls.addWidget(self.manual_button)
+        self.waifu_button = QPushButton("🎴 Waifu / TCG")
+        self.waifu_button.clicked.connect(self._open_waifu)
+        controls.addWidget(self.waifu_button)
         root.addLayout(controls)
 
         self.auth_hint = QLabel(
@@ -1568,6 +1575,11 @@ class BotExpandedDialog(QDialog):
         send.clicked.connect(self._emit_message)
         composer.addWidget(send)
         root.addLayout(composer)
+
+    def _open_waifu(self) -> None:
+        parent = self.parent()
+        if isinstance(parent, CommandCenterWindow):
+            parent._open_waifu_registry(self.bot_id)
 
     def _provider_changed(self, _index: int) -> None:
         provider_id = str(self.provider.currentData() or "").strip()
@@ -1643,6 +1655,251 @@ class BotExpandedDialog(QDialog):
         self._usage_timer.stop()
         self.hide()
         event.accept()
+
+
+class WaifuRegistryDialog(QDialog):
+    """Panel local para registrar waifus, generar prompts y ensamblar cartas."""
+
+    def __init__(
+        self,
+        registry: WaifuRegistry,
+        *,
+        bot_id: str = "",
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.registry = registry
+        self.bot_id = bot_id
+        self.records = self.registry.load()
+        self.image_path = ""
+        self.assembled_path = ""
+        self.setWindowTitle("🎴 Registro de Waifus · TCG")
+        self.setMinimumSize(920, 700)
+        self.resize(1080, 780)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(14, 14, 14, 14)
+        root.setSpacing(8)
+
+        header = QHBoxLayout()
+        title = QLabel("🎴 Registro de Waifus")
+        title.setObjectName("PageTitle")
+        header.addWidget(title)
+        header.addStretch(1)
+        self.record_count = QLabel()
+        self.record_count.setObjectName("Muted")
+        header.addWidget(self.record_count)
+        root.addLayout(header)
+
+        form = QGridLayout()
+        form.addWidget(QLabel("Nombre"), 0, 0)
+        self.name = QLineEdit()
+        form.addWidget(self.name, 0, 1)
+        form.addWidget(QLabel("Personalidad / Trope"), 1, 0)
+        self.personality = QLineEdit()
+        form.addWidget(self.personality, 1, 1)
+        form.addWidget(QLabel("Apariencia"), 2, 0)
+        self.appearance = QLineEdit()
+        form.addWidget(self.appearance, 2, 1)
+        form.addWidget(QLabel("Elemento"), 3, 0)
+        self.element = QComboBox()
+        self.element.addItems(
+            ("Fuego", "Agua", "Tierra", "Aire", "Luz", "Oscuridad", "Neutro")
+        )
+        form.addWidget(self.element, 3, 1)
+        form.addWidget(QLabel("Referencia Cosplay"), 4, 0)
+        self.cosplay = QComboBox()
+        self.cosplay.addItems(("SR", "UR"))
+        form.addWidget(self.cosplay, 4, 1)
+        root.addLayout(form)
+
+        actions = QHBoxLayout()
+        self.generate_button = QPushButton("Generar Prompt")
+        self.generate_button.clicked.connect(self._generate)
+        actions.addWidget(self.generate_button)
+        self.upload_button = QPushButton("+ Subir Imagen")
+        self.upload_button.clicked.connect(self._upload)
+        actions.addWidget(self.upload_button)
+        self.assemble_button = QPushButton("🃏 Ensamblar Carta")
+        self.assemble_button.clicked.connect(self._assemble)
+        actions.addWidget(self.assemble_button)
+        self.save_button = QPushButton("💾 Registrar / Guardar")
+        self.save_button.clicked.connect(self._save)
+        actions.addWidget(self.save_button)
+        actions.addStretch(1)
+        root.addLayout(actions)
+
+        self.prompt = QPlainTextEdit()
+        self.prompt.setPlaceholderText(
+            "El prompt TCG optimizado aparecerá aquí..."
+        )
+        self.prompt.setMinimumHeight(170)
+        root.addWidget(self.prompt)
+
+        self.image_label = QLabel(
+            "Sin sprite. Usa «+ Subir Imagen» después de generar el prompt."
+        )
+        self.image_label.setObjectName("Muted")
+        self.image_label.setMinimumHeight(90)
+        self.image_label.setWordWrap(True)
+        root.addWidget(self.image_label)
+
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        root.addWidget(self.progress)
+
+        self.status = QLabel("Listo. Todo el registro funciona localmente.")
+        self.status.setObjectName("Muted")
+        self.status.setWordWrap(True)
+        root.addWidget(self.status)
+
+        self.records_view = QPlainTextEdit()
+        self.records_view.setReadOnly(True)
+        self.records_view.setPlaceholderText("Registro guardado...")
+        root.addWidget(self.records_view, 1)
+        self._refresh_records()
+
+    def _current_record(self) -> WaifuRecord:
+        return WaifuRecord(
+            name=self.name.text().strip(),
+            personality=self.personality.text().strip(),
+            appearance=self.appearance.text().strip(),
+            element=str(self.element.currentText()).strip(),
+            cosplay_reference=str(self.cosplay.currentText()).strip(),
+            prompt=self.prompt.toPlainText().strip(),
+            image_path=self.image_path,
+            assembled_path=self.assembled_path,
+            progress=self.progress.value(),
+        )
+
+    def _generate(self) -> None:
+        record = self._current_record()
+        if not record.name:
+            self.status.setText("Escribe un nombre antes de generar el prompt.")
+            return
+        record.prompt = generate_tcg_prompt(record)
+        self.prompt.setPlainText(record.prompt)
+        self.progress.setValue(max(self.progress.value(), 25))
+        self.status.setText(
+            "Prompt TCG generado: sprite aislado sobre fondo blanco, "
+            "sin marco ni texto para facilitar la composición."
+        )
+
+    def _upload(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Seleccionar sprite de waifu",
+            "",
+            "Imágenes (*.png *.jpg *.jpeg *.webp);;Todos los archivos (*)",
+        )
+        if not path:
+            return
+        self.image_path = str(Path(path).resolve())
+        pixmap = QPixmap(self.image_path)
+        if not pixmap.isNull():
+            preview = pixmap.scaled(
+                220,
+                220,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation,
+            )
+            self.image_label.setPixmap(preview)
+            self.image_label.setText("")
+        else:
+            self.image_label.setText(f"Imagen seleccionada: {self.image_path}")
+        self.progress.setValue(max(self.progress.value(), 50))
+        self.status.setText("Sprite cargado. Ya puede ensamblarse en una carta.")
+
+    def _save(self) -> None:
+        record = self._current_record()
+        record.prompt = (
+            self.prompt.toPlainText().strip()
+            or generate_tcg_prompt(record)
+        )
+        existing = next(
+            (
+                item
+                for item in self.records
+                if item.name.casefold() == record.name.casefold()
+            ),
+            None,
+        )
+        if existing is None:
+            self.records.append(record)
+        else:
+            existing.personality = record.personality
+            existing.appearance = record.appearance
+            existing.element = record.element
+            existing.cosplay_reference = record.cosplay_reference
+            existing.prompt = record.prompt
+            existing.image_path = record.image_path or existing.image_path
+            existing.assembled_path = (
+                record.assembled_path or existing.assembled_path
+            )
+            existing.progress = max(existing.progress, record.progress)
+        self.registry.save(self.records)
+        self._refresh_records()
+        self.status.setText("Waifu registrada en config/waifu_registry.json.")
+
+    def _assemble(self) -> None:
+        if not self.image_path:
+            self.status.setText(
+                "Primero usa «+ Subir Imagen» para elegir el sprite."
+            )
+            return
+        sprite = QPixmap(self.image_path)
+        if sprite.isNull():
+            self.status.setText("No se pudo leer el sprite seleccionado.")
+            return
+
+        element = str(self.element.currentText()).strip()
+        name = self.name.text().strip() or "Waifu"
+        out_dir = self.registry.root / "artifacts" / "tcg_cards"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        output = out_dir / f"{slugify(name)}_{slugify(element)}.png"
+
+        canvas = QPixmap(768, 1024)
+        canvas.fill(Qt.white)
+        painter = QPainter(canvas)
+        try:
+            painter.drawRect(6, 6, 756, 1012)
+            painter.drawRect(24, 24, 720, 110)
+            painter.drawText(42, 66, f"{name} · {element}")
+            painter.drawText(42, 94, f"Cosplay {self.cosplay.currentText()}")
+            fitted = sprite.scaled(
+                690,
+                790,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation,
+            )
+            x = (768 - fitted.width()) // 2
+            painter.drawPixmap(x, 150, fitted)
+            painter.drawRect(24, 150, 720, 790)
+            painter.drawText(42, 980, "BOT-IA · TCG LOCAL")
+        finally:
+            painter.end()
+
+        if not canvas.save(str(output), "PNG"):
+            self.status.setText("No se pudo guardar la carta ensamblada.")
+            return
+
+        self.assembled_path = str(output)
+        self.progress.setValue(100)
+        self.status.setText(f"Carta ensamblada localmente: {output}")
+        self._save()
+
+    def _refresh_records(self) -> None:
+        self.record_count.setText(f"{len(self.records)} registro(s)")
+        lines = []
+        for item in self.records:
+            lines.append(
+                f"• {item.name} · {item.element} · {item.cosplay_reference} · "
+                f"{item.progress}%"
+            )
+            if item.assembled_path:
+                lines.append(f"  Carta: {item.assembled_path}")
+        self.records_view.setPlainText("\n".join(lines))
 
 
 class CommandCenterWindow(QMainWindow):
@@ -1742,6 +1999,8 @@ class CommandCenterWindow(QMainWindow):
         self._matrix_dispatcher = SequentialChatDispatcher(parent=self)
         self._matrix_widgets: dict[str, dict[str, object]] = {}
         self._expanded_bot_dialogs: dict[str, BotExpandedDialog] = {}
+        self.waifu_registry = WaifuRegistry(ROOT)
+        self._waifu_dialog: WaifuRegistryDialog | None = None
         self._matrix_chain_running = False
         self._matrix_chain_button: QPushButton | None = None
         self._matrix_chain_summary: QLabel | None = None
@@ -1966,6 +2225,13 @@ class CommandCenterWindow(QMainWindow):
         selected_layout.addLayout(actions)
 
         layout.addWidget(selected_card)
+
+        self.waifu_sidebar_button = QPushButton("🎴 Registro de Waifus")
+        self.waifu_sidebar_button.setToolTip(
+            "Registrar waifus, generar prompts TCG y ensamblar cartas localmente."
+        )
+        self.waifu_sidebar_button.clicked.connect(self._open_waifu_registry)
+        layout.addWidget(self.waifu_sidebar_button)
 
         return panel
 
@@ -2442,6 +2708,82 @@ class CommandCenterWindow(QMainWindow):
         if isinstance(log, QPlainTextEdit):
             dialog.history.setPlainText(log.toPlainText())
 
+    def _open_waifu_registry(self, bot_id: str | None = None) -> None:
+        selected = bot_id or self._selected_bot_id
+        if selected in BOT_MAP:
+            self.select_bot(selected)
+        if self._waifu_dialog is None:
+            self._waifu_dialog = WaifuRegistryDialog(
+                self.waifu_registry,
+                bot_id=selected,
+                parent=self,
+            )
+        self._waifu_dialog.bot_id = selected
+        self._waifu_dialog.show()
+        self._waifu_dialog.raise_()
+        self._waifu_dialog.activateWindow()
+
+    def _try_local_bot_response(self, message: str) -> bool:
+        bot_id = self._selected_bot_id
+        if bot_id not in {"cari", "cami"}:
+            return False
+        normalized = " ".join(message.casefold().strip().split())
+        if not normalized or len(normalized) > 180:
+            return False
+
+        profile = BOT_MAP[bot_id]
+        response = ""
+        if normalized in {
+            "hola",
+            "holi",
+            "hello",
+            "buenas",
+            "buenos dias",
+            "buenas tardes",
+        }:
+            response = (
+                "¡Hola! Soy Cari. Estoy disponible localmente para consultas "
+                "simples del Café Otaku."
+                if bot_id == "cari"
+                else
+                "Hola. Soy Cami. Puedo resolver consultas simples localmente "
+                "sin abrir una sesión web."
+            )
+        elif any(
+            token in normalized
+            for token in ("estado", "estas ahi", "estás ahí", "disponible")
+        ):
+            response = (
+                f"{profile.name}: estado local OK. "
+                "No fue necesario invocar WebQueue."
+            )
+        elif any(
+            token in normalized
+            for token in ("ayuda", "que puedes hacer", "qué puedes hacer")
+        ):
+            response = (
+                f"{profile.name}: puedo atender saludos, estado, ayuda y "
+                "acciones locales sencillas sin consumir una sesión web."
+            )
+        elif any(
+            token in normalized
+            for token in ("waifu", "carta tcg", "prompt tcg")
+        ):
+            response = (
+                f"{profile.name}: el Registro de Waifus está disponible en "
+                "«🎴 Registro de Waifus»."
+            )
+        else:
+            return False
+
+        self._append_message(profile.name, response, "bot")
+        self._append_system(
+            f"{profile.name}: respuesta local; WebQueue omitido."
+        )
+        self.send_button.setEnabled(True)
+        self._sync_expanded_bot(bot_id)
+        return True
+
     def _send_expanded_bot_message(
         self,
         bot_id: str,
@@ -2591,6 +2933,8 @@ class CommandCenterWindow(QMainWindow):
             self.refresh_state()
 
     def _send_web_persona(self, message: str) -> None:
+        if self._try_local_bot_response(message):
+            return
         if self._web_queue is None:
             self._append_system(
                 "WebQueue no está disponible en esta sesión."
@@ -4263,6 +4607,10 @@ class CommandCenterWindow(QMainWindow):
             dialog.hide()
             dialog.deleteLater()
         self._expanded_bot_dialogs.clear()
+        if self._waifu_dialog is not None:
+            self._waifu_dialog.close()
+            self._waifu_dialog.deleteLater()
+            self._waifu_dialog = None
 
         if self._closing:
             event.accept()
