@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
 import ast
+import os
 import importlib
 import unittest
 from unittest.mock import patch
@@ -121,6 +122,14 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "setup_mode",
             "headless=self.headless",
             "SETUP_LOGIN_TIMEOUT_MS = 300_000",
+            "class ManualBrowserSetupWorker(QObject):",
+            "headless=False",
+            "no_viewport=True",
+            "launch_persistent_context(",
+            "storage_state.json",
+            "indexed_db=True",
+            "self._manual_setup_thread",
+            "self._finish_manual_setup_mode",
             "🔑 Iniciar Sesión Manual",
             "_enable_manual_setup_mode",
             "_lightweight_browser_args(headless=True)",
