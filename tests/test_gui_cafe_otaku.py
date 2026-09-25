@@ -1569,7 +1569,9 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             )
             self.assertEqual("R", result.rarity)
             self.assertTrue(result.affinity_bonus)
-            self.assertEqual(1, wallet.get("u2").pity_sr)
+            # Primera tirada: pity_sr pasa de 0 a 1 y la afinidad
+            # Lv.5+ añade un paso adicional.
+            self.assertEqual(2, wallet.get("u2").pity_sr)
 
     def test_cafe_telegram_immersion_handlers_contract(self):
         source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
