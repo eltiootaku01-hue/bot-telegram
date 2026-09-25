@@ -1567,11 +1567,6 @@ class BotExpandedDialog(QDialog):
             )
 
     def closeEvent(self, event: object) -> None:
-        for dialog in tuple(self._expanded_bot_dialogs.values()):
-            dialog.hide()
-            dialog.deleteLater()
-        self._expanded_bot_dialogs.clear()
-
         self.hide()
         event.accept()
 
@@ -4063,6 +4058,11 @@ class CommandCenterWindow(QMainWindow):
             return
 
     def closeEvent(self, event) -> None:  # noqa: N802
+        for dialog in tuple(self._expanded_bot_dialogs.values()):
+            dialog.hide()
+            dialog.deleteLater()
+        self._expanded_bot_dialogs.clear()
+
         if self._closing:
             event.accept()
             return
