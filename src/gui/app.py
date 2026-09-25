@@ -2898,6 +2898,7 @@ class CommandCenterWindow(QMainWindow):
             ROOT,
             runtime=self.runtime,
         )
+        self.admin_provisioner = AdminProvisioner(ROOT)
         self._config_dialog_fields: dict[str, dict[str, QLineEdit]] = {}
         self._diagnostic_thread: QThread | None = None
         self._diagnostic_worker: SystemDiagnosticWorker | None = None
