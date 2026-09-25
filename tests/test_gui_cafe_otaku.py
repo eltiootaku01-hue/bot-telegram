@@ -1464,7 +1464,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             '"#cantina-18"',
             '"#pedidos-nsfw"',
             '"#mesa-de-apuestas-21"',
-            '"#pedidos"',
+            '"#pedidos-admin"',
             "SFW_ROOM_KEYS",
             "MATURE_ROOM_KEYS",
             "ADMIN_ROOM_KEY",
