@@ -1809,7 +1809,10 @@ class BebidaOrderDialog(QDialog):
             product_type=self.product.currentText(),
         ).normalized()
         self.summary.setPlainText(build_bebida_summary(order))
-        self.prompt.setPlainText(build_bebida_prompt(order))class WaifuRegistryDialog(QDialog):
+        self.prompt.setPlainText(build_bebida_prompt(order))
+
+
+class WaifuRegistryDialog(QDialog):
     """Panel local para registrar waifus, generar prompts y ensamblar cartas."""
 
     def __init__(
