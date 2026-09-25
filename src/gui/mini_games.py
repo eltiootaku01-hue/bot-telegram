@@ -256,4 +256,10 @@ class LocalGameRouter:
         if any(token in normalized for token in ("uno", "juego de cartas")):
             action = normalized.replace("uno", " ").strip() or "nuevo"
             return self._uno_response(user_id, bot_id, action)
+        if any(token in normalized for token in ("juego de mesa", "mesa local")):
+            return (
+                f"Mesa local · anfitriona: {GAME_HOSTS['mesa']} · "
+                "catálogo disponible: UNO, 21 y PPT. "
+                "Todo se resuelve localmente; WebQueue omitido."
+            )
         return None
