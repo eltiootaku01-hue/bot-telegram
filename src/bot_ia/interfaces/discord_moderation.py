@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from .auto_moderation import moderate, ModerationDecision
 from .group_setup import DiscordGroupSetup
+from .discord_community import ImmersiveStrikeEngine
 
 
 @dataclass(frozen=True, slots=True)
@@ -13,13 +15,16 @@ class DiscordModerationResult:
     decision: ModerationDecision
     deleted: bool
     sanctioned: bool
+    strikes: int = 0
+    admin_actions: tuple[tuple[str, str], ...] = ()
 
 
 class DiscordModerationHandler:
     """Clasifica y aplica primero la acción local; no procesa el contenido después."""
 
-    def __init__(self, client: DiscordGroupSetup) -> None:
+    def __init__(self, client: DiscordGroupSetup, *, strike_store=None) -> None:
         self._client = client
+        self._strike_engine = ImmersiveStrikeEngine(strike_store) if strike_store is not None else None
 
     def handle_message(
         self,
@@ -41,8 +46,21 @@ class DiscordModerationHandler:
         self._client.delete_message(channel_id, message_id)
         deleted = True
 
+        strikes = 0
+        admin_actions = ()
         if decision.action == "ban":
             self._client.ban_member(guild_id, user_id)
             sanctioned = True
-
-        return DiscordModerationResult(decision, deleted, sanctioned)
+        elif self._strike_engine is not None:
+            record = self._strike_engine.evaluate(guild_id, user_id, decision.reason)
+            if record is not None:
+                strikes = record.strikes
+                action = self._strike_engine.action_for(record)
+                if action == "timeout":
+                    self._client.timeout_member(guild_id, user_id, (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat())
+                    sanctioned = True
+                elif action == "isolate":
+                    self._client.timeout_member(guild_id, user_id, (datetime.now(timezone.utc) + timedelta(days=28)).isoformat())
+                    sanctioned = True
+                    admin_actions = (("🔨 Ban", "strike:ban:" + user_id), ("👢 Kick", "strike:kick:" + user_id), ("💗 Perdonar", "strike:forgive:" + user_id))
+        return DiscordModerationResult(decision, deleted, sanctioned, strikes, admin_actions)
