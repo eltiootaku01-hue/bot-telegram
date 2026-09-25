@@ -1667,7 +1667,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIsNone(guard.check("u1", official=False, now=2))
         blocked = guard.check("u1", official=False, now=3)
         self.assertTrue(blocked.blocked)
-        self.assertTrue(guard.is_blocked("u1"))
+        self.assertTrue(guard.is_blocked("u1", now=3))
 
     def test_order_confirmation_and_complaint_refund_contract(self):
         from tempfile import TemporaryDirectory
