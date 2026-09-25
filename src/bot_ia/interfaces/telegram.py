@@ -824,6 +824,41 @@ class TelegramPoller:
                     auto_delete,
                 )
 
+    def _moderate_raw_update(self, update: dict[str, object]) -> TelegramOutbound | None:
+        message = update.get("message")
+        if not isinstance(message, dict):
+            return None
+        chat = message.get("chat")
+        sender = message.get("from")
+        if not isinstance(chat, dict) or not isinstance(sender, dict):
+            return None
+        text = message.get("text") or message.get("caption") or ""
+        if not isinstance(text, str):
+            text = ""
+        room_key = str(update.get("room_key", "general"))
+        decision = moderate(text, room_key=room_key)
+        if decision.action == "allow":
+            return None
+        chat_id = str(chat.get("id", "")).strip()
+        message_id = message.get("message_id")
+        user_id = sender.get("id")
+        if not chat_id or not isinstance(message_id, int) or not isinstance(user_id, int):
+            return None
+        try:
+            self._client.delete_message(chat_id, message_id)
+            if decision.action == "ban":
+                self._client.ban_chat_member(chat_id, str(user_id))
+        except (TelegramTransportError, TelegramApiError, TelegramInputError) as error:
+            self._logger(f"telegram moderation action failed: {error}")
+        if decision.action == "ban":
+            return TelegramOutbound(chat_id, decision.message, room_key, auto_delete_seconds=30)
+        return TelegramOutbound(
+            chat_id,
+            decision.message,
+            decision.target_room or room_key,
+            auto_delete_seconds=30,
+        )
+
     @staticmethod
     def _callback_key(update: dict[str, object]) -> str:
         callback = update.get("callback_query")
@@ -980,7 +1015,12 @@ class TelegramPoller:
                             break
 
                 try:
-                    outbound = self._adapter.handle_update(update)
+                    moderation_outbound = self._moderate_raw_update(update)
+                    outbound = (
+                        moderation_outbound
+                        if moderation_outbound is not None
+                        else self._adapter.handle_update(update)
+                    )
                 except TelegramInputError:
                     if callback_key:
                         self._callback_mutex.release(callback_key)
