@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 import re
 
+from PySide6.QtGui import QImage
+
 
 @dataclass(slots=True)
 class CardSlot:
@@ -33,6 +35,8 @@ class WaifuRecord:
     appearance: str
     element: str
     cosplay_reference: str
+    card_category: str = "Waifu / TCG"
+    lora_tags: str = ""
     prompt: str = ""
     image_path: str = ""
     assembled_path: str = ""
@@ -69,6 +73,10 @@ class WaifuRegistry:
                         cosplay_reference=str(
                             item.get("cosplay_reference", "")
                         ).strip(),
+                        card_category=str(
+                            item.get("card_category", "Waifu / TCG")
+                        ).strip() or "Waifu / TCG",
+                        lora_tags=str(item.get("lora_tags", "")).strip(),
                         prompt=str(item.get("prompt", "")).strip(),
                         image_path=str(item.get("image_path", "")).strip(),
                         assembled_path=str(
@@ -157,13 +165,18 @@ def generate_tcg_prompt(record: WaifuRecord) -> str:
     appearance = record.appearance.strip() or "detailed character appearance"
     element = record.element.strip() or "fantasy"
     cosplay = record.cosplay_reference.strip() or "SR"
+    category = record.card_category.strip() or "Waifu / TCG"
+    lora_tags = normalize_lora_tags(record.lora_tags)
+    lora_line = f"LoRA tags: {lora_tags}.\\n" if lora_tags else ""
     return (
-        "TCG CHARACTER SPRITE / WAIFU CARD ART\n"
-        f"Character: {name}.\n"
-        f"Personality / trope: {personality}.\n"
-        f"Appearance: {appearance}.\n"
-        f"Element: {element}.\n"
-        f"Cosplay reference tier: {cosplay}.\n\n"
+        "TCG / GAME CARD ART\\n"
+        f"Category: {category}.\\n"
+        f"Character: {name}.\\n"
+        f"Personality / trope: {personality}.\\n"
+        f"Appearance: {appearance}.\\n"
+        f"Element: {element}.\\n"
+        f"Cosplay reference tier: {cosplay}.\\n"
+        f"{lora_line}\\n"
         "Create a clean full-body character sprite suitable for a trading "
         "card game. Preserve a clear silhouette, readable costume details, "
         "expressive face, polished anime illustration, centered character, "
@@ -173,6 +186,67 @@ def generate_tcg_prompt(record: WaifuRecord) -> str:
         "no card border. The character asset must be easy to separate "
         "from the background and place inside a TCG card frame."
     )
+
+
+def normalize_lora_tags(value: str) -> str:
+    """Normaliza etiquetas LoRA a la forma limpia [NAME], sin inventar nombres."""
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    tags: list[str] = []
+    for token in re.split(r"[,;\\n]+", raw):
+        token = token.strip().strip("[]")
+        token = re.sub(r"[^a-zA-Z0-9_.:-]+", "_", token).strip("_")
+        if token:
+            tags.append(f"[{token}]")
+    return " ".join(dict.fromkeys(tags))
+
+
+def crop_sprite_to_ratio(
+    image: QImage,
+    *,
+    ratio: float = 3 / 4,
+    background_threshold: int = 245,
+    padding: float = 0.06,
+) -> QImage:
+    """Detecta contenido, centra el recorte y conserva la proporción pedida."""
+    if image.isNull():
+        return QImage()
+    ratio = max(0.25, min(4.0, float(ratio)))
+    source = image.convertToFormat(QImage.Format_RGBA8888)
+    width, height = source.width(), source.height()
+    left, top, right, bottom = width, height, -1, -1
+    for y in range(height):
+        for x in range(width):
+            pixel = source.pixel(x, y)
+            alpha = (pixel >> 24) & 0xFF
+            red = (pixel >> 16) & 0xFF
+            green = (pixel >> 8) & 0xFF
+            blue = pixel & 0xFF
+            if alpha > 10 and not (
+                red >= background_threshold
+                and green >= background_threshold
+                and blue >= background_threshold
+            ):
+                left, top = min(left, x), min(top, y)
+                right, bottom = max(right, x), max(bottom, y)
+    if right < left or bottom < top:
+        left, top, right, bottom = 0, 0, width - 1, height - 1
+    pad_x = max(1, int((right - left + 1) * padding))
+    pad_y = max(1, int((bottom - top + 1) * padding))
+    left, top = max(0, left - pad_x), max(0, top - pad_y)
+    right, bottom = min(width - 1, right + pad_x), min(height - 1, bottom + pad_y)
+    box_w, box_h = right - left + 1, bottom - top + 1
+    target_w, target_h = box_w, box_h
+    if box_w / box_h > ratio:
+        target_h = max(1, round(box_w / ratio))
+    else:
+        target_w = max(1, round(box_h * ratio))
+    center_x = (left + right) / 2
+    center_y = (top + bottom) / 2
+    left = max(0, min(width - target_w, round(center_x - target_w / 2)))
+    top = max(0, min(height - target_h, round(center_y - target_h / 2)))
+    return source.copy(left, top, target_w, target_h)
 
 
 def frame_candidates(root: Path, rarity: str, element: str) -> list[Path]:
