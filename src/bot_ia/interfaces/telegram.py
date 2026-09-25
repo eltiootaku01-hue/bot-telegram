@@ -12,7 +12,8 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from bot_ia.core.application import ApplicationRequest, ApplicationResponse, BotApplication
+from bot_ia.core.application import ApplicationRequest
+from bot_ia.paths import PROJECT_ROOT, ApplicationResponse, BotApplication
 from bot_ia.core.waitress_session_manager import TavernError, TavernReply, WaitressSessionManager
 from bot_ia.librarian.models import CoverageStatus
 
