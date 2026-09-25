@@ -18,7 +18,7 @@ from bot_ia.librarian.models import CoverageStatus
 
 from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
-from .cafe_orders import BebidaOrderFlow, build_bebida_summary
+from .cafe_orders import BebidaOrderFlow, build_bebida_summary, build_bebida_prompt, RESOLUTIONS, RENDER_STYLES
 from .hardening import MutexGuard
 from .order_support import ComplaintStore, OrderConfirmation, new_order_id, order_destination
 from .auto_moderation import moderate
@@ -178,6 +178,7 @@ class TelegramAdapter:
         self._complaint_store = ComplaintStore(Path.cwd())
         self._pending_orders: dict[str, OrderConfirmation] = {}
         self._last_orders: dict[str, OrderConfirmation] = {}
+        self._pending_attachments: dict[str, OrderConfirmation] = {}
         self._callback_mutex = MutexGuard()
 
     def _active_maid(self, user_id: str) -> str:
@@ -229,6 +230,43 @@ class TelegramAdapter:
             keyboard,
             message_thread_id=thread_id,
         )
+
+    def _admin_order_followup(self, order: OrderConfirmation) -> TelegramOutbound | None:
+        admin_chat = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "").strip()
+        if not admin_chat:
+            return None
+        thread_raw = os.getenv("TELEGRAM_ADMIN_ORDERS_THREAD_ID", os.getenv("TELEGRAM_ADMIN_THREAD_ID", "")).strip()
+        try:
+            thread_id = int(thread_raw) if thread_raw else None
+        except ValueError:
+            thread_id = None
+        text = (
+            "🧾 PEDIDO · #pedidos\n"
+            f"ID: {order.order_id}\n"
+            f"Usuario pagador: {order.user_id}\n"
+            f"Destino: {order.destination}\n"
+            f"Resolución: {order.resolution}\n"
+            f"Estilo: {order.render_style}\n"
+            "Texto original en español:\n"
+            f"{order.summary}\n\n"
+            "Prompt optimizado en inglés:\n"
+            f"{order.prompt_en}"
+        )
+        keyboard = (((("📎 Adjuntar / Subir imagen generada", f"order:attach:{order.order_id}"),),),)
+        return TelegramOutbound(admin_chat, text, "admin_order", keyboard, message_thread_id=thread_id)
+
+    def _order_attach(self, callback: TelegramCallback, order_id: str) -> TelegramOutbound:
+        if callback.user_id not in self._admin_ids():
+            return TelegramOutbound(callback.conversation_id, "⛔ Acción reservada al equipo administrativo.", "admin")
+        for order in self._last_orders.values():
+            if order.order_id == order_id:
+                self._pending_attachments[callback.user_id] = order
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    f"📎 Pedido {order_id} listo. Envía ahora la imagen generada como foto a este chat.",
+                    "admin_order",
+                )
+        return TelegramOutbound(callback.conversation_id, "⚠️ Pedido no encontrado o expirado.", "admin")
 
     def _complaint_response(self, callback: TelegramCallback, action: str, complaint_id: str) -> TelegramOutbound:
         if callback.user_id not in self._admin_ids():
@@ -643,6 +681,20 @@ class TelegramAdapter:
                         (("🖼️ Imagen IA Personalizada", "bebida:product_type:Imagen IA Personalizada"),),
                     ),
                 )
+            if field == "product_type":
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    "🖼️ Selecciona resolución:",
+                    "bebida",
+                    tuple(((label, f"bebida:resolution:{label}"),) for label in RESOLUTIONS),
+                )
+            if field == "resolution":
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    "🎨 Selecciona estilo de renderizado:",
+                    "bebida",
+                    tuple(((label, f"bebida:render_style:{label}"),) for label in RENDER_STYLES),
+                )
             is_image = order.product_type.casefold() == "imagen ia personalizada"
             target_rarity = "SPECIAL" if is_image else "R"
             quote = quote_bebida_order(
@@ -658,6 +710,9 @@ class TelegramAdapter:
                 rarity=quote.rarity,
                 cost=quote.cost,
                 summary=build_bebida_summary(order),
+                resolution=order.resolution,
+                render_style=order.render_style,
+                prompt_en=build_bebida_prompt(order),
             )
             self._pending_orders[callback.user_id] = pending
             return TelegramOutbound(
@@ -688,6 +743,7 @@ class TelegramAdapter:
                 return TelegramOutbound(callback.conversation_id, "❌ Saldo insuficiente al confirmar. No se descontaron puntos.", "bebida")
             self._pending_orders.pop(callback.user_id, None)
             self._last_orders[callback.user_id] = pending
+            admin_followup = self._admin_order_followup(pending)
             return TelegramOutbound(
                 callback.conversation_id,
                 "✅ Pedido " + pending.order_id + " confirmado.\n"
@@ -695,6 +751,7 @@ class TelegramAdapter:
                 + pending.rarity + " · " + str(pending.cost) + " puntos descontados.",
                 "bebida",
                 (((("📣 Queja / Reembolso", "complaint:help"),)),),
+                followups=(admin_followup,) if admin_followup is not None else (),
             )
         if callback.data == "complaint:help":
             return TelegramOutbound(
@@ -703,6 +760,8 @@ class TelegramAdapter:
                 "Puedes solicitar reembolso, conversión a imagen o dejar una sugerencia.",
                 "complaint",
             )
+        if callback.data.startswith("order:attach:"):
+            return self._order_attach(callback, callback.data.split(":", 2)[2])
         if callback.data.startswith("complaint:"):
             parts = callback.data.split(":", 2)
             if len(parts) != 3:
