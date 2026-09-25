@@ -159,6 +159,15 @@ class TelegramAdapter:
         self._bebida_flow = BebidaOrderFlow()
         self._wallet_store = CafeWalletStore(Path.cwd())
 
+    def _active_maid(self, user_id: str) -> str:
+        """Devuelve la mesera activa del turno local; Cami es el fallback."""
+        if self._tavern_manager is not None:
+            session = self._tavern_manager.get_active_session(str(user_id))
+            waitress_id = str(getattr(session, "waitress_id", "") or "").strip()
+            if waitress_id:
+                return waitress_id.capitalize()
+        return "Cami"
+
     def handle_update(self, update: dict[str, object]) -> TelegramOutbound:
         if "callback_query" in update:
             return self.handle_callback(update)
@@ -183,13 +192,13 @@ class TelegramAdapter:
         if command == "/pity":
             return TelegramOutbound(
                 inbound.conversation_id,
-                pity_text(inbound.user_id, self._wallet_store, maid="Cami"),
+                pity_text(inbound.user_id, self._wallet_store, maid=self._active_maid(inbound.user_id)),
                 "pity",
                 ((("🎰 Gacha", "gacha:draw"), ("☕ Puntos", "economy:show")),),
             )
         if command == "/gacha":
             try:
-                result = draw_gacha(inbound.user_id, self._wallet_store, maid="Cami")
+                result = draw_gacha(inbound.user_id, self._wallet_store, maid=self._active_maid(inbound.user_id))
             except ValueError as error:
                 return TelegramOutbound(inbound.conversation_id, f"🎰 Gacha: {error}", "gacha")
             return TelegramOutbound(
@@ -348,13 +357,13 @@ class TelegramAdapter:
         if callback.data == "pity:show":
             return TelegramOutbound(
                 callback.conversation_id,
-                pity_text(callback.user_id, self._wallet_store, maid="Cami"),
+                pity_text(callback.user_id, self._wallet_store, maid=self._active_maid(callback.user_id)),
                 "pity",
                 ((("🎰 Gacha", "gacha:draw"), ("☕ Puntos", "economy:show")),),
             )
         if callback.data == "gacha:draw":
             try:
-                result = draw_gacha(callback.user_id, self._wallet_store, maid="Cami")
+                result = draw_gacha(callback.user_id, self._wallet_store, maid=self._active_maid(callback.user_id))
             except ValueError as error:
                 return TelegramOutbound(callback.conversation_id, f"🎰 Gacha: {error}", "gacha")
             return TelegramOutbound(
