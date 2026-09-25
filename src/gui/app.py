@@ -672,6 +672,8 @@ class ManualBrowserSetupWorker(QObject):
             configured = os.getenv("BOT_IA_GEMINI_URL", "")
         elif self.provider_id == "chatgpt":
             configured = os.getenv("BOT_IA_CHATGPT_URL", "")
+        elif self.provider_id == "copilot":
+            configured = os.getenv("BOT_IA_COPILOT_URL", "")
         else:
             configured = (
                 self.provider_url
@@ -2334,6 +2336,7 @@ class CommandCenterWindow(QMainWindow):
             provider = QComboBox()
             provider.addItem("Google Gemini", "gemini")
             provider.addItem("OpenAI ChatGPT", "chatgpt")
+            provider.addItem("Microsoft Copilot", "copilot")
             provider.addItem("Grok / Claude", "grok_claude")
             provider.setCurrentIndex(
                 max(
