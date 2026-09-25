@@ -90,7 +90,8 @@ class FakeBrowser(FakeResource):
 
 
 class FakePlaywright(FakeResource):
-    pass
+    async def stop(self):
+        self.closed += 1
 
 
 class WebQueueCoreTests(unittest.IsolatedAsyncioTestCase):
