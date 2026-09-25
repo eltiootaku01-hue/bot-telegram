@@ -1637,6 +1637,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertIn(token, support)
 
     def test_image_order_resolution_style_and_admin_upload_contract(self):
+        from tempfile import TemporaryDirectory
         from bot_ia.interfaces.cafe_orders import (
             RESOLUTIONS,
             RENDER_STYLES,
@@ -1644,7 +1645,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             build_bebida_prompt,
             build_bebida_summary,
         )
-        from bot_ia.interfaces.order_support import OrderConfirmation
+        from bot_ia.interfaces.order_support import OrderConfirmation, OrderStore
 
         self.assertEqual("1104x1824", RESOLUTIONS["XL"])
         self.assertEqual("944x1584", RESOLUTIONS["L"])
