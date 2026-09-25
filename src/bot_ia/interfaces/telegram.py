@@ -20,7 +20,7 @@ from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore
 from .group_setup import GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text
-from .cafe_immersion import waitress_dialogue
+from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue
 from gui.waifu_registry import WaifuRegistry
 from .tutorials import build_tutorial_text
 
@@ -223,9 +223,9 @@ class TelegramAdapter:
             return TelegramOutbound(
                 inbound.conversation_id,
                 f"💝 {maid} recibió {charged} puntos de propina. Heart Level: {level}/10 ❤️\n"
-                f"{waitress_dialogue(maid, 'greeting')}",
+                f"{waitress_exclusive_dialogue(maid, level) or waitress_dialogue(maid, 'greeting')}",
                 "affinity",
-                (((("🍀 Ver afinidad", "affinity:show"),),),),
+                ((("🍀 Ver afinidad", "affinity:show"),),),
             )
         if command == "/afinidad":
             return TelegramOutbound(
