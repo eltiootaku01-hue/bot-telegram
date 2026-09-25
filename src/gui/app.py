@@ -2026,6 +2026,9 @@ class WaifuRegistryDialog(QDialog):
         canvas.fill(Qt.transparent)
         painter = QPainter(canvas)
         try:
+            if record.card_category.casefold() in {"póker", "poker", "cartas de juego"}:
+                self._draw_playing_card_template(painter, record)
+
             fitted = sprite.scaled(
                 690,
                 790,
@@ -2044,8 +2047,6 @@ class WaifuRegistryDialog(QDialog):
             painter.drawPixmap(0, 0, frame.scaled(
                 768, 1024, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
             ))
-            if record.card_category.casefold() in {"póker", "poker", "cartas de juego"}:
-                self._draw_playing_card_template(painter, record)
 
             painter.setPen(QColor(255, 255, 255))
             painter.setFont(QFont("Georgia", 28, QFont.Bold))
