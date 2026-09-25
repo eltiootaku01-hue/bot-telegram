@@ -127,11 +127,7 @@ except ImportError:
     QEventLoop = None
 
 
-ROOT = (
-    Path(sys.executable).resolve().parent
-    if getattr(sys, "frozen", False)
-    else Path(__file__).resolve().parents[2]
-)
+ROOT = PROJECT_ROOT
 DESKTOP_USER = "desktop-user"
 DESKTOP_SESSION = "desktop-session"
 
