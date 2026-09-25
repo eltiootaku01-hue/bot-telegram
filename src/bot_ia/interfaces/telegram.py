@@ -23,7 +23,7 @@ from .hardening import MutexGuard
 from .order_support import ComplaintStore, OrderConfirmation, OrderStore, new_order_id, order_destination
 from .auto_moderation import moderate
 from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, purchase_bebida_order, quote_bebida_order
-from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue
+from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue, supervise_admin_publication
 from .superadmin import is_superadmin
 from .cafe_rooms import sfw_transition, mature_game_message
 from gui.waifu_registry import WaifuRegistry
@@ -1100,6 +1100,32 @@ class TelegramPoller:
         if not isinstance(text, str):
             text = ""
         room_key = str(update.get("room_key", "general"))
+        username = str(sender.get("username", "") or "")
+        raw_tags = message.get("image_tags", ())
+        image_tags = tuple(tag for tag in raw_tags if isinstance(tag, str)) if isinstance(raw_tags, (list, tuple)) else ()
+        cami_decision = supervise_admin_publication(
+            text,
+            image_tags=image_tags,
+            user_id=str(sender.get("id", "")),
+            username=username,
+            content_kind=str(message.get("content_kind", "text")),
+            target_room=room_key,
+        )
+        if is_superadmin(str(sender.get("id", "")), username) and cami_decision.action != "allow":
+            chat_id = str(chat.get("id", "")).strip()
+            message_id = message.get("message_id")
+            if not chat_id or not isinstance(message_id, int):
+                return None
+            try:
+                self._client.delete_message(chat_id, message_id)
+            except (TelegramTransportError, TelegramApiError, TelegramInputError) as error:
+                self._logger(f"telegram Cami Guard action failed: {error}")
+            return TelegramOutbound(
+                chat_id,
+                cami_decision.message,
+                cami_decision.target_room or room_key,
+                auto_delete_seconds=30,
+            )
         decision = moderate(text, room_key=room_key)
         if decision.action == "allow":
             return None
