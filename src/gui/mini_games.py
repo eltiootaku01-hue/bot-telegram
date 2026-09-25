@@ -20,6 +20,10 @@ PPT_ALIASES = {
     "t": "tijera",
 }
 BLACKJACK_ACTIONS = {"carta", "hit", "pedir", "otra", "plantarse", "plantar", "stand", "paso"}
+GAME_HOSTS = {"ppt": "Cari", "21": "Sunna", "uno": "Cami", "mesa": "Chie"}
+UNO_COLORS = ("rojo", "amarillo", "verde", "azul")
+UNO_VALUES = tuple("0 1 2 3 4 5 6 7 8 9 +2 salto reversa".split())
+
 CARD_VALUES = {
     "A": 11,
     "2": 2,
@@ -38,6 +42,14 @@ CARD_VALUES = {
 
 
 @dataclass(slots=True)
+class UnoState:
+    player_cards: list[str] = field(default_factory=list)
+    host_cards: list[str] = field(default_factory=list)
+    top_card: str = ""
+    finished: bool = False
+
+
+@dataclass(slots=True)
 class BlackjackState:
     player_cards: list[str] = field(default_factory=list)
     dealer_cards: list[str] = field(default_factory=list)
@@ -49,6 +61,7 @@ class LocalGameRouter:
 
     def __init__(self) -> None:
         self._blackjack: dict[tuple[str, str], BlackjackState] = {}
+        self._uno: dict[tuple[str, str], UnoState] = {}
 
     @staticmethod
     def _key(user_id: str, bot_id: str) -> tuple[str, str]:
@@ -123,6 +136,59 @@ class LocalGameRouter:
             "No se usa WebQueue."
         )
 
+    @staticmethod
+    def _new_uno() -> UnoState:
+        deck = [f"{color} {value}" for color in UNO_COLORS for value in UNO_VALUES]
+        _RANDOM.shuffle(deck)
+        return UnoState(
+            player_cards=[deck.pop() for _ in range(5)],
+            host_cards=[deck.pop() for _ in range(5)],
+            top_card=deck.pop(),
+        )
+
+    def _uno_response(self, user_id: str, bot_id: str, action: str) -> str:
+        key = self._key(user_id, bot_id)
+        action = action.casefold().strip()
+        state = self._uno.get(key)
+        if state is None or action in {"nuevo", "reiniciar"}:
+            state = self._new_uno()
+            self._uno[key] = state
+            return (
+                f"UNO local · anfitriona: {GAME_HOSTS['uno']} · "
+                f"carta en mesa: {state.top_card} · "
+                f"tus cartas: {', '.join(state.player_cards)}. "
+                "Escribe «robar» o «UNO jugar»."
+            )
+        if state.finished:
+            return "La partida de UNO ya terminó. Escribe «UNO nuevo» para reiniciar."
+        if action in {"robar", "carta", "pedir"}:
+            color, value = state.top_card.split(" ", 1)
+            candidates = [
+                card for card in state.player_cards
+                if card.startswith(color + " ") or card.endswith(" " + value)
+            ]
+            if not candidates:
+                new_card = f"{_RANDOM.choice(UNO_COLORS)} {_RANDOM.choice(UNO_VALUES)}"
+                state.player_cards.append(new_card)
+                return (
+                    f"UNO local · robaste {new_card}. "
+                    f"Anfitriona: {GAME_HOSTS['uno']}."
+                )
+            state.top_card = candidates[0]
+            state.player_cards.remove(candidates[0])
+            if not state.player_cards:
+                state.finished = True
+                return f"UNO local · ¡ganaste! Anfitriona: {GAME_HOSTS['uno']}."
+            return (
+                f"UNO local · jugaste {state.top_card}. "
+                f"Te quedan {len(state.player_cards)} cartas. "
+                f"Anfitriona: {GAME_HOSTS['uno']}."
+            )
+        return (
+            f"UNO local · anfitriona: {GAME_HOSTS['uno']} · "
+            "usa «UNO nuevo», «robar» o «UNO jugar»."
+        )
+
     def _finish_blackjack(self, state: BlackjackState, *, natural: bool) -> str:
         player = self._score(state.player_cards)
         while self._score(state.dealer_cards) < 17:
@@ -172,7 +238,7 @@ class LocalGameRouter:
             result = "ganaste"
         else:
             result = "perdiste"
-        return f"PPT local · tú: {choice} · mesera: {bot} · {result}."
+        return f"PPT local · anfitriona: {GAME_HOSTS['ppt']} · tú: {choice} · mesera: {bot} · {result}."
 
     def route(self, message: str, user_id: str, bot_id: str) -> str | None:
         normalized = " ".join(message.casefold().strip().split())
@@ -188,8 +254,6 @@ class LocalGameRouter:
         if any(token in normalized for token in ("piedra", "papel", "tijera")):
             return self._ppt_response(normalized)
         if any(token in normalized for token in ("uno", "juego de cartas")):
-            return (
-                "UNO local · catálogo disponible. Para jugar una partida completa "
-                "todavía se usa el registro de cartas; no se abrió WebQueue."
-            )
+            action = normalized.replace("uno", " ").strip() or "nuevo"
+            return self._uno_response(user_id, bot_id, action)
         return None
