@@ -544,7 +544,8 @@ class GeminiLobbyWorker(QObject):
                 wait_until="domcontentloaded",
                 timeout=self.TIMEOUT_MS,
             )
-            self._open_new_chat(page)
+            if not self.setup_mode:
+                self._open_new_chat(page)
 
             response_selector = ", ".join(
                 self.provider.response_selectors
@@ -1635,6 +1636,19 @@ class CommandCenterWindow(QMainWindow):
             lambda: self._start_matrix_chain("cari")
         )
         matrix_header.addWidget(self._matrix_chain_button)
+
+        self.lobby_manual_login_button = QPushButton(
+            "🔑 Iniciar Sesión Manual"
+        )
+        self.lobby_manual_login_button.setToolTip(
+            "Activa INITIAL_SETUP_MODE para que la próxima cadena "
+            "abra Chromium visible y permita completar el inicio de sesión."
+        )
+        self.lobby_manual_login_button.clicked.connect(
+            self._enable_manual_setup_mode
+        )
+        matrix_header.addWidget(self.lobby_manual_login_button)
+
         layout.addLayout(matrix_header)
 
         self._matrix_chain_summary = QLabel(
@@ -2424,6 +2438,30 @@ class CommandCenterWindow(QMainWindow):
             self._matrix_chain_summary.setText(
                 f"❌ No se pudo iniciar la cadena: {error}"
             )
+
+    def _enable_manual_setup_mode(self) -> None:
+        """Activa el modo de configuración visible para el próximo arranque web."""
+        os.environ[INITIAL_SETUP_MODE_ENV] = "true"
+        if self._matrix_chain_summary is not None:
+            self._matrix_chain_summary.setText(
+                "🔑 Modo de inicio de sesión manual ACTIVO · "
+                "la próxima cadena abrirá Chromium visible para completar "
+                "la autenticación antes de enviar el comando."
+            )
+        for button in (
+            getattr(self, "manual_login_button", None),
+            getattr(self, "lobby_manual_login_button", None),
+        ):
+            if isinstance(button, QPushButton):
+                button.setText("🔑 Sesión Manual: ACTIVA")
+                button.setToolTip(
+                    "INITIAL_SETUP_MODE está activo. "
+                    "La próxima cadena usará Chromium visible."
+                )
+        self._append_system(
+            "🔑 Inicio de sesión manual activado. "
+            "Ejecuta la cadena desde el Lobby para abrir Chromium visible."
+        )
 
     def _request_lobby_gemini(self) -> None:
         self._start_matrix_chain("cari")
