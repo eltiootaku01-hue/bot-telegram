@@ -100,7 +100,7 @@ from bot_ia.interfaces.cafe_orders import (
     build_bebida_summary,
     character_suggestions,
 )
-from .tutorials import build_tutorial_html, build_tutorial_text
+from bot_ia.interfaces.tutorials import build_tutorial_html, build_tutorial_text
 
 try:
     from qasync import QEventLoop
