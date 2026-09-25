@@ -28,6 +28,7 @@ from PySide6.QtCore import (
     QThreadPool,
     QTimer,
     Qt,
+    QStringListModel,
     QUrl,
     Signal,
     Slot,
@@ -38,6 +39,7 @@ from .admin_provisioning import AdminProvisioner
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
+    QCompleter,
     QFrame,
     QGridLayout,
     QDialog,
@@ -87,6 +89,18 @@ from .waifu_registry import (
 )
 from .mini_games import LocalGameRouter
 from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, GroupSetupStore, TelegramGroupSetup
+from bot_ia.interfaces.cafe_orders import (
+    BOLDNESS_LEVELS,
+    DEFAULT_OUTFITS,
+    DEFAULT_POSES,
+    EXPOSURE_LEVELS,
+    PRODUCT_TYPES,
+    BebidaOrder,
+    build_bebida_prompt,
+    build_bebida_summary,
+    character_suggestions,
+)
+from .tutorials import build_tutorial_html, build_tutorial_text
 
 try:
     from qasync import QEventLoop
@@ -1568,6 +1582,10 @@ class BotExpandedDialog(QDialog):
         self.waifu_button = QPushButton("🎴 Waifu / TCG")
         self.waifu_button.clicked.connect(self._open_waifu)
         controls.addWidget(self.waifu_button)
+        if self.bot_id == "cami":
+            self.bebida_button = QPushButton("🥤 Bebida Especial")
+            self.bebida_button.clicked.connect(self._open_bebida)
+            controls.addWidget(self.bebida_button)
         root.addLayout(controls)
 
         self.auth_hint = QLabel(
@@ -1597,6 +1615,11 @@ class BotExpandedDialog(QDialog):
         parent = self.parent()
         if isinstance(parent, CommandCenterWindow):
             parent._open_waifu_registry(self.bot_id)
+
+    def _open_bebida(self) -> None:
+        parent = self.parent()
+        if isinstance(parent, CommandCenterWindow):
+            parent._open_bebida_order()
 
     def _provider_changed(self, _index: int) -> None:
         provider_id = str(self.provider.currentData() or "").strip()
@@ -1674,7 +1697,119 @@ class BotExpandedDialog(QDialog):
         event.accept()
 
 
-class WaifuRegistryDialog(QDialog):
+class TutorialDialog(QDialog):
+    """Visualizador local de la guía TCG/Waifumon."""
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("📚 Tutorial TCG · Waifumon")
+        self.setMinimumSize(700, 560)
+        root = QVBoxLayout(self)
+        title = QLabel("📚 Tutorial visual · TCG / Waifumon")
+        title.setObjectName("PageTitle")
+        root.addWidget(title)
+        visual = QLabel(build_tutorial_html())
+        visual.setTextFormat(Qt.RichText)
+        visual.setWordWrap(True)
+        visual.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        root.addWidget(visual, 1)
+        details = QPlainTextEdit()
+        details.setReadOnly(True)
+        details.setPlainText(build_tutorial_text())
+        root.addWidget(details, 1)
+class BebidaOrderDialog(QDialog):
+    """Constructor local del pedido de Bebida Especial con Cami."""
+    def __init__(self, registry: WaifuRegistry, *, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.registry = registry
+        self.setWindowTitle("🥤 Bebida Especial · Cami")
+        self.setMinimumSize(760, 620)
+        root = QVBoxLayout(self)
+        title = QLabel("🥤 Pedido Bebida Especial · Cami")
+        title.setObjectName("PageTitle")
+        root.addWidget(title)
+        form = QGridLayout()
+        form.addWidget(QLabel("Personaje"), 0, 0)
+        self.character = QComboBox()
+        self.character.setEditable(True)
+        self.character.setInsertPolicy(QComboBox.NoInsert)
+        self.character.addItems(character_suggestions(self.registry.load()))
+        self.character.setCurrentText("")
+        completer = QCompleter(self.character.model(), self)
+        completer.setCaseSensitivity(Qt.CaseInsensitive)
+        completer.setFilterMode(Qt.MatchContains)
+        self.character.setCompleter(completer)
+        self.character.activated.connect(self._apply_character)
+        form.addWidget(self.character, 0, 1)
+        form.addWidget(QLabel("Grado de Exposición"), 1, 0)
+        self.exposure = QComboBox()
+        self.exposure.addItems(EXPOSURE_LEVELS)
+        form.addWidget(self.exposure, 1, 1)
+        form.addWidget(QLabel("Nivel de Atrevimiento"), 2, 0)
+        self.boldness = QComboBox()
+        self.boldness.addItems(BOLDNESS_LEVELS)
+        form.addWidget(self.boldness, 2, 1)
+        form.addWidget(QLabel("Pose"), 3, 0)
+        self.pose = QComboBox()
+        self.pose.setEditable(True)
+        self.pose.addItems(DEFAULT_POSES)
+        form.addWidget(self.pose, 3, 1)
+        form.addWidget(QLabel("Vestimenta"), 4, 0)
+        self.outfit = QComboBox()
+        self.outfit.setEditable(True)
+        self.outfit.addItems(DEFAULT_OUTFITS)
+        form.addWidget(self.outfit, 4, 1)
+        form.addWidget(QLabel("Cosplay"), 5, 0)
+        self.cosplay = QLineEdit()
+        self.cosplay.setPlaceholderText("Referencia exacta del registro local")
+        form.addWidget(self.cosplay, 5, 1)
+        form.addWidget(QLabel("Producto"), 6, 0)
+        self.product = QComboBox()
+        self.product.addItems(PRODUCT_TYPES)
+        form.addWidget(self.product, 6, 1)
+        root.addLayout(form)
+        actions = QHBoxLayout()
+        self.prepare = QPushButton("🥤 Preparar Pedido")
+        self.prepare.clicked.connect(self._prepare)
+        actions.addWidget(self.prepare)
+        tutorial = QPushButton("📚 Ver Tutorial")
+        tutorial.clicked.connect(lambda: TutorialDialog(self).exec())
+        actions.addWidget(tutorial)
+        actions.addStretch(1)
+        root.addLayout(actions)
+        self.summary = QPlainTextEdit()
+        self.summary.setReadOnly(True)
+        root.addWidget(self.summary, 1)
+        self.prompt = QPlainTextEdit()
+        self.prompt.setReadOnly(True)
+        root.addWidget(self.prompt, 1)
+    def _find_record(self, value: str) -> WaifuRecord | None:
+        normalized = value.strip().casefold()
+        if not normalized:
+            return None
+        for record in self.registry.load():
+            if record.name.casefold() == normalized or record.danbooru_tag.casefold() == normalized:
+                return record
+        return None
+    def _apply_character(self, index: int) -> None:
+        record = self._find_record(self.character.itemText(index))
+        if record is None:
+            return
+        self.character.setCurrentText(record.name)
+        self.cosplay.setText(record.cosplay_reference)
+    def _prepare(self) -> None:
+        record = self._find_record(self.character.currentText())
+        order = BebidaOrder(
+            character=self.character.currentText(),
+            character_tag=record.danbooru_tag if record else self.character.currentText(),
+            exposure=self.exposure.currentText(),
+            boldness=self.boldness.currentText(),
+            pose=self.pose.currentText(),
+            outfit=self.outfit.currentText(),
+            cosplay=self.cosplay.text(),
+            product_type=self.product.currentText(),
+        ).normalized()
+        self.summary.setPlainText(build_bebida_summary(order))
+        self.prompt.setPlainText(build_bebida_prompt(order))class WaifuRegistryDialog(QDialog):
     """Panel local para registrar waifus, generar prompts y ensamblar cartas."""
 
     def __init__(
@@ -1718,65 +1853,72 @@ class WaifuRegistryDialog(QDialog):
         form.addWidget(QLabel("Nombre"), 0, 0)
         self.name = QLineEdit()
         form.addWidget(self.name, 0, 1)
-        form.addWidget(QLabel("Personalidad / Trope"), 1, 0)
+        form.addWidget(QLabel("Tag Danbooru / personaje"), 1, 0)
+        self.danbooru_tag = QLineEdit()
+        self.danbooru_tag.setPlaceholderText("character_name_(anime) · sólo tags del registro local")
+        form.addWidget(self.danbooru_tag, 1, 1)
+        form.addWidget(QLabel("Personalidad / Trope"), 2, 0)
         self.personality = QLineEdit()
-        form.addWidget(self.personality, 1, 1)
-        form.addWidget(QLabel("Apariencia"), 2, 0)
+        form.addWidget(self.personality, 2, 1)
+        form.addWidget(QLabel("Apariencia"), 3, 0)
         self.appearance = QLineEdit()
-        form.addWidget(self.appearance, 2, 1)
-        form.addWidget(QLabel("Elemento"), 3, 0)
+        form.addWidget(self.appearance, 3, 1)
+        form.addWidget(QLabel("Elemento"), 4, 0)
         self.element = QComboBox()
         self.element.addItems(
             ("Fuego", "Agua", "Tierra", "Aire", "Luz", "Oscuridad", "Neutro")
         )
-        form.addWidget(self.element, 3, 1)
-        form.addWidget(QLabel("Referencia Cosplay"), 4, 0)
+        form.addWidget(self.element, 4, 1)
+        form.addWidget(QLabel("Referencia Cosplay"), 5, 0)
         self.cosplay = QComboBox()
         self.cosplay.addItems(("SR", "UR"))
-        form.addWidget(self.cosplay, 4, 1)
-        form.addWidget(QLabel("Categoría de carta"), 5, 0)
+        form.addWidget(self.cosplay, 5, 1)
+        form.addWidget(QLabel("Categoría de carta"), 6, 0)
         self.card_category = QComboBox()
         self.card_category.addItems(
             ("Waifu / TCG", "Cartas de Juego", "Póker", "UNO", "Waifumon / Ficha de Stats")
         )
-        form.addWidget(self.card_category, 5, 1)
-        form.addWidget(QLabel("HP"), 6, 0)
+        form.addWidget(self.card_category, 6, 1)
+        form.addWidget(QLabel("HP"), 7, 0)
         self.card_hp = QLineEdit()
         self.card_hp.setPlaceholderText("Ej.: 120")
-        form.addWidget(self.card_hp, 6, 1)
-        form.addWidget(QLabel("Ataque"), 7, 0)
+        form.addWidget(self.card_hp, 7, 1)
+        form.addWidget(QLabel("Ataque"), 8, 0)
         self.card_attack = QLineEdit()
         self.card_attack.setPlaceholderText("Ej.: 80")
-        form.addWidget(self.card_attack, 7, 1)
-        form.addWidget(QLabel("Tipo"), 8, 0)
+        form.addWidget(self.card_attack, 8, 1)
+        form.addWidget(QLabel("Tipo"), 9, 0)
         self.card_type = QLineEdit()
         self.card_type.setPlaceholderText("Ej.: Guerrero, Mago, Bestia...")
-        form.addWidget(self.card_type, 8, 1)
-        form.addWidget(QLabel("Número / Rango"), 9, 0)
+        form.addWidget(self.card_type, 9, 1)
+        form.addWidget(QLabel("Número / Rango"), 10, 0)
         self.card_number = QComboBox()
         self.card_number.addItems(("A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"))
-        form.addWidget(self.card_number, 9, 1)
-        form.addWidget(QLabel("Palo"), 10, 0)
+        form.addWidget(self.card_number, 10, 1)
+        form.addWidget(QLabel("Palo"), 11, 0)
         self.card_suit = QComboBox()
         self.card_suit.addItems(("Corazones", "Diamantes", "Tréboles", "Picas"))
-        form.addWidget(self.card_suit, 10, 1)
-        form.addWidget(QLabel("Etiquetas LoRA"), 11, 0)
+        form.addWidget(self.card_suit, 11, 1)
+        form.addWidget(QLabel("Etiquetas LoRA"), 12, 0)
         self.lora_tags = QLineEdit()
         self.lora_tags.setPlaceholderText("[LORA_NAME], [STYLE_TAG]")
-        form.addWidget(self.lora_tags, 11, 1)
-        form.addWidget(QLabel("Slot de carta"), 12, 0)
+        form.addWidget(self.lora_tags, 12, 1)
+        form.addWidget(QLabel("Slot de carta"), 13, 0)
         self.card_slot = QComboBox()
         self.card_slot.addItems(
             ("Carta 1 · R", "Carta 2 · SR", "Cosplay UR · UR")
         )
         self.card_slot.currentIndexChanged.connect(self._select_slot)
-        form.addWidget(self.card_slot, 12, 1)
+        form.addWidget(self.card_slot, 13, 1)
         root.addLayout(form)
 
         actions = QHBoxLayout()
         self.generate_button = QPushButton("Generar Prompt")
         self.generate_button.clicked.connect(self._generate)
         actions.addWidget(self.generate_button)
+        tutorial_button = QPushButton("📚 Tutorial")
+        tutorial_button.clicked.connect(lambda: TutorialDialog(self).exec())
+        actions.addWidget(tutorial_button)
         self.upload_button = QPushButton("+ Subir Imagen")
         self.upload_button.clicked.connect(self._upload)
         actions.addWidget(self.upload_button)
@@ -1827,7 +1969,46 @@ class WaifuRegistryDialog(QDialog):
 
         self._refresh_records()
         self._refresh_slot_status()
+        self._configure_local_tag_completers()
 
+    def _configure_local_tag_completers(self) -> None:
+        records = self.registry.load()
+        names = character_suggestions(records)
+        tags = []
+        for record in records:
+            if record.danbooru_tag.strip() and record.danbooru_tag.strip() not in tags:
+                tags.append(record.danbooru_tag.strip())
+            for token in normalize_lora_tags(record.lora_tags).split():
+                if token and token not in tags:
+                    tags.append(token)
+        name_model = QStringListModel(names, self)
+        tag_model = QStringListModel(tags, self)
+        self._name_model = name_model
+        self._tag_model = tag_model
+        name_completer = QCompleter(name_model, self)
+        name_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        name_completer.setFilterMode(Qt.MatchContains)
+        tag_completer = QCompleter(tag_model, self)
+        tag_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        tag_completer.setFilterMode(Qt.MatchContains)
+        self.name.setCompleter(name_completer)
+        self.danbooru_tag.setCompleter(tag_completer)
+        name_completer.activated.connect(self._apply_registry_character)
+
+    def _apply_registry_character(self, value: str) -> None:
+        for record in self.registry.load():
+            if value.casefold() in {record.name.casefold(), record.danbooru_tag.casefold()}:
+                self.name.setText(record.name)
+                self.danbooru_tag.setText(record.danbooru_tag)
+                self.personality.setText(record.personality)
+                self.appearance.setText(record.appearance)
+                index = self.element.findText(record.element, Qt.MatchFixedString)
+                if index >= 0:
+                    self.element.setCurrentIndex(index)
+                self.cosplay.setCurrentText(record.cosplay_reference or "SR")
+                self.lora_tags.setText(normalize_lora_tags(record.lora_tags))
+                self._refresh_slot_status()
+                return
     def _select_slot(self, index: int) -> None:
         self.selected_slot_index = max(0, min(index, len(self.card_slots) - 1))
         slot = self.card_slots[self.selected_slot_index]
