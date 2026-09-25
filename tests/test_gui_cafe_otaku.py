@@ -2507,6 +2507,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("InlineRedirectHandler", telegram)
         self.assertIn("parse_inline_query_update", telegram)
         self.assertIn("analyze_telegram_comment", telegram)
+        self.assertIn("_sync_authorized_bot_join", telegram)
+        self.assertIn("new_chat_members", telegram)
         self.assertIn("AsyncBusyGuard", immersion)
 
     def test_telegram_setup_read_only_orders_and_role_policy_contract(self):
