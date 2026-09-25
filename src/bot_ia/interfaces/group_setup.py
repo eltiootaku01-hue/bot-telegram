@@ -166,10 +166,36 @@ class DiscordGroupSetup:
         for name, key in ROOMS:
             if key in existing:
                 continue
+            payload: dict[str, object] = {
+                "name": name.lstrip("#"),
+                "type": 0,
+                "topic": f"BOT-IA · {key}",
+            }
+            if key == ADMIN_ROOM_KEY:
+                # Discord permite hacer #pedidos privado mediante permission overwrites.
+                overwrites = [
+                    {"id": guild_id, "type": 0, "deny": str(1 << 10)},
+                ]
+                for role in roles:
+                    if not isinstance(role, dict):
+                        continue
+                    try:
+                        role_permissions = int(role.get("permissions", 0))
+                    except (TypeError, ValueError):
+                        continue
+                    if role_permissions & 0x8:
+                        overwrites.append(
+                            {"id": str(role.get("id")), "type": 0, "allow": str((1 << 10) | (1 << 11))}
+                        )
+                for role_id in role_ids:
+                    overwrites.append(
+                        {"id": role_id, "type": 0, "allow": str((1 << 10) | (1 << 11))}
+                    )
+                payload["permission_overwrites"] = overwrites
             created = self._request(
                 "POST",
                 f"/guilds/{guild_id}/channels",
-                {"name": name.lstrip("#"), "type": 0, "topic": f"BOT-IA · {key}"},
+                payload,
             )
             if not isinstance(created, dict) or not created.get("id"):
                 raise GroupSetupError(f"Discord no devolvió ID para {name}")
