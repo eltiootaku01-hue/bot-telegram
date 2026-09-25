@@ -1771,6 +1771,43 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn('"#pedidos"', group)
 
 
+    def test_cross_platform_presence_timeout_guard_contract(self):
+        from bot_ia.interfaces.cafe_immersion import (
+            BUSY_EVENT_TIMEOUT_SECONDS,
+            OPPOSITE_NETWORK_LINKS,
+            WaitressPresenceManager,
+        )
+
+        self.assertEqual(60.0, BUSY_EVENT_TIMEOUT_SECONDS)
+        self.assertIn("Telegram", OPPOSITE_NETWORK_LINKS)
+        self.assertIn("Discord", OPPOSITE_NETWORK_LINKS)
+
+        now = [100.0]
+        manager = WaitressPresenceManager(clock=lambda: now[0])
+        self.assertTrue(manager.acquire("Cami", "Telegram", "evt-1", timeout=120))
+        self.assertFalse(manager.acquire("Cami", "Discord", "evt-2"))
+        message = manager.encargado_message("Cami", "Discord")
+        self.assertIn("Cami", message)
+        self.assertIn("Telegram", message)
+        self.assertIn("https://t.me/eltiootaku", message)
+
+        now[0] += 60.0
+        self.assertIsNone(manager.state("Cami"))
+        self.assertIsNone(manager.encargado_message("Cami", "Discord"))
+        self.assertTrue(manager.acquire("Cami", "Discord", "evt-3"))
+
+    def test_cross_platform_presence_source_contract(self):
+        source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+        for token in (
+            "WaitressPresenceManager",
+            "BUSY_EVENT_TIMEOUT_SECONDS = 60.0",
+            "OPPOSITE_NETWORK_LINKS",
+            "encargado_message",
+            "sweep_expired",
+            "min(float(timeout), BUSY_EVENT_TIMEOUT_SECONDS)",
+        ):
+            self.assertIn(token, source)
+
 
 if __name__ == "__main__":
     unittest.main()
