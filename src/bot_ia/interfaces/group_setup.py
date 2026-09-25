@@ -169,7 +169,7 @@ class DiscordGroupSetup:
             created = self._request(
                 "POST",
                 f"/guilds/{guild_id}/channels",
-                {"name": name, "type": 0, "topic": f"BOT-IA · {key}"},
+                {"name": name.lstrip("#"), "type": 0, "topic": f"BOT-IA · {key}"},
             )
             if not isinstance(created, dict) or not created.get("id"):
                 raise GroupSetupError(f"Discord no devolvió ID para {name}")
