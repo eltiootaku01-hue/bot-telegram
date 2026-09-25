@@ -1111,7 +1111,7 @@ class TelegramPoller:
             content_kind=str(message.get("content_kind", "text")),
             target_room=room_key,
         )
-        if is_superadmin(str(sender.get("id", "")), username) and cami_decision.action != "allow":
+        if is_superadmin(str(sender.get("id", "")), username) and cami_decision.action not in {"allow", "allow_react"}:
             chat_id = str(chat.get("id", "")).strip()
             message_id = message.get("message_id")
             if not chat_id or not isinstance(message_id, int):
