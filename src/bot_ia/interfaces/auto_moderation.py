@@ -131,13 +131,7 @@ def moderate(
     if _has_term(combined, LEGAL_SAFETY_TERMS):
         return ModerationDecision("ban", "illegal_minor_related", CARI_LEGAL_MESSAGE)
     if room_key in {"general", "tcg_collection", "pedidos_sfw", "noticias_otaku"} and _has_term(combined, EXPLICIT_TERMS):
-        return ModerationDecision(
-            "delete_redirect",
-            "explicit_in_sfw",
-            CANTINA_REDIRECT_MESSAGE,
-            waitress="Scarlet",
-            target_room="#cantina-18",
-        )
+        return ModerationDecision("delete_redirect", "explicit_in_sfw", CANTINA_REDIRECT_MESSAGE, waitress="Scarlet", target_room="#cantina-18")
     if _has_term(combined, SEVERE_PROFANITY):
         return ModerationDecision("delete_warn", "severe_profanity", CARI_PROFANITY_MESSAGE)
     return ModerationDecision("allow", "clean", "")
