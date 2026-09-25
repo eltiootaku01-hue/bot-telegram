@@ -2780,11 +2780,14 @@ class CommandCenterWindow(QMainWindow):
             return False
 
         self._append_message(profile.name, response, "bot")
+        dialog = self._expanded_bot_dialogs.get(bot_id)
+        if dialog is not None:
+            dialog.append_history(profile.name, response)
+            dialog.append_history("Sistema", "Respuesta local; WebQueue omitido.")
         self._append_system(
             f"{profile.name}: respuesta local; WebQueue omitido."
         )
         self.send_button.setEnabled(True)
-        self._sync_expanded_bot(bot_id)
         return True
 
     def _send_expanded_bot_message(
@@ -2795,6 +2798,8 @@ class CommandCenterWindow(QMainWindow):
         if bot_id not in BOT_MAP:
             return
         self.select_bot(bot_id)
+        if self._try_local_bot_response(message):
+            return
         self._send_web_persona(message)
         dialog = self._expanded_bot_dialogs.get(bot_id)
         if dialog is not None:
