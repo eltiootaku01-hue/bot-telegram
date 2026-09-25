@@ -2454,5 +2454,99 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
 
 
 
+    def test_ecosystem_cami_sunna_and_inline_anti_murphy_contract(self):
+        from bot_ia.interfaces.inline_router import InlineAbuseGuard, InlineRedirectHandler
+        from bot_ia.interfaces.cafe_immersion import AsyncBusyGuard, WaitressPresenceManager, waitress_dialogue
+
+        guard = InlineAbuseGuard(limit=3, window_seconds=60)
+        self.assertIsNone(guard.check("u1", official=False, now=0))
+        self.assertIsNone(guard.check("u1", official=False, now=1))
+        self.assertIsNone(guard.check("u1", official=False, now=2))
+        blocked = guard.check("u1", official=False, now=3)
+        self.assertTrue(blocked.blocked)
+        self.assertTrue(guard.is_blocked("u1"))
+
+        handler = InlineRedirectHandler(official_ids={"-100"}, cafe_url="https://t.me/cafe")
+        result = handler.handle(user_id="u2", chat_id="outside", query="hola")
+        self.assertEqual("☕ Ir al Café Otaku", result.button_label)
+        self.assertEqual("https://t.me/cafe", result.button_url)
+        self.assertIn("Oh... ¿me seguiste hasta aquí?", result.text)
+        self.assertFalse(handler.handle(user_id="u3", chat_id="-100", query="hola").blocked)
+
+        presence = WaitressPresenceManager(clock=lambda: 100.0)
+        self.assertTrue(presence.acquire("Cari", "Telegram", "evt-1"))
+        self.assertIn("Discord", presence.encargado_message("Cari", "Telegram"))
+        self.assertFalse(presence.acquire("Cari", "Discord", "evt-2"))
+        self.assertIn("Café", waitress_dialogue("Cari", chat_title="Servidor Real"))
+
+        async def busy_contract():
+            busy = AsyncBusyGuard()
+            self.assertTrue(await busy.acquire("cari", timeout=60))
+            self.assertTrue(await busy.busy("cari"))
+            await busy.release("cari")
+            self.assertFalse(await busy.busy("cari"))
+            await busy.close()
+
+        asyncio.run(busy_contract())
+
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        immersion = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+        for token in (
+            "SUNNA_PRIMARY_ADMIN",
+            "AUTHORIZED_BOT_TOKEN_ENV",
+            "can_invite_users",
+            "can_delete_messages",
+            "can_restrict_members",
+            "can_manage_topics",
+            "configure_authorized_bots",
+        ):
+            self.assertIn(token, group)
+        self.assertIn("InlineRedirectHandler", telegram)
+        self.assertIn("parse_inline_query_update", telegram)
+        self.assertIn("analyze_telegram_comment", telegram)
+        self.assertIn("AsyncBusyGuard", immersion)
+
+    def test_telegram_setup_read_only_orders_and_role_policy_contract(self):
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        for token in (
+            'ORDERS_ROOM_KEY = "pedidos"',
+            "READ_ONLY_ORDERS",
+            '"can_send_messages": False',
+            '"send_messages": False',
+            "permission_overwrites",
+            "SUNNA_BOT_TOKEN",
+            "CARI_BOT_TOKEN",
+            "CAMI_BOT_TOKEN",
+            "SCHRODINGER_BOT_TOKEN",
+        ):
+            self.assertIn(token, group)
+        # Telegram Forum Topics no tienen permisos independientes: el contrato
+        # exige que esta limitación no se presente como una capacidad inexistente.
+        self.assertIn("no admite permisos independientes por tema de foro", group)
+
+    def test_cami_guard_zero_strike_and_comments_are_integrated(self):
+        immersion = (self.ROOT / "src" / "bot_ia" / "interfaces" / "cafe_immersion.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        for token in (
+            "supervise_admin_publication",
+            "superadmin_is_immune",
+            "scan_cami_guard",
+            "SENSITIVE_IMAGE_TAGS",
+            "DEFAULT_REACTIONS",
+            "COMMENT_REPLY_TEXT",
+            "DISCORD_COMMENT_THREAD_NAME",
+        ):
+            self.assertIn(token, immersion)
+        for token in (
+            "analyze_telegram_comment",
+            "cami_decision",
+            "is_superadmin",
+            "parse_inline_query_update",
+            "InlineRedirectHandler",
+        ):
+            self.assertIn(token, telegram)
+
+
 if __name__ == "__main__":
     unittest.main()
