@@ -1570,6 +1570,26 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
                     registry=registry,
                 )
 
+            converted = store.create("u-refund", "chat-1", "Convertir por favor", points_paid=10)
+            converted_result = store.resolve(
+                converted.complaint_id,
+                "convert_image",
+                wallet_store=wallet,
+                registry=registry,
+            )
+            self.assertEqual("CONVERTED_TO_IMAGE", converted_result.status)
+            self.assertEqual(85, wallet.balance("u-refund"))
+
+            rejected = store.create("u-refund", "chat-1", "No corresponde", points_paid=10)
+            rejected_result = store.resolve(
+                rejected.complaint_id,
+                "reject",
+                wallet_store=wallet,
+                registry=registry,
+            )
+            self.assertEqual("REJECTED", rejected_result.status)
+            self.assertEqual(85, wallet.balance("u-refund"))
+
     def test_order_confirmation_gui_and_telegram_contract(self):
         app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
         telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
