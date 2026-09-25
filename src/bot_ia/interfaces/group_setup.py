@@ -232,7 +232,7 @@ class DiscordGroupSetup:
             names = ("Cari", "Cami", "Sunna", "Chie") if room.key in {"general", "tcg_collection", "pedidos_sfw", "noticias_otaku"} else ("Scarlet", "Chloé")
             ids: list[str] = []
             for name in names:
-                hook = self.ensure_webhook(room.channel_id, name, avatar_data_uri=waitress_avatar_data_uri(name))
+                hook = self.ensure_webhook(room.external_id, name, avatar_data_uri=waitress_avatar_data_uri(name))
                 ids.append(str(hook.get("id")))
             result[room.key] = tuple(ids)
         return result
