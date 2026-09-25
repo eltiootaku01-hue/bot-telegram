@@ -1137,6 +1137,75 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertNotIn(chr(27), raw.outfit)
         self.assertNotIn(chr(0), raw.cosplay)
 
+    def test_auto_moderation_priority_and_cari_suggestions(self):
+        from bot_ia.interfaces.auto_moderation import (
+            CANTINA_REDIRECT_MESSAGE,
+            CARI_LEGAL_MESSAGE,
+            CARI_PROFANITY_MESSAGE,
+            moderate,
+            moderation_action_priority,
+        )
+
+        illegal = moderate("quiero loli y contenido para menores")
+        self.assertEqual("ban", illegal.action)
+        self.assertEqual("illegal_minor_related", illegal.reason)
+        self.assertEqual("Cari", illegal.waitress)
+        self.assertEqual(CARI_LEGAL_MESSAGE, illegal.message)
+        self.assertGreater(
+            moderation_action_priority(illegal),
+            moderation_action_priority(moderate("puta mierda")),
+        )
+
+        profanity = moderate("puta mierda")
+        self.assertEqual("delete_warn", profanity.action)
+        self.assertEqual("severe_profanity", profanity.reason)
+        self.assertEqual(CARI_PROFANITY_MESSAGE, profanity.message)
+
+        sfw = moderate("quiero porno explícito", room_key="pedidos_sfw")
+        self.assertEqual("delete_redirect", sfw.action)
+        self.assertEqual("#cantina-18", sfw.target_room)
+        self.assertEqual("Scarlet", sfw.waitress)
+        self.assertIn("Scarlet", sfw.message)
+        self.assertIn("Chloé", sfw.message)
+        self.assertEqual(CANTINA_REDIRECT_MESSAGE, sfw.message)
+
+        self.assertEqual("allow", moderate("quiero un café con leche", room_key="pedidos_sfw").action)
+        # La prioridad legal gana aunque también aparezca una señal SFW explícita.
+        mixed = moderate("loli porno explícito", room_key="pedidos_sfw")
+        self.assertEqual("ban", mixed.action)
+
+    def test_auto_moderation_integration_contract(self):
+        moderation = (self.ROOT / "src" / "bot_ia" / "interfaces" / "auto_moderation.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        discord = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+
+        for token in (
+            "LEGAL_SAFETY_TERMS",
+            "SEVERE_PROFANITY",
+            "EXPLICIT_TERMS",
+            "CARI_LEGAL_MESSAGE",
+            "CARI_PROFANITY_MESSAGE",
+            "CANTINA_REDIRECT_MESSAGE",
+            'return ModerationDecision("ban"',
+            'return ModerationDecision("delete_redirect"',
+        ):
+            self.assertIn(token, moderation)
+
+        for token in (
+            "moderate(",
+            "self._client.delete_message",
+            "self._client.ban_chat_member",
+            "TelegramInputError",
+        ):
+            self.assertIn(token, telegram)
+
+        for token in (
+            "def delete_message",
+            "def ban_member",
+            "def timeout_member",
+        ):
+            self.assertIn(token, discord)
+
     def test_hardening_shutdown_contract(self):
         queue_source = (self.ROOT / "src" / "services" / "web_queue.py").read_text(encoding="utf-8")
         app_source = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
