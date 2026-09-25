@@ -114,6 +114,12 @@ class GroupSetupStore:
         temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         temporary.replace(self.path)
 
+        if platform == "telegram":
+            router = TelegramRoomRouter(
+                Path(self.path).parent / "telegram_rooms.sqlite3"
+            )
+            router.replace_chat_rooms(target_id, rooms)
+
     def get_feeds(self, platform: str, target_id: str) -> tuple[tuple[str, str], ...]:
         raw = self.load().get(f"{platform}:{target_id}", {})
         items = raw.get("feeds", []) if isinstance(raw, dict) else []
@@ -546,12 +552,6 @@ class TelegramGroupSetup:
             existing[key] = room
         result = GroupSetupResult("telegram", chat_id, tuple(rooms))
         store.save_target("telegram", chat_id, result.rooms)
-
-        # El provisioning es la única fuente de verdad del mapa de temas.
-        router = TelegramRoomRouter(
-            Path(store.path).parent / "telegram_rooms.sqlite3"
-        )
-        router.replace_chat_rooms(chat_id, result.rooms)
 
         self.configure_authorized_bots(chat_id)
         return result
