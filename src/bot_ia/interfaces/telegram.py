@@ -1433,6 +1433,8 @@ class TelegramPoller:
                             break
 
                 try:
+                    outbound: TelegramOutbound | None = None
+                    moderation_outbound: TelegramOutbound | None = None
                     inline_query = update.get("inline_query")
                     if isinstance(inline_query, dict):
                         inline = parse_inline_query_update(update)
