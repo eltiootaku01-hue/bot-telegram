@@ -84,9 +84,15 @@ class TelegramOutbound:
     auto_delete_seconds: int | None = None
     message_thread_id: int | None = None
     followups: tuple["TelegramOutbound", ...] = ()
+    photo_file_id: str | None = None
 
     def payload(self) -> dict[str, object]:
-        payload: dict[str, object] = {"chat_id": self.chat_id, "text": self.text}
+        if self.photo_file_id:
+            payload: dict[str, object] = {"chat_id": self.chat_id, "photo": self.photo_file_id}
+            if self.text:
+                payload["caption"] = self.text
+        else:
+            payload = {"chat_id": self.chat_id, "text": self.text}
         if self.message_thread_id is not None:
             payload["message_thread_id"] = int(self.message_thread_id)
         if self.keyboard:
@@ -858,6 +864,11 @@ class TelegramApiClient:
         start_chunk: int = 0,
         on_chunk_ack: Callable[[int, dict[str, object]], None] | None = None,
     ) -> dict[str, object]:
+        if outbound.photo_file_id:
+            result = self._call("sendPhoto", outbound.payload())
+            if on_chunk_ack is not None:
+                on_chunk_ack(1, result)
+            return dict(result)
         chunks = _split_message(outbound.text)
         if start_chunk < 0 or start_chunk > len(chunks):
             raise TelegramInputError("invalid Telegram chunk index")
