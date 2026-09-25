@@ -870,5 +870,35 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
                 loaded.prompt,
             )
 
+
+    def test_group_setup_and_rarity_contract(self):
+        group = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
+        telegram = (self.ROOT / "src" / "bot_ia" / "interfaces" / "telegram.py").read_text(encoding="utf-8")
+        registry = (self.ROOT / "src" / "gui" / "waifu_registry.py").read_text(encoding="utf-8")
+        app = (self.ROOT / "src" / "gui" / "app.py").read_text(encoding="utf-8")
+        for token in (
+            "TelegramGroupSetup",
+            "createForumTopic",
+            "can_manage_topics",
+            "DiscordGroupSetup",
+            "/guilds/{guild_id}/channels",
+            '"type": 0',
+            "Administrador o Gestionar Canales",
+            "📌 Anuncios / General",
+            "🎴 Colección TCG",
+            "🎮 Minijuegos (21 / UNO / PPT)",
+            "💬 Zona de Meseras",
+        ):
+            self.assertIn(token, group)
+        self.assertIn('command == "/setup_group"', telegram)
+        self.assertIn("Estructurar Grupo", app)
+        self.assertIn("frame_R.svg", registry)
+        self.assertIn("frame_UR.svg", registry)
+        self.assertIn('if rarity == "R":', registry)
+        self.assertIn('if rarity == "UR":', registry)
+        self.assertIn("def _draw_ur_element_effects", app)
+        self.assertIn('if rarity == "UR":', app)
+
+
 if __name__ == "__main__":
     unittest.main()
