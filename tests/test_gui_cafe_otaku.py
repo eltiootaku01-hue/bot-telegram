@@ -989,6 +989,9 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "target_rarity",
             "🍀 Pity",
             "pity_text",
+            "_show_pity",
+            "_show_affinity",
+            "affinity_level=self.waifu_registry.affinity_level",
         ):
             self.assertIn(token, app + registry + economy + menu)
         for token in ('"/pity"', '"pity:show"', '"gacha:draw"', "pity_text"):
