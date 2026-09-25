@@ -1567,6 +1567,11 @@ class BotExpandedDialog(QDialog):
             )
 
     def closeEvent(self, event: object) -> None:
+        for dialog in tuple(self._expanded_bot_dialogs.values()):
+            dialog.hide()
+            dialog.deleteLater()
+        self._expanded_bot_dialogs.clear()
+
         self.hide()
         event.accept()
 
@@ -2268,6 +2273,21 @@ class CommandCenterWindow(QMainWindow):
         dialog.raise_()
         dialog.activateWindow()
 
+    def _sync_expanded_bot(self, bot_id: str) -> None:
+        dialog = self._expanded_bot_dialogs.get(bot_id)
+        widgets = self._matrix_widgets.get(bot_id, {})
+        if dialog is None:
+            return
+        status = widgets.get("status")
+        log = widgets.get("log")
+        provider = widgets.get("provider")
+        if isinstance(status, QLabel):
+            dialog.set_status(status.text())
+        if isinstance(provider, QComboBox):
+            dialog.set_provider(str(provider.currentData()).strip())
+        if isinstance(log, QPlainTextEdit):
+            dialog.history.setPlainText(log.toPlainText())
+
     def _send_expanded_bot_message(
         self,
         bot_id: str,
@@ -2681,6 +2701,8 @@ class CommandCenterWindow(QMainWindow):
         log.appendPlainText(
             "Perfil aislado abierto; solicitando un chat nuevo…"
         )
+        self._sync_expanded_bot(bot_id)
+
 
     @Slot(str, str)
     def _on_matrix_bot_finished(
@@ -2702,6 +2724,7 @@ class CommandCenterWindow(QMainWindow):
             response,
             "bot",
         )
+        self._sync_expanded_bot(bot_id)
 
     @Slot(str)
     def _on_matrix_bot_ready(self, bot_id: str) -> None:
@@ -2712,6 +2735,7 @@ class CommandCenterWindow(QMainWindow):
         widgets["log"].appendPlainText(
             "CONTEXTO_LISTO confirmado. Se habilita el siguiente turno."
         )
+        self._sync_expanded_bot(bot_id)
 
     @Slot(str, str)
     def _on_matrix_bot_failed(
@@ -2724,6 +2748,7 @@ class CommandCenterWindow(QMainWindow):
             return
         widgets["status"].setText("❌ Error")
         widgets["log"].appendPlainText(error)
+        self._sync_expanded_bot(bot_id)
 
     @Slot(dict)
     def _on_matrix_chain_finished(
@@ -2751,11 +2776,6 @@ class CommandCenterWindow(QMainWindow):
 
     def _enable_manual_setup_mode(self, bot_id: str | None = None) -> None:
         """Lanza el Chromium nativo de configuración para el perfil seleccionado."""
-        for dialog in tuple(self._expanded_bot_dialogs.values()):
-            dialog.hide()
-            dialog.deleteLater()
-        self._expanded_bot_dialogs.clear()
-
         if self._manual_setup_thread is not None:
             self._append_system(
                 "🔑 Ya hay una sesión de inicio manual en curso."
