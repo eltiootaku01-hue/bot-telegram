@@ -20,26 +20,29 @@ class InlineAbuseGuard:
         self.limit = max(1, int(limit))
         self.window_seconds = max(1.0, float(window_seconds))
         self._events: dict[str, list[float]] = {}
-        self._blocked: set[str] = set()
+        self._blocked_until: dict[str, float] = {}
 
     def check(self, user_id: str, *, official: bool, now: float | None = None) -> InlineResult | None:
         if official:
             return None
         uid = str(user_id)
-        if uid in self._blocked:
-            return InlineResult("Inline bloqueado por abuso repetido. Revisa las incidencias del Café.", "☕ Ir al Café Otaku", "", True)
         current = time.monotonic() if now is None else float(now)
+        blocked_until = self._blocked_until.get(uid, 0.0)
+        if blocked_until > current:
+            return InlineResult("Inline bloqueado temporalmente por abuso repetido. Revisa las incidencias del Café.", "☕ Ir al Café Otaku", "", True)
+        if blocked_until:
+            self._blocked_until.pop(uid, None)
         events = [stamp for stamp in self._events.get(uid, []) if current - stamp < self.window_seconds]
         if len(events) >= self.limit:
             self._events[uid] = events
-            self._blocked.add(uid)
+            self._blocked_until[uid] = current + self.window_seconds
             return InlineResult("Demasiadas consultas Inline fuera de la comunidad. Se bloqueó temporalmente el acceso Inline.", "☕ Ir al Café Otaku", "", True)
         events.append(current)
         self._events[uid] = events
         return None
 
     def is_blocked(self, user_id: str) -> bool:
-        return str(user_id) in self._blocked
+        return self._blocked_until.get(str(user_id), 0.0) > time.monotonic()
 
 
 class InlineRedirectHandler:
