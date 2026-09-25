@@ -94,7 +94,7 @@ from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, Gr
 from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text, draw_gacha, pity_text, purchase_bebida_order)
 from bot_ia.interfaces.cafe_immersion import TeaTimeScheduler
 from bot_ia.interfaces.hardening import sanitize_control_text, whitelist_tag
-from bot_ia.interfaces.cafe_orders import (
+from bot_ia.interfaces.order_support import ComplaintStore, new_order_id, order_destination\nfrom bot_ia.interfaces.cafe_orders import (
     BOLDNESS_LEVELS,
     DEFAULT_OUTFITS,
     DEFAULT_POSES,
@@ -1729,6 +1729,8 @@ class BebidaOrderDialog(QDialog):
         self.registry = registry
         self.wallet_store = wallet_store
         self._prepared_order: BebidaOrder | None = None
+        self._prepared_order_id = ""
+        self._last_paid_points = 0
         self.setWindowTitle("🥤 Bebida Especial · Cami")
         self.setMinimumSize(760, 620)
         root = QVBoxLayout(self)
@@ -1791,6 +1793,9 @@ class BebidaOrderDialog(QDialog):
         self.purchase = QPushButton("☕ Comprar / Clonar")
         self.purchase.clicked.connect(self._purchase)
         actions.addWidget(self.purchase)
+        self.complaint = QPushButton("📣 Queja / Reembolso")
+        self.complaint.clicked.connect(self._complaint)
+        actions.addWidget(self.complaint)
         tutorial = QPushButton("📚 Ver Tutorial")
         tutorial.clicked.connect(lambda: TutorialDialog(self).exec())
         actions.addWidget(tutorial)
@@ -1913,10 +1918,74 @@ class BebidaOrderDialog(QDialog):
                 f"Necesitas exactamente {quote.cost} puntos para {quote.kind} {quote.rarity}.",
             )
             return
+
+        destination = order_destination(self._prepared_order.product_type)
+        confirmation = QMessageBox(self)
+        confirmation.setWindowTitle("⚠️ Confirmación final del pedido")
+        confirmation.setText(
+            "Revisa antes de cobrar los puntos.\n\n"
+            f"Destino: {destination}\n"
+            f"Personaje: {self._prepared_order.character}\n"
+            f"Producto: {self._prepared_order.product_type}\n"
+            f"Rareza: {quote.rarity}\n"
+            f"Costo: {quote.cost} Puntos del Café\n\n"
+            "La compra NO se ejecutará hasta pulsar [✅ Confirmar]."
+        )
+        confirm_button = confirmation.addButton("✅ Confirmar", QMessageBox.AcceptRole)
+        confirmation.addButton("❌ Cancelar", QMessageBox.RejectRole)
+        confirmation.exec()
+        if confirmation.clickedButton() is not confirm_button:
+            return
+
+        # Revalidar el saldo justo antes del débito: evita cobrar un pedido obsoleto.
+        quote = purchase_bebida_order(
+            self.wallet_store,
+            "local-user",
+            existing=target_key != "SPECIAL",
+            target_rarity=target_key,
+        )
+        if not quote.can_afford:
+            QMessageBox.warning(
+                self,
+                "☕ Puntos del Café",
+                "El saldo cambió mientras confirmabas el pedido. No se cobró nada.",
+            )
+            return
+        self._prepared_order_id = new_order_id()
+        self._last_paid_points = quote.cost
         QMessageBox.information(
             self,
             "☕ Pedido confirmado",
-            f"Pedido {quote.kind} {quote.rarity} confirmado por {quote.cost} puntos.",
+            f"Pedido {self._prepared_order_id} confirmado.\n"
+            f"{destination}\n"
+            f"{quote.kind} {quote.rarity} · {quote.cost} puntos.",
+        )
+
+    def _complaint(self) -> None:
+        text, accepted = QInputDialog.getMultiLineText(
+            self,
+            "📣 Queja / Sugerencia / Reembolso",
+            "Describe el problema:",
+        )
+        if not accepted or not text.strip():
+            return
+        try:
+            record = ComplaintStore(ROOT).create(
+                "local-user",
+                "gui",
+                text,
+                order_id=self._prepared_order_id,
+                product_type=self._prepared_order.product_type if self._prepared_order else "",
+                points_paid=self._last_paid_points,
+            )
+        except ValueError as error:
+            QMessageBox.warning(self, "📣 Reclamo", str(error))
+            return
+        QMessageBox.information(
+            self,
+            "📣 Reclamo enviado",
+            f"Reclamo #{record.complaint_id} registrado.\n"
+            "Un administrador podrá reembolsar puntos, convertirlo a imagen o rechazarlo.",
         )
 
 
