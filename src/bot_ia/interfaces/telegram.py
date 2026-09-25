@@ -382,6 +382,8 @@ class TelegramAdapter:
 
     def _admin_order_followup(self, order: OrderConfirmation) -> TelegramOutbound | None:
         admin_chat = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "").strip()
+        if not is_authorized_admin_destination(admin_chat):
+            return None
         if not admin_chat:
             return None
         thread_raw = os.getenv("TELEGRAM_ADMIN_ORDERS_THREAD_ID", os.getenv("TELEGRAM_ADMIN_THREAD_ID", "")).strip()
@@ -1361,7 +1363,11 @@ class TelegramPoller:
         text = message.get("text") or message.get("caption") or ""
         if not isinstance(text, str):
             text = ""
-        room_key = str(update.get("room_key", "general"))
+        room_resolver = getattr(self._adapter, "room_key_for_update", None)
+        if callable(room_resolver):
+            room_key = room_resolver(update)
+        else:
+            room_key = str(update.get("room_key", "general"))
         username = str(sender.get("username", "") or "")
         raw_tags = message.get("image_tags", ())
         image_tags = tuple(tag for tag in raw_tags if isinstance(tag, str)) if isinstance(raw_tags, (list, tuple)) else ()
