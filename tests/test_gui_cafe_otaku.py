@@ -905,6 +905,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             lora_tags="[AKI_LORA]",
         )
         self.assertEqual(["Aki", "aki_(anime)"], character_suggestions([record]))
+        self.assertIn("Danbooru character tag: aki_(anime).", __import__("bot_ia.interfaces.cafe_orders", fromlist=["build_bebida_prompt"]))
         flow = BebidaOrderFlow()
         flow.start("user-1", "Aki")
         flow.set_character("user-1", "Aki", "aki_(anime)")
