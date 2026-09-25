@@ -91,6 +91,7 @@ from .waifu_registry import (
 from .mini_games import LocalGameRouter
 from bot_ia.interfaces.group_setup import DiscordGroupSetup, GroupSetupError, GroupSetupStore, TelegramGroupSetup
 from bot_ia.interfaces.cafe_economy import (CafeWalletStore, economy_price_text, draw_gacha, pity_text, purchase_bebida_order)
+from bot_ia.interfaces.cafe_immersion import TeaTimeScheduler
 from bot_ia.interfaces.cafe_orders import (
     BOLDNESS_LEVELS,
     DEFAULT_OUTFITS,
@@ -2543,7 +2544,12 @@ class CommandCenterWindow(QMainWindow):
         self.cafe_wallet = CafeWalletStore(ROOT)
         self._waifu_dialog: WaifuRegistryDialog | None = None
         self._bebida_dialog: BebidaOrderDialog | None = None
-        self._mini_game_router = LocalGameRouter(self.cafe_wallet)
+        self._tea_scheduler = TeaTimeScheduler()
+        self._tea_scheduler.start()
+        self._mini_game_router = LocalGameRouter(
+            self.cafe_wallet,
+            self._tea_scheduler,
+        )
         self._mini_games_dialog: QDialog | None = None
         self._matrix_chain_running = False
         self._matrix_chain_button: QPushButton | None = None
@@ -5333,6 +5339,7 @@ class CommandCenterWindow(QMainWindow):
             return
         self._closing = True
         self._telegram_poll_timer.stop()
+        self._tea_scheduler.stop(timeout=2.0)
 
         if (
             self._telegram_process is not None
