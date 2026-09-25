@@ -32,7 +32,7 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtGui import QColor, QFont, QKeyEvent, QPainter, QPixmap
+from PySide6.QtGui import QColor, QFont, QKeyEvent, QPainter, QPixmap, QPen
 from core.config import DynamicConfigManager
 from .admin_provisioning import AdminProvisioner
 from PySide6.QtWidgets import (
@@ -1999,6 +1999,34 @@ class WaifuRegistryDialog(QDialog):
             painter.setFont(QFont("Georgia", 17, QFont.Bold))
             painter.drawText(x + 10, box_y + 56, value[:18])
 
+    def _draw_ur_element_effects(self, painter: QPainter, record: WaifuRecord) -> None:
+        """Añade un acento elemental y efectos premium sin tapar el sprite."""
+        accents = {
+            "Fuego": QColor(230, 72, 35, 175),
+            "Agua": QColor(45, 145, 235, 175),
+            "Tierra": QColor(145, 95, 45, 175),
+            "Aire": QColor(180, 220, 235, 175),
+            "Luz": QColor(255, 235, 105, 185),
+            "Oscuridad": QColor(130, 85, 205, 180),
+            "Neutro": QColor(190, 190, 190, 150),
+        }
+        accent = accents.get(record.element.strip(), accents["Neutro"])
+        painter.save()
+        painter.setPen(QPen(accent, 8))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawRoundedRect(24, 24, 720, 976, 30, 30)
+        painter.setPen(QPen(QColor(255, 232, 145, 210), 3))
+        for x, y in ((88, 112), (680, 150), (104, 900), (665, 860)):
+            painter.drawLine(x - 14, y, x + 14, y)
+            painter.drawLine(x, y - 14, x, y + 14)
+        painter.setPen(QPen(accent, 5))
+        painter.drawLine(55, 180, 180, 55)
+        painter.drawLine(588, 969, 713, 844)
+        painter.setBrush(accent)
+        painter.drawEllipse(52, 52, 24, 24)
+        painter.drawEllipse(692, 948, 24, 24)
+        painter.restore()
+
     def _draw_playing_card_template(self, painter: QPainter, record: WaifuRecord) -> None:
         """Dibuja una plantilla de naipe local sin depender de arte externo."""
         painter.setPen(QColor(35, 35, 35))
@@ -2095,6 +2123,9 @@ class WaifuRegistryDialog(QDialog):
             painter.drawPixmap(0, 0, frame.scaled(
                 768, 1024, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
             ))
+
+            if rarity == "UR":
+                self._draw_ur_element_effects(painter, record)
 
             if record.card_category.casefold() in {
                 "waifumon / ficha de stats",
