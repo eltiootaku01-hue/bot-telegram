@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 
+import asyncio
 import base64
 from pathlib import Path
 
@@ -211,6 +212,57 @@ class WaitressPresenceManager:
             for name in expired:
                 self._states.pop(name, None)
             return len(expired)
+
+
+class AsyncBusyGuard:
+    """Guarda no bloqueante: libera automáticamente cada evento a los 60 s."""
+
+    def __init__(self, *, loop: asyncio.AbstractEventLoop | None = None) -> None:
+        self._loop = loop
+        self._events: dict[str, asyncio.Task[None]] = {}
+        self._lock = asyncio.Lock()
+
+    async def acquire(self, key: str, timeout: float = BUSY_EVENT_TIMEOUT_SECONDS) -> bool:
+        safe_key = str(key).strip()
+        if not safe_key:
+            raise ValueError("busy key cannot be empty")
+        bounded = min(float(timeout), BUSY_EVENT_TIMEOUT_SECONDS)
+        if bounded <= 0:
+            raise ValueError("timeout must be positive")
+        async with self._lock:
+            task = self._events.get(safe_key)
+            if task is not None and not task.done():
+                return False
+            self._events[safe_key] = asyncio.create_task(self._auto_release(safe_key, bounded))
+            return True
+
+    async def _auto_release(self, key: str, timeout: float) -> None:
+        try:
+            await asyncio.sleep(timeout)
+        except asyncio.CancelledError:
+            return
+        async with self._lock:
+            self._events.pop(key, None)
+
+    async def release(self, key: str) -> None:
+        async with self._lock:
+            task = self._events.pop(str(key), None)
+            if task is not None and not task.done():
+                task.cancel()
+
+    async def busy(self, key: str) -> bool:
+        async with self._lock:
+            task = self._events.get(str(key))
+            return task is not None and not task.done()
+
+    async def close(self) -> None:
+        async with self._lock:
+            tasks = tuple(self._events.values())
+            self._events.clear()
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
 
 TEA_TIME_DURATION_SECONDS = 20 * 60
