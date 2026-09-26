@@ -3,7 +3,7 @@
 import random
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
@@ -60,6 +60,89 @@ def get_available_referee(session: Session) -> Optional[str]:
         if r not in busy_referees and not is_referee_on_break(r)
     ]
     return random.choice(available) if available else None
+
+
+def _get_card_definition(item: Any) -> Any:
+    """Obtiene la definición de carta tanto de ORM como de estructuras dict."""
+    if isinstance(item, dict):
+        return item
+    template = getattr(item, "card_template", None)
+    if template is not None:
+        return template
+    return getattr(item, "card", item)
+
+
+def _get_card_type(item: Any) -> Optional[str]:
+    definition = _get_card_definition(item)
+    if isinstance(definition, dict):
+        value = definition.get("card_type", definition.get("type"))
+    else:
+        value = getattr(definition, "card_type", getattr(definition, "type", None))
+    return str(value).upper() if value is not None else None
+
+
+def create_rental_card_instance(
+    name: str,
+    card_type: str,
+    atk: int = 0,
+    def_val: int = 0,
+    effect_code: Optional[str] = None
+) -> dict:
+    """Crea una carta rental exclusivamente en memoria, sin persistencia."""
+    return {
+        "id": None,
+        "name": name,
+        "card_type": str(card_type).upper(),
+        "rarity": "R",
+        "is_rental": True,
+        "base_atk": max(0, int(atk)),
+        "base_def": max(0, int(def_val)),
+        "effect_code": effect_code,
+    }
+
+
+def get_or_create_rental_deck(
+    session: Session,
+    user_id: int,
+    user_inventory: list
+) -> dict:
+    """
+    Construye un mazo temporal de Waifu, Equipo y Magia.
+
+    Las cartas faltantes se generan como estructuras dict en memoria.
+    Esta función nunca crea, actualiza ni elimina CardInstance.
+    """
+    del session
+    del user_id
+
+    deck = {"waifu": None, "equipment": None, "magic": None}
+    slot_by_type = {
+        "WAIFU": "waifu",
+        "EQUIPMENT": "equipment",
+        "MAGIC": "magic",
+    }
+
+    for item in user_inventory or []:
+        slot = slot_by_type.get(_get_card_type(item))
+        if slot is not None and deck[slot] is None:
+            deck[slot] = item
+
+    if deck["waifu"] is None:
+        deck["waifu"] = create_rental_card_instance(
+            "Waifu Principiante", "WAIFU", atk=1000, def_val=1000
+        )
+
+    if deck["equipment"] is None:
+        deck["equipment"] = create_rental_card_instance(
+            "Escudo de Madera", "EQUIPMENT", atk=100, def_val=200
+        )
+
+    if deck["magic"] is None:
+        deck["magic"] = create_rental_card_instance(
+            "Poción de Taberna", "MAGIC", effect_code="BASIC_HEAL"
+        )
+
+    return deck
 
 
 def create_match_challenge(
