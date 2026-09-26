@@ -62,8 +62,37 @@ def get_available_referee(session: Session) -> Optional[str]:
     return random.choice(available) if available else None
 
 
+def release_staked_cards(session: Session, match: ActiveMatch) -> None:
+    """
+    Desbloquea las cartas apostadas o seleccionadas si el duelo no se completa.
+
+    La liberación se concentra aquí para que cancelaciones y expiraciones
+    utilicen exactamente la misma ruta de limpieza.
+    """
+    card_ids = [
+        match.p1_staked_card_id,
+        match.p2_staked_card_id,
+        match.p1_waifu_instance_id,
+        match.p1_equip_instance_id,
+        match.p1_magic_instance_id,
+        match.p2_waifu_instance_id,
+        match.p2_equip_instance_id,
+        match.p2_magic_instance_id,
+        match.staked_card_instance_id,
+    ]
+
+    valid_ids = list({str(card_id) for card_id in card_ids if card_id is not None})
+
+    if valid_ids:
+        session.query(CardInstance).filter(
+            CardInstance.id.in_(valid_ids)
+        ).update(
+            {"is_locked": False},
+            synchronize_session=False,
+        )
+
+
 def _get_card_definition(item: Any) -> Any:
-    """Obtiene la definición de carta tanto de ORM como de estructuras dict."""
     if isinstance(item, dict):
         return item
     template = getattr(item, "card_template", None)
@@ -88,7 +117,6 @@ def create_rental_card_instance(
     def_val: int = 0,
     effect_code: Optional[str] = None
 ) -> dict:
-    """Crea una carta rental exclusivamente en memoria, sin persistencia."""
     return {
         "id": None,
         "name": name,
@@ -106,21 +134,11 @@ def get_or_create_rental_deck(
     user_id: int,
     user_inventory: list
 ) -> dict:
-    """
-    Construye un mazo temporal de Waifu, Equipo y Magia.
-
-    Las cartas faltantes se generan como estructuras dict en memoria.
-    Esta función nunca crea, actualiza ni elimina CardInstance.
-    """
     del session
     del user_id
 
     deck = {"waifu": None, "equipment": None, "magic": None}
-    slot_by_type = {
-        "WAIFU": "waifu",
-        "EQUIPMENT": "equipment",
-        "MAGIC": "magic",
-    }
+    slot_by_type = {"WAIFU": "waifu", "EQUIPMENT": "equipment", "MAGIC": "magic"}
 
     for item in user_inventory or []:
         slot = slot_by_type.get(_get_card_type(item))
@@ -131,12 +149,10 @@ def get_or_create_rental_deck(
         deck["waifu"] = create_rental_card_instance(
             "Waifu Principiante", "WAIFU", atk=1000, def_val=1000
         )
-
     if deck["equipment"] is None:
         deck["equipment"] = create_rental_card_instance(
             "Escudo de Madera", "EQUIPMENT", atk=100, def_val=200
         )
-
     if deck["magic"] is None:
         deck["magic"] = create_rental_card_instance(
             "Poción de Taberna", "MAGIC", effect_code="BASIC_HEAL"
@@ -204,6 +220,7 @@ def accept_match_challenge(
     now = datetime.utcnow()
 
     if (now - match.created_at).total_seconds() > MATCH_TIMEOUT_SECONDS:
+        release_staked_cards(session, match)
         match.status = "EXPIRED"
         match.staked_card_instance_id = None
         set_referee_on_break(referee)
@@ -229,28 +246,9 @@ def validate_and_lock_staked_card(
     user_id: int,
     card_instance_id: str
 ) -> Tuple[bool, str]:
-    """
-    Valida y bloquea una carta para un duelo.
-
-    Blindajes:
-    - La operación solo se permite a participantes del duelo.
-    - La carta debe existir y pertenecer al usuario.
-    - Se usa SELECT ... FOR UPDATE cuando el motor lo soporta.
-    - Se rechaza una carta marcada como rental o locked si esos campos
-      existen en una versión posterior del modelo.
-    - La rareza debe coincidir con la ya fijada por el duelo.
-    - Una misma CardInstance no puede ser apostada por ambos jugadores.
-    - El cambio de apuesta y el bloqueo se confirman en una sola transacción.
-
-    Nota: el modelo actual del repositorio usa CardInstance.id como UUID string
-    y relaciona la plantilla mediante CardInstance.card; por eso no se usan
-    card_template ni un ID entero aquí.
-    """
     if user_id is None:
         return False, "Usuario no válido."
 
-    # La fase actual del repositorio es IN_PROGRESS después de aceptar el duelo.
-    # También se admite WAITING_FOR_STAKES para el flujo de apuestas futuro.
     match_stmt = (
         select(ActiveMatch)
         .where(ActiveMatch.id == match_id)
@@ -274,11 +272,10 @@ def validate_and_lock_staked_card(
     if not card:
         return False, "La carta seleccionada no existe."
 
-    # Compatibilidad con futuras columnas de economía/mercado.
     if getattr(card, "is_rental", False):
         return False, "⚠️ **Operación Denegada:** Las cartas prestadas por la mesera no se pueden apostar."
 
-    if getattr(card, "is_locked", False):
+    if card.is_locked:
         return False, "⚠️ Esta carta ya está en uso en otro duelo o mercado."
 
     if card.owner_id != user_id:
@@ -287,10 +284,7 @@ def validate_and_lock_staked_card(
     if match.p1_staked_card_id == card.id or match.p2_staked_card_id == card.id:
         return False, "⚠️ Esta misma carta ya fue seleccionada como apuesta en este duelo."
 
-    # El modelo actual usa card.rarity. Se mantiene fallback a card_template
-    # para compatibilidad con una futura migración del catálogo.
-    card_template = getattr(card, "card_template", None)
-    card_definition = card_template if card_template is not None else card.card
+    card_definition = getattr(card, "card_template", None) or card.card
     if card_definition is None:
         return False, "⚠️ La instancia no tiene una carta base válida."
 
@@ -310,12 +304,7 @@ def validate_and_lock_staked_card(
     else:
         match.p2_staked_card_id = card.id
 
-    # Solo se persiste el bloqueo si la columna existe en el modelo.
-    # Esto evita fingir un bloqueo durable cuando todavía no existe esa
-    # columna en la base de datos actual.
-    if hasattr(card, "is_locked"):
-        card.is_locked = True
-
+    card.is_locked = True
     session.commit()
 
     card_name = getattr(card_definition, "name", "Carta")
@@ -328,10 +317,6 @@ def validate_and_set_stakes(
     p1_card_instance_id: str,
     p2_card_instance_id: str
 ) -> Tuple[bool, str]:
-    """
-    Compatibilidad con el flujo anterior: valida ambas cartas y delega el
-    bloqueo individual para mantener una sola ruta de seguridad.
-    """
     match = session.get(ActiveMatch, match_id)
     if not match or match.status not in {"WAITING_FOR_STAKES", "IN_PROGRESS"}:
         return False, "No hay un duelo activo para establecer las apuestas."
@@ -370,28 +355,23 @@ def finish_match(
     referee = match.referee_name
     match.status = "FINISHED"
 
-    # Resolver tanto la apuesta histórica única como las dos apuestas nuevas.
     if match.staked_card_instance_id:
         card_inst = session.get(CardInstance, match.staked_card_instance_id)
         if card_inst:
             card_inst.owner_id = winner_id
-            if hasattr(card_inst, "is_locked"):
-                card_inst.is_locked = False
+            card_inst.is_locked = False
 
     if match.p1_staked_card_id and match.p2_staked_card_id:
         p1_card = session.get(CardInstance, str(match.p1_staked_card_id))
         p2_card = session.get(CardInstance, str(match.p2_staked_card_id))
 
-        # La apuesta perdedora pasa al ganador. La carta del ganador original
-        # permanece en su poder.
         loser_card = p2_card if winner_id == match.player1_id else p1_card
         if loser_card:
             loser_card.owner_id = winner_id
-            if hasattr(loser_card, "is_locked"):
-                loser_card.is_locked = False
+            loser_card.is_locked = False
 
         for card_inst in (p1_card, p2_card):
-            if card_inst and hasattr(card_inst, "is_locked"):
+            if card_inst:
                 card_inst.is_locked = False
 
     match.staked_card_instance_id = None
@@ -423,12 +403,12 @@ def forfeit_match(
     else:
         return False, "El usuario indicado no pertenece a este duelo."
 
-    referee = match.referee_name
     success, msg = finish_match(session, match_id, winner_id=winner_id)
 
     if not success:
         return False, msg
 
+    referee = match.referee_name
     dialogue = (
         f"⏳ **¡Tiempo agotado / Abandono!**\n\n"
         f"🍺 *{referee} declara el final del combate*: "
