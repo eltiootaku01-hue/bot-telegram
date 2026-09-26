@@ -59,6 +59,7 @@ class CardInstance(Base):
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     copy_number: Mapped[int] = mapped_column(Integer, nullable=False)
     level: Mapped[int] = mapped_column(Integer, default=1)
+    is_locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     acquired_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
     card: Mapped["Card"] = relationship("Card", back_populates="instances")
     owner: Mapped["User | None"] = relationship("User", back_populates="inventory")
@@ -82,56 +83,32 @@ class ActiveMatch(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     group_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     message_thread_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-
     player1_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     player2_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-
     p1_hp: Mapped[int] = mapped_column(Integer, default=100)
     p2_hp: Mapped[int] = mapped_column(Integer, default=100)
     current_turn_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
-    p1_waifu_instance_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("card_instances.id"), nullable=True
-    )
-    p1_equip_instance_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("card_instances.id"), nullable=True
-    )
-    p1_magic_instance_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("card_instances.id"), nullable=True
-    )
-
-    p2_waifu_instance_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("card_instances.id"), nullable=True
-    )
-    p2_equip_instance_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("card_instances.id"), nullable=True
-    )
-    p2_magic_instance_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("card_instances.id"), nullable=True
-    )
+    p1_waifu_instance_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("card_instances.id"), nullable=True)
+    p1_equip_instance_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("card_instances.id"), nullable=True)
+    p1_magic_instance_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("card_instances.id"), nullable=True)
+    p2_waifu_instance_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("card_instances.id"), nullable=True)
+    p2_equip_instance_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("card_instances.id"), nullable=True)
+    p2_magic_instance_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("card_instances.id"), nullable=True)
 
     staked_rarity: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    p1_staked_card_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("card_instances.id"), nullable=True
-    )
-    p2_staked_card_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("card_instances.id"), nullable=True
-    )
+    p1_staked_card_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("card_instances.id"), nullable=True)
+    p2_staked_card_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("card_instances.id"), nullable=True)
 
     coin_picker_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     coin_choice: Mapped[str | None] = mapped_column(String(10), nullable=True)
     first_turn_player_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     current_turn_player_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-
-    staked_card_instance_id: Mapped[str | None] = mapped_column(
-        ForeignKey("card_instances.id"), nullable=True
-    )
+    staked_card_instance_id: Mapped[str | None] = mapped_column(ForeignKey("card_instances.id"), nullable=True)
 
     status: Mapped[str] = mapped_column(String(20), default="IN_PROGRESS")
     referee_name: Mapped[str] = mapped_column(String(50), default="Mesera")
-    created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.datetime.utcnow
-    )
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
 
 
 class MatchHistory(Base):
@@ -143,9 +120,7 @@ class MatchHistory(Base):
     loser_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     staked_card_instance_id: Mapped[str | None] = mapped_column(ForeignKey("card_instances.id"), nullable=True)
     details: Mapped[str | None] = mapped_column(Text, nullable=True)
-    finished_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.datetime.utcnow
-    )
+    finished_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
 
 
 def init_db(db_url: str = "sqlite:///bot_database.db"):
