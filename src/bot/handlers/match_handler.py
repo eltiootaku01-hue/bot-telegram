@@ -4,7 +4,7 @@ import logging
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from src.db.models import ActiveMatch, User
@@ -100,18 +100,38 @@ async def duel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def accept_duel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Procesa el clic en el botón 'Aceptar Duelo'."""
+    """Procesa el clic en el botón 'Aceptar Duelo' con validaciones de seguridad en el Handler."""
     query = update.callback_query
-    await query.answer()
-
-    match_id = query.data.split(":")[1]
+    match_id = query.data.split(":", 1)[1]
     user_p2 = query.from_user
+    current_chat_id = query.message.chat.id
 
     with Session(engine) as session:
+        match = session.get(ActiveMatch, match_id)
+
+        if not match:
+            await query.answer("Este duelo ya no existe o fue cancelado.", show_alert=True)
+            return
+
+        # 1. Validación de contexto de Chat/Grupo
+        if match.group_id != current_chat_id:
+            await query.answer("❌ Este duelo pertenece a otro grupo.", show_alert=True)
+            return
+
+        # 2. Validación de Auto-Desafío
+        if user_p2.id == match.player1_id:
+            await query.answer("❌ No puedes aceptar tu propio reto.", show_alert=True)
+            return
+
+        # 3. Validación de Autorización para Reto Directo
+        if match.player2_id and match.player2_id != 0 and user_p2.id != match.player2_id:
+            await query.answer("❌ Este reto fue enviado a otra persona.", show_alert=True)
+            return
+
         # Asegurar que el jugador 2 esté registrado
         get_or_create_user(session, user_p2)
 
-        # Intentar aceptar el reto
+        # Intentar aceptar el reto en la capa de servicio
         success, result_message = accept_match_challenge(
             session=session,
             match_id=match_id,
@@ -119,16 +139,15 @@ async def accept_duel_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         )
 
         if not success:
-            # Mostrar alerta emergente o editar mensaje si falló/expiró
             if "expirado" in result_message.lower() or "no está disponible" in result_message.lower():
                 await query.edit_message_text(text=f"❌ {result_message}", reply_markup=None, parse_mode="Markdown")
             else:
                 await query.answer(text=f"⚠️ {result_message}", show_alert=True)
             return
 
-        # Si el duelo fue aceptado con éxito
-        match = session.get(ActiveMatch, match_id)
-        
+        # Refrescar la instancia tras confirmación
+        session.refresh(match)
+
         updated_text = (
             f"✨ **¡DUELO CONFIRMADO!** ✨\n\n"
             f"{result_message}\n\n"
@@ -138,14 +157,16 @@ async def accept_duel_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             f"💬 *Usen los comandos de batalla para atacar.*"
         )
 
+        await query.answer()
         await query.edit_message_text(text=updated_text, reply_markup=None, parse_mode="Markdown")
 
 
 async def decline_duel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Procesa la cancelación o rechazo del duelo."""
+    """Procesa la cancelación o rechazo del duelo con autorizaciones estrictas."""
     query = update.callback_query
-    match_id = query.data.split(":")[1]
+    match_id = query.data.split(":", 1)[1]
     user_clicking = query.from_user
+    current_chat_id = query.message.chat.id
 
     with Session(engine) as session:
         match = session.get(ActiveMatch, match_id)
@@ -154,9 +175,17 @@ async def decline_duel_callback(update: Update, context: ContextTypes.DEFAULT_TY
             await query.answer("Esta mesa ya no está disponible.", show_alert=True)
             return
 
-        # Solo el retador o el retado pueden presionar rechazar
-        if user_clicking.id not in [match.player1_id, match.player2_id] and match.player2_id != 0:
-            await query.answer("No puedes cancelar un duelo en el que no participas.", show_alert=True)
+        # 1. Validación de contexto de Chat/Grupo
+        if match.group_id != current_chat_id:
+            await query.answer("❌ Este duelo pertenece a otro grupo.", show_alert=True)
+            return
+
+        # 2. Validación de Autorización para Cancelar
+        is_direct_challenge = match.player2_id and match.player2_id != 0
+        allowed_users = [match.player1_id, match.player2_id] if is_direct_challenge else [match.player1_id]
+
+        if user_clicking.id not in allowed_users:
+            await query.answer("❌ Solo los participantes de este duelo pueden cancelarlo.", show_alert=True)
             return
 
         referee = match.referee_name
