@@ -162,3 +162,43 @@ def accept_match_challenge(
     session.commit()
 
     return True, REFEREE_PROFILES[referee]["accept"]
+
+
+def finish_match(
+    session: Session,
+    match_id: str,
+    winner_id: int
+) -> Tuple[bool, str]:
+    """
+    Finaliza un duelo activo en IN_PROGRESS:
+    - Cambia estado a FINISHED.
+    - Transfiere la carta apostada al ganador si no era el dueño original.
+    - Pone a la mesera referí en descanso (ON_BREAK) por 2 minutos.
+    """
+    match = session.get(ActiveMatch, match_id)
+
+    if not match or match.status != "IN_PROGRESS":
+        return False, "No se encontró un duelo en curso con esa identificación."
+
+    # Solo un participante puede ser declarado ganador.
+    if winner_id not in {match.player1_id, match.player2_id}:
+        return False, "El ganador indicado no participa en este duelo."
+
+    referee = match.referee_name
+    match.status = "FINISHED"
+
+    # Transferencia de la carta apostada si corresponde.
+    if match.staked_card_instance_id:
+        card_inst = session.get(CardInstance, match.staked_card_instance_id)
+        if card_inst:
+            card_inst.owner_id = winner_id
+
+    # Desvincular la carta del duelo después de resolver la apuesta.
+    match.staked_card_instance_id = None
+
+    # Enviar a la mesera a descanso tras concluir el combate.
+    set_referee_on_break(referee)
+
+    session.commit()
+    
+    return True, f"🏁 Duelo concluido. {referee} se retira a la cocina por su receso reglamentario."
