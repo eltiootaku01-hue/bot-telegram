@@ -353,6 +353,9 @@ def finish_match(
         return False, "El ganador indicado no participa en el duelo."
 
     referee = match.referee_name
+
+    # Liberar siempre las cartas seleccionadas y apostadas antes de limpiar referencias.
+    release_staked_cards(session, match)
     match.status = "FINISHED"
 
     if match.staked_card_instance_id:
