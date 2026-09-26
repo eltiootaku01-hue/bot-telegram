@@ -60,13 +60,13 @@ def get_available_referee(session: Session) -> Optional[str]:
         ActiveMatch.status.in_(["WAITING", "IN_PROGRESS"])
     )
     busy_referees = session.scalars(busy_stmt).all()
-    
+
     # Filtrar meseras que no estén ocupadas en DB ni descansando en memoria
     available = [
-        r for r in REFEREE_PROFILES.keys() 
+        r for r in REFEREE_PROFILES.keys()
         if r not in busy_referees and not is_referee_on_break(r)
     ]
-    
+
     return random.choice(available) if available else None
 
 
@@ -141,13 +141,13 @@ def accept_match_challenge(
     # Validar expiración por tiempo (90 segundos)
     if (now - match.created_at).total_seconds() > MATCH_TIMEOUT_SECONDS:
         match.status = "EXPIRED"
-        
+
         # 1. Liberar la carta apostada (el ownership nunca cambió, simplemente desvinculamos)
         match.staked_card_instance_id = None
-        
+
         # 2. Poner a la mesera en receso por hacerla esperar en vano
         set_referee_on_break(referee)
-        
+
         session.commit()
         return False, REFEREE_PROFILES[referee]["timeout"]
 
@@ -200,5 +200,45 @@ def finish_match(
     set_referee_on_break(referee)
 
     session.commit()
-    
+
     return True, f"🏁 Duelo concluido. {referee} se retira a la cocina por su receso reglamentario."
+
+
+def forfeit_match(
+    session: Session,
+    match_id: str,
+    forfeiter_id: int,
+    reason: str = "abandono"
+) -> Tuple[bool, str]:
+    """
+    Procesa la derrota automática por abandono, tiempo de turno agotado o rendición.
+    Le otorga la victoria al jugador que permaneció en la mesa.
+    """
+    match = session.get(ActiveMatch, match_id)
+
+    if not match or match.status != "IN_PROGRESS":
+        return False, "No hay un duelo activo para abandonar."
+
+    # Determinar el ganador: el jugador que no abandonó/rindió.
+    if forfeiter_id == match.player1_id:
+        winner_id = match.player2_id
+    elif forfeiter_id == match.player2_id:
+        winner_id = match.player1_id
+    else:
+        return False, "El usuario indicado no pertenece a este duelo."
+
+    referee = match.referee_name
+
+    # Reutilizar finish_match para centralizar transferencia de carta y descanso.
+    success, msg = finish_match(session, match_id, winner_id=winner_id)
+
+    if not success:
+        return False, msg
+
+    dialogue = (
+        f"⏳ **¡Tiempo agotado / Abandono!**\n\n"
+        f"🍺 *{referee} declara el final del combate*: "
+        f"«Un participante se ha retirado de la mesa. Victoria por {reason} para el rival.»"
+    )
+
+    return True, dialogue
