@@ -9,12 +9,13 @@ class Base(DeclarativeBase):
     pass
 
 # -------------------------------------------------------------------
-# 1. USUARIOS Y PERFILES (Coincide con Telegram ID)
+# 1. USUARIOS Y PERFILES (Soporta Telegram ID y Discord ID)
 # -------------------------------------------------------------------
 class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False) # Telegram User ID
+    discord_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, unique=True, index=True) # Discord ID opcional
     username: Mapped[str | None] = mapped_column(String(64), nullable=True)
     coins: Mapped[int] = mapped_column(Integer, default=100)
     xp: Mapped[int] = mapped_column(Integer, default=0)
@@ -66,14 +67,14 @@ class CardInstance(Base):
     owner: Mapped["User | None"] = relationship("User", back_populates="inventory")
 
 # -------------------------------------------------------------------
-# 4. DROPS EN GRUPOS Y TEMAS
+# 4. DROPS EN GRUPOS Y CANALES
 # -------------------------------------------------------------------
 class GroupDrop(Base):
     __tablename__ = "group_drops"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     group_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    message_thread_id: Mapped[int | None] = mapped_column(Integer, nullable=True) # Tema/Topic ID de Telegram
+    message_thread_id: Mapped[int | None] = mapped_column(Integer, nullable=True) # Tema/Topic ID de Telegram o Canal Discord
     card_instance_id: Mapped[str] = mapped_column(ForeignKey("card_instances.id"), nullable=False)
     is_claimed: Mapped[bool] = mapped_column(Boolean, default=False)
     claimed_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
@@ -107,7 +108,7 @@ class ActiveMatch(Base):
     )
 
 # -------------------------------------------------------------------
-# 6. HISTORIAL DE DUELOS (Para consultar en la Mini App)
+# 6. HISTORIAL DE DUELOS
 # -------------------------------------------------------------------
 class MatchHistory(Base):
     __tablename__ = "match_history"
