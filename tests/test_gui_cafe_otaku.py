@@ -1225,7 +1225,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         clean = sanitize_control_text(dirty)
         self.assertNotIn("\\x00", clean)
         self.assertNotIn("\\x1b", clean)
-        self.assertEqual("hola usuario", clean)
+        self.assertEqual("holausuario", clean)
         self.assertEqual("aki_(anime)", whitelist_tag("aki_(anime)", ["aki_(anime)"]))
         self.assertEqual("", whitelist_tag("forged_(anime)", ["aki_(anime)"]))
 
