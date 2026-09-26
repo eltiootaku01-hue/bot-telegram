@@ -407,6 +407,7 @@ PERSISTENT_WEB_PROVIDERS = frozenset({"gemini", "chatgpt", "copilot", "grok_clau
 
 LIGHTWEIGHT_CHROMIUM_ARGS = (
     "--disable-features=WebAuthentication,WebAuthenticationUI",
+    "--disable-features=Translate,BackForwardCache",
     "--disable-blink-features=AutomationControlled",
     "--hide-crash-restore-bubble",
     "--disable-gpu",
