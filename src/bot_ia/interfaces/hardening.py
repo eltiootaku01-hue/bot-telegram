@@ -25,7 +25,12 @@ def sanitize_control_text(value: object, *, max_length: int = 512) -> str:
     # Eliminar de forma explícita NUL y ESC antes del filtrado general.
     # Esto mantiene el contrato de hardening incluso si cambia la tabla
     # de categorías Unicode en una futura refactorización.
-    text = (\n        text.replace("\x00", "")\n        .replace("\x1b", "")\n        .replace("\\x00", "")\n        .replace("\\x1b", "")\n    )
+    text = (
+        text.replace("\x00", "")
+        .replace("\x1b", "")
+        .replace("\\x00", "")
+        .replace("\\x1b", "")
+    )
     text = "".join(
         character
         for character in text
