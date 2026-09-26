@@ -5,6 +5,8 @@ import ast
 import os
 import importlib
 import unittest
+import sqlite3
+import gc
 from unittest.mock import patch
 
 
@@ -71,9 +73,9 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             finally:
                 # Cerrar explícitamente cualquier conexión abierta por la prueba
                 # antes de detener el escritor WAL y destruir el directorio temporal.
-                db = sqlite3.connect(Path(tmp) / "xp.sqlite3")
+                conn = sqlite3.connect(Path(tmp) / "xp.sqlite3")
                 try:
-                    db.close()
+                    conn.close()
                 finally:
                     tracker.stop()
                     thread = getattr(tracker, "_thread", None)
@@ -83,6 +85,9 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
                         thread.is_alive() if thread is not None else False,
                         "PassiveXPTracker debe detener su escritor SQLite antes de eliminar TemporaryDirectory",
                     )
+                    del conn
+                    del tracker
+                    gc.collect()
 
     def test_passive_xp_discord_integration_contract(self):
         source = (self.ROOT / "src" / "bot_ia" / "interfaces" / "group_setup.py").read_text(encoding="utf-8")
@@ -1188,8 +1193,9 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
 
         guard = MutexGuard()
         self.assertTrue(guard.try_acquire("catch:user-1"))
-        # threading.Lock no es reentrante: el segundo intento debe devolver False.
-        self.assertFalse(guard.try_acquire("catch:user-1"))
+        # MutexGuard conserva el threading.Lock y no permite reentrada.
+        reentrant = guard.try_acquire("catch:user-1")
+        self.assertIs(reentrant, False)
         guard.release("catch:user-1")
         self.assertTrue(guard.try_acquire("catch:user-1"))
         self.assertFalse(guard.try_acquire("catch:user-1"))
