@@ -1471,7 +1471,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "ROOMS = (",
             '"#tcg-collection"',
             '"#mesa-de-apuestas-21"',
-            '"#zona-reservada",
+            '"#zona-reservada"',
         ):
             self.assertIn(token, group)
         self.assertIn('command == "/setup_group"', telegram)
