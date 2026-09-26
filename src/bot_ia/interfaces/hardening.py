@@ -7,7 +7,6 @@ from contextlib import contextmanager
 import re
 import threading
 import unicodedata
-import weakref
 from collections.abc import Iterator, Iterable
 
 
@@ -55,7 +54,7 @@ class MutexGuard:
 
     def __init__(self) -> None:
         self._registry_lock = threading.Lock()
-        self._locks: weakref.WeakValueDictionary[str, threading.Lock] = weakref.WeakValueDictionary()
+        self._locks: dict[str, threading.Lock] = {}
 
     def _get_lock(self, key: str) -> threading.Lock:
         normalized = sanitize_control_text(key, max_length=256).casefold()
