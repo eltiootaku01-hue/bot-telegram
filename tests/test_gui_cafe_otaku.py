@@ -71,13 +71,13 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
                 bus.publish("moderation", platform="telegram", user_id="user-1", details="message deleted")
                 self.assertEqual("moderation", events[0][0])
             finally:
-                # Cerrar explícitamente cualquier conexión abierta por la prueba
-                # antes de detener el escritor WAL y destruir el directorio temporal.
-                conn = sqlite3.connect(Path(tmp) / "xp.sqlite3")
+                # Detener primero el escritor WAL y cerrar explícitamente la
+                # conexión antes de que Windows intente eliminar TemporaryDirectory.
+                tracker.stop()
+                db = sqlite3.connect(Path(tmp) / "xp.sqlite3")
                 try:
-                    conn.close()
+                    db.close()
                 finally:
-                    tracker.stop()
                     thread = getattr(tracker, "_thread", None)
                     if thread is not None and thread.is_alive():
                         thread.join(timeout=5.0)
@@ -85,8 +85,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
                         thread.is_alive() if thread is not None else False,
                         "PassiveXPTracker debe detener su escritor SQLite antes de eliminar TemporaryDirectory",
                     )
-                    del conn
                     del tracker
+                    del db
                     gc.collect()
 
     def test_passive_xp_discord_integration_contract(self):
