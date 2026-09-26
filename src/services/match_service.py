@@ -164,6 +164,52 @@ def accept_match_challenge(
     return True, REFEREE_PROFILES[referee]["accept"]
 
 
+def validate_and_set_stakes(
+    session: Session,
+    match_id: str,
+    p1_card_instance_id: str,
+    p2_card_instance_id: str
+) -> Tuple[bool, str]:
+    """
+    Valida las cartas apostadas y exige que ambas pertenezcan a la misma rareza.
+    Las IDs de CardInstance son UUID string en el modelo actual.
+    """
+    match = session.get(ActiveMatch, match_id)
+    if not match or match.status != "IN_PROGRESS":
+        return False, "No hay un duelo activo para establecer las apuestas."
+
+    c1 = session.get(CardInstance, p1_card_instance_id)
+    c2 = session.get(CardInstance, p2_card_instance_id)
+
+    if not c1 or not c2:
+        return False, "Una o ambas cartas apostadas no existen en el inventario."
+
+    # La apuesta debe corresponder al propietario de cada lado del duelo.
+    if c1.owner_id != match.player1_id:
+        return False, "La carta apostada por el Jugador 1 no pertenece a su inventario."
+    if c2.owner_id != match.player2_id:
+        return False, "La carta apostada por el Jugador 2 no pertenece a su inventario."
+
+    # El modelo actual relaciona CardInstance con Card mediante .card.
+    rarity1 = c1.card.rarity
+    rarity2 = c2.card.rarity
+
+    if rarity1 != rarity2:
+        return (
+            False,
+            f"⚠️ **Apuesta Desequilibrada:** se intentó apostar una carta "
+            f"**{rarity1}** contra una **{rarity2}**. Las apuestas deben ser de la misma rareza."
+        )
+
+    match.p1_staked_card_id = c1.id
+    match.p2_staked_card_id = c2.id
+    match.staked_rarity = rarity1
+
+    session.commit()
+
+    return True, f"✅ Apuestas validadas correctamente: ambos apostaron una carta **{rarity1}**."
+
+
 def finish_match(
     session: Session,
     match_id: str,
