@@ -22,6 +22,10 @@ def sanitize_control_text(value: object, *, max_length: int = 512) -> str:
     if max_length <= 0:
         raise ValueError("max_length debe ser > 0")
     text = unicodedata.normalize("NFKC", str(value or ""))
+    # Eliminar de forma explícita NUL y ESC antes del filtrado general.
+    # Esto mantiene el contrato de hardening incluso si cambia la tabla
+    # de categorías Unicode en una futura refactorización.
+    text = text.replace("\x00", "").replace("\x1b", "")
     text = "".join(
         character
         for character in text
