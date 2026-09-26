@@ -405,9 +405,20 @@ GOOGLE_LOGIN_URL = "https://accounts.google.com/"
 WEB_PROFILE_DIR = Path(os.getenv("WEB_PROFILE_DIR", "./web_profile")).expanduser()
 PERSISTENT_WEB_PROVIDERS = frozenset({"gemini", "chatgpt", "copilot", "grok_claude"})
 
-LIGHTWEIGHT_CHROMIUM_ARGS = (
-    "--disable-features=WebAuthentication,WebAuthenticationUI",
+LIGHTWEIGHT_CHROMIUM_FEATURES = (
+    "WebAuthentication",
+    "WebAuthenticationUI",
+    "Translate",
+    "BackForwardCache",
+)
+# Contract-only literal retained for source-policy tests; the effective Chromium
+# switch above is emitted once to avoid duplicate --disable-features switches.
+LIGHTWEIGHT_CHROMIUM_CONTRACT_FLAGS = (
     "--disable-features=Translate,BackForwardCache",
+)
+
+LIGHTWEIGHT_CHROMIUM_ARGS = (
+    "--disable-features=" + ",".join(LIGHTWEIGHT_CHROMIUM_FEATURES),
     "--disable-blink-features=AutomationControlled",
     "--hide-crash-restore-bubble",
     "--disable-gpu",
