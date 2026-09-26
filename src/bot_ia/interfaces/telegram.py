@@ -1780,10 +1780,12 @@ class TelegramPoller:
                                 errors += 1
                                 break
                         else:
+                            message_ids: list[int] = []
                             result = self._client.send(outbound)
-                            self._append_message_ids(
-                                [],
-                                result,
+                            self._append_message_ids(message_ids, result)
+                            self._schedule_auto_delete_if_needed(
+                                outbound,
+                                message_ids,
                             )
                             self._mark_events_completed(
                                 update_id,
