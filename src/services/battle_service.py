@@ -4,6 +4,7 @@ import logging
 import math
 from typing import Any, Dict, Optional
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.db.models import ActiveMatch, CardInstance
@@ -136,6 +137,90 @@ def calculate_combat_stats(
         "heal_amount": heal_amount,
         "magic_effect": effect,
     }
+
+
+def set_player_deck_and_lock(
+    session: Session,
+    match_id: str,
+    player_id: int,
+    deck: Dict[str, Dict[str, Any]],
+) -> bool:
+    """
+    Persiste un mazo real de CardInstance en ActiveMatch y bloquea sus cartas
+    de forma atómica desde el punto de vista de la transacción SQLAlchemy.
+
+    La función usa owner_id, porque es el campo de propiedad real del modelo
+    actual. Las columnas *_instance_id de ActiveMatch almacenan las referencias.
+    """
+    required_slots = ("waifu", "equip", "magic")
+    if not isinstance(deck, dict) or not all(
+        isinstance(deck.get(slot), dict) and deck[slot].get("id") is not None
+        for slot in required_slots
+    ):
+        return False
+
+    card_ids = [str(deck[slot]["id"]) for slot in required_slots]
+    if len(set(card_ids)) != len(card_ids):
+        return False
+
+    match_stmt = (
+        select(ActiveMatch)
+        .where(ActiveMatch.id == match_id)
+        .with_for_update()
+    )
+    match = session.scalars(match_stmt).first()
+
+    if not match or match.status != "IN_PROGRESS":
+        return False
+
+    if player_id == match.player1_id:
+        slot_fields = (
+            "p1_waifu_instance_id",
+            "p1_equip_instance_id",
+            "p1_magic_instance_id",
+        )
+    elif player_id == match.player2_id:
+        slot_fields = (
+            "p2_waifu_instance_id",
+            "p2_equip_instance_id",
+            "p2_magic_instance_id",
+        )
+    else:
+        return False
+
+    card_stmt = (
+        select(CardInstance)
+        .where(
+            CardInstance.id.in_(card_ids),
+            CardInstance.owner_id == player_id,
+            CardInstance.is_locked.is_(False),
+        )
+        .with_for_update()
+    )
+    cards = session.scalars(card_stmt).all()
+
+    if len(cards) != len(card_ids):
+        session.rollback()
+        return False
+
+    cards_by_id = {str(card.id): card for card in cards}
+    if set(cards_by_id) != set(card_ids):
+        session.rollback()
+        return False
+
+    try:
+        for field_name, card_id in zip(slot_fields, card_ids):
+            setattr(match, field_name, card_id)
+
+        for card in cards:
+            card.is_locked = True
+
+        session.commit()
+        return True
+    except Exception:
+        session.rollback()
+        logger.exception("No se pudo persistir y bloquear el mazo del duelo %s", match_id)
+        return False
 
 
 def execute_turn(
