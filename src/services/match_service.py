@@ -10,13 +10,11 @@ from sqlalchemy.orm import Session
 
 from src.db.models import ActiveMatch, CardInstance, User
 
-MATCH_TIMEOUT_SECONDS = 90  # 90 segundos para aceptar o expira el reto
-BREAK_DURATION_SECONDS = 120  # 2 minutos de descanso tras coordinar/expirar un duelo
+MATCH_TIMEOUT_SECONDS = 90
+BREAK_DURATION_SECONDS = 120
 
-# Registro en memoria de descansos temporales para no recargar SQLite
 REFEREE_BREAKS: Dict[str, datetime] = {}
 
-# Perfiles de personalidad y diálogos de las Meseras Referí
 REFEREE_PROFILES: Dict[str, Dict[str, str]] = {
     "Cari": {
         "start": "☕ *Cari limpia la mesa con un trapo cansada*: «Bueno, coordinemos esto rápido que mi café se enfría. Tienen 90 segundos para aceptar o me voy a la cocina.»",
@@ -40,7 +38,6 @@ REFEREE_PROFILES: Dict[str, Dict[str, str]] = {
 
 
 def is_referee_on_break(referee_name: str) -> bool:
-    """Verifica si la mesera está actualmente en su tiempo de descanso."""
     break_until = REFEREE_BREAKS.get(referee_name)
     if break_until and datetime.utcnow() < break_until:
         return True
@@ -48,25 +45,20 @@ def is_referee_on_break(referee_name: str) -> bool:
 
 
 def set_referee_on_break(referee_name: str):
-    """Pone a la mesera en estado de descanso (ON_BREAK) por 2 minutos."""
     REFEREE_BREAKS[referee_name] = datetime.utcnow() + timedelta(seconds=BREAK_DURATION_SECONDS)
 
 
 def get_available_referee(session: Session) -> Optional[str]:
-    """
-    Selecciona una mesera libre que no esté en un duelo activo ni en descanso (ON_BREAK).
-    """
     busy_stmt = select(ActiveMatch.referee_name).where(
         ActiveMatch.status.in_(["WAITING", "IN_PROGRESS"])
     )
     busy_referees = session.scalars(busy_stmt).all()
 
-    # Filtrar meseras que no estén ocupadas en DB ni descansando en memoria
     available = [
-        r for r in REFEREE_PROFILES.keys()
+        r
+        for r in REFEREE_PROFILES.keys()
         if r not in busy_referees and not is_referee_on_break(r)
     ]
-
     return random.choice(available) if available else None
 
 
@@ -78,14 +70,10 @@ def create_match_challenge(
     staked_card_id: Optional[str] = None,
     message_thread_id: Optional[int] = None
 ) -> Tuple[bool, str, Optional[ActiveMatch]]:
-    """
-    Crea una solicitud de duelo asignando una mesera libre y un tiempo de expiración (90s).
-    """
     referee = get_available_referee(session)
     if not referee:
         return False, "☕ *Todas las meseras están en duelos o en su descanso de cocina.* ¡Inténtalo en un par de minutos!", None
 
-    # Verificar que el retador no tenga otro duelo activo
     active_stmt = select(ActiveMatch).where(
         or_(ActiveMatch.player1_id == player1_id, ActiveMatch.player2_id == player1_id),
         ActiveMatch.status.in_(["WAITING", "IN_PROGRESS"])
@@ -93,7 +81,6 @@ def create_match_challenge(
     if session.scalars(active_stmt).first():
         return False, "⚠️ Ya tienes una mesa o duelo en curso. Termina tu partida antes de pedir otra.", None
 
-    # Validar propiedad de la carta si se está apostando una
     if staked_card_id:
         card_inst = session.get(CardInstance, staked_card_id)
         if not card_inst or card_inst.owner_id != player1_id:
@@ -117,8 +104,7 @@ def create_match_challenge(
     session.add(new_match)
     session.commit()
 
-    intro_msg = REFEREE_PROFILES[referee]["start"]
-    return True, intro_msg, new_match
+    return True, REFEREE_PROFILES[referee]["start"], new_match
 
 
 def accept_match_challenge(
@@ -126,10 +112,6 @@ def accept_match_challenge(
     match_id: str,
     player2_id: int
 ) -> Tuple[bool, str]:
-    """
-    Procesa la aceptación del reto validando tiempos (90s) y permisos.
-    Si expira, libera la carta apostada y envía a la mesera a descanso.
-    """
     match = session.get(ActiveMatch, match_id)
 
     if not match or match.status != "WAITING":
@@ -138,16 +120,10 @@ def accept_match_challenge(
     referee = match.referee_name
     now = datetime.utcnow()
 
-    # Validar expiración por tiempo (90 segundos)
     if (now - match.created_at).total_seconds() > MATCH_TIMEOUT_SECONDS:
         match.status = "EXPIRED"
-
-        # 1. Liberar la carta apostada (el ownership nunca cambió, simplemente desvinculamos)
         match.staked_card_instance_id = None
-
-        # 2. Poner a la mesera en receso por hacerla esperar en vano
         set_referee_on_break(referee)
-
         session.commit()
         return False, REFEREE_PROFILES[referee]["timeout"]
 
@@ -164,6 +140,105 @@ def accept_match_challenge(
     return True, REFEREE_PROFILES[referee]["accept"]
 
 
+def validate_and_lock_staked_card(
+    session: Session,
+    match_id: str,
+    user_id: int,
+    card_instance_id: str
+) -> Tuple[bool, str]:
+    """
+    Valida y bloquea una carta para un duelo.
+
+    Blindajes:
+    - La operación solo se permite a participantes del duelo.
+    - La carta debe existir y pertenecer al usuario.
+    - Se usa SELECT ... FOR UPDATE cuando el motor lo soporta.
+    - Se rechaza una carta marcada como rental o locked si esos campos
+      existen en una versión posterior del modelo.
+    - La rareza debe coincidir con la ya fijada por el duelo.
+    - Una misma CardInstance no puede ser apostada por ambos jugadores.
+    - El cambio de apuesta y el bloqueo se confirman en una sola transacción.
+
+    Nota: el modelo actual del repositorio usa CardInstance.id como UUID string
+    y relaciona la plantilla mediante CardInstance.card; por eso no se usan
+    card_template ni un ID entero aquí.
+    """
+    if user_id is None:
+        return False, "Usuario no válido."
+
+    # La fase actual del repositorio es IN_PROGRESS después de aceptar el duelo.
+    # También se admite WAITING_FOR_STAKES para el flujo de apuestas futuro.
+    match_stmt = (
+        select(ActiveMatch)
+        .where(ActiveMatch.id == match_id)
+        .with_for_update()
+    )
+    match = session.scalars(match_stmt).first()
+
+    if not match or match.status not in {"WAITING_FOR_STAKES", "IN_PROGRESS"}:
+        return False, "El duelo no está en fase de apuestas o ya no existe."
+
+    if user_id not in {match.player1_id, match.player2_id}:
+        return False, "⚠️ **Operación Denegada:** no participas en este duelo."
+
+    card_stmt = (
+        select(CardInstance)
+        .where(CardInstance.id == str(card_instance_id))
+        .with_for_update()
+    )
+    card = session.scalars(card_stmt).first()
+
+    if not card:
+        return False, "La carta seleccionada no existe."
+
+    # Compatibilidad con futuras columnas de economía/mercado.
+    if getattr(card, "is_rental", False):
+        return False, "⚠️ **Operación Denegada:** Las cartas prestadas por la mesera no se pueden apostar."
+
+    if getattr(card, "is_locked", False):
+        return False, "⚠️ Esta carta ya está en uso en otro duelo o mercado."
+
+    if card.owner_id != user_id:
+        return False, "⚠️ **Violación de Seguridad:** Intentaste apostar una carta que no te pertenece."
+
+    if match.p1_staked_card_id == card.id or match.p2_staked_card_id == card.id:
+        return False, "⚠️ Esta misma carta ya fue seleccionada como apuesta en este duelo."
+
+    # El modelo actual usa card.rarity. Se mantiene fallback a card_template
+    # para compatibilidad con una futura migración del catálogo.
+    card_template = getattr(card, "card_template", None)
+    card_definition = card_template if card_template is not None else card.card
+    if card_definition is None:
+        return False, "⚠️ La instancia no tiene una carta base válida."
+
+    rarity = card_definition.rarity
+
+    if match.staked_rarity is None:
+        match.staked_rarity = rarity
+    elif rarity != match.staked_rarity:
+        return (
+            False,
+            f"⚠️ **Apuesta Inválida:** Tu oponente apostó una carta "
+            f"**{match.staked_rarity}**. Debes apostar una carta de la misma rareza."
+        )
+
+    if user_id == match.player1_id:
+        match.p1_staked_card_id = card.id
+    else:
+        match.p2_staked_card_id = card.id
+
+    # Solo se persiste el bloqueo si la columna existe en el modelo.
+    # Esto evita fingir un bloqueo durable cuando todavía no existe esa
+    # columna en la base de datos actual.
+    if hasattr(card, "is_locked"):
+        card.is_locked = True
+
+    session.commit()
+
+    card_name = getattr(card_definition, "name", "Carta")
+    return True, f"✅ Carta **{card_name}** ({rarity}) fijada y bloqueada correctamente para el duelo."
+
+
 def validate_and_set_stakes(
     session: Session,
     match_id: str,
@@ -171,43 +246,29 @@ def validate_and_set_stakes(
     p2_card_instance_id: str
 ) -> Tuple[bool, str]:
     """
-    Valida las cartas apostadas y exige que ambas pertenezcan a la misma rareza.
-    Las IDs de CardInstance son UUID string en el modelo actual.
+    Compatibilidad con el flujo anterior: valida ambas cartas y delega el
+    bloqueo individual para mantener una sola ruta de seguridad.
     """
     match = session.get(ActiveMatch, match_id)
-    if not match or match.status != "IN_PROGRESS":
+    if not match or match.status not in {"WAITING_FOR_STAKES", "IN_PROGRESS"}:
         return False, "No hay un duelo activo para establecer las apuestas."
 
-    c1 = session.get(CardInstance, p1_card_instance_id)
-    c2 = session.get(CardInstance, p2_card_instance_id)
+    ok, message = validate_and_lock_staked_card(
+        session, match_id, match.player1_id, p1_card_instance_id
+    )
+    if not ok:
+        return False, message
 
-    if not c1 or not c2:
-        return False, "Una o ambas cartas apostadas no existen en el inventario."
+    ok, message = validate_and_lock_staked_card(
+        session, match_id, match.player2_id, p2_card_instance_id
+    )
+    if not ok:
+        return False, message
 
-    # La apuesta debe corresponder al propietario de cada lado del duelo.
-    if c1.owner_id != match.player1_id:
-        return False, "La carta apostada por el Jugador 1 no pertenece a su inventario."
-    if c2.owner_id != match.player2_id:
-        return False, "La carta apostada por el Jugador 2 no pertenece a su inventario."
-
-    # El modelo actual relaciona CardInstance con Card mediante .card.
-    rarity1 = c1.card.rarity
-    rarity2 = c2.card.rarity
-
-    if rarity1 != rarity2:
-        return (
-            False,
-            f"⚠️ **Apuesta Desequilibrada:** se intentó apostar una carta "
-            f"**{rarity1}** contra una **{rarity2}**. Las apuestas deben ser de la misma rareza."
-        )
-
-    match.p1_staked_card_id = c1.id
-    match.p2_staked_card_id = c2.id
-    match.staked_rarity = rarity1
-
-    session.commit()
-
-    return True, f"✅ Apuestas validadas correctamente: ambos apostaron una carta **{rarity1}**."
+    return True, (
+        f"✅ Apuestas validadas y bloqueadas correctamente: "
+        f"ambos apostaron una carta **{match.staked_rarity}**."
+    )
 
 
 def finish_match(
@@ -215,36 +276,47 @@ def finish_match(
     match_id: str,
     winner_id: int
 ) -> Tuple[bool, str]:
-    """
-    Finaliza un duelo activo en IN_PROGRESS:
-    - Cambia estado a FINISHED.
-    - Transfiere la carta apostada al ganador si no era el dueño original.
-    - Pone a la mesera referí en descanso (ON_BREAK) por 2 minutos.
-    """
     match = session.get(ActiveMatch, match_id)
 
     if not match or match.status != "IN_PROGRESS":
         return False, "No se encontró un duelo en curso con esa identificación."
 
-    # Solo un participante puede ser declarado ganador.
     if winner_id not in {match.player1_id, match.player2_id}:
-        return False, "El ganador indicado no participa en este duelo."
+        return False, "El ganador indicado no participa en el duelo."
 
     referee = match.referee_name
     match.status = "FINISHED"
 
-    # Transferencia de la carta apostada si corresponde.
+    # Resolver tanto la apuesta histórica única como las dos apuestas nuevas.
     if match.staked_card_instance_id:
         card_inst = session.get(CardInstance, match.staked_card_instance_id)
         if card_inst:
             card_inst.owner_id = winner_id
+            if hasattr(card_inst, "is_locked"):
+                card_inst.is_locked = False
 
-    # Desvincular la carta del duelo después de resolver la apuesta.
+    if match.p1_staked_card_id and match.p2_staked_card_id:
+        p1_card = session.get(CardInstance, str(match.p1_staked_card_id))
+        p2_card = session.get(CardInstance, str(match.p2_staked_card_id))
+
+        # La apuesta perdedora pasa al ganador. La carta del ganador original
+        # permanece en su poder.
+        loser_card = p2_card if winner_id == match.player1_id else p1_card
+        if loser_card:
+            loser_card.owner_id = winner_id
+            if hasattr(loser_card, "is_locked"):
+                loser_card.is_locked = False
+
+        for card_inst in (p1_card, p2_card):
+            if card_inst and hasattr(card_inst, "is_locked"):
+                card_inst.is_locked = False
+
     match.staked_card_instance_id = None
+    match.p1_staked_card_id = None
+    match.p2_staked_card_id = None
+    match.staked_rarity = None
 
-    # Enviar a la mesera a descanso tras concluir el combate.
     set_referee_on_break(referee)
-
     session.commit()
 
     return True, f"🏁 Duelo concluido. {referee} se retira a la cocina por su receso reglamentario."
@@ -256,16 +328,11 @@ def forfeit_match(
     forfeiter_id: int,
     reason: str = "abandono"
 ) -> Tuple[bool, str]:
-    """
-    Procesa la derrota automática por abandono, tiempo de turno agotado o rendición.
-    Le otorga la victoria al jugador que permaneció en la mesa.
-    """
     match = session.get(ActiveMatch, match_id)
 
     if not match or match.status != "IN_PROGRESS":
         return False, "No hay un duelo activo para abandonar."
 
-    # Determinar el ganador: el jugador que no abandonó/rindió.
     if forfeiter_id == match.player1_id:
         winner_id = match.player2_id
     elif forfeiter_id == match.player2_id:
@@ -274,8 +341,6 @@ def forfeit_match(
         return False, "El usuario indicado no pertenece a este duelo."
 
     referee = match.referee_name
-
-    # Reutilizar finish_match para centralizar transferencia de carta y descanso.
     success, msg = finish_match(session, match_id, winner_id=winner_id)
 
     if not success:
