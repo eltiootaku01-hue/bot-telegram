@@ -7,6 +7,7 @@ from telegram.ext import (
     CommandHandler,
 )
 
+from src.bot.handlers.battle_handler import register_battle_handlers
 from src.bot.handlers.deck_selection_handler import (
     deck_callback_handler,
     start_deck_selection_handler,
@@ -33,6 +34,9 @@ def create_bot_app():
 
     # Registrar el módulo de duelos.
     register_match_handlers(app)
+
+    # Registrar el motor de combate.
+    register_battle_handlers(app)
 
     # Selector interactivo de mazo.
     app.add_handler(CommandHandler("mazo", start_deck_selection_handler))
