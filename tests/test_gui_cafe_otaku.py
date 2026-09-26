@@ -2595,7 +2595,6 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "supervise_admin_publication",
             "superadmin_is_immune",
             "scan_cami_guard",
-            "DEFAULT_REACTIONS",
             "COMMENT_REPLY_TEXT",
             "DISCORD_COMMENT_THREAD_NAME",
         ):
