@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Colección TCG</title>
+  <!-- Telegram Mini App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Tailwind CSS CDN para estilos rápidos -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .bg-rarity-Common { border-color: #9ca3af; }
+    .bg-rarity-Rare { border-color: #3b82f6; }
+    .bg-rarity-Epic { border-color: #a855f7; }
+    .bg-rarity-Legendary { border-color: #eab308; box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); }
+  </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-4 font-sans">
+
+  <header class="text-center mb-6">
+    <h1 class="text-2xl font-bold text-amber-400">🎴 Mi Mazo de Cartas</h1>
+    <p id="user-info" class="text-xs text-slate-400 mt-1">Cargando datos del jugador...</p>
+  </header>
+
+  <!-- Contenedor del inventario -->
+  <main id="inventory-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+    <div class="col-span-full text-center py-10 text-slate-500">
+      Cargando colección...
+    </div>
+  </main>
+
+  <script>
+    // Configuración del backend FastAPI
+    const API_BASE_URL = "https://TU-SERVIDOR.com"; // Reemplazar con URL real o Ngrok en desarrollo
+
+    // Inicialización del Telegram Mini App SDK
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+
+    async function loadInventory() {
+      const grid = document.getElementById("inventory-grid");
+      const userInfo = document.getElementById("user-info");
+
+      const initData = tg?.initData || "";
+      const user = tg?.initDataUnsafe?.user;
+
+      if (user) {
+        userInfo.textContent = `Jugador: ${user.first_name} (@${user.username || 'sin_alias'})`;
+      } else {
+        userInfo.textContent = "Modo vista previa (Sin initData de Telegram)";
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/inventory`, {
+          method: "GET",
+          headers: {
+            "Authorization": `tma ${initData}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        const cards = await response.json();
+
+        if (cards.length === 0) {
+          grid.innerHTML = `
+            <div class="col-span-full text-center py-10 text-slate-400">
+              <p class="text-lg">📭 Aún no tienes cartas en tu colección.</p>
+              <p class="text-xs mt-2 text-slate-500">¡Estate atento a los drops en los grupos!</p>
+            </div>`;
+          return;
+        }
+
+        grid.innerHTML = cards.map(item => `
+          <div class="bg-slate-800 border-2 bg-rarity-${item.card.rarity} rounded-xl p-3 flex flex-col justify-between shadow-lg relative overflow-hidden">
+            <span class="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900/80 text-amber-300">
+              #${item.copy_number}
+            </span>
+            
+            <img src="${item.card.image_url || 'https://placehold.co/400x600/png?text=Sin+Imagen'}" 
+                 alt="${item.card.name}" 
+                 class="w-full h-36 object-cover rounded-lg mb-2">
+
+            <div>
+              <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">${item.card.rarity}</span>
+              <h2 class="text-sm font-semibold text-white truncate">${item.card.name}</h2>
+            </div>
+
+            <div class="flex justify-between items-center mt-3 pt-2 border-t border-slate-700/60 text-xs">
+              <span class="text-red-400 font-bold">⚔️ ${item.card.attack}</span>
+              <span class="text-blue-400 font-bold">🛡️ ${item.card.defense}</span>
+              <span class="text-emerald-400 font-bold">Lvl ${item.level}</span>
+            </div>
+          </div>
+        `).join("");
+
+      } catch (err) {
+        console.error(err);
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-10 text-red-400">
+            ❌ Error al conectar con el servidor.<br>
+            <span class="text-xs text-slate-500">${err.message}</span>
+          </div>`;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadInventory);
+  </script>
+</body>
+</html>
