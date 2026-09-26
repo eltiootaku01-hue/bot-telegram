@@ -1,5 +1,38 @@
 # -*- coding: utf-8 -*-
 
+import math
+
+
+def safe_stat_calculation(
+    base_value: int,
+    percentage_modifier: float,
+    flat_modifier: int
+) -> int:
+    """
+    Aplica modificadores de forma segura.
+
+    - Evita resultados negativos.
+    - Trunca hacia abajo con math.floor().
+    - Rechaza valores no finitos para evitar NaN/Infinity.
+    """
+    if not isinstance(base_value, int) or isinstance(base_value, bool):
+        raise TypeError("base_value debe ser un entero.")
+    if not isinstance(flat_modifier, int) or isinstance(flat_modifier, bool):
+        raise TypeError("flat_modifier debe ser un entero.")
+    if not isinstance(percentage_modifier, (int, float)) or isinstance(percentage_modifier, bool):
+        raise TypeError("percentage_modifier debe ser numérico.")
+
+    if not math.isfinite(float(base_value)):
+        raise ValueError("base_value debe ser finito.")
+    if not math.isfinite(float(flat_modifier)):
+        raise ValueError("flat_modifier debe ser finito.")
+    if not math.isfinite(float(percentage_modifier)):
+        raise ValueError("percentage_modifier debe ser finito.")
+
+    total = (base_value + flat_modifier) * (1.0 + float(percentage_modifier))
+    return max(0, math.floor(total))
+
+
 def calculate_combat_stats(
     waifu_base_atk: int,
     waifu_base_def: int,
@@ -10,25 +43,25 @@ def calculate_combat_stats(
     """
     Calcula ATK y DEF finales aplicando equipamiento y cartas mágicas.
 
-    Efectos de Magia soportados:
-    - DOUBLE_ATTACK: otorga 2 ataques por turno y reduce DEF un 20%.
-    - BERSERK_FORCE: +30% ATK y -30% DEF.
-    - SHIELD_WALL: +50% DEF y -20% ATK.
+    Los modificadores pasan por safe_stat_calculation() para mantener una
+    única ruta de saneamiento matemático.
     """
-    # 1. Aplicar bonos fijos de equipamiento.
-    total_atk = max(0, waifu_base_atk + equip_atk_mod)
-    total_def = max(0, waifu_base_def + equip_def_mod)
+    total_atk = safe_stat_calculation(
+        waifu_base_atk, 0.0, equip_atk_mod
+    )
+    total_def = safe_stat_calculation(
+        waifu_base_def, 0.0, equip_def_mod
+    )
     double_attack = False
 
-    # 2. Aplicar modificadores porcentuales de cartas mágicas.
     if magic_effect_code == "BERSERK_FORCE":
-        total_atk = int(total_atk * 1.30)
-        total_def = int(total_def * 0.70)
+        total_atk = safe_stat_calculation(total_atk, 0.30, 0)
+        total_def = safe_stat_calculation(total_def, -0.30, 0)
     elif magic_effect_code == "SHIELD_WALL":
-        total_def = int(total_def * 1.50)
-        total_atk = int(total_atk * 0.80)
+        total_def = safe_stat_calculation(total_def, 0.50, 0)
+        total_atk = safe_stat_calculation(total_atk, -0.20, 0)
     elif magic_effect_code == "DOUBLE_ATTACK":
-        total_def = int(total_def * 0.80)
+        total_def = safe_stat_calculation(total_def, -0.20, 0)
         double_attack = True
 
     return {
