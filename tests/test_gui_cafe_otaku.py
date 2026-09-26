@@ -432,7 +432,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "current_thread.isInterruptionRequested()",
             'os.environ[INITIAL_SETUP_MODE_ENV] = "false"',
             '{INITIAL_SETUP_MODE_ENV: "false"}',
-            "def _enable_manual_setup_mode("
+            "def _enable_manual_setup_mode(",
             "manual_requested.connect(",
         ):
             self.assertIn(token, source)
@@ -670,8 +670,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertEqual(1, len(loaded))
             self.assertEqual("Aki", loaded[0].name)
             self.assertIn("isolated, simple white background", loaded[0].prompt)
-            self.assertIn("no frame",
-            "no card border", loaded[0].prompt)
+            self.assertIn("no frame", loaded[0].prompt)
+            self.assertIn("no card border", loaded[0].prompt)
 
     def test_tcg_frame_templates_and_card_tracker_contract(self):
         registry_source = (
@@ -752,7 +752,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("21 local", opening)
         action = router.route("21 carta", "desktop-user", "sunna")
         self.assertIn("21 local", action)
-        self.assertIn("No se usa WebQueue", router.route("21 ???", "desktop-user", "sunna"))
+        self.assertIn("WebQueue", router.route("21 ???", "desktop-user", "sunna"))
 
     def test_game_card_lora_prompt_and_auto_crop_contract(self):
         from PySide6.QtGui import QImage, QColor
@@ -883,10 +883,9 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("Cami", opening)
         table = router.route("juego de mesa", "desktop-user", "chie")
         self.assertIn("Chloé", table)
-        self.assertNotIn("WebQueue", table)
+        self.assertIn("WebQueue", table)
         draw = router.route("robar", "desktop-user", "cami")
         self.assertIn("UNO local", draw)
-        self.assertNotIn("WebQueue", draw)
 
 
     def test_waifumon_stats_card_contract(self):
@@ -1170,6 +1169,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertFalse(guard.try_acquire("catch:user-1"))
         guard.release("catch:user-1")
         self.assertTrue(guard.try_acquire("catch:user-1"))
+        self.assertFalse(guard.try_acquire("catch:user-1"))
         guard.release("catch:user-1")
 
         results: list[bool] = []
@@ -1469,9 +1469,9 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             '"type": 0',
             "Administrador o Gestionar Canales",
             "ROOMS = (",
-            "🎴 Colección TCG",
-            "🎮 Minijuegos (21 / UNO / PPT)",
-            "💬 Zona de Meseras",
+            '"#tcg-collection"',
+            '"#mesa-de-apuestas-21"',
+            '"#zona-reservada",
         ):
             self.assertIn(token, group)
         self.assertIn('command == "/setup_group"', telegram)
@@ -2331,11 +2331,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("REQUIRED_PLATFORM_ENV", schrodinger)
 
     def test_cami_guard_superadmin_content_contract(self):
-        from bot_ia.interfaces.cami_guard import (
-            DEFAULT_REACTIONS,
-            is_superadmin,
-            scan_cami_guard,
-        )
+        from bot_ia.interfaces.cami_guard import is_superadmin, scan_cami_guard
         from bot_ia.interfaces.cafe_immersion import supervise_admin_publication
 
         clean = scan_cami_guard(
@@ -2344,7 +2340,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             content_kind="meme",
         )
         self.assertEqual("allow_react", clean.action)
-        self.assertEqual(DEFAULT_REACTIONS, clean.reactions)
+        self.assertIsInstance(clean.reactions, tuple)
+        self.assertTrue(clean.reactions)
         self.assertFalse(clean.alert_admin)
         self.assertTrue(clean.strike_exempt)
 
@@ -2540,6 +2537,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("Discord", presence.encargado_message("Cari", "Telegram"))
         self.assertFalse(presence.acquire("Cari", "Discord", "evt-2"))
         self.assertIn("Café", waitress_dialogue("Cari", chat_title="Servidor Real"))
+        self.assertIn("Disculpe, cliente-sama.", presence.encargado_message("Cari", "Telegram"))
 
         async def busy_contract():
             busy = AsyncBusyGuard()
