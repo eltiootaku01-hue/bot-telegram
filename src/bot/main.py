@@ -3,6 +3,7 @@ import logging
 from telegram.ext import ApplicationBuilder
 
 from src.bot.handlers.drop_handler import register_drop_handlers
+from src.bot.handlers.match_handler import register_match_handlers
 from src.core.config import settings
 
 logging.basicConfig(
@@ -19,6 +20,9 @@ def create_bot_app():
 
     # Registrar el módulo de drops (comando /drop y callbacks claim_drop:)
     register_drop_handlers(app)
+
+    # Registrar el módulo de duelos (comando /duelo y callbacks accept/decline)
+    register_match_handlers(app)
 
     return app
 
