@@ -204,6 +204,7 @@ Para el único recurso exclusivo actual se aplica una política mínima anti-sta
 El Action Deadline pertenece al Task Engine y es absoluto. No se extiende por espera de recursos, timeout de WebQueue, cooldown del circuit breaker ni timers de sesión/mesera.
 En el WebQueue actual existen dos tiempos distintos: un retardo de 100 ms antes de reevaluar la cola después de un ticket resuelto, y un circuit cooldown de 10 s después de alcanzar tres fallos consecutivos. Ninguno modifica el deadline de la tarea.
 El recurso lógico del Scheduler se libera cuando el ejecutor informa que terminó físicamente mediante execution_finished(task_id), no simplemente cuando el Task Engine cambia a COMPLETED.
+Cuando el WebQueue cierra su circuit breaker, emite capacity_restored para despertar al Scheduler. Esto permite que WAITING_WEBCHAT vuelva a ser elegible sin un polling permanente ni una segunda cola.
 
 ### Cancelación y respuestas tardías
 
