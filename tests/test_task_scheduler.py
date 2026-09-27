@@ -101,7 +101,14 @@ class TaskSchedulerTests(unittest.TestCase):
         )
         self.assertEqual(("high",), self.scheduler.dispatch())
         self.assertEqual(["high"], self.web.started)
-        self.assertEqual(TaskState.PENDING, self.engine.snapshot(low.task_id).state)
+        self.assertEqual(
+            TaskState.WAITING,
+            self.engine.snapshot(low.task_id).state,
+        )
+        self.assertEqual(
+            "WAITING_WEBCHAT",
+            self.engine.snapshot(low.task_id).wait_reason.value,
+        )
 
     def test_fifo_within_same_priority(self) -> None:
         self.create("a", route=TaskRoute.WEBCHAT, priority=TaskEngine.HIGH)
