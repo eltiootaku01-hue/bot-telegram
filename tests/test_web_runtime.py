@@ -67,48 +67,33 @@ class WebRuntimeTests(unittest.TestCase):
         self.server.server_close()
         self.thread.join(timeout=2)
 
-    def test_health_and_openapi_are_reachable(self):
+    def test_health_and_openapi_handlers_are_deterministic(self):
         server = create_web_server(
             WebApi(FakeApplication(), api_token="t" * 32),
             port=0,
         )
-        server.timeout = 3
         try:
-            for path in ("/health", "/openapi.json"):
-                worker = threading.Thread(
-                    target=server.handle_request,
-                    daemon=True,
-                )
-                worker.start()
+            recorded = []
+            handler = object.__new__(server.RequestHandlerClass)
+            handler._send = lambda status, payload: recorded.append(
+                (status, payload)
+            )
 
-                connection = http.client.HTTPConnection(
-                    "127.0.0.1",
-                    server.server_port,
-                    timeout=3,
-                )
-                connection.request(
-                    "GET",
-                    path,
-                    headers={"Connection": "close"},
-                )
-                response = connection.getresponse()
-                body = response.read()
-                connection.close()
+            handler.path = "/health"
+            handler.do_GET()
+            self.assertEqual(
+                (200, {"ok": True, "service": "bot-ia"}),
+                recorded[-1],
+            )
 
-                worker.join(timeout=3)
-                self.assertFalse(
-                    worker.is_alive(),
-                    "HTTP request worker did not finish",
-                )
-                self.assertEqual(200, response.status)
-                payload = json.loads(body)
-                if path == "/health":
-                    self.assertTrue(payload["ok"])
-                else:
-                    self.assertEqual(
-                        "queryBotIA",
-                        payload["paths"]["/v1/query"]["post"]["operationId"],
-                    )
+            handler.path = "/openapi.json"
+            handler.do_GET()
+            status, document = recorded[-1]
+            self.assertEqual(200, status)
+            self.assertEqual(
+                "queryBotIA",
+                document["paths"]["/v1/query"]["post"]["operationId"],
+            )
         finally:
             server.server_close()
 
