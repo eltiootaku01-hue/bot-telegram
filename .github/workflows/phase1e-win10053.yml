@@ -3,6 +3,8 @@ name: Phase 1E Windows 10053 Diagnostic
 on:
   push:
     branches: [diagnostic/phase1e-win10053]
+  pull_request:
+    branches: [main]
 
 jobs:
   isolated:
