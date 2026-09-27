@@ -187,6 +187,7 @@ Reglas implementadas:
 - WEB_MESA_UNICA conserva la exclusión física de una sesión WebChat y no representa mesas sociales del Café.
 - tareas locales sin resource_key pueden ejecutarse concurrentemente.
 - una tarea con recurso ocupado espera sin crear otra instancia del recurso.
+- el WebQueue expone un evento de capacidad restaurada al volver el circuit breaker de OPEN, permitiendo al Scheduler reactivar WAITING_WEBCHAT sin polling ni una segunda cola.
 - Action Deadline no se extiende por timeout/cooldown/session/rest.
 - cancelación no reanima ni reencola.
 - respuestas tardías se validan sólo por task_id.
