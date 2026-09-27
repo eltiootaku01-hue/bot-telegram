@@ -868,3 +868,408 @@ Bloqueadores actuales:
 - continuidad WebChat y RAM aún no verificadas mediante ejecución real.
 
 No se modificó código funcional durante esta FASE A.
+
+
+## 22. ACTUALIZACIÓN DE DISEÑO — CHARACTER ENGINE + CARI + WEBCHAT COMPARTIDO (2026-09-27)
+
+Naturaleza: ESPECIFICACIÓN DE DISEÑO / NO IMPLEMENTADA.
+
+Esta sección registra la ampliación de arquitectura solicitada para el Character Engine y el uso compartido del WebChat. No modifica contratos funcionales ni autoriza implementación.
+
+### 22.1 WebChat compartido
+
+Requisito de diseño confirmado:
+
+WebChatController
+      ↓
+Task Queue
+      ↓
+Shared WebChat Session
+
+No se deben crear infraestructuras separadas como CariWebChat, CamiWebChat, NewsWebChat, TriviaWebChat, ni una página permanente por personaje.
+
+La prioridad propuesta para las tareas es:
+
+1. conversación activa/interacción pendiente con Cari o personaje que atiende una mesa;
+2. interacción directa prioritaria con una mesera;
+3. tareas internas urgentes;
+4. noticias;
+5. anime del día;
+6. meme/contenido programado;
+7. trivia y tareas de baja prioridad.
+
+Esta lista es política conceptual de orden, no una implementación actual de prioridades.
+
+La prioridad debe ser independiente del cooldown del recurso. El cooldown es una restricción de disponibilidad y no debe poder saltarse mediante prioridad.
+
+Ejemplo:
+
+Trivia termina
+    ↓
+cooldown 30 s
+    ↓
+Cari entra en cola
+    ↓
+Cari espera el fin del cooldown
+    ↓
+Cari se procesa antes que Trivia
+
+Estado actual:
+- src/services/web_queue.py: FIFO + mutex, no prioridad global demostrada.
+- src/gui/task_orchestrator.py: HIGH/MEDIUM/LOW EXISTE, pero no constituye todavía la cola global del Café en el runtime Qt normal.
+- Prioridad global + cooldown separado: PROPUESTO / NO IMPLEMENTADO.
+
+### 22.2 Estados técnicos y mensajes visibles
+
+Se admite un estado interno equivalente a:
+
+AVAILABLE / BUSY / CANCELLING / WAITING_RESPONSE / WAITING_COOLDOWN / ERROR
+
+También puede existir internamente WAITING_FOR_CARI.
+
+Estos estados no forman parte de la interfaz pública del Café.
+
+No deben aparecer como texto visible:
+- WAITING_FOR_CARI;
+- BUSY;
+- task IDs;
+- COOLDOWN;
+- PROCESSING;
+- “WebChat ocupado”;
+- otros detalles técnicos.
+
+Cualquier señal visible deberá ser diegética/natural, por ejemplo:
+
+“Cari se queda pensativa un momento...”
+
+Esto afecta el contrato futuro de adapters de Telegram/Discord y GUI, pero no se implementa aquí.
+
+### 22.3 Intervención única del usuario con Cari
+
+Diseño propuesto:
+
+Usuario
+  ↓
+Hablarle a Cari
+  ↓
+una intervención pendiente
+  ↓
+WebChat
+  ↓
+respuesta
+  ↓
+liberar interacción
+
+La exclusión es por usuario + personaje + interacción y no por usuario completo dentro del grupo.
+
+Mientras una intervención está pendiente:
+- el mismo usuario no genera otra intervención dirigida a Cari;
+- mensajes adicionales no se envían automáticamente a Cari;
+- el resto del grupo sigue funcionando;
+- no se muestran errores técnicos.
+
+Estado: PROPUESTO / FALTANTE.
+
+### 22.4 Character Engine
+
+El Character Engine propuesto será un ensamblador de contexto determinista antes de WebChat.
+
+Debe poder producir, cuando exista información:
+- identidad;
+- personalidad;
+- historia relevante;
+- forma de hablar;
+- preferencias;
+- relación con el usuario;
+- estado emocional actual;
+- actitud hacia el usuario;
+- memoria relevante;
+- mensajes relevantes recientes;
+- mensaje actual;
+- ambigüedades;
+- posibilidad de contrapregunta;
+- instrucciones de continuidad.
+
+La responsabilidad queda separada así:
+
+BOT-IA
+ ├─ identidad
+ ├─ estado
+ ├─ emociones
+ ├─ relaciones
+ ├─ economía
+ ├─ permisos
+ ├─ inventario
+ ├─ sesiones
+ ├─ mesas
+ └─ eventos
+          ↓
+   Character Engine
+          ↓
+       WebChat
+          ↓
+       lenguaje
+
+El modelo web no adquiere autoridad sobre esos datos.
+
+Estado: PROPUESTO / NO IMPLEMENTADO.
+
+### 22.5 Estado emocional de Cari
+
+El futuro contrato de Character Engine puede suministrar explícitamente:
+
+ESTADO EMOCIONAL ACTUAL DE CARI
+
+felicidad: 90
+enojo: 40
+miedo: 0
+
+Podrían añadirse:
+- felicidad;
+- enojo;
+- miedo;
+- tristeza;
+- confianza;
+- afinidad;
+- entusiasmo;
+- coquetería.
+
+El catálogo definitivo de variables queda como DECISIÓN PENDIENTE DEL USUARIO.
+
+Los valores son estado de BOT-IA.
+
+El WebChat solamente los interpreta para producir lenguaje.
+
+No se autoriza que el modelo cambie directamente estos valores.
+
+### 22.6 Actitud hacia el usuario
+
+La actitud será una capa interpretativa distinta de los valores emocionales.
+
+Ejemplo:
+
+ACTITUD HACIA EL USUARIO
+amigable
+entusiasta
+confianza alta
+
+o:
+
+ACTITUD HACIA EL USUARIO
+cercana
+juguetona
+ligeramente coqueta
+
+Regla propuesta:
+
+Estado emocional = datos estructurados.
+Actitud = interpretación operacional para expresión lingüística.
+
+Ambos deben provenir de BOT-IA.
+
+### 22.7 Memoria relevante
+
+No se enviará automáticamente todo el historial.
+
+El Character Engine deberá seleccionar:
+- mensaje actual;
+- mensajes recientes necesarios;
+- memorias relevantes;
+- hechos históricos necesarios;
+- identidad del usuario;
+- contexto de mesa.
+
+Ejemplo:
+
+CONTEXTO RELEVANTE ANTERIOR:
+El usuario dijo anteriormente:
+“Me gusta mucho ver Naruto.”
+
+Estado:
+- MemoryStore ya existe.
+- Selección especializada de contexto para Character Engine: PROPUESTA / NO IMPLEMENTADA.
+
+### 22.8 Ambigüedad y continuidad conversacional
+
+Cari podrá, según contexto:
+- detectar interpretaciones múltiples;
+- hacer una contrapregunta natural;
+- continuar la conversación en la misma respuesta;
+- recordar información relevante previa;
+- terminar con una pregunta cuando aporte valor.
+
+Las contrapreguntas no deben convertirse en un patrón obligatorio.
+
+Estado: REGLA DE PROMPT PROPUESTA.
+
+### 22.9 Nuevo contrato conceptual del prompt de Cari
+
+El futuro prompt deberá contemplar, cuando corresponda:
+
+CANCELACIÓN / LIMPIEZA DE TAREA ANTERIOR
+PERSONAJE
+PERSONALIDAD
+FORMA DE HABLAR
+ESTADO EMOCIONAL ACTUAL
+ACTITUD ACTUAL HACIA EL USUARIO
+CONTINUIDAD RELEVANTE
+MENSAJES RECIENTES RELEVANTES
+MENSAJE ACTUAL DEL USUARIO
+INSTRUCCIONES CONVERSACIONALES
+SALIDA: SOLO DIÁLOGO DEL PERSONAJE
+
+Reglas de salida propuestas:
+- solo contenido que el personaje diría;
+- sin análisis;
+- sin etiquetas;
+- sin JSON;
+- sin estados emocionales;
+- sin instrucciones;
+- sin referencias a BOT-IA;
+- sin referencias a WebChat;
+- sin task IDs;
+- sin explicación del prompt.
+
+### 22.10 Conflicto con src/bot_ia/providers/prompt_builder.py
+
+El archivo actual sí implementa:
+- WaitressPromptProfile;
+- identidad;
+- rol;
+- personalidad;
+- modo de sesión;
+- directivas de supervisión;
+- contexto del usuario;
+- mensaje actual.
+
+Pero actualmente no implementa explícitamente:
+- estado emocional estructurado;
+- actitud estructurada;
+- memoria relevante separada de historial;
+- mensajes recientes relevantes como bloque específico;
+- análisis formal de ambigüedad;
+- control explícito de contrapregunta;
+- instrucciones de limpieza/cancelación de tarea anterior;
+- contrato formal de “solo salida del personaje”;
+- canal separado para metadata posterior de estado.
+
+Por tanto:
+
+Prompt actual = EXISTE / PARCIAL respecto al nuevo contrato.
+
+No se actualizó prompt_builder.py en esta fase.
+
+### 22.11 Señal interna posterior a la respuesta
+
+La especificación introduce:
+
+[CALCULAR_ESTADO_EMOCIONAL_CARI]
+
+como señal interna posterior a la respuesta.
+
+Existe una tensión de diseño que debe resolverse antes de implementar:
+
+usuario recibe únicamente diálogo
+
+versus
+
+WebChat devuelve diálogo + metadata interna
+
+La solución técnica no debe depender de filtrar una cadena visible después de enviarla al usuario.
+
+Queda como DECISIÓN PENDIENTE DEL USUARIO / CONTRATO TÉCNICO PENDIENTE:
+- metadata separada del texto;
+- canal estructurado paralelo;
+- delimitador no visible;
+- o análisis separado posterior.
+
+No se implementa una señal textual en esta fase.
+
+### 22.12 Conflicto con WebQueue actual
+
+La arquitectura actual:
+
+WebChatQueueManager → FIFO → _WEB_MESA_UNICA
+
+cumple la exclusión mutua, pero no implementa la política de prioridad conceptual solicitada.
+
+No debe reutilizarse TaskOrchestrator automáticamente como reemplazo porque está asociado a otro camino de ejecución.
+
+La futura arquitectura debe conservar:
+- una única infraestructura WebChat;
+- exclusión mutua;
+- cooldown independiente de prioridad;
+- aislamiento de contexto;
+- lifecycle de sesión;
+- errores/reintentos.
+
+Debe añadirse prioridad únicamente después de definir el contrato de tarea.
+
+### 22.13 Conflicto con “una página por personaje”
+
+La especificación ahora descarta explícitamente una página WebChat por personaje.
+
+Esto es compatible conceptualmente con el Qt path actual, que utiliza una vista WebChat compartida.
+
+Sin embargo, queda pendiente determinar cómo se preserva la continuidad de cada contexto si varias personalidades reutilizan la misma sesión física del navegador.
+
+No se debe asumir que “sesión compartida” implica “historial mezclado”.
+
+Debe existir una separación lógica de contexto de tarea/personaje/usuario/mesa.
+
+Estado: PROPUESTA / NO VERIFICADA E2E.
+
+### 22.14 Cari en grupos
+
+La especificación solicita una interacción explícita “Hablarle a Cari”.
+
+Actualmente el Telegram adapter tiene comentario/reply handling y la Tavern individual, pero no se demuestra un flujo grupal específico con:
+
+botón/comando → una intervención → bloqueo solo de esa interacción → respuesta → reapertura.
+
+Estado: FALTANTE / NO IMPLEMENTADO.
+
+### 22.15 Impacto sobre arquitectura existente
+
+No se propone reemplazar:
+- MemoryStore;
+- WaitressSessionManager;
+- WebChatQueueManager;
+- TelegramRoomRouter;
+- CafeWalletStore;
+- adapters Telegram/Discord.
+
+Se propone estudiar un nuevo ensamblador encima de esos componentes.
+
+La futura implementación deberá evitar un segundo sistema de memoria, un segundo WebChat o un segundo scheduler si los existentes pueden ampliarse.
+
+### 22.16 Decisiones nuevas pendientes
+
+Se añaden a la lista existente:
+1. catálogo definitivo de variables emocionales;
+2. formato de actitud operacional;
+3. contrato exacto de metadata posterior a la respuesta;
+4. mecanismo para detectar ambigüedad sin convertirlo en una respuesta técnica;
+5. criterio para seleccionar mensajes recientes;
+6. criterio para seleccionar memoria relevante;
+7. contrato de aislamiento task_context_id;
+8. política de prioridad concreta del WebChat;
+9. valor y semántica del cooldown;
+10. regla de exclusión por usuario/personaje/interacción;
+11. estrategia de continuidad cuando una sesión física de WebChat sea compartida;
+12. comportamiento de recuperación ante respuesta parcial o metadata ausente.
+
+### 22.17 Límite de esta actualización
+
+La especificación recibida termina durante la definición de la señal interna posterior a la respuesta. Por ello no se inventan ni documentan como requisitos cerrados los puntos que no fueron proporcionados todavía.
+
+Estado final de esta actualización:
+- documentación: ACTUALIZADA;
+- código funcional: SIN CAMBIOS;
+- migraciones: NINGUNA;
+- Character Engine: PROPUESTO;
+- prioridad WebChat: PROPUESTA;
+- estado emocional Cari: PROPUESTO;
+- intervención grupal Cari: FALTANTE;
+- contrato metadata emocional: PENDIENTE;
+- prueba E2E: NO REALIZADA.
