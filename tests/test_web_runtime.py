@@ -140,7 +140,7 @@ class WebRuntimeTests(unittest.TestCase):
             response = self._opener.open(request, timeout=timeout)
             self._forensic_phase("client open returned")
             return response
-        except ConnectionAbortedError as error:
+        except OSError as error:
             self._forensic_capture_10053(error)
             raise
 
@@ -204,14 +204,11 @@ class WebRuntimeTests(unittest.TestCase):
         body = json.dumps({"message": "hola"}).encode("utf-8")
         request = Request(self.base + "/v1/query", data=body, headers={"Content-Type": "application/json"}, method="POST")
         with self.assertRaises(HTTPError) as raised:
-            self._opener.open(request, timeout=3)
+            self._forensic_open(request, timeout=3)
         raised.exception.close()
 
         request.add_header("Authorization", "Bearer " + "t" * 32)
-        try:
-            response = self._forensic_open(request, timeout=3)
-        except ConnectionAbortedError:
-            raise
+        response = self._forensic_open(request, timeout=3)
         with response:
             payload = json.loads(response.read())
             self.assertEqual("evidencia", payload["answer"])
