@@ -1699,6 +1699,16 @@ class WaitressSessionManager:
     def shutdown(self) -> None:
         if self._shutdown:
             return
+
+        with self._ticket_lock:
+            live_ticket_ids = tuple(self._ticket_sessions)
+
+        for ticket_id in live_ticket_ids:
+            try:
+                self._task_scheduler.cancel(ticket_id)
+            except (KeyError, RuntimeError):
+                pass
+
         self._shutdown = True
 
         with self._timer_lock:
