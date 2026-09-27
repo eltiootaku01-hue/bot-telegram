@@ -29,6 +29,7 @@ class Phase72Tests(unittest.TestCase):
         self.addCleanup(self._ledger_tmp.cleanup)
         self.event_ledger = TelegramEventLedger(Path(self._ledger_tmp.name) / "events.sqlite3")
         self.adapter = TelegramAdapter(BotApplication(LocalBrain(universes), Router(), self.sessions, default_universe_id="one_neko_punch"))
+        self.addCleanup(self.adapter.close)
 
     def client(self, transport, **kwargs) -> TelegramApiClient:
         kwargs.setdefault("sleeper", lambda _: None)
