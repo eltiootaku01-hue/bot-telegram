@@ -40,7 +40,27 @@ jobs:
         run: python scripts/check_code_policy.py --git-range-env
       - name: Import runtime surface
         run: python -c "import bot_ia; import core.config; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.core.web_queue; import gui.task_orchestrator; import gui.gui_bridge; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher; import desktop_entry; import gui.app"
+      - name: Run FASE 1J diagnostic sequence on Windows
+        if: runner.os == 'Windows' && startsWith(github.head_ref, 'diagnostic/phase1j-windows-keyboardinterrupt-xp-writer')
+        env:
+          PYTHONWARNINGS: error::ResourceWarning
+        shell: pwsh
+        run: |
+          python -m pytest tests/test_telegram_runtime_safety.py::TelegramRuntimeSafetyTests::test_adapter_close_stops_xp_writer_thread -q -vv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pytest tests/test_telegram_runtime_safety.py -q -vv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Run test suite
+        if: ${{ !startsWith(github.head_ref, 'diagnostic/phase1j-windows-keyboardinterrupt-xp-writer') || runner.os != 'Windows' }}
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: python -m pytest -q -vv
+
+      - name: Upload FASE 1J diagnostic artifact
+        if: always() && runner.os == 'Windows' && startsWith(github.head_ref, 'diagnostic/phase1j-windows-keyboardinterrupt-xp-writer')
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1j-keyboardinterrupt-forensics-windows
+          path: phase1j-artifacts/
+          if-no-files-found: warn
