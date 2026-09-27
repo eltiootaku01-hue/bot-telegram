@@ -67,6 +67,8 @@ from PySide6.QtWidgets import (
 from bot_ia.core.application import ApplicationRequest
 from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.web_queue import WebQueueManager
+from bot_ia.core.task_engine import ResponseDisposition, TaskEngine
+from bot_ia.core.task_scheduler import TaskRoute, TaskScheduler
 from .task_orchestrator import Priority, TaskOrchestrator
 from bot_ia.core.waitress_session_manager import (
     InsufficientBalanceError,
@@ -4234,14 +4236,27 @@ class CommandCenterWindow(QMainWindow):
         ticket_id = f"gui-{self._web_ticket_sequence}-{datetime.now().strftime('%H%M%S%f')}"
         self._web_ticket_ids[ticket_id] = self._selected_bot_id
         try:
-            self._web_queue.enqueue_bot_message(
-                BOT_MAP[self._selected_bot_id].name,
-                ticket_id,
-                "chat",
-                message,
-                user=DESKTOP_USER,
-                channel="/cafe",
+            self.runtime.task_engine.create_task(
+                DESKTOP_USER,
+                "gui_chat",
+                task_id=ticket_id,
+                context={
+                    "bot_name": BOT_MAP[self._selected_bot_id].name,
+                    "action": "chat",
+                    "message": message,
+                    "user": DESKTOP_USER,
+                    "channel": "/cafe",
+                    "route": TaskRoute.WEBCHAT.value,
+                    "resource_key": TaskScheduler.WEBCHAT_RESOURCE,
+                },
+                priority=TaskEngine.MEDIUM,
             )
+            self.runtime.task_scheduler.schedule(
+                ticket_id,
+                TaskRoute.WEBCHAT,
+                resource_key=TaskScheduler.WEBCHAT_RESOURCE,
+            )
+            self.runtime.task_scheduler.dispatch()
             self.send_button.setEnabled(False)
         except (ValueError, RuntimeError) as error:
             self._web_ticket_ids.pop(ticket_id, None)
@@ -5272,6 +5287,11 @@ class CommandCenterWindow(QMainWindow):
     def _on_web_ticket_processed(self, ticket_id: str, response: str) -> None:
         if ticket_id in self._tavern_ticket_ids:
             return
+        if (
+            self.runtime.task_scheduler.accept_response(ticket_id)
+            is not ResponseDisposition.ACCEPTED
+        ):
+            return
         bot_id = self._web_ticket_ids.get(ticket_id, self._selected_bot_id)
         self._append_message(
             BOT_MAP.get(bot_id, BotProfile(bot_id, bot_id, "🤖", "Web")).name,
@@ -5284,6 +5304,10 @@ class CommandCenterWindow(QMainWindow):
     @Slot(str, str)
     def _on_web_ticket_failed(self, ticket_id: str, reason: str) -> None:
         if ticket_id not in self._tavern_ticket_ids:
+            try:
+                self.runtime.task_scheduler.fail_from_executor(ticket_id)
+            except (KeyError, RuntimeError):
+                pass
             self._append_system(
                 "El chat web no pudo completar el mensaje. "
                 "La cola lo marcó como fallo controlado."
@@ -5293,6 +5317,8 @@ class CommandCenterWindow(QMainWindow):
 
     @Slot(str, str)
     def _on_web_ticket_finished(self, ticket_id: str, _bot_name: str) -> None:
+        if ticket_id not in self._tavern_ticket_ids:
+            self.runtime.task_scheduler.execution_finished(ticket_id)
         self._tavern_ticket_ids.discard(ticket_id)
         self._web_ticket_ids.pop(ticket_id, None)
         self.send_button.setEnabled(self._pending_tasks == 0)
