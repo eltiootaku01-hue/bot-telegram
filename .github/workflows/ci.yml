@@ -44,7 +44,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-                    @'
+          @'
           # Generated only on the CI runner for FASE 1 diagnostics.
           from __future__ import annotations
           
