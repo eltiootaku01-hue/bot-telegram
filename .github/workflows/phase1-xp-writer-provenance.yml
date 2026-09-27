@@ -1,0 +1,28 @@
+name: Phase 1 XP writer provenance diagnostic
+on:
+  push:
+    branches:
+      - diagnostic/phase1-xp-writer-provenance-20260927
+jobs:
+  diagnose:
+    runs-on: windows-latest
+    env:
+      PYTHONPATH: src
+      PYTHONFAULTHANDLER: "1"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check PySide6 tzdata playwright python-dotenv SQLAlchemy pytest
+      - name: Compile
+        run: python -m compileall -q src tests launcher.py desktop.py desktop_entry.py
+      - name: Full diagnostic suite
+        run: python -m pytest -q -vv --full-trace -p xp_writer_diag_plugin
+      - name: Upload diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: xp-writer-diagnostic
+          path: xp_writer_diagnostic.log
