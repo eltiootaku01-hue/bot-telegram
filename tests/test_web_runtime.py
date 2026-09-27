@@ -54,7 +54,16 @@ class WebRuntimeTests(unittest.TestCase):
         self.base = f"http://127.0.0.1:{self.server.server_port}"
 
     def tearDown(self):
-        self.server.shutdown()
+        shutdown_thread = threading.Thread(
+            target=self.server.shutdown,
+            daemon=True,
+        )
+        shutdown_thread.start()
+        shutdown_thread.join(timeout=3)
+        self.assertFalse(
+            shutdown_thread.is_alive(),
+            "HTTP server shutdown did not complete within 3 seconds",
+        )
         self.server.server_close()
         self.thread.join(timeout=2)
 
