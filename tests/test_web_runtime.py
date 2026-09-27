@@ -68,20 +68,73 @@ class WebRuntimeTests(unittest.TestCase):
         self.thread.join(timeout=2)
 
     def test_health_and_openapi_are_reachable(self):
-        connection = self._http_request("/health")
-        try:
-            response = connection.getresponse()
-            self.assertEqual(200, response.status)
-            self.assertTrue(json.loads(response.read())["ok"])
-        finally:
-            connection.close()
-        connection = self._http_request("/openapi.json")
-        try:
-            response = connection.getresponse()
-            document = json.loads(response.read())
-            self.assertEqual("queryBotIA", document["paths"]["/v1/query"]["post"]["operationId"])
-        finally:
-            connection.close()
+        script = r"""
+import http.client
+import json
+import threading
+
+from bot_ia.interfaces.web import WebApi, create_web_server
+
+server = create_web_server(
+    WebApi(object(), api_token="t" * 32),
+    port=0,
+)
+thread = threading.Thread(
+    target=server.serve_forever,
+    daemon=True,
+)
+thread.start()
+
+try:
+    for path in ("/health", "/openapi.json"):
+        connection = http.client.HTTPConnection(
+            "127.0.0.1",
+            server.server_port,
+            timeout=3,
+        )
+        connection.request(
+            "GET",
+            path,
+            headers={"Connection": "close"},
+        )
+        response = connection.getresponse()
+        body = response.read()
+        assert response.status == 200, response.status
+        payload = json.loads(body)
+        if path == "/health":
+            assert payload["ok"] is True
+        else:
+            assert (
+                payload["paths"]["/v1/query"]["post"]["operationId"]
+                == "queryBotIA"
+            )
+        connection.close()
+finally:
+    shutdown_thread = threading.Thread(
+        target=server.shutdown,
+        daemon=True,
+    )
+    shutdown_thread.start()
+    shutdown_thread.join(timeout=3)
+    if shutdown_thread.is_alive():
+        raise RuntimeError("child server shutdown timed out")
+    server.server_close()
+    thread.join(timeout=2)
+    if thread.is_alive():
+        raise RuntimeError("child server loop did not stop")
+
+        completed = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            cwd=os.getcwd(),
+        )
+        self.assertEqual(
+            0,
+            completed.returncode,
+            completed.stderr or completed.stdout,
+        )
 
     def test_query_requires_bearer_and_returns_json(self):
         body = json.dumps({"message": "hola"}).encode("utf-8")
