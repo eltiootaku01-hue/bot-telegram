@@ -30,6 +30,7 @@ class CreativeAssistTests(unittest.TestCase):
 class TelegramUiTests(unittest.TestCase):
     def test_main_menu_exposes_novel_and_status_controls(self):
         adapter = TelegramNovelAdapter(_FakeApp())
+        self.addCleanup(adapter.close)
         labels = [label for row in adapter.MAIN_MENU for label, _ in row]
         self.assertIn("📖 Novela", labels)
         self.assertIn("📊 Estado API", labels)
@@ -38,6 +39,7 @@ class TelegramUiTests(unittest.TestCase):
     def test_local_scene_helper_does_not_call_application(self):
         app = _FakeApp()
         adapter = TelegramNovelAdapter(app)
+        self.addCleanup(adapter.close)
         update = {"callback_query": {"from": {"id": 1}, "message": {"chat": {"id": 2}}, "data": "stuck:local"}}
         outbound = adapter.handle_callback(update)
         self.assertEqual(app.calls, [])
