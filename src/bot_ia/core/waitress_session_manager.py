@@ -15,6 +15,7 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from bot_ia.core.mama_mia_supervisor import MamaMiaSupervisor
+from bot_ia.core.task_engine import ResponseDisposition, TaskEngine, TaskState
 from bot_ia.providers.prompt_builder import (
     SupervisorDirective,
     TavernSessionType,
@@ -125,6 +126,7 @@ class WaitressSessionManager:
         mama_mia_supervisor: MamaMiaSupervisor | None = None,
         message_sender: Callable[[str, str], object] | None = None,
         message_deleter: Callable[[str, int], object] | None = None,
+        task_engine: TaskEngine | None = None,
         timezone_name: str = "America/Argentina/Buenos_Aires",
         now_provider: Callable[[], datetime] | None = None,
         max_notification_workers: int = 4,
@@ -146,6 +148,9 @@ class WaitressSessionManager:
         self._message_sender = message_sender
         self._now_provider = now_provider or (
             lambda: datetime.now(timezone.utc)
+        )
+        self._task_engine = task_engine or TaskEngine(
+            now_provider=self._now_utc
         )
         self._message_deleter = message_deleter
         self._notification_pool = ThreadPoolExecutor(
@@ -786,6 +791,17 @@ class WaitressSessionManager:
         ticket_id = (
             f"tavern-{session.session_id}-{uuid4().hex[:20]}"
         )
+        # Reutiliza el ticket_id existente de WebQueue como task_id.
+        self._task_engine.create_task(
+            telegram_id,
+            "tavern_chat",
+            task_id=ticket_id,
+            context={
+                "session_id": session.session_id,
+                "waitress_id": session.waitress_id,
+            },
+            priority=TaskEngine.MEDIUM,
+        )
         with self._ticket_lock:
             if self._shutdown:
                 raise TavernError("tavern manager is shut down")
@@ -815,6 +831,10 @@ class WaitressSessionManager:
                 channel=f"/taberna/{session.waitress_id}",
             )
         except Exception:
+            try:
+                self._task_engine.cancel(ticket_id)
+            except (KeyError, RuntimeError):
+                pass
             with self._ticket_lock:
                 self._ticket_sessions.pop(ticket_id, None)
             connection = self._transaction()
@@ -1266,11 +1286,19 @@ class WaitressSessionManager:
         except Exception:
             return
 
+    @property
+    def task_engine(self) -> TaskEngine:
+        return self._task_engine
+
     def _on_ticket_started(
         self,
         ticket_id: str,
         _bot_name: str,
     ) -> None:
+        try:
+            self._task_engine.start_task(ticket_id)
+        except (KeyError, RuntimeError):
+            return
         with self._ticket_lock:
             session_id = self._ticket_sessions.get(ticket_id)
         if session_id is not None:
@@ -1285,6 +1313,12 @@ class WaitressSessionManager:
         ticket_id: str,
         response_text: str,
     ) -> None:
+        if self._task_engine.validate_response(ticket_id) is not ResponseDisposition.ACCEPTED:
+            return
+        try:
+            self._task_engine.complete(ticket_id)
+        except (KeyError, RuntimeError):
+            return
         with self._ticket_lock:
             session_id = self._ticket_sessions.get(ticket_id)
         if session_id is None:
@@ -1302,6 +1336,20 @@ class WaitressSessionManager:
         ticket_id: str,
         _reason: str,
     ) -> None:
+        task = self._task_engine.get(ticket_id)
+        if task is None or task.state not in {
+            TaskState.PENDING,
+            TaskState.RUNNING,
+            TaskState.WAITING,
+            TaskState.INTERRUPTED,
+        }:
+            with self._ticket_lock:
+                self._ticket_sessions.pop(ticket_id, None)
+            return
+        try:
+            self._task_engine.fail(ticket_id)
+        except (KeyError, RuntimeError):
+            return
         with self._ticket_lock:
             session_id = self._ticket_sessions.pop(ticket_id, None)
         if session_id is None:

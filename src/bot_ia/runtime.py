@@ -71,6 +71,7 @@ class RuntimeComponents:
         self,
         *,
         web_queue_manager: object | None = None,
+        task_engine=None,
         message_sender=None,
         message_deleter=None,
         timezone_name: str = "America/Argentina/Buenos_Aires",
@@ -78,6 +79,7 @@ class RuntimeComponents:
         return WaitressSessionManager(
             self.memory_store.path,
             web_queue_manager=web_queue_manager,
+            task_engine=task_engine,
             message_sender=message_sender,
             message_deleter=message_deleter,
             timezone_name=timezone_name,
