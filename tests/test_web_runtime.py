@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import json
-import multiprocessing
 import threading
 import unittest
 from urllib.error import HTTPError
@@ -35,37 +34,11 @@ class FakeApplication:
         return Response()
 
 
-def _web_runtime_process(control):
-    server = create_web_server(
-        WebApi(FakeApplication(), api_token="t" * 32),
-        port=0,
-    )
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    control.send(server.server_port)
-    try:
-        control.recv()
-    finally:
-        shutdown_thread = threading.Thread(
-            target=server.shutdown,
-            daemon=True,
-        )
-        shutdown_thread.start()
-        shutdown_thread.join(timeout=3)
-        if shutdown_thread.is_alive():
-            raise RuntimeError("HTTP server shutdown did not complete")
-        server.server_close()
-        thread.join(timeout=2)
-        if thread.is_alive():
-            raise RuntimeError("HTTP server thread did not terminate")
-        control.close()
-
-
 class WebRuntimeTests(unittest.TestCase):
     _opener = build_opener(ProxyHandler({}))
 
     def _http_request(self, path, *, method="GET", body=None, headers=None):
-        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
         connection.request(
             method,
             path,
@@ -74,63 +47,25 @@ class WebRuntimeTests(unittest.TestCase):
         )
         return connection
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        context = multiprocessing.get_context("spawn")
-        parent, child = context.Pipe()
-        cls.control = parent
-        cls.process = context.Process(
-            target=_web_runtime_process,
-            args=(child,),
-        )
-        cls.process.start()
-        child.close()
-        if not parent.poll(5):
-            cls.process.terminate()
-            cls.process.join(timeout=5)
-            raise AssertionError("HTTP runtime process did not start")
-        cls.port = parent.recv()
-
-        connection = http.client.HTTPConnection(
-            "127.0.0.1",
-            cls.port,
-            timeout=3,
-        )
-        try:
-            connection.request("GET", "/health")
-            response = connection.getresponse()
-            if response.status != 200:
-                raise AssertionError(
-                    f"HTTP server readiness failed: {response.status}"
-                )
-            if not json.loads(response.read())["ok"]:
-                raise AssertionError("HTTP server readiness returned ok=false")
-        finally:
-            connection.close()
-
-    @classmethod
-    def tearDownClass(cls):
-        try:
-            cls.control.send("stop")
-            cls.process.join(timeout=5)
-            if cls.process.is_alive():
-                cls.process.terminate()
-                cls.process.join(timeout=5)
-                raise AssertionError(
-                    "HTTP runtime process did not terminate"
-                )
-            if cls.process.exitcode != 0:
-                raise AssertionError(
-                    f"HTTP runtime process exited with code {cls.process.exitcode}"
-                )
-        finally:
-            cls.control.close()
-        super().tearDownClass()
-
     def setUp(self):
-        self.port = type(self).port
-        self.base = f"http://127.0.0.1:{self.port}"
+        self.server = create_web_server(WebApi(FakeApplication(), api_token="t" * 32), port=0)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.base = f"http://127.0.0.1:{self.server.server_port}"
+
+    def tearDown(self):
+        shutdown_thread = threading.Thread(
+            target=self.server.shutdown,
+            daemon=True,
+        )
+        shutdown_thread.start()
+        shutdown_thread.join(timeout=3)
+        self.assertFalse(
+            shutdown_thread.is_alive(),
+            "HTTP server shutdown did not complete within 3 seconds",
+        )
+        self.server.server_close()
+        self.thread.join(timeout=2)
 
     def test_health_and_openapi_are_reachable(self):
         connection = self._http_request("/health")
