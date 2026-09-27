@@ -6,12 +6,12 @@ import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QEvent, QObject, QThread, QTimer, Signal, Slot
-from PySide6.QtWebChannel import QWebChannel
-from PySide6.QtWebEngineCore import QWebEngineProfile
-from PySide6.QtWebEngineWidgets import QWebEngineView
+
+if TYPE_CHECKING:
+    from PySide6.QtWebEngineWidgets import QWebEngineView
 
 
 PROTOCOL_DIRECTIVE = """[DIRECTRIZ SISTEMA - PROTOCOLO CASA DE COMANDO]
@@ -987,6 +987,8 @@ class WebChatQueueManager(QObject):
             self._on_shutdown_watchdog_timeout
         )
 
+        from PySide6.QtWebEngineCore import QWebEngineProfile
+
         # El visor Qt usa exactamente el mismo perfil persistente que el
         # Chromium de autenticación humana. Así las cookies de Google y del
         # proveedor sobreviven al cambio de superficie sin segundo login.
@@ -1120,6 +1122,8 @@ class WebChatQueueManager(QObject):
         if existing_channel is not None:
             self._channel = existing_channel
         else:
+            from PySide6.QtWebChannel import QWebChannel
+
             self._channel = QWebChannel(
                 self.web_view.page()
             )
