@@ -15,6 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       PYTHONPATH: src
+      PHASE1H_FORENSICS: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -44,3 +45,10 @@ jobs:
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: python -m pytest -q -vv
+      - name: Upload Phase 1H forensics artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1h-win10053-forensics-${{ matrix.os }}
+          path: phase1h-artifacts/
+          if-no-files-found: ignore
