@@ -455,6 +455,8 @@ class WebChatTaskExecutor:
             cancel(task_id)
 
     def is_available(self) -> bool:
+        if bool(getattr(self._web_queue, "circuit_open", False)):
+            return False
         if bool(getattr(self._web_queue, "is_busy", False)):
             return False
         message_queue = getattr(self._web_queue, "msg_queue", None)
