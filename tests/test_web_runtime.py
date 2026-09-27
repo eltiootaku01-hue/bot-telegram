@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+import http.client
 import json
+import os
+import subprocess
+import sys
 import threading
 import unittest
 from urllib.error import HTTPError
-import http.client
 from urllib.request import ProxyHandler, Request, build_opener
 
 from bot_ia.interfaces.web import BoundedThreadingHTTPServer, WebApi, WebApiError, create_web_server
@@ -122,7 +125,7 @@ finally:
     thread.join(timeout=2)
     if thread.is_alive():
         raise RuntimeError("child server loop did not stop")
-
+"""
         completed = subprocess.run(
             [sys.executable, "-c", script],
             capture_output=True,
