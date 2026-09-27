@@ -8,6 +8,48 @@ from bot_ia.interfaces.telegram import TelegramApiClient, TelegramOutbound, Tele
 
 
 class TelegramRuntimeSafetyTests(unittest.TestCase):
+    def test_adapter_close_stops_xp_writer_thread(self):
+        adapter = TelegramAdapter(object())
+        thread = adapter._xp_tracker._thread
+        self.addCleanup(adapter.close)
+        self.assertTrue(thread.is_alive())
+
+        adapter.close()
+
+        self.assertFalse(
+            thread.is_alive(),
+            "TelegramAdapter.close() debe detener el escritor XP",
+        )
+
+    def test_poller_stop_closes_adapter(self):
+        class Adapter:
+            def __init__(self):
+                self.closed = False
+
+            def handle_update(self, _update):
+                return None
+
+            def close(self):
+                self.closed = True
+
+        class Client:
+            token = "test_token"
+
+            def get_updates(self, *, offset=None, timeout_seconds=25):
+                return ()
+
+        adapter = Adapter()
+        poller = TelegramPoller(
+            Client(),
+            adapter,
+            event_ledger=self.event_ledger,
+            sleeper=lambda _: None,
+        )
+
+        poller.stop()
+
+        self.assertTrue(adapter.closed)
+
     def setUp(self) -> None:
         self._ledger_tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._ledger_tmp.cleanup)
