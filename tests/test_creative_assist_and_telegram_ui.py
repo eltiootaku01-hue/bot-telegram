@@ -30,6 +30,7 @@ class CreativeAssistTests(unittest.TestCase):
 class TelegramUiTests(unittest.TestCase):
     def test_main_menu_exposes_novel_and_status_controls(self):
         adapter = TelegramNovelAdapter(_FakeApp())
+        self.addCleanup(adapter.close)
         labels = [label for row in adapter.MAIN_MENU for label, _ in row]
         self.assertIn("📖 Novela", labels)
         self.assertIn("📊 Estado API", labels)
@@ -38,6 +39,7 @@ class TelegramUiTests(unittest.TestCase):
     def test_local_scene_helper_does_not_call_application(self):
         app = _FakeApp()
         adapter = TelegramNovelAdapter(app)
+        self.addCleanup(adapter.close)
         update = {"callback_query": {"from": {"id": 1}, "message": {"chat": {"id": 2}}, "data": "stuck:local"}}
         outbound = adapter.handle_callback(update)
         self.assertEqual(app.calls, [])
@@ -50,6 +52,7 @@ class TelegramUiTests(unittest.TestCase):
     def test_api_button_requires_explicit_authorization_flag(self):
         app = _FakeApp()
         adapter = TelegramNovelAdapter(app)
+        self.addCleanup(adapter.close)
         key = ("1", "2")
         adapter._fallback_query[key] = "consulta pendiente"
         adapter._last_message[key] = "mensaje distinto posterior"
@@ -61,6 +64,7 @@ class TelegramUiTests(unittest.TestCase):
     def test_prompt_button_never_calls_application(self):
         app = _FakeApp()
         adapter = TelegramNovelAdapter(app)
+        self.addCleanup(adapter.close)
         adapter._fallback_query[("1", "2")] = "Kuro salva a alguien"
         update = {"callback_query": {"from": {"id": 1}, "message": {"chat": {"id": 2}}, "data": "fallback:prompt"}}
         result = adapter.handle_callback(update)
