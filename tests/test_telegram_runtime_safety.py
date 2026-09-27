@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import unittest
 import tempfile
+
+from tests.diagnostics.phase1j_keyboardinterrupt import Phase1JRecorder
 from pathlib import Path
 
 from bot_ia.interfaces.telegram_event_ledger import TelegramEventLedger
@@ -10,18 +12,33 @@ from bot_ia.interfaces.telegram import TelegramAdapter, TelegramApiClient, Teleg
 class TelegramRuntimeSafetyTests(unittest.TestCase):
     def test_adapter_close_stops_xp_writer_thread(self):
         adapter = TelegramAdapter(object())
-        adapter._xp_tracker.record_message("shutdown-test", "telegram")
-        thread = adapter._xp_tracker._thread
+        recorder = Phase1JRecorder()
+        recorder.install(adapter._xp_tracker, adapter)
+        self.addCleanup(recorder.uninstall)
         self.addCleanup(adapter.close)
-        self.assertIsNotNone(thread)
-        self.assertTrue(thread.is_alive())
+        recorder.log("telegram_adapter_created")
+        recorder.log("passive_xp_tracker_created")
 
-        adapter.close()
+        try:
+            recorder.log("record_message_call")
+            adapter._xp_tracker.record_message("shutdown-test", "telegram")
+            recorder.log("record_message_return")
+            thread = adapter._xp_tracker._thread
+            self.assertIsNotNone(thread)
+            self.assertTrue(thread.is_alive())
 
-        self.assertFalse(
-            thread.is_alive(),
-            "TelegramAdapter.close() debe detener el escritor XP",
-        )
+            recorder.log("adapter_close_call")
+            adapter.close()
+            recorder.log("adapter_close_return")
+
+            self.assertFalse(
+                thread.is_alive(),
+                "TelegramAdapter.close() debe detener el escritor XP",
+            )
+            recorder.log("test_finished")
+        except KeyboardInterrupt as error:
+            recorder.capture_keyboard_interrupt(error, tracker=adapter._xp_tracker)
+            raise
 
     def test_poller_stop_closes_adapter(self):
         class Adapter:
