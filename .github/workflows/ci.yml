@@ -43,4 +43,11 @@ jobs:
       - name: Run test suite
         env:
           PYTHONWARNINGS: error::ResourceWarning
-        run: python -m pytest -q -vv
+        run: python -m pytest -q -vv --full-trace
+      - name: Upload Phase 1B native resource diagnostic
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: phase1b-thread-bootstrap-11
+          path: phase1b_native_resources.log
+          if-no-files-found: ignore
