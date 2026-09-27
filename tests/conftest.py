@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 LOG = Path("phase1b_validation_threads.log")
-VALIDATION_REPEAT = "02"
+VALIDATION_REPEAT = "03"
 
 
 def _writer_names() -> list[str]:
