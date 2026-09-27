@@ -44,3 +44,10 @@ jobs:
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: python -m pytest -q -vv --full-trace
+      - name: Upload Phase 1B Telegram-integrity probes
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: phase1b-thread-bootstrap-17
+          path: phase1b_telegram_integrity_probes.log
+          if-no-files-found: ignore
