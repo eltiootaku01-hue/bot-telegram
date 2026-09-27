@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from bot_ia.security.authority import AuthorityCore
+
 from .auto_moderation import moderate, ModerationDecision
 from .group_setup import DiscordGroupSetup
 from .discord_community import ImmersiveStrikeEngine
@@ -25,6 +27,7 @@ class DiscordModerationHandler:
 
     def __init__(self, client: DiscordGroupSetup, *, strike_store=None) -> None:
         self._client = client
+        self._authority = AuthorityCore()
         self._strike_engine = ImmersiveStrikeEngine(strike_store) if strike_store is not None else None
 
     def handle_message(
@@ -40,6 +43,14 @@ class DiscordModerationHandler:
         burst: bool = False,
         username: str = "",
     ) -> DiscordModerationResult:
+        authorization = self._authority.authorize_discord_event(
+            user_id,
+            action="automated_moderation",
+            guild_id=guild_id,
+        )
+        if not authorization.allowed:
+            raise PermissionError(authorization.reason)
+
         decision = moderate(text, room_key=room_key, image_tags=image_tags)
         if decision.action == "allow":
             return DiscordModerationResult(decision, False, False)

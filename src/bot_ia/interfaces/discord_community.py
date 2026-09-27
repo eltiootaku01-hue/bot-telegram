@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from bot_ia.security.authority import is_discord_superadmin
+
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
@@ -174,9 +176,8 @@ class ImmersiveStrikeEngine:
         self.discord_superadmin_id = os.getenv("DISCORD_SUPERADMIN_USER_ID", "").strip()
 
     def is_superadmin(self, user_id: str, username: str = "") -> bool:
-        return (
-            bool(self.discord_superadmin_id) and str(user_id) == self.discord_superadmin_id
-        ) or str(username).casefold().lstrip("@") == self.superadmin
+        """La inmunidad de moderación depende del ID Discord estable."""
+        return is_discord_superadmin(str(user_id))
 
     def evaluate(self, guild_id: str, user_id: str, reason: str, *, username: str = "", burst: bool = False) -> StrikeRecord | None:
         if self.is_superadmin(user_id, username):

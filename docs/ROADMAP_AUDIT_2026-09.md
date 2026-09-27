@@ -53,3 +53,31 @@ Se incorpora como requisito arquitectónico, todavía no implementado:
 ### Política
 
 Esta actualización es documentación de diseño. No autoriza implementación funcional, migración de runtime, cambio de dependencias ni eliminación de legacy.
+
+## FASE 1 — Seguridad y autoridad (implementación)
+
+Implementada una autoridad de acceso pequeña y reutilizable en src/bot_ia/security/authority.py.
+
+- IDs estables de SuperAdmin Telegram/Discord: IMPLEMENTADO.
+- TELEGRAM_ADMIN_USER_IDS centralizado: IMPLEMENTADO.
+- AUTHORIZED_GROUP_ID / TELEGRAM_OFFICIAL_CHAT_IDS: REUTILIZADOS.
+- AUTHORIZED_FORUM_ID: REUTILIZADO.
+- DISCORD_AUTHORIZED_GUILD_IDS: IMPLEMENTADO, fail-closed.
+- /setup_group y callbacks administrativos Telegram: GUARDADOS POR AUTORIDAD.
+- Moderación automatizada Discord: limitada a guild autorizada.
+- TCG Discord /drop y claim: limitados a guild autorizada.
+- Character Engine, prompts privados y detector de extracción: PENDIENTE.
+- GUI local: REUTILIZADA; autenticación OS formal: PENDIENTE.
+
+### Verificación
+
+Se añadió tests/test_security_authority.py con 18 pruebas contractuales para identidad, grupos/topics, guilds, privilegios y exposición de secretos.
+
+En el punto de partida existían errores de sintaxis ajenos a FASE 1 en:
+- src/bot/handlers/drop_handler.py
+- src/bot/handlers/support_handler.py
+- src/discord/bot.py
+
+El error de sintaxis de src/discord/bot.py se corrigió únicamente porque ese archivo debía modificarse para aplicar el guard de guild. Los dos fallos restantes siguen fuera del alcance de FASE 1.
+
+No se añadieron dependencias ni migraciones SQLite.

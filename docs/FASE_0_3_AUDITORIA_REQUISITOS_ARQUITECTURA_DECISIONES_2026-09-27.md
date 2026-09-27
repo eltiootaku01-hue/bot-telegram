@@ -1273,3 +1273,75 @@ Estado final de esta actualización:
 - intervención grupal Cari: FALTANTE;
 - contrato metadata emocional: PENDIENTE;
 - prueba E2E: NO REALIZADA.
+
+## FASE 1 — Seguridad y autoridad: implementación registrada
+
+Estado: IMPLEMENTADA EN LOS CAMINOS CUBIERTOS. La verificación E2E y el CI completo quedan condicionados por los fallos de compilación previos registrados.
+
+### Autoridad central reutilizable
+
+Se creó src/bot_ia/security/authority.py porque src/bot_ia/policy/authority.py existente tiene una responsabilidad distinta: autoridad epistemológica de fuentes/canon, no control de acceso.
+
+La nueva autoridad reutiliza las allowlists Telegram existentes de telegram_security.py y centraliza identidad administrativa por IDs estables, autorización de grupos/topics Telegram, allowlist de guilds Discord mediante DISCORD_AUTHORIZED_GUILD_IDS y la separación entre permisos públicos y administrativos.
+
+No se inventaron IDs reales.
+
+### Identidad
+
+TELEGRAM_SUPERADMIN_ID y DISCORD_SUPERADMIN_USER_ID son las raíces estables del propietario por plataforma.
+
+TELEGRAM_ADMIN_USER_IDS sigue siendo la fuente existente para administradores Telegram. Se añadió DISCORD_ADMIN_USER_IDS como allowlist opcional de administradores Discord adicionales.
+
+Los usernames dejan de ser raíces de confianza. TELEGRAM_SUPERADMIN_USERNAME se conserva como dato descriptivo/compatibilidad.
+
+### Telegram
+
+TelegramAdapter.room_key_for_update() delega al AuthorityCore la decisión sobre el destino antes de continuar.
+
+Un grupo/supergrupo fuera de AUTHORIZED_GROUP_ID / TELEGRAM_OFFICIAL_CHAT_IDS es rechazado antes de continuar con la aplicación.
+
+Un topic configurado mediante AUTHORIZED_FORUM_ID debe coincidir exactamente.
+
+El comando /setup_group requiere identidad administrativa por ID estable y un destino de grupo autorizado. Un DM de un usuario externo no puede activar esa operación.
+
+Los callbacks administrativos y la carga de adjuntos requieren identidad administrativa centralizada.
+
+### Discord
+
+Se introdujo DISCORD_AUTHORIZED_GUILD_IDS con política fail-closed cuando está vacío.
+
+DiscordModerationHandler exige guild autorizada antes de ejecutar moderación automatizada.
+
+src/discord/bot.py exige guild autorizada para /drop y para el reclamo de cartas.
+
+### SuperAdmin y moderación
+
+interfaces/superadmin.py, cami_guard.py e ImmersiveStrikeEngine convergen en IDs estables para la confianza del SuperAdmin.
+
+La lógica de strikes y su pendiente de ventana de una hora no fue rediseñada.
+
+### Prompts y secretos
+
+No se implementó Character Engine ni detector semántico de extracción de prompts.
+
+La palabra prompt no se bloquea por sí sola.
+
+La frontera implementada impide que una conversación externa adquiera permisos administrativos por username o por texto. La superficie pública WebApi verificada devuelve un contrato sin campos de secretos.
+
+### GUI administrativa
+
+No se creó un segundo panel. AdminProvisioner e IncidentsPanel siguen siendo las piezas existentes.
+
+La GUI se mantiene como superficie local de confianza en el PC. No se inventó autenticación del sistema operativo; esa capa queda como decisión futura si el propietario la exige.
+
+### Clasificación
+
+- AuthorityCore: EXISTE Y VERIFICADO por pruebas unitarias nuevas.
+- Identidad Telegram por ID: EXISTE Y VERIFICADO.
+- Identidad Discord por ID: EXISTE Y VERIFICADO.
+- Grupo/topic Telegram: EXISTE Y VERIFICADO por pruebas de decisión y guardia del adapter.
+- Guild Discord autorizado: EXISTE Y VERIFICADO por pruebas de decisión.
+- /setup_group protegido: EXISTE, integrado; E2E PENDIENTE.
+- Callbacks administrativos protegidos: EXISTE, integrado; E2E PENDIENTE.
+- Contrato público sin secretos: EXISTE Y VERIFICADO de forma contractual.
+- Autenticación de SO para GUI: FALTA / DECISIÓN PENDIENTE.

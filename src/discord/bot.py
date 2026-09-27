@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.db.models import User
 from src.services.drop_service import spawn_card_drop, claim_card_drop
+from bot_ia.security.authority import AuthorityCore
 
 # Configuración del motor de base de datos SQLite
 engine = create_engine("sqlite:///bot_database.db", echo=False)
@@ -28,6 +29,18 @@ class ClaimDropView(discord.ui.View):
     )
     async def claim_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         discord_user = interaction.user
+        guild_id = str(interaction.guild_id or "").strip()
+        authorization = AuthorityCore().authorize_discord_event(
+            str(discord_user.id),
+            action="claim_drop",
+            guild_id=guild_id,
+        )
+        if not authorization.allowed:
+            await interaction.response.send_message(
+                "⛔ Servidor Discord no autorizado para BOT-IA.",
+                ephemeral=True,
+            )
+            return
 
         with Session(engine) as session:
             # 1. Buscar o crear al usuario en la BD usando su discord_id
@@ -91,10 +104,22 @@ async def drop_command(interaction: discord.Interaction):
     """
     Comando Slash /drop para generar una carta aleatoria en un canal de Discord.
     """
+    guild_id = str(interaction.guild_id or "").strip()
+    authorization = AuthorityCore().authorize_discord_event(
+        str(interaction.user.id),
+        action="drop",
+        guild_id=guild_id,
+    )
+    if not authorization.allowed:
+        await interaction.response.send_message(
+            "⛔ Servidor Discord no autorizado para BOT-IA.",
+            ephemeral=True,
+        )
+        return
+
     await interaction.response.defer()
 
     channel_id = interaction.channel_id
-    guild_id = interaction.guild_id or channel_id
 
     with Session(engine) as session:
         drop, card_instance, card = spawn_card_drop(
@@ -107,13 +132,9 @@ async def drop_command(interaction: discord.Interaction):
         embed = discord.Embed(
             title="✨ ¡UNA CARTA SILVESTRE HA APARECIDO!",
             description=(
-                f"🎴 **Personaje:** {card.name}
-"
-                f"⭐ **Rareza:** {card.rarity}
-"
-                f"🌊 **Elemento:** {card.element or 'Neutro'}
-
-"
+                f"🎴 **Personaje:** {card.name}\n"
+                f"⭐ **Rareza:** {card.rarity}\n"
+                f"🌊 **Elemento:** {card.element or 'Neutro'}\n\n"
                 f"¡Presiona el botón para agregarla a tu mazo!"
             ),
             color=discord.Color.gold()

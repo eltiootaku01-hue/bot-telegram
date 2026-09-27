@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import os
 import re
 import unicodedata
 from urllib.parse import urlparse
+
+from bot_ia.security.authority import is_telegram_superadmin
+
 
 SUPERADMIN_USERNAME = "tiootakuu"
 SUPERADMIN_ENV = "TELEGRAM_SUPERADMIN_ID"
@@ -63,12 +65,8 @@ def _unsafe_link(value: object) -> bool:
 
 
 def is_superadmin(user_id: object = "", username: object = "") -> bool:
-    configured = os.getenv(SUPERADMIN_ENV, "").strip()
-    uid = str(user_id or "").strip()
-    name = str(username or "").strip().lstrip("@").casefold()
-    if configured and uid == configured:
-        return True
-    return name == SUPERADMIN_USERNAME.casefold()
+    """La confianza del SuperAdmin de Telegram depende sólo de su ID estable."""
+    return is_telegram_superadmin(str(user_id or ""))
 
 
 def scan_cami_guard(

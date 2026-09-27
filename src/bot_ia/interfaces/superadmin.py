@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import os
+from bot_ia.security.authority import AuthorityCore
 
 
 SUPERADMIN_USERNAME = "tiootakuu"
@@ -11,8 +11,10 @@ SUPERADMIN_TELEGRAM_URL = "https://t.me/tiootakuu"
 
 
 def is_superadmin(user_id: str = "", username: str = "") -> bool:
-    configured_id = os.getenv("DISCORD_SUPERADMIN_USER_ID", "").strip()
-    configured_username = os.getenv("TELEGRAM_SUPERADMIN_USERNAME", SUPERADMIN_USERNAME).strip().lstrip("@").casefold()
+    """Compatibilidad; la confianza depende sólo de IDs estables."""
+    authority = AuthorityCore()
+    uid = str(user_id).strip()
     return (
-        bool(configured_id) and str(user_id).strip() == configured_id
-    ) or str(username).strip().lstrip("@").casefold() == configured_username
+        authority.is_superadmin(AuthorityCore.TELEGRAM, uid)
+        or authority.is_superadmin(AuthorityCore.DISCORD, uid)
+    )

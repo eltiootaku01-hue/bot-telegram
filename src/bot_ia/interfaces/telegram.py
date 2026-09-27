@@ -16,6 +16,7 @@ from bot_ia.core.application import ApplicationRequest, ApplicationResponse, Bot
 from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.waitress_session_manager import TavernError, TavernReply, WaitressSessionManager
 from bot_ia.librarian.models import CoverageStatus
+from bot_ia.security.authority import AuthorizationRequest, AuthorityCore
 
 from .telegram_outbox import TelegramOutboxError, TelegramOutboxStore, TelegramOutboxRecord
 from .telegram_event_ledger import TelegramEventLedger, TelegramEventLedgerError
@@ -248,6 +249,7 @@ class TelegramAdapter:
             cafe_url=os.getenv("CAFE_OTAKU_INVITE_URL", "").strip(),
         )
         self._callback_mutex = MutexGuard()
+        self._authority = AuthorityCore()
         self._xp_tracker = PassiveXPTracker(PROJECT_ROOT / "config" / "nakama_xp.sqlite3")
         self._audit_bus = AuditBus()
 
@@ -263,13 +265,11 @@ class TelegramAdapter:
     def _affinity_level(self, user_id: str, maid: str) -> int:
         return self._waifu_registry.affinity_level(user_id, maid)
 
-    @staticmethod
-    def _admin_ids() -> frozenset[str]:
-        raw = os.getenv("TELEGRAM_ADMIN_USER_IDS", "")
-        return frozenset(part.strip() for part in raw.split(",") if part.strip())
+    def _admin_ids(self) -> frozenset[str]:
+        return self._authority.admin_user_ids(AuthorityCore.TELEGRAM)
 
     def room_key_for_update(self, update: dict[str, object]) -> str:
-        """Resuelve la sala real del update sin inventar "general" en un foro."""
+        """Resuelve la sala real del update mediante la autoridad central."""
         message = update.get("message")
         if not isinstance(message, dict):
             raise TelegramInputError("update sin mensaje Telegram")
@@ -280,7 +280,10 @@ class TelegramAdapter:
         if not chat_id:
             raise TelegramInputError("chat_id Telegram vacío")
 
+        sender = message.get("from")
+        user_id = str(sender.get("id", "")).strip() if isinstance(sender, dict) else ""
         chat_type = str(chat.get("type", "")).strip().lower()
+        is_group = chat_type in {"group", "supergroup"}
         thread_raw = message.get("message_thread_id")
         is_topic = bool(message.get("is_topic_message"))
         thread_id: int | None = None
@@ -292,21 +295,23 @@ class TelegramAdapter:
                     "message_thread_id Telegram inválido"
                 ) from error
 
-        if chat_type in {"group", "supergroup"}:
-            if not is_authorized_telegram_group(chat_id):
-                raise TelegramInputError(
-                    "chat Telegram fuera de la allowlist autorizada"
-                )
+        authorization = self._authority.authorize(
+            AuthorizationRequest(
+                platform=AuthorityCore.TELEGRAM,
+                user_id=user_id,
+                action="conversation",
+                destination_id=chat_id,
+                destination_kind="group" if is_group else "dm",
+                thread_id=thread_id,
+                require_authorized_destination=is_group,
+            )
+        )
+        if not authorization.allowed:
+            raise TelegramInputError(authorization.reason)
 
         if thread_id is not None or is_topic:
             if thread_id is None:
-                raise TelegramInputError(
-                    "mensaje de topic sin message_thread_id"
-                )
-            if not is_authorized_telegram_forum_route(chat_id, thread_id):
-                raise TelegramInputError(
-                    "topic Telegram fuera de AUTHORIZED_FORUM_ID"
-                )
+                raise TelegramInputError("mensaje de topic sin message_thread_id")
             try:
                 room_key = self._room_router.resolve(chat_id, thread_id)
             except TelegramRoomRoutingError as error:
@@ -407,7 +412,12 @@ class TelegramAdapter:
         return TelegramOutbound(admin_chat, text, "admin_order", keyboard, message_thread_id=thread_id)
 
     def _order_attach(self, callback: TelegramCallback, order_id: str) -> TelegramOutbound:
-        if callback.user_id not in self._admin_ids():
+        authorization = self._authority.authorize_telegram_admin(
+            callback.user_id,
+            action="order_attachment",
+            destination_id=callback.conversation_id,
+        )
+        if not authorization.allowed:
             return TelegramOutbound(callback.conversation_id, "⛔ Acción reservada al equipo administrativo.", "admin")
         order = self._order_store.get(order_id)
         if order is not None:
@@ -421,7 +431,12 @@ class TelegramAdapter:
         return TelegramOutbound(callback.conversation_id, "⚠️ Pedido no encontrado o expirado.", "admin")
 
     def _complaint_response(self, callback: TelegramCallback, action: str, complaint_id: str) -> TelegramOutbound:
-        if callback.user_id not in self._admin_ids():
+        authorization = self._authority.authorize_telegram_admin(
+            callback.user_id,
+            action="complaint_resolution",
+            destination_id=callback.conversation_id,
+        )
+        if not authorization.allowed:
             return TelegramOutbound(callback.conversation_id, "⛔ Esta acción está reservada al equipo administrativo.", "admin")
         try:
             record = self._complaint_store.resolve(
@@ -448,7 +463,14 @@ class TelegramAdapter:
         photos = message.get("photo")
         if not isinstance(sender, dict) or not isinstance(chat, dict) or not isinstance(photos, list) or not photos:
             raise TelegramInputError("invalid photo update")
-        admin_id = str(sender.get("id", ""))
+        admin_id = str(sender.get("id", "")).strip()
+        authorization = self._authority.authorize_telegram_admin(
+            admin_id,
+            action="order_attachment_upload",
+            destination_id=str(chat.get("id", "")).strip(),
+        )
+        if not authorization.allowed:
+            raise TelegramInputError("acción administrativa no autorizada")
         pending = self._pending_attachments.get(admin_id)
         if pending is None:
             raise TelegramInputError("no order is waiting for an attachment")
@@ -706,6 +728,19 @@ class TelegramAdapter:
             )
 
         if command == "/setup_group":
+            authorization = self._authority.authorize_telegram_admin(
+                inbound.user_id,
+                action="setup_group",
+                destination_id=inbound.conversation_id,
+                destination_kind="group",
+                require_destination=True,
+            )
+            if not authorization.allowed:
+                return TelegramOutbound(
+                    inbound.conversation_id,
+                    "⛔ Acción administrativa no autorizada.",
+                    "admin",
+                )
             try:
                 setup = TelegramGroupSetup(os.getenv("TELEGRAM_BOT_TOKEN", ""))
                 result = setup.setup_chat(
