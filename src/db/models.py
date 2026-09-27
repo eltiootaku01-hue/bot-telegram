@@ -48,6 +48,11 @@ class Card(Base):
     element: Mapped[str | None] = mapped_column(String(30), nullable=True)
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     total_copies_minted: Mapped[int] = mapped_column(Integer, default=0)
+    card_type: Mapped[CardType] = mapped_column(
+        Enum(CardType, name="card_type"),
+        nullable=False,
+        default=CardType.WAIFU,
+    )
     instances: Mapped[list["CardInstance"]] = relationship("CardInstance", back_populates="card")
 
 
