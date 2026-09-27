@@ -168,6 +168,79 @@ class Phase1JRecorder:
         threading.Thread.start = start
         self._originals.append((threading.Thread, "start", original_start))
 
+        original_join = threading.Thread.join
+
+        def join(thread, *args, **kwargs):
+            recorder.log(
+                "thread_join_called",
+                thread=recorder._thread_info(thread),
+                timeout=args[0] if args else kwargs.get("timeout"),
+            )
+            try:
+                result = original_join(thread, *args, **kwargs)
+            except BaseException as error:
+                recorder.log(
+                    "thread_join_exception",
+                    thread=recorder._thread_info(thread),
+                    exception_type=type(error).__name__,
+                    exception_message=str(error),
+                )
+                raise
+            recorder.log("thread_join_return", thread=recorder._thread_info(thread))
+            return result
+
+        threading.Thread.join = join
+        self._originals.append((threading.Thread, "join", original_join))
+
+        original_kill = os.kill
+
+        def kill(pid, sig):
+            recorder.log("os.kill_call", pid=pid, signal=sig)
+            try:
+                result = original_kill(pid, sig)
+            except BaseException as error:
+                recorder.log(
+                    "os.kill_exception",
+                    pid=pid,
+                    signal=sig,
+                    exception_type=type(error).__name__,
+                    exception_message=str(error),
+                )
+                raise
+            recorder.log("os.kill_return", pid=pid, signal=sig)
+            return result
+
+        os.kill = kill
+        self._originals.append((os, "kill", original_kill))
+
+        try:
+            from bot_ia.interfaces.telegram_instance_lock import TelegramInstanceLock
+            original_alive = TelegramInstanceLock._process_is_alive
+
+            def process_is_alive(lock, pid):
+                recorder.log("telegram_instance_lock.process_is_alive_enter", pid=pid)
+                try:
+                    result = original_alive(lock, pid)
+                except BaseException as error:
+                    recorder.log(
+                        "telegram_instance_lock.process_is_alive_exception",
+                        pid=pid,
+                        exception_type=type(error).__name__,
+                        exception_message=str(error),
+                    )
+                    raise
+                recorder.log(
+                    "telegram_instance_lock.process_is_alive_return",
+                    pid=pid,
+                    result=result,
+                )
+                return result
+
+            TelegramInstanceLock._process_is_alive = process_is_alive
+            self._originals.append((TelegramInstanceLock, "_process_is_alive", original_alive))
+        except (AttributeError, ImportError):
+            self.log("telegram_instance_lock_instrumentation_unavailable")
+
     def _wrap_method(self, obj, name: str, event: str, *, thread_target: bool = False) -> None:
         original = getattr(obj, name)
         recorder = self
