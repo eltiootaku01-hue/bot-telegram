@@ -21,3 +21,35 @@ Se añadió el registro persistente de la auditoría de requisitos, arquitectura
 - Se documentaron los huecos de Tavern Telegram, estados de mesera, espera por regreso, TCG inventory/deck, rental fallback, MatchHistory, economía, identidad, WebQueue, Chromium, ProviderManager, Ollama, memoria, emociones, timing, almacenamiento externo y TCG Web.
 - Las decisiones aún no confirmadas quedan marcadas como `DECISIÓN PENDIENTE DEL USUARIO`.
 
+
+
+## Actualización de diseño — Character Engine + WebChat compartido (2026-09-27)
+
+Se incorpora como requisito arquitectónico, todavía no implementado:
+
+- WebChat como recurso compartido para tareas que requieren generación de lenguaje.
+- Cola con prioridades conceptuales y cooldown independiente de prioridad.
+- Estados técnicos internos separados de cualquier mensaje visible al usuario.
+- Interacción controlada de una sola intervención por usuario/personaje cuando se hable directamente con Cari.
+- Character Engine como ensamblador de contexto antes de WebChat.
+- Separación de roleplay y análisis.
+- Estado emocional y actitud proporcionados por BOT-IA.
+- Selección de memoria relevante en vez de enviar todo el historial.
+- Posibilidad de ambigüedad y contrapregunta natural.
+- Salida pública limitada al diálogo del personaje.
+- Metadata emocional posterior separada del texto público.
+
+### Conflictos documentados
+
+- src/services/web_queue.py es FIFO + exclusión mutua; no demuestra prioridad global actual.
+- src/gui/task_orchestrator.py tiene HIGH/MEDIUM/LOW, pero no es la cola global del runtime Qt normal.
+- src/bot_ia/providers/prompt_builder.py implementa roleplay de Tavern, pero no el Character Engine completo.
+- No existe todavía estado emocional persistente estructurado.
+- No existe todavía actitud operacional persistente.
+- No existe selección especializada de memoria para Character Engine.
+- No existe flujo grupal “Hablarle a Cari” con la restricción especificada.
+- El mecanismo de señal/metadata emocional posterior todavía requiere contrato técnico.
+
+### Política
+
+Esta actualización es documentación de diseño. No autoriza implementación funcional, migración de runtime, cambio de dependencias ni eliminación de legacy.
