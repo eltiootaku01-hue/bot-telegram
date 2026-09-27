@@ -1397,11 +1397,11 @@ Esto garantiza que una respuesta tardía identificada por `task_id` no modifique
 Cuando una tarea hija con `parent_task_id` comienza, el parent RUNNING/WAITING pasa a INTERRUPTED.
 
 Al completar la hija:
-- RETURN_IF_VALID reanuda el parent sólo si sigue válido;
+- RETURN_IF_VALID deja el parent en INTERRUPTED; TaskEngine.can_return() determina si sigue válido;
 - DISCARD_PARENT invalida el parent;
 - NO_RETURN deja el parent interrumpido.
 
-La validez del parent incluye comprobar el deadline antes de reanudarlo.
+La decisión de cuándo reanudar el parent corresponde al Task Scheduler, después de que el ejecutor haya liberado cualquier recurso físico asociado.
 
 ### Integración con WaitressSessionManager
 
@@ -1409,9 +1409,9 @@ No se reemplazan ACTIVE_SESSIONS, BUSY, RESTING ni sus timers.
 
 Los tickets de Tavern reutilizan su `ticket_id` existente como `TaskEngine.task_id`. La sesión sigue siendo responsable de su propio tiempo de sesión y descanso; el Action Deadline del Task Engine permanece conceptualmente separado y no se deriva de esos tiempos.
 
-Cuando WebQueue notifica `ticket_started`, Tavern inicia la tarea.
+El Task Scheduler inicia la tarea antes de entregarla a WebQueue; `ticket_started` sólo sincroniza el estado de la mesera.
 
-Cuando llega `ticket_processed`, Tavern primero valida el `task_id`; sólo una respuesta aceptada puede completar y publicar la tarea.
+Cuando llega `ticket_processed`, Tavern entrega el evento al Scheduler, que valida el `task_id`; sólo una respuesta aceptada puede completar y publicar la tarea.
 
 Una respuesta posterior a una cancelación, fallo o completado previo se descarta.
 
