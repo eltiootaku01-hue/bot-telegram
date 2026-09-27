@@ -115,7 +115,9 @@ class Phase9IntegrationTests(unittest.TestCase):
         self.assertIn("personality", execution.rule_resolution.conflicts[0].blocked_rule_ids)
 
     def test_fake_telegram_adapter_reaches_local_workflow(self) -> None:
-        outbound = TelegramAdapter(self.app).handle_update({"message": {"from": {"id": 1}, "chat": {"id": 2}, "text": "Hola, ¿qué tal?"}})
+        adapter = TelegramAdapter(self.app)
+        self.addCleanup(adapter.close)
+        outbound = adapter.handle_update({"message": {"from": {"id": 1}, "chat": {"id": 2}, "text": "Hola, ¿qué tal?"}})
         self.assertEqual("local", outbound.route)
 
 
