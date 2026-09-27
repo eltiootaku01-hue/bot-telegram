@@ -43,4 +43,11 @@ jobs:
       - name: Run test suite
         env:
           PYTHONWARNINGS: error::ResourceWarning
-        run: python -m pytest -q -vv
+        run: python -m pytest -q -vv --full-trace
+      - name: Upload Phase 1B validation diagnostic
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: phase1b-validation-01
+          path: phase1b_validation_threads.log
+          if-no-files-found: ignore
