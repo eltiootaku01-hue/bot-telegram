@@ -7,6 +7,7 @@ from bot_ia.core.task_engine import (
     ReturnPolicy,
     TaskEngine,
     TaskState,
+    TaskWaitReason,
 )
 from bot_ia.core.task_scheduler import (
     TaskRoute,
@@ -142,6 +143,57 @@ class TaskSchedulerTests(unittest.TestCase):
         )
         self.assertEqual(["web"], self.web.started)
         self.assertEqual(["local"], self.local.started)
+
+    def test_waiting_user_requires_explicit_wake(self) -> None:
+        task = self.create(
+            "user-wait",
+            route=TaskRoute.LOCAL,
+        )
+        self.scheduler.wait(task.task_id, TaskWaitReason.USER)
+        self.assertEqual(
+            (),
+            self.scheduler.dispatch(),
+        )
+        self.assertEqual(
+            TaskState.WAITING,
+            self.engine.snapshot(task.task_id).state,
+        )
+        self.scheduler.wake(task.task_id)
+        self.assertEqual(
+            ["user-wait"],
+            self.local.started,
+        )
+        self.assertEqual(
+            TaskState.RUNNING,
+            self.engine.snapshot(task.task_id).state,
+        )
+
+    def test_interrupted_requires_explicit_wake(self) -> None:
+        task = self.create(
+            "interrupted",
+            route=TaskRoute.LOCAL,
+        )
+        self.engine.interrupt(
+            task.task_id,
+            interrupted_by="test",
+        )
+        self.assertEqual(
+            (),
+            self.scheduler.dispatch(),
+        )
+        self.assertEqual(
+            TaskState.INTERRUPTED,
+            self.engine.snapshot(task.task_id).state,
+        )
+        self.scheduler.wake(task.task_id)
+        self.assertEqual(
+            ["interrupted"],
+            self.local.started,
+        )
+        self.assertEqual(
+            TaskState.RUNNING,
+            self.engine.snapshot(task.task_id).state,
+        )
 
     def test_pending_cancel_never_executes(self) -> None:
         self.create("a", route=TaskRoute.WEBCHAT)

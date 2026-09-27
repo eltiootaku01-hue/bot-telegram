@@ -60,6 +60,7 @@ class TaskScheduler:
         self._active: dict[str, ScheduledTask] = {}
         self._resource_active: dict[str, str] = {}
         self._return_after_finish: set[str] = set()
+        self._resume_requests: set[str] = set()
         self._sequence = 0
         self._priority_streak: dict[str, tuple[int, int]] = {}
         self._lock = threading.RLock()
@@ -140,6 +141,7 @@ class TaskScheduler:
                     return tuple(started)
 
                 self._pending.pop(candidate.task_id, None)
+                self._resume_requests.discard(candidate.task_id)
                 task = self._engine.snapshot(candidate.task_id)
                 if task is None or not self._engine.is_valid(candidate.task_id):
                     continue
@@ -209,6 +211,7 @@ class TaskScheduler:
 
             self._pending.pop(task_id, None)
             self._return_after_finish.discard(task_id)
+            self._resume_requests.discard(task_id)
 
             if was_active:
                 scheduled = self._active.get(task_id)
@@ -284,7 +287,32 @@ class TaskScheduler:
 
     def wait(self, task_id: str, reason: TaskWaitReason) -> Task:
         with self._lock:
+            self._resume_requests.discard(str(task_id).strip())
             return self._engine.wait(task_id, reason)
+
+    def wake(self, task_id: str) -> Task:
+        """Marca una tarea WAITING/INTERRUPTED para una reanudación explícita."""
+        task_id = str(task_id).strip()
+        with self._lock:
+            task = self._engine.snapshot(task_id)
+            if task is None:
+                raise KeyError(f"unknown task_id: {task_id}")
+            if task_id in self._active:
+                raise RuntimeError(
+                    f"task {task_id} is already active and cannot be woken"
+                )
+            if task.state not in {TaskState.WAITING, TaskState.INTERRUPTED}:
+                raise RuntimeError(
+                    f"task {task_id} cannot be woken from {task.state.value}"
+                )
+            self._resume_requests.add(task_id)
+            if task_id not in self._pending:
+                self._enqueue_registered_locked(task_id)
+            self.dispatch()
+            result = self._engine.snapshot(task_id)
+            if result is None:
+                raise KeyError(f"unknown task_id: {task_id}")
+            return result
 
     def snapshot(self, task_id: str) -> ScheduledTask | None:
         with self._lock:
@@ -308,10 +336,12 @@ class TaskScheduler:
                 )
             )
 
-    def _enqueue_parent_locked(self, task_id: str) -> None:
+    def _enqueue_registered_locked(self, task_id: str) -> None:
         registration = self._registrations.get(task_id)
         if registration is None:
-            return
+            raise RuntimeError(
+                f"task {task_id} has no scheduler registration"
+            )
         if task_id in self._pending or task_id in self._active:
             return
         self._sequence += 1
@@ -321,6 +351,12 @@ class TaskScheduler:
             registration.resource_key,
             self._sequence,
         )
+
+    def _enqueue_parent_locked(self, task_id: str) -> None:
+        if task_id not in self._registrations:
+            return
+        self._enqueue_registered_locked(task_id)
+        self._resume_requests.add(task_id)
 
     def _request_parent_interruption_locked(
         self,
@@ -334,10 +370,35 @@ class TaskScheduler:
 
     def _select_candidate_locked(self) -> ScheduledTask | None:
         candidates: list[ScheduledTask] = []
+        stale_ids: list[str] = []
 
-        for item in self._pending.values():
+        for item in tuple(self._pending.values()):
             task = self._engine.snapshot(item.task_id)
             if task is None or not self._engine.is_valid(item.task_id):
+                stale_ids.append(item.task_id)
+                continue
+
+            if task.state is TaskState.WAITING:
+                auto_resume = task.wait_reason in {
+                    TaskWaitReason.WEBCHAT,
+                    TaskWaitReason.EXTERNAL,
+                }
+                if not auto_resume and item.task_id not in self._resume_requests:
+                    continue
+
+            if (
+                task.state is TaskState.INTERRUPTED
+                and item.task_id not in self._resume_requests
+            ):
+                continue
+
+            if task.state not in {
+                TaskState.PENDING,
+                TaskState.WAITING,
+                TaskState.INTERRUPTED,
+            }:
+                stale_ids.append(item.task_id)
+                self._resume_requests.discard(item.task_id)
                 continue
 
             if (
@@ -373,6 +434,10 @@ class TaskScheduler:
                 continue
 
             candidates.append(item)
+
+        for task_id in stale_ids:
+            self._pending.pop(task_id, None)
+            self._resume_requests.discard(task_id)
 
         if not candidates:
             return None

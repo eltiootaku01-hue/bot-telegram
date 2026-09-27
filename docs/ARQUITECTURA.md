@@ -232,3 +232,5 @@ src/bot_ia/core/web_queue.py y src/gui/task_orchestrator.py permanecen sin promo
 ### No implementado en esta fase
 
 No se añadieron Café Table, host/invitados, facturación, limpieza, Character Engine, emociones, relaciones, memoria nueva, automatización de Cari, strikes/moderation redesign, nuevos bots, nueva IA, nuevo navegador ni otra WebQueue.
+Las esperas `WAITING_USER` y `WAITING_TIMER` no se reanudan automáticamente al llamar `dispatch()`. Requieren una activación explícita mediante el Scheduler (`wake(task_id)`); de este modo una llamada de rutina no convierte una dependencia aún pendiente en trabajo ejecutable. `WAITING_WEBCHAT` y `WAITING_EXTERNAL` sí pueden volver a ser elegibles cuando el recurso/dependencia correspondiente se libera. Un task `INTERRUPTED` tampoco se reanuda por accidente: debe existir una solicitud explícita de retorno, como la generada por la política parent/child.
+
