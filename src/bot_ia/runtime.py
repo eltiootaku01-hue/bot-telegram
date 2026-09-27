@@ -19,6 +19,7 @@ from bot_ia.core.project_manager import ProjectManager, ProjectRecord
 from bot_ia.core.router import Router
 from bot_ia.core.session_store import PersistentSessionStore
 from bot_ia.core.task_engine import TaskEngine
+from bot_ia.core.task_scheduler import TaskScheduler
 from bot_ia.librarian import EntityIndex, SourceInventory
 from bot_ia.librarian.models import CatalogEntry
 from bot_ia.memory import MemoryStore
@@ -45,6 +46,7 @@ class RuntimeComponents:
     _universe_map: dict[str, UniverseRuntime] = field(default_factory=dict, repr=False, compare=False)
     _runtime_lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
     task_engine: TaskEngine | None = field(default=None, repr=False, compare=False)
+    task_scheduler: TaskScheduler | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "_universe_map", {item.definition.universe_id: item for item in self.universes})
@@ -74,14 +76,22 @@ class RuntimeComponents:
         *,
         web_queue_manager: object | None = None,
         task_engine=None,
+        task_scheduler=None,
         message_sender=None,
         message_deleter=None,
         timezone_name: str = "America/Argentina/Buenos_Aires",
     ) -> WaitressSessionManager:
+        selected_engine = task_engine or self.task_engine
+        selected_scheduler = task_scheduler or self.task_scheduler
+        if selected_scheduler is not None and selected_scheduler.task_engine is not selected_engine:
+            raise ValueError(
+                "task_scheduler and task_engine must share the same lifecycle authority"
+            )
         return WaitressSessionManager(
             self.memory_store.path,
             web_queue_manager=web_queue_manager,
-            task_engine=task_engine or self.task_engine,
+            task_engine=selected_engine,
+            task_scheduler=selected_scheduler,
             message_sender=message_sender,
             message_deleter=message_deleter,
             timezone_name=timezone_name,
@@ -160,6 +170,7 @@ def build_runtime(project_root: Path, *, key_loader=None, transports=None) -> Ru
     provider_manager = build_provider_manager(config, key_loader=key_loader, transports=transports)
     memory_store = MemoryStore(project_root, universe_registry)
     task_engine = TaskEngine()
+    task_scheduler = TaskScheduler(task_engine)
     return RuntimeComponents(
         config,
         registry,
@@ -170,4 +181,5 @@ def build_runtime(project_root: Path, *, key_loader=None, transports=None) -> Ru
         project_manager,
         project_root,
         task_engine=task_engine,
+        task_scheduler=task_scheduler,
     )
