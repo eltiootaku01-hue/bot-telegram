@@ -1,0 +1,73 @@
+# -*- coding: utf-8 -*-
+name: Phase 1F - Windows 10053 forensic capture
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+jobs:
+  forensic-windows:
+    runs-on: windows-latest
+    env:
+      PYTHONPATH: src
+      PYTHONWARNINGS: error::ResourceWarning
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install runtime dependencies
+        run: python -m pip install --disable-pip-version-check PySide6 tzdata playwright python-dotenv SQLAlchemy pytest
+
+      - name: Compile source and tests
+        run: python -m compileall -q src tests launcher.py desktop.py desktop_entry.py
+
+      - name: Normal validation - target test once
+        run: python -m pytest -q tests/test_web_runtime.py::WebRuntimeTests::test_query_requires_bearer_and_returns_json
+
+      - name: Forensic campaign - target test 10 times
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 10; $i++) {
+            Write-Host "=== Phase 1F target iteration $i/10 ==="
+            $log = "forensic-target-$i.log"
+            python -m pytest -q tests/test_web_runtime.py::WebRuntimeTests::test_query_requires_bearer_and_returns_json *> $log
+            $code = $LASTEXITCODE
+            Get-Content $log
+            if ($code -ne 0) {
+              Write-Host "10053 campaign stopped at iteration $i"
+              exit $code
+            }
+          }
+
+      - name: Context campaign - full web runtime file 5 times
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 5; $i++) {
+            Write-Host "=== Phase 1F web runtime iteration $i/5 ==="
+            $log = "forensic-runtime-$i.log"
+            python -m pytest -q tests/test_web_runtime.py *> $log
+            $code = $LASTEXITCODE
+            Get-Content $log
+            if ($code -ne 0) {
+              Write-Host "Web runtime campaign stopped at iteration $i"
+              exit $code
+            }
+          }
+
+      - name: Upload forensic logs
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: phase1f-win10053-forensic-logs
+          path: |
+            forensic-target-*.log
+            forensic-runtime-*.log
+          if-no-files-found: ignore
