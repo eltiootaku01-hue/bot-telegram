@@ -169,3 +169,32 @@ La primera ejecución posterior a la corrección de sintaxis alcanzó `pytest`, 
 Por tratarse de una dependencia de runtime existente que impedía verificar el repositorio completo, se declaró `SQLAlchemy>=2.0,<3` en `pyproject.toml` y se añadió a la instalación explícita del workflow CI.
 
 Esta modificación no pertenece al Task Engine funcional; es una corrección mínima del contrato de dependencias/CI necesaria para poder probar la fase y la base existente.
+
+## FASE Scheduler / Task Routing — implementación
+
+Estado actual del bloque:
+- Task Engine: corregido para mantener una sola autoridad de lifecycle y devolver snapshots aislados.
+- Task Scheduler / Router: IMPLEMENTADO en src/bot_ia/core/task_scheduler.py.
+- WebQueue: REUTILIZADO; no se creó otra cola. Se añadió cancelación por task_id/ticket_id.
+- Tavern y GUI WebChat: conectados al mismo Scheduler del Runtime.
+- src/gui/task_orchestrator.py: continúa como orquestador específico de GUI y no se convirtió en Scheduler global.
+- src/bot_ia/core/web_queue.py: permanece LEGACY/condicionado y no se incorpora al runtime global.
+
+Reglas implementadas:
+- HIGH=1, MEDIUM=2, LOW=3.
+- FIFO dentro de cada prioridad.
+- anti-starvation mínimo después de tres selecciones consecutivas de mayor prioridad para el mismo recurso exclusivo.
+- WEB_MESA_UNICA conserva la exclusión física de una sesión WebChat y no representa mesas sociales del Café.
+- tareas locales sin resource_key pueden ejecutarse concurrentemente.
+- una tarea con recurso ocupado espera sin crear otra instancia del recurso.
+- Action Deadline no se extiende por timeout/cooldown/session/rest.
+- cancelación no reanima ni reencola.
+- respuestas tardías se validan sólo por task_id.
+- parent/child: Task Engine decide validez; Scheduler decide cuándo reanudar; WebQueue decide acceso físico.
+
+Verificación pendiente al redactar esta actualización:
+- CI Windows del SHA previo b69d2fef seguía terminando con KeyboardInterrupt después de 567 tests y advertencias ResourceWarning de SQLite; Ubuntu había pasado con 572 tests. Ese bloqueo heredado de verificación no se ocultó ni se marcó como PASS.
+- La ejecución local no está disponible porque el repositorio no está montado en el entorno actual.
+- El bloque Scheduler requiere una nueva ejecución completa de CI sobre su SHA final.
+
+Fuera de esta fase: Café Table, Character Engine, emociones, relaciones, memoria nueva, automatización de Cari, moderation redesign, nuevos bots/IA, nuevo navegador y nueva WebQueue.
