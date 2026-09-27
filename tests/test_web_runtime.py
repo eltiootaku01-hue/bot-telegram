@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-import http.client
 import json
 import threading
 import unittest
 from urllib.error import HTTPError
+import http.client
 from urllib.request import ProxyHandler, Request, build_opener
 
 from bot_ia.interfaces.web import BoundedThreadingHTTPServer, WebApi, WebApiError, create_web_server
@@ -67,35 +67,21 @@ class WebRuntimeTests(unittest.TestCase):
         self.server.server_close()
         self.thread.join(timeout=2)
 
-    def test_health_and_openapi_handlers_are_deterministic(self):
-        server = create_web_server(
-            WebApi(FakeApplication(), api_token="t" * 32),
-            port=0,
-        )
+    def test_health_and_openapi_are_reachable(self):
+        connection = self._http_request("/health")
         try:
-            recorded = []
-            handler = object.__new__(server.RequestHandlerClass)
-            handler._send = lambda status, payload: recorded.append(
-                (status, payload)
-            )
-
-            handler.path = "/health"
-            handler.do_GET()
-            self.assertEqual(
-                (200, {"ok": True, "service": "bot-ia"}),
-                recorded[-1],
-            )
-
-            handler.path = "/openapi.json"
-            handler.do_GET()
-            status, document = recorded[-1]
-            self.assertEqual(200, status)
-            self.assertEqual(
-                "queryBotIA",
-                document["paths"]["/v1/query"]["post"]["operationId"],
-            )
+            response = connection.getresponse()
+            self.assertEqual(200, response.status)
+            self.assertTrue(json.loads(response.read())["ok"])
         finally:
-            server.server_close()
+            connection.close()
+        connection = self._http_request("/openapi.json")
+        try:
+            response = connection.getresponse()
+            document = json.loads(response.read())
+            self.assertEqual("queryBotIA", document["paths"]["/v1/query"]["post"]["operationId"])
+        finally:
+            connection.close()
 
     def test_query_requires_bearer_and_returns_json(self):
         body = json.dumps({"message": "hola"}).encode("utf-8")

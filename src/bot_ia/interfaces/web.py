@@ -35,13 +35,7 @@ class BoundedThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
     block_on_close = False
     MAX_WORKERS = 8
 
-    def __init__(
-        self,
-        server_address,
-        RequestHandlerClass,
-        *,
-        max_workers: int | None = None,
-    ):
+    def __init__(self, server_address, RequestHandlerClass, *, max_workers: int | None = None):
         self.max_workers = max_workers or self.MAX_WORKERS
         if self.max_workers < 1:
             raise ValueError("max_workers must be positive")
@@ -65,19 +59,23 @@ class BoundedThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
                 self.shutdown_request(request)
             return
 
+        def run() -> None:
+            try:
+                self.process_request_thread(request, client_address)
+            finally:
+                self._request_slots.release()
+
+        thread = threading.Thread(
+            target=run,
+            name=f"bot-ia-http-{client_address[0]}:{client_address[1]}",
+            daemon=self.daemon_threads,
+        )
         try:
-            super().process_request(request, client_address)
-        except Exception:
+            thread.start()
+        except RuntimeError:
             self._request_slots.release()
             self.shutdown_request(request)
             raise
-
-    def process_request_thread(self, request, client_address) -> None:
-        try:
-            super().process_request_thread(request, client_address)
-        finally:
-            self._request_slots.release()
-
 
 
 class WebApi:
