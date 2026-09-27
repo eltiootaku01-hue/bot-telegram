@@ -252,6 +252,14 @@ class TelegramAdapter:
         self._authority = AuthorityCore()
         self._xp_tracker = PassiveXPTracker(PROJECT_ROOT / "config" / "nakama_xp.sqlite3")
         self._audit_bus = AuditBus()
+        self._closed = False
+
+    def close(self) -> None:
+        """Libera recursos de fondo asociados a este adapter."""
+        if self._closed:
+            return
+        self._closed = True
+        self._xp_tracker.stop()
 
     def _active_maid(self, user_id: str) -> str:
         """Devuelve la mesera activa del turno local; Cami es el fallback."""
@@ -1323,6 +1331,9 @@ class TelegramPoller:
 
     def stop(self) -> None:
         self._running = False
+        close = getattr(self._adapter, "close", None)
+        if callable(close):
+            close()
 
     @staticmethod
     def _message_ids_from_result(result: object) -> tuple[int, ...]:
