@@ -1,0 +1,47 @@
+name: Phase 1E Windows 10053 Diagnostic
+
+on:
+  push:
+    branches: [diagnostic/phase1e-win10053]
+  pull_request:
+    branches: [main]
+
+jobs:
+  isolated:
+    runs-on: windows-latest
+    env:
+      PYTHONPATH: src
+      PYTHONWARNINGS: error::ResourceWarning
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check PySide6 tzdata playwright python-dotenv SQLAlchemy pytest
+      - name: Run target in clean processes
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 10; $i++) {
+            Write-Host "=== isolated run $i ==="
+            python -m pytest -q -vv tests/test_web_runtime.py::WebRuntimeTests::test_query_requires_bearer_and_returns_json
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Run web runtime file in clean processes
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 10; $i++) {
+            Write-Host "=== web_runtime file run $i ==="
+            python -m pytest -q -vv tests/test_web_runtime.py
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Run web-context sequence in clean processes
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 10; $i++) {
+            Write-Host "=== web context run $i ==="
+            python -m pytest -q -vv tests/test_web_api.py tests/test_web_chat.py tests/test_web_interface.py tests/test_web_runtime.py
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
