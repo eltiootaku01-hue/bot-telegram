@@ -21,11 +21,14 @@ def _writer_names() -> list[str]:
 
 
 def _write(label: str) -> None:
-    LOG.open("a", encoding="utf-8").write(
-        f"label={label} python={sys.version.split()[0]} pid={os.getpid()} "
-        f"threads={len(threading.enumerate())} writers={len(_writer_names())} "
-        f"names={[thread.name for thread in threading.enumerate()]}\n"
-    )
+    with LOG.open("a", encoding="utf-8") as handle:
+        handle.write(
+            f"label={label} python={sys.version.split()[0]} pid={os.getpid()} "
+            f"threads={len(threading.enumerate())} writers={len(_writer_names())} "
+            f"names={[thread.name for thread in threading.enumerate()]}\n"
+        )
+        handle.flush()
+        os.fsync(handle.fileno())
 
 
 def pytest_sessionstart(session):
