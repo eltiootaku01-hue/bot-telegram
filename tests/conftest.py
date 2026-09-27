@@ -10,5 +10,5 @@ TARGET = (
 )
 
 
-def pytest_collection_modifyitems(_config, items):
+def pytest_collection_modifyitems(config, items):
     items.sort(key=lambda item: 0 if item.nodeid == TARGET else 1)
