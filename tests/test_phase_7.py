@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
@@ -21,6 +22,7 @@ class Phase7Tests(unittest.TestCase):
         universes.register(UniverseDefinition("other_world", "Other World", Path("data/other")))
         self.sessions = InMemorySessionStore()
         self.adapter = TelegramAdapter(BotApplication(LocalBrain(universes), Router(), self.sessions, default_universe_id="one_neko_punch"))
+        self.addCleanup(self.adapter.close)
 
     def test_update_becomes_normalized_request(self) -> None:
         inbound = parse_update(update("  Hola  "))
