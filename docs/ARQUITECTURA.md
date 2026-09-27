@@ -158,3 +158,11 @@ Una respuesta posterior a una cancelación, fallo o completado previo se descart
 
 El estado de la camarera permanece BUSY durante una interrupción de tareas internas porque la sesión sigue activa; el retorno de trabajo queda gobernado por TaskEngine para las tareas futuras que utilicen parent/child.
 
+
+### Correcciones de verificación heredadas
+
+Durante la verificación de FASE 1B, los dos errores de compilación preexistentes de `src/bot/handlers/drop_handler.py` y `src/bot/handlers/support_handler.py` impidieron ejecutar tests.
+
+Se corrigieron únicamente sus literales con saltos de línea para restaurar el código Python válido. No se modificó la lógica funcional de drops, claims ni soporte.
+
+Estas correcciones son de desbloqueo de compilación y no forman parte del diseño del Task Engine.

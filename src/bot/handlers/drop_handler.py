@@ -34,16 +34,10 @@ async def cmd_spawn_drop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         ])
 
         caption = (
-            f"✨ **¡UNA CARTA SILVESTRE HA APARECIDO!** ✨
-
-"
-            f"🎴 **Personaje:** {card.name}
-"
-            f"⭐ **Rareza:** {card.rarity}
-"
-            f"🌊 **Elemento:** {card.element or 'Neutro'}
-
-"
+            f"✨ **¡UNA CARTA SILVESTRE HA APARECIDO!** ✨\n\n"
+            f"🎴 **Personaje:** {card.name}\n"
+            f"⭐ **Rareza:** {card.rarity}\n"
+            f"🌊 **Elemento:** {card.element or 'Neutro'}\n\n"
             f"¡Sé el primero en presionar el botón para agregarla a tu mazo!"
         )
 
@@ -98,9 +92,7 @@ async def handle_claim_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
             # Modificar el mensaje original desactivando el botón
             claimed_caption = (
-                f"{query.message.caption or query.message.text}
-
-"
+                f"{query.message.caption or query.message.text}\n\n"
                 f"✅ **{message}**"
             )
 

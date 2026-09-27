@@ -36,14 +36,10 @@ async def handle_missing_cards_support(
     )
 
     response_text = (
-        "Espere, busco... 📋
-
-"
+        "Espere, busco... 📋\n\n"
         "Perdón, pero usted nunca consiguió esa carta en este grupo de Telegram. "
         "¡Los baúles de Discord y Telegram son completamente independientes "
-        "para evitar confusiones! Sus cartas siguen a salvo en Discord.
-
-"
+        "para evitar confusiones! Sus cartas siguen a salvo en Discord.\n\n"
         "¿Eso era todo? Cami me está llamando..."
     )
 
