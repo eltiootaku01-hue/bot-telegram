@@ -54,6 +54,22 @@ class WebQueueCancellationTests(unittest.TestCase):
             except RuntimeError:
                 pass
 
+    def test_circuit_recovery_signals_scheduler_capacity(self) -> None:
+        worker = _QueueWorker(
+            timeout_ms=45000,
+            circuit_threshold=3,
+            circuit_cooldown_ms=10000,
+        )
+        events = []
+        worker.capacity_restored.connect(lambda: events.append(True))
+        worker.circuit_open = True
+
+        worker._half_open_circuit()
+
+        self.assertEqual([True], events)
+        self.assertFalse(worker.circuit_open)
+        self.assertEqual(0, worker.consecutive_failures)
+
     def test_queued_ticket_cancellation_keeps_remaining_fifo_order(self) -> None:
         worker = _QueueWorker(
             timeout_ms=45000,
