@@ -1,0 +1,37 @@
+name: Phase 1B Experiment 05 - isolated Telegram adapter
+
+on:
+  push:
+    branches:
+      - diagnostic/phase1b-thread-bootstrap-05
+
+jobs:
+  isolated:
+    runs-on: windows-latest
+    env:
+      PYTHONPATH: src
+      PYTHONFAULTHANDLER: "1"
+      PYTHONWARNINGS: error::ResourceWarning
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python --version
+          python -c "import platform; print(platform.platform()); print(platform.version())"
+          python -m pip install --disable-pip-version-check PySide6 tzdata playwright python-dotenv SQLAlchemy pytest
+      - name: Compile
+        run: python -m compileall -q src tests launcher.py desktop.py desktop_entry.py
+      - name: Run isolated failing test
+        shell: pwsh
+        run: |
+          python -m pytest -vv --full-trace tests/test_telegram_runtime_safety.py::TelegramRuntimeSafetyTests::test_adapter_close_stops_xp_writer_thread 2>&1 | Tee-Object -FilePath phase1b-05.log
+      - name: Upload diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: phase1b-thread-bootstrap-05
+          path: phase1b-05.log
