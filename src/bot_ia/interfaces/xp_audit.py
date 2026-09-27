@@ -82,17 +82,19 @@ class PassiveXPTracker:
         return XPResult(key[0], key[1], 10, level, True, self.role_for(level))
 
     def _ensure_writer_started(self) -> None:
-        thread = self._thread
-        if thread is not None and thread.is_alive():
-            return
-        self._stop.clear()
-        thread = threading.Thread(
-            target=self._writer,
-            name="nakama-xp-writer",
-            daemon=True,
-        )
-        self._thread = thread
-        thread.start()
+        with self._lock:
+            thread = self._thread
+            if thread is not None and thread.is_alive():
+                return
+            if self._stop.is_set():
+                raise RuntimeError("PassiveXPTracker is stopped")
+            thread = threading.Thread(
+                target=self._writer,
+                name="nakama-xp-writer",
+                daemon=True,
+            )
+            self._thread = thread
+            thread.start()
 
     def current_xp(self, user_id: str, platform: str) -> int:
         with closing(self._connect()) as db:
@@ -115,8 +117,9 @@ class PassiveXPTracker:
             db.commit()
 
     def stop(self) -> None:
-        self._stop.set()
-        thread = self._thread
+        with self._lock:
+            self._stop.set()
+            thread = self._thread
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=1.0)
 
