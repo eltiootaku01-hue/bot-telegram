@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from src.db.models import Base, Card
+from src.db.models import Base, Card, CardType
 
 
 def seed_cards(db_url: str = "sqlite:///bot_database.db"):
@@ -26,6 +26,7 @@ def seed_cards(db_url: str = "sqlite:///bot_database.db"):
             defense=20,
             element="Agua",
             image_url="https://placehold.co/400x600/png?text=Capibara+Bebe",
+            card_type=CardType.WAIFU,
         ),
         Card(
             name="Capibara Explorador",
@@ -34,6 +35,7 @@ def seed_cards(db_url: str = "sqlite:///bot_database.db"):
             defense=18,
             element="Planta",
             image_url="https://placehold.co/400x600/png?text=Capibara+Explorador",
+            card_type=CardType.WAIFU,
         ),
         # Raras
         Card(
@@ -43,6 +45,7 @@ def seed_cards(db_url: str = "sqlite:///bot_database.db"):
             defense=55,
             element="Tierra",
             image_url="https://placehold.co/400x600/png?text=Capibara+Caballero",
+            card_type=CardType.WAIFU,
         ),
         Card(
             name="Capibara Mago",
@@ -51,6 +54,7 @@ def seed_cards(db_url: str = "sqlite:///bot_database.db"):
             defense=30,
             element="Fuego",
             image_url="https://placehold.co/400x600/png?text=Capibara+Mago",
+            card_type=CardType.WAIFU,
         ),
         # Épicas
         Card(
@@ -60,6 +64,7 @@ def seed_cards(db_url: str = "sqlite:///bot_database.db"):
             defense=75,
             element="Rayo",
             image_url="https://placehold.co/400x600/png?text=Cari+Tactica",
+            card_type=CardType.WAIFU,
         ),
         Card(
             name="Cami, Gemela Impulsiva",
@@ -68,6 +73,7 @@ def seed_cards(db_url: str = "sqlite:///bot_database.db"):
             defense=60,
             element="Fuego",
             image_url="https://placehold.co/400x600/png?text=Cami+Impulsiva",
+            card_type=CardType.WAIFU,
         ),
         # Legendaria
         Card(
@@ -77,6 +83,7 @@ def seed_cards(db_url: str = "sqlite:///bot_database.db"):
             defense=115,
             element="Luz",
             image_url="https://placehold.co/400x600/png?text=Rey+Capibara",
+            card_type=CardType.WAIFU,
         ),
     ]
 
