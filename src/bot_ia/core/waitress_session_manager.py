@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from bot_ia.core.mama_mia_supervisor import MamaMiaSupervisor
 from bot_ia.core.task_engine import ResponseDisposition, TaskEngine, TaskState
+from bot_ia.core.task_scheduler import TaskRoute, TaskScheduler, WebChatTaskExecutor
 from bot_ia.providers.prompt_builder import (
     SupervisorDirective,
     TavernSessionType,
@@ -127,6 +128,7 @@ class WaitressSessionManager:
         message_sender: Callable[[str, str], object] | None = None,
         message_deleter: Callable[[str, int], object] | None = None,
         task_engine: TaskEngine | None = None,
+        task_scheduler: TaskScheduler | None = None,
         timezone_name: str = "America/Argentina/Buenos_Aires",
         now_provider: Callable[[], datetime] | None = None,
         max_notification_workers: int = 4,
@@ -152,6 +154,17 @@ class WaitressSessionManager:
         self._task_engine = task_engine or TaskEngine(
             now_provider=self._now_utc
         )
+        self._task_scheduler = task_scheduler or TaskScheduler(self._task_engine)
+        if self._task_scheduler.task_engine is not self._task_engine:
+            raise TavernConfigurationError(
+                "task_scheduler and task_engine must share the same lifecycle authority"
+            )
+        if self._web_queue is not None:
+            self._task_scheduler.register_executor(
+                TaskRoute.WEBCHAT,
+                WebChatTaskExecutor(self._web_queue),
+                default_resource_key=TaskScheduler.WEBCHAT_RESOURCE,
+            )
         self._message_deleter = message_deleter
         self._notification_pool = ThreadPoolExecutor(
             max_workers=max_notification_workers,
@@ -799,6 +812,13 @@ class WaitressSessionManager:
             context={
                 "session_id": session.session_id,
                 "waitress_id": session.waitress_id,
+                "bot_name": str(waitress["display_name"]),
+                "action": "tavern_chat",
+                "message": prompt,
+                "user": telegram_id,
+                "channel": f"/taberna/{session.waitress_id}",
+                "route": TaskRoute.WEBCHAT.value,
+                "resource_key": TaskScheduler.WEBCHAT_RESOURCE,
             },
             priority=TaskEngine.MEDIUM,
         )
@@ -822,14 +842,12 @@ class WaitressSessionManager:
                 self._supervision_slots.release()
 
         try:
-            self._web_queue.enqueue_bot_message(
-                bot_name=str(waitress["display_name"]),
-                ticket_id=ticket_id,
-                action="tavern_chat",
-                message=prompt,
-                user=telegram_id,
-                channel=f"/taberna/{session.waitress_id}",
+            self._task_scheduler.schedule(
+                ticket_id,
+                TaskRoute.WEBCHAT,
+                resource_key=TaskScheduler.WEBCHAT_RESOURCE,
             )
+            self._task_scheduler.dispatch()
         except Exception:
             try:
                 self._task_engine.cancel(ticket_id)
@@ -1290,14 +1308,16 @@ class WaitressSessionManager:
     def task_engine(self) -> TaskEngine:
         return self._task_engine
 
+    @property
+    def task_scheduler(self) -> TaskScheduler:
+        return self._task_scheduler
+
     def _on_ticket_started(
         self,
         ticket_id: str,
         _bot_name: str,
     ) -> None:
-        try:
-            self._task_engine.start_task(ticket_id)
-        except (KeyError, RuntimeError):
+        if self._task_engine.snapshot(ticket_id) is None:
             return
         with self._ticket_lock:
             session_id = self._ticket_sessions.get(ticket_id)
@@ -1313,11 +1333,7 @@ class WaitressSessionManager:
         ticket_id: str,
         response_text: str,
     ) -> None:
-        if self._task_engine.validate_response(ticket_id) is not ResponseDisposition.ACCEPTED:
-            return
-        try:
-            self._task_engine.complete(ticket_id)
-        except (KeyError, RuntimeError):
+        if self._task_scheduler.accept_response(ticket_id) is not ResponseDisposition.ACCEPTED:
             return
         with self._ticket_lock:
             session_id = self._ticket_sessions.get(ticket_id)
@@ -1347,7 +1363,7 @@ class WaitressSessionManager:
                 self._ticket_sessions.pop(ticket_id, None)
             return
         try:
-            self._task_engine.fail(ticket_id)
+            self._task_scheduler.fail_from_executor(ticket_id)
         except (KeyError, RuntimeError):
             return
         with self._ticket_lock:
@@ -1372,6 +1388,7 @@ class WaitressSessionManager:
         ticket_id: str,
         _bot_name: str,
     ) -> None:
+        self._task_scheduler.execution_finished(ticket_id)
         with self._ticket_lock:
             session_id = self._ticket_sessions.pop(ticket_id, None)
         if session_id is None:
@@ -1473,6 +1490,12 @@ class WaitressSessionManager:
                 for ticket_id, stored_id in self._ticket_sessions.items()
                 if stored_id == session_id
             ]
+        for ticket_id in stale:
+            try:
+                self._task_scheduler.cancel(ticket_id)
+            except (KeyError, RuntimeError):
+                pass
+        with self._ticket_lock:
             for ticket_id in stale:
                 self._ticket_sessions.pop(ticket_id, None)
 
