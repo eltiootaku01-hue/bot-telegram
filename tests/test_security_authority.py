@@ -241,6 +241,7 @@ class SecurityAuthorityTests(unittest.TestCase):
 
         with auth_env(TELEGRAM_OFFICIAL_CHAT_IDS="-100"):
             adapter = TelegramAdapter(Application())
+            self.addCleanup(adapter.close)
             update = {
                 "message": {
                     "from": {"id": 200, "username": "normal"},
