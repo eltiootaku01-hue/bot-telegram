@@ -42,8 +42,7 @@ class PassiveXPTracker:
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._init_db()
-        self._thread = threading.Thread(target=self._writer, name="nakama-xp-writer", daemon=True)
-        self._thread.start()
+        self._thread: threading.Thread | None = None
 
     def _connect(self) -> sqlite3.Connection:
         db = sqlite3.connect(self.path, timeout=2.0)
@@ -77,9 +76,23 @@ class PassiveXPTracker:
                 level = self.level_for(self.current_xp(*key))
                 return XPResult(key[0], key[1], 0, level, False, self.role_for(level))
             self._last[key] = now
+        self._ensure_writer_started()
         self._queue.put((key[0], key[1], now))
         level = self.level_for(self.current_xp(*key) + 10)
         return XPResult(key[0], key[1], 10, level, True, self.role_for(level))
+
+    def _ensure_writer_started(self) -> None:
+        thread = self._thread
+        if thread is not None and thread.is_alive():
+            return
+        self._stop.clear()
+        thread = threading.Thread(
+            target=self._writer,
+            name="nakama-xp-writer",
+            daemon=True,
+        )
+        self._thread = thread
+        thread.start()
 
     def current_xp(self, user_id: str, platform: str) -> int:
         with closing(self._connect()) as db:
@@ -103,7 +116,9 @@ class PassiveXPTracker:
 
     def stop(self) -> None:
         self._stop.set()
-        self._thread.join(timeout=1.0)
+        thread = self._thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=1.0)
 
 
 class AuditBus:
