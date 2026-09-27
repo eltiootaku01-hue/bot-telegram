@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 from bot_ia.interfaces.telegram_event_ledger import TelegramEventLedger
-from bot_ia.interfaces.telegram import TelegramApiClient, TelegramOutbound, TelegramPoller, PollingConfig
+from bot_ia.interfaces.telegram import TelegramAdapter, TelegramApiClient, TelegramOutbound, TelegramPoller, PollingConfig
 
 
 class TelegramRuntimeSafetyTests(unittest.TestCase):
