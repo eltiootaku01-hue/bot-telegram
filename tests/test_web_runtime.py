@@ -46,10 +46,10 @@ class WebRuntimeTests(unittest.TestCase):
         self.thread.join(timeout=2)
 
     def test_health_and_openapi_are_reachable(self):
-        with urlopen(self.base + "/health") as response:
+        with urlopen(self.base + "/health", timeout=3) as response:
             self.assertEqual(200, response.status)
             self.assertTrue(json.loads(response.read())["ok"])
-        with urlopen(self.base + "/openapi.json") as response:
+        with urlopen(self.base + "/openapi.json", timeout=3) as response:
             document = json.loads(response.read())
             self.assertEqual("queryBotIA", document["paths"]["/v1/query"]["post"]["operationId"])
 
@@ -57,7 +57,7 @@ class WebRuntimeTests(unittest.TestCase):
         body = json.dumps({"message": "hola"}).encode("utf-8")
         request = Request(self.base + "/v1/query", data=body, headers={"Content-Type": "application/json"}, method="POST")
         with self.assertRaises(HTTPError) as raised:
-            urlopen(request)
+            urlopen(request, timeout=3)
         raised.exception.close()
 
         request.add_header("Authorization", "Bearer " + "t" * 32)
