@@ -238,3 +238,12 @@ src/bot_ia/core/web_queue.py y src/gui/task_orchestrator.py permanecen sin promo
 No se añadieron Café Table, host/invitados, facturación, limpieza, Character Engine, emociones, relaciones, memoria nueva, automatización de Cari, strikes/moderation redesign, nuevos bots, nueva IA, nuevo navegador ni otra WebQueue.
 Las esperas `WAITING_USER` y `WAITING_TIMER` no se reanudan automáticamente al llamar `dispatch()`. Requieren una activación explícita mediante el Scheduler (`wake(task_id)`); de este modo una llamada de rutina no convierte una dependencia aún pendiente en trabajo ejecutable. `WAITING_WEBCHAT` y `WAITING_EXTERNAL` sí pueden volver a ser elegibles cuando el recurso/dependencia correspondiente se libera. Un task `INTERRUPTED` tampoco se reanuda por accidente: debe existir una solicitud explícita de retorno, como la generada por la política parent/child.
 
+
+
+## Telegram - cierre determinista de recursos de fondo
+
+`TelegramAdapter` posee un `PassiveXPTracker` que mantiene un escritor SQLite en background. El tracker ahora tiene un owner explícito: `TelegramAdapter.close()` libera ese hilo, y `TelegramPoller.stop()` propaga el cierre al adapter. Esto evita que cada adapter creado durante la vida del proceso deje un `nakama-xp-writer` residente.
+
+Durante la auditoría de CI Windows se observaron decenas de esos hilos vivos simultáneamente. El bloqueo posterior aparecía en `Thread.start()` mientras intentaba arrancar el hilo del WebRuntime. El endpoint HTTP no era la causa funcional: WebRuntime pasó de forma aislada en Windows y Ubuntu. La corrección mantiene el flujo real de `/health` y `/openapi.json` y sólo hace explícito el cleanup del recurso que ya existía.
+
+Los tests que crean adapters directamente también registran `close()` como cleanup para que cada caso libere su propio recurso.
