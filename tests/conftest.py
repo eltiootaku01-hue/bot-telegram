@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 LOG = Path("phase1b_validation_threads.log")
+VALIDATION_REPEAT = "02"
 
 
 def _writer_names() -> list[str]:
@@ -23,7 +24,7 @@ def _writer_names() -> list[str]:
 def _write(label: str) -> None:
     with LOG.open("a", encoding="utf-8") as handle:
         handle.write(
-            f"label={label} python={sys.version.split()[0]} pid={os.getpid()} "
+            f"repeat={VALIDATION_REPEAT} label={label} python={sys.version.split()[0]} pid={os.getpid()} "
             f"threads={len(threading.enumerate())} writers={len(_writer_names())} "
             f"names={[thread.name for thread in threading.enumerate()]}\n"
         )
