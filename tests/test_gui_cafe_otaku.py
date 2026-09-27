@@ -57,6 +57,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
 
         with TemporaryDirectory() as tmp:
             tracker = PassiveXPTracker(Path(tmp) / "xp.sqlite3")
+            self.assertIsNone(tracker._thread)
             events = []
             bus = AuditBus()
             bus.subscribe(lambda event, details: events.append((event, details)))
