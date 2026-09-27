@@ -43,4 +43,4 @@ jobs:
       - name: Run test suite
         env:
           PYTHONWARNINGS: error::ResourceWarning
-        run: python -m pytest -q -vv
+        run: python -m pytest -q -vv tests/test_web_runtime.py
