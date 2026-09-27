@@ -150,7 +150,7 @@ No se reemplazan ACTIVE_SESSIONS, BUSY, RESTING ni sus timers.
 
 Los tickets de Tavern reutilizan su `ticket_id` existente como `TaskEngine.task_id`. La sesión sigue siendo responsable de su propio tiempo de sesión y descanso; el Action Deadline del Task Engine permanece conceptualmente separado y no se deriva de esos tiempos.
 
-Cuando WebQueue notifica `ticket_started`, Tavern inicia la tarea.
+Scheduler inicia la tarea lógica en Task Engine antes de entregarla a WebQueue. La señal `ticket_started` sólo confirma que la ejecución física WebChat comenzó y permite actualizar el estado operativo de la camarera.
 
 Cuando llega `ticket_processed`, Tavern primero valida el `task_id`; sólo una respuesta aceptada puede completar y publicar la tarea.
 
@@ -198,6 +198,10 @@ Cuando el recurso WebChat está ocupado, las tareas WebChat no se duplican en ot
 
 Las prioridades siguen la convención existente: HIGH=1, MEDIUM=2, LOW=3. Dentro de una misma prioridad se conserva FIFO mediante una secuencia monotónica.
 Para el único recurso exclusivo actual se aplica una política mínima anti-starvation: después de tres ejecuciones consecutivas de una prioridad superior, se permite seleccionar la tarea de prioridad inferior más antigua que ya sea elegible. No se introduce un sistema de fairness más complejo.
+
+### WAITING
+
+`WAITING_WEBCHAT` y `WAITING_EXTERNAL` representan esperas que pueden volver a ser elegibles cuando el Scheduler detecta que el recurso o dependencia quedó disponible. `WAITING_USER` y `WAITING_TIMER` no se reanudan por un `dispatch()` de rutina: requieren una activación explícita mediante `wake(task_id)`. `INTERRUPTED` tampoco se reanuda automáticamente; el retorno parent/child genera la solicitud explícita que el Scheduler consume.
 
 ### Deadlines y cooldown
 
