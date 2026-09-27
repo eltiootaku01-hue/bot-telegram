@@ -51,7 +51,7 @@ class PassiveXPTracker:
         return db
 
     def _init_db(self) -> None:
-        with self._connect() as db:
+        with closing(self._connect()) as db:
             db.execute("CREATE TABLE IF NOT EXISTS xp_users (user_id TEXT NOT NULL, platform TEXT NOT NULL, xp INTEGER NOT NULL DEFAULT 0, messages INTEGER NOT NULL DEFAULT 0, updated_at REAL NOT NULL, PRIMARY KEY(user_id, platform))")
             db.execute("CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, platform TEXT NOT NULL, user_id TEXT, event TEXT NOT NULL, details TEXT NOT NULL, created_at REAL NOT NULL)")
             db.commit()
@@ -92,7 +92,7 @@ class PassiveXPTracker:
                 user_id, platform, now = self._queue.get_nowait()
             except Exception:
                 continue
-            with self._connect() as db:
+            with closing(self._connect()) as db:
                 db.execute("INSERT INTO xp_users(user_id,platform,xp,messages,updated_at) VALUES(?,?,10,1,?) ON CONFLICT(user_id,platform) DO UPDATE SET xp=xp+10,messages=messages+1,updated_at=excluded.updated_at", (user_id, platform, now))
                 db.commit()
 
