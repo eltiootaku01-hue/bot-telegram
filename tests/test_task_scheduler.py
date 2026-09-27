@@ -238,6 +238,30 @@ class TaskSchedulerTests(unittest.TestCase):
         self.assertEqual(["a"], self.web.started)
         self.assertEqual(TaskState.TIMED_OUT, self.engine.snapshot("a").state)
 
+    def test_webchat_cooldown_wait_does_not_extend_deadline(self) -> None:
+        task = self.create(
+            "cooling",
+            route=TaskRoute.WEBCHAT,
+            deadline=self.clock.now() + timedelta(seconds=3),
+        )
+        self.web.available = False
+        self.assertEqual((), self.scheduler.dispatch())
+        self.assertEqual(
+            TaskState.WAITING,
+            self.engine.snapshot(task.task_id).state,
+        )
+        self.assertEqual(
+            "WAITING_WEBCHAT",
+            self.engine.snapshot(task.task_id).wait_reason.value,
+        )
+        self.clock.advance(4)
+        self.web.available = True
+        self.assertEqual((), self.scheduler.dispatch())
+        self.assertEqual(
+            TaskState.TIMED_OUT,
+            self.engine.snapshot(task.task_id).state,
+        )
+
     def test_duplicate_task_cannot_execute_twice(self) -> None:
         self.create("a", route=TaskRoute.WEBCHAT)
         with self.assertRaises(ValueError):
