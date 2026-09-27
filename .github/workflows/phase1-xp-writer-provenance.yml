@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - diagnostic/phase1-xp-writer-provenance-20260927
+  pull_request:
+    branches:
+      - main
 jobs:
   diagnose:
     runs-on: windows-latest
