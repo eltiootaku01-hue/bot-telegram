@@ -2219,7 +2219,11 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertEqual("timeout", engine.action_for(second))
             self.assertEqual("isolate", engine.action_for(third))
             self.assertIn("Cari", engine.cari_message(third))
-            self.assertEqual("immune", engine.action_for(engine.evaluate("g1", "tiootakuu", "spam", username="@tiootakuu")))
+            with patch.dict(os.environ, {"DISCORD_SUPERADMIN_USER_ID": "300"}, clear=False):
+                self.assertEqual(
+                    "immune",
+                    engine.action_for(engine.evaluate("g1", "300", "spam", username="@otro")),
+                )
 
         self.assertTrue(should_purge(0, now=7 * 24 * 60 * 60))
         self.assertEqual(0, should_purge(0, now=1))
@@ -2383,7 +2387,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
 
         clean = scan_cami_guard(
             "¡Meme de bienvenida al Café!",
-            username="@tiootakuu",
+            user_id="100",
+            username="@otro",
             content_kind="meme",
         )
         self.assertEqual("allow_react", clean.action)
@@ -2395,7 +2400,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         image_sensitive = scan_cami_guard(
             "Nueva publicación",
             image_tags=("nsfw",),
-            username="tiootakuu",
+            user_id="100",
+            username="otro",
         )
         self.assertEqual("spoiler_redirect", image_sensitive.action)
         self.assertTrue(image_sensitive.spoiler)
@@ -2404,7 +2410,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
 
         unsafe = supervise_admin_publication(
             "Anuncio: https://phishing.example/login",
-            username="@tiootakuu",
+            user_id="100",
+            username="@otro",
         )
         self.assertEqual("delete_alert", unsafe.action)
         self.assertTrue(unsafe.alert_admin)
@@ -2413,7 +2420,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ordinary = scan_cami_guard("texto normal", username="cliente")
         self.assertEqual("allow", ordinary.action)
         self.assertFalse(ordinary.strike_exempt)
-        self.assertTrue(is_superadmin(username="@tiootakuu"))
+        with patch.dict(os.environ, {"TELEGRAM_SUPERADMIN_ID": "100"}, clear=False):
+            self.assertTrue(is_superadmin(user_id="100", username="@otro"))
 
     def test_cami_guard_gui_alert_contract(self):
         source = (self.ROOT / "src" / "gui" / "incidents_panel.py").read_text(encoding="utf-8")
