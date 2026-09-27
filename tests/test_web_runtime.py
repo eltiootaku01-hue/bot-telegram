@@ -71,11 +71,11 @@ class WebRuntimeTests(unittest.TestCase):
         body = json.dumps({"message": "hola"}).encode("utf-8")
         request = Request(self.base + "/v1/query", data=body, headers={"Content-Type": "application/json"}, method="POST")
         with self.assertRaises(HTTPError) as raised:
-            urlopen(request, timeout=3)
+            self._opener.open(request, timeout=3)
         raised.exception.close()
 
         request.add_header("Authorization", "Bearer " + "t" * 32)
-        with urlopen(request) as response:
+        with self._opener.open(request, timeout=3) as response:
             payload = json.loads(response.read())
             self.assertEqual("evidencia", payload["answer"])
             self.assertTrue(payload["searched"])
