@@ -161,3 +161,11 @@ Durante la verificación de FASE 1B, los dos errores de compilación preexistent
 Se corrigieron únicamente sus literales con saltos de línea para restaurar el código Python válido. No se modificó la lógica funcional de drops, claims ni soporte.
 
 Estas correcciones son de desbloqueo de compilación y no forman parte del diseño del Task Engine.
+
+### Dependencia de verificación descubierta durante FASE 1B
+
+La primera ejecución posterior a la corrección de sintaxis alcanzó `pytest`, pero la colección se detuvo porque CI no instalaba `SQLAlchemy`, pese a que el repositorio ya importa SQLAlchemy en código y pruebas.
+
+Por tratarse de una dependencia de runtime existente que impedía verificar el repositorio completo, se declaró `SQLAlchemy>=2.0,<3` en `pyproject.toml` y se añadió a la instalación explícita del workflow CI.
+
+Esta modificación no pertenece al Task Engine funcional; es una corrección mínima del contrato de dependencias/CI necesaria para poder probar la fase y la base existente.
