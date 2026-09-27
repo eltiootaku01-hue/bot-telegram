@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 
 from bot_ia.core.creative_assist import expand_scene_sketch
