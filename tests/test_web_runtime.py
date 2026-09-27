@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import http.client
 import json
-import os
-import subprocess
-import sys
 import threading
 import unittest
 from urllib.error import HTTPError
@@ -71,73 +68,49 @@ class WebRuntimeTests(unittest.TestCase):
         self.thread.join(timeout=2)
 
     def test_health_and_openapi_are_reachable(self):
-        script = r"""
-import http.client
-import json
-import threading
+        server = create_web_server(
+            WebApi(FakeApplication(), api_token="t" * 32),
+            port=0,
+        )
+        server.timeout = 3
+        try:
+            for path in ("/health", "/openapi.json"):
+                worker = threading.Thread(
+                    target=server.handle_request,
+                    daemon=True,
+                )
+                worker.start()
 
-from bot_ia.interfaces.web import WebApi, create_web_server
+                connection = http.client.HTTPConnection(
+                    "127.0.0.1",
+                    server.server_port,
+                    timeout=3,
+                )
+                connection.request(
+                    "GET",
+                    path,
+                    headers={"Connection": "close"},
+                )
+                response = connection.getresponse()
+                body = response.read()
+                connection.close()
 
-server = create_web_server(
-    WebApi(object(), api_token="t" * 32),
-    port=0,
-)
-thread = threading.Thread(
-    target=server.serve_forever,
-    daemon=True,
-)
-thread.start()
-
-try:
-    for path in ("/health", "/openapi.json"):
-        connection = http.client.HTTPConnection(
-            "127.0.0.1",
-            server.server_port,
-            timeout=3,
-        )
-        connection.request(
-            "GET",
-            path,
-            headers={"Connection": "close"},
-        )
-        response = connection.getresponse()
-        body = response.read()
-        assert response.status == 200, response.status
-        payload = json.loads(body)
-        if path == "/health":
-            assert payload["ok"] is True
-        else:
-            assert (
-                payload["paths"]["/v1/query"]["post"]["operationId"]
-                == "queryBotIA"
-            )
-        connection.close()
-finally:
-    shutdown_thread = threading.Thread(
-        target=server.shutdown,
-        daemon=True,
-    )
-    shutdown_thread.start()
-    shutdown_thread.join(timeout=3)
-    if shutdown_thread.is_alive():
-        raise RuntimeError("child server shutdown timed out")
-    server.server_close()
-    thread.join(timeout=2)
-    if thread.is_alive():
-        raise RuntimeError("child server loop did not stop")
-"""
-        completed = subprocess.run(
-            [sys.executable, "-c", script],
-            capture_output=True,
-            text=True,
-            timeout=15,
-            cwd=os.getcwd(),
-        )
-        self.assertEqual(
-            0,
-            completed.returncode,
-            completed.stderr or completed.stdout,
-        )
+                worker.join(timeout=3)
+                self.assertFalse(
+                    worker.is_alive(),
+                    "HTTP request worker did not finish",
+                )
+                self.assertEqual(200, response.status)
+                payload = json.loads(body)
+                if path == "/health":
+                    self.assertTrue(payload["ok"])
+                else:
+                    self.assertEqual(
+                        "queryBotIA",
+                        payload["paths"]["/v1/query"]["post"]["operationId"],
+                    )
+        finally:
+            server.server_close()
 
     def test_query_requires_bearer_and_returns_json(self):
         body = json.dumps({"message": "hola"}).encode("utf-8")
