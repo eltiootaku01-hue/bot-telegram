@@ -42,6 +42,7 @@ class _Shared:
 class TelegramContextSharingTests(unittest.TestCase):
     def test_share_menu_requires_a_previous_execution(self):
         adapter = TelegramNovelAdapter(_FakeApp())
+        self.addCleanup(adapter.close)
         update = {"callback_query": {"from": {"id": 1}, "message": {"chat": {"id": 2}}, "data": "menu:share_context"}}
         result = adapter.handle_callback(update)
         self.assertIn("No hay una consulta procesada", result.text)
