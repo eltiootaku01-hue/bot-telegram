@@ -1433,3 +1433,32 @@ La primera ejecución posterior a la corrección de sintaxis alcanzó `pytest`, 
 Por tratarse de una dependencia de runtime existente que impedía verificar el repositorio completo, se declaró `SQLAlchemy>=2.0,<3` en `pyproject.toml` y se añadió a la instalación explícita del workflow CI.
 
 Esta modificación no pertenece al Task Engine funcional; es una corrección mínima del contrato de dependencias/CI necesaria para poder probar la fase y la base existente.
+
+## 22. Scheduler / Task Routing — cierre del bloque de implementación
+
+Se confirma que la auditoría previa no encontraba un Scheduler global activo. src/gui/task_orchestrator.py era un orquestador específico de GUI y las dos implementaciones WebQueue no podían asumir el lifecycle común.
+
+Se implementó src/bot_ia/core/task_scheduler.py con un registro de pendientes, prioridades HIGH/MEDIUM/LOW, FIFO por prioridad, arbitraje de resource_key, anti-starvation mínimo y adaptador WebChat. No se añadió una tercera cola de ejecución.
+
+Separación definitiva:
+- Task Engine: lifecycle, estados, deadlines, cancelación, parent/child y validez.
+- Scheduler: selección, prioridad, espera por recurso, concurrencia lógica y momento de reanudación.
+- WebQueue: ejecución física WebChat, ticket/operation, timeout, captura y exclusión de WEB_MESA_UNICA.
+
+Task Engine ya no auto-reanuda un parent al completar un child. can_return() informa la validez y el Scheduler decide cuándo reencolar/reanudar.
+
+WaitressSessionManager reutiliza ticket_id como task_id, entrega la ejecución al Scheduler y cancela tareas vivas al expirar la sesión. No se alteraron los tiempos de sesión/descanso.
+
+GUI WebChat directo también usa el mismo RuntimeComponents.task_scheduler. Esto elimina el bypass directo de WebQueue en el camino Qt normal.
+
+WebQueue recibió cancelación física por task_id. La cancelación de un ticket activo invalida operation_id, libera WEB_MESA_UNICA y emite TASK_CANCELLED sin contarlo como fallo del circuit breaker.
+
+Cooldown: no se inventó un cooldown nuevo. El WebQueue actual mantiene el retardo de 100 ms tras resolución y circuit cooldown de 10 s tras tres fallos. Ninguno modifica Action Deadline.
+
+### Verificación del cierre
+
+Al SHA b69d2fef el CI Ubuntu llegó a 572 passed y Windows terminó con 567 passed + KeyboardInterrupt, acompañado por ResourceWarning de conexiones SQLite sin cerrar. Esto quedó tratado como bloqueo de verificación heredado, no como PASS.
+Tras la implementación del Scheduler, el repositorio necesita una ejecución completa nueva sobre el SHA final. La ejecución local no está disponible en este entorno porque el repositorio no está montado.
+Los tests nuevos del Scheduler cubren prioridad, FIFO, exclusión WebChat, concurrencia local/WebChat, cancelación, respuestas tardías, parent/return, expiración del parent, deadline/cooldown, no duplicación y aislamiento.
+
+Estado del bloque al documentarlo: IMPLEMENTACIÓN REALIZADA; PASS global pendiente de compileall/tests/CI Ubuntu+Windows sobre el SHA final.
