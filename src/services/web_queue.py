@@ -500,6 +500,61 @@ class _QueueWorker(QObject):
 
         self._process_next()
 
+    @Slot(str)
+    def cancel_ticket(self, ticket_id: str) -> None:
+        ticket_id = str(ticket_id).strip()
+        if not ticket_id:
+            return
+
+        current = self.current_ticket
+        if current is not None and current.ticket_id == ticket_id:
+            self._cancel_current()
+            return
+
+        if ticket_id not in self._queued_ids:
+            return
+
+        retained: list[BotTicket] = []
+        cancelled: BotTicket | None = None
+        while True:
+            try:
+                queued = self.msg_queue.get_nowait()
+            except queue.Empty:
+                break
+            if queued.ticket_id == ticket_id:
+                queued.status = "CANCELLED"
+                cancelled = queued
+                self._queued_ids.discard(queued.ticket_id)
+            else:
+                retained.append(queued)
+
+        for queued in retained:
+            self.msg_queue.put(queued)
+
+        if cancelled is not None:
+            self.ticket_failed.emit(cancelled, "TASK_CANCELLED")
+            QTimer.singleShot(0, self._process_next)
+
+    def _cancel_current(self) -> None:
+        ticket = self.current_ticket
+        if ticket is None:
+            return
+
+        ticket.status = "CANCELLED"
+        if self._timeout_timer is not None:
+            self._timeout_timer.stop()
+        self.current_ticket = None
+        self.is_busy = False
+        self.awaiting_terminated = False
+        self.close_in_flight = False
+        if self._mesa_unica_acquired:
+            _WEB_MESA_UNICA.release()
+            self._mesa_unica_acquired = False
+        self.ticket_failed.emit(ticket, "TASK_CANCELLED")
+        self.busy_changed.emit(False)
+        if self._running and not self.circuit_open:
+            self._process_next()
+
     @Slot(object)
     def enqueue(self, ticket: BotTicket) -> None:
         if not self._running:
@@ -864,6 +919,7 @@ class WebChatQueueManager(QObject):
     process_requested = Signal()
     close_requested = Signal()
     stop_requested = Signal()
+    cancel_requested = Signal(str)
 
     injection_result_requested = Signal(
         str,
@@ -992,6 +1048,9 @@ class WebChatQueueManager(QObject):
         )
         self.stop_requested.connect(
             self._worker.stop
+        )
+        self.cancel_requested.connect(
+            self._worker.cancel_ticket
         )
         self.injection_result_requested.connect(
             self._worker.injection_result
@@ -1135,6 +1194,16 @@ class WebChatQueueManager(QObject):
         """Pide al QThread que reevalúe la cola sin tocarla directamente."""
         if not self.is_busy:
             self.process_requested.emit()
+
+    def cancel_ticket(self, ticket_id: str) -> None:
+        """Cancela un ticket por identidad y anula callbacks JS activos."""
+        ticket_id = str(ticket_id).strip()
+        if not ticket_id:
+            raise ValueError("ticket_id no puede estar vacío")
+        current = self.current_ticket
+        if current is not None and current.ticket_id == ticket_id:
+            self._cancel_web_operation()
+        self.cancel_requested.emit(ticket_id)
 
     def close_current_ticket(self) -> None:
         self.close_requested.emit()
