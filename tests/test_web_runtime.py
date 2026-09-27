@@ -47,40 +47,60 @@ class WebRuntimeTests(unittest.TestCase):
         )
         return connection
 
-    def setUp(self):
-        self.server = create_web_server(
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.server = create_web_server(
             WebApi(FakeApplication(), api_token="t" * 32),
             port=0,
         )
-        self.thread = threading.Thread(
-            target=self.server.serve_forever,
+        cls.thread = threading.Thread(
+            target=cls.server.serve_forever,
             daemon=True,
         )
-        self.thread.start()
+        cls.thread.start()
 
-        connection = self._http_request("/health")
+        connection = http.client.HTTPConnection(
+            "127.0.0.1",
+            cls.server.server_port,
+            timeout=3,
+        )
         try:
+            connection.request("GET", "/health")
             response = connection.getresponse()
-            self.assertEqual(200, response.status)
-            self.assertTrue(json.loads(response.read())["ok"])
+            if response.status != 200:
+                raise AssertionError(
+                    f"HTTP server readiness failed: {response.status}"
+                )
+            if not json.loads(response.read())["ok"]:
+                raise AssertionError("HTTP server readiness returned ok=false")
         finally:
             connection.close()
 
-        self.base = f"http://127.0.0.1:{self.server.server_port}"
-
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         shutdown_thread = threading.Thread(
-            target=self.server.shutdown,
+            target=cls.server.shutdown,
             daemon=True,
         )
         shutdown_thread.start()
         shutdown_thread.join(timeout=3)
-        self.assertFalse(
-            shutdown_thread.is_alive(),
-            "HTTP server shutdown did not complete within 3 seconds",
-        )
-        self.server.server_close()
-        self.thread.join(timeout=2)
+        if shutdown_thread.is_alive():
+            raise AssertionError(
+                "HTTP server shutdown did not complete within 3 seconds"
+            )
+        cls.server.server_close()
+        cls.thread.join(timeout=2)
+        if cls.thread.is_alive():
+            raise AssertionError(
+                "HTTP server thread did not terminate within 2 seconds"
+            )
+        super().tearDownClass()
+
+    def setUp(self):
+        self.server = type(self).server
+        self.thread = type(self).thread
+        self.base = f"http://127.0.0.1:{self.server.server_port}"
 
     def test_health_and_openapi_are_reachable(self):
         connection = self._http_request("/health")
