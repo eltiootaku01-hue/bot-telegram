@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path
 import sqlite3
 from typing import Iterator
@@ -57,19 +57,17 @@ class EconomyDatabase:
 
     @contextmanager
     def transaction(self, *, immediate: bool = False) -> Iterator[sqlite3.Connection]:
-        connection = self.connect()
-        try:
-            connection.execute("BEGIN IMMEDIATE" if immediate else "BEGIN")
-            yield connection
-            connection.execute("COMMIT")
-        except Exception:
+        with closing(self.connect()) as connection:
             try:
-                connection.execute("ROLLBACK")
-            except sqlite3.DatabaseError:
-                pass
-            raise
-        finally:
-            connection.close()
+                connection.execute("BEGIN IMMEDIATE" if immediate else "BEGIN")
+                yield connection
+                connection.execute("COMMIT")
+            except Exception:
+                try:
+                    connection.execute("ROLLBACK")
+                except sqlite3.DatabaseError:
+                    pass
+                raise
 
     def _initialize(self) -> None:
         try:
