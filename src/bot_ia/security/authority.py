@@ -29,6 +29,7 @@ class AuthorizationRequest:
     destination_id: str = ""
     destination_kind: str = "dm"
     thread_id: int | None = None
+    is_topic: bool = False
     requires_admin: bool = False
     require_authorized_destination: bool = False
 
@@ -88,8 +89,15 @@ class AuthorityCore:
             if kind == "group":
                 if not is_authorized_telegram_group(destination):
                     return AuthorizationDecision(False, "chat Telegram fuera de la allowlist autorizada")
-                if not is_authorized_telegram_forum_route(destination, request.thread_id):
-                    return AuthorizationDecision(False, "topic Telegram fuera de AUTHORIZED_FORUM_ID")
+                if request.is_topic or request.thread_id is not None:
+                    if not is_authorized_telegram_forum_route(
+                        destination,
+                        request.thread_id,
+                    ):
+                        return AuthorizationDecision(
+                            False,
+                            "topic Telegram fuera de AUTHORIZED_FORUM_ID",
+                        )
                 return AuthorizationDecision(True, "grupo y topic Telegram autorizados")
             if kind == "admin_private":
                 if not is_authorized_admin_destination(destination):
@@ -139,6 +147,7 @@ class AuthorityCore:
         destination_id: str = "",
         destination_kind: str = "dm",
         thread_id: int | None = None,
+        is_topic: bool = False,
         require_destination: bool = False,
     ) -> AuthorizationDecision:
         return self.authorize(
@@ -149,6 +158,7 @@ class AuthorityCore:
                 destination_id=destination_id,
                 destination_kind=destination_kind,
                 thread_id=thread_id,
+                is_topic=is_topic,
                 requires_admin=True,
                 require_authorized_destination=require_destination,
             )

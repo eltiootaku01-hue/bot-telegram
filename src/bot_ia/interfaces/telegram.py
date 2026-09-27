@@ -303,6 +303,7 @@ class TelegramAdapter:
                 destination_id=chat_id,
                 destination_kind="group" if is_group else "dm",
                 thread_id=thread_id,
+                is_topic=is_topic,
                 require_authorized_destination=is_group,
             )
         )
