@@ -118,3 +118,5 @@ def pytest_keyboard_interrupt(excinfo):
 
 def pytest_unconfigure(config):
     snapshot("unconfigure")
+
+# diagnostic trigger: Windows provenance run
