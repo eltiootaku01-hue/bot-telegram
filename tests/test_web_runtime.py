@@ -3,7 +3,7 @@ import json
 import threading
 import unittest
 from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+from urllib.request import ProxyHandler, Request, build_opener
 
 from bot_ia.interfaces.web import BoundedThreadingHTTPServer, WebApi, WebApiError, create_web_server
 
@@ -34,6 +34,20 @@ class FakeApplication:
 
 
 class WebRuntimeTests(unittest.TestCase):
+    _opener = build_opener(ProxyHandler({}))
+
+    @classmethod
+    def _open(cls, url, *, data=None, headers=None, method=None):
+        return cls._opener.open(
+            Request(
+                url,
+                data=data,
+                headers=headers or {},
+                method=method,
+            ),
+            timeout=3,
+        )
+
     def setUp(self):
         self.server = create_web_server(WebApi(FakeApplication(), api_token="t" * 32), port=0)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -46,10 +60,10 @@ class WebRuntimeTests(unittest.TestCase):
         self.thread.join(timeout=2)
 
     def test_health_and_openapi_are_reachable(self):
-        with urlopen(self.base + "/health", timeout=3) as response:
+        with self._open(self.base + "/health") as response:
             self.assertEqual(200, response.status)
             self.assertTrue(json.loads(response.read())["ok"])
-        with urlopen(self.base + "/openapi.json", timeout=3) as response:
+        with self._open(self.base + "/openapi.json") as response:
             document = json.loads(response.read())
             self.assertEqual("queryBotIA", document["paths"]["/v1/query"]["post"]["operationId"])
 
