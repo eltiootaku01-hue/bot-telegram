@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+import logging
 import threading
 from typing import Protocol
 
@@ -219,7 +220,10 @@ class TaskScheduler:
                     try:
                         self._executors[scheduled.route].cancel(task_id)
                     except Exception:
-                        pass
+                        logging.exception(
+                            "Task %s executor cancellation failed",
+                            task_id,
+                        )
             else:
                 self.dispatch()
             return task
@@ -366,7 +370,10 @@ class TaskScheduler:
         try:
             parent_executor.cancel(parent.task_id)
         except Exception:
-            pass
+            logging.exception(
+                "Parent task %s physical cancellation failed",
+                parent.task_id,
+            )
 
     def _select_candidate_locked(self) -> ScheduledTask | None:
         candidates: list[ScheduledTask] = []
