@@ -48,9 +48,27 @@ class WebRuntimeTests(unittest.TestCase):
         return connection
 
     def setUp(self):
-        self.server = create_web_server(WebApi(FakeApplication(), api_token="t" * 32), port=0)
-        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.server = create_web_server(
+            WebApi(FakeApplication(), api_token="t" * 32),
+            port=0,
+        )
+        self.server_ready = threading.Event()
+        original_service_actions = self.server.service_actions
+
+        def mark_server_ready():
+            self.server_ready.set()
+            original_service_actions()
+
+        self.server.service_actions = mark_server_ready
+        self.thread = threading.Thread(
+            target=self.server.serve_forever,
+            daemon=True,
+        )
         self.thread.start()
+        self.assertTrue(
+            self.server_ready.wait(timeout=3),
+            "HTTP server did not enter serve_forever before the test started",
+        )
         self.base = f"http://127.0.0.1:{self.server.server_port}"
 
     def tearDown(self):
