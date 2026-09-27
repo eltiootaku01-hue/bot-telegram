@@ -3,7 +3,8 @@
 Repositorio: eltiootaku01-hue/bot-telegram
 Rama: main
 Fecha: 2026-09-27
-HEAD auditado: 4f2141759483a3f8f3e3610e3b3cad8d1ec2f314
+HEAD auditado base: 4f2141759483a3f8f3e3610e3b3cad8d1ec2f314
+HEAD de continuación FASE A: 1743b29c9c5fc66d2dfb08bd989bb84de8060efa
 Naturaleza: auditoría + diseño. No implementación funcional.
 
 ## Regla de lectura
@@ -390,3 +391,480 @@ Prueba E2E productiva: NO REALIZADA.
 Este documento es el registro persistente de la FASE 0.3 para que futuras IA no dependan de la memoria de conversación.
 
 Conclusión: existe una base sólida de componentes locales, Tavern, WebQueue, memoria, economía y TCG, pero no debe marcarse como terminado ningún flujo de personaje, identidad, emoción, retorno de mesera, deck real o TCG web hasta cerrar los huecos y ejecutar verificaciones reales.
+
+## 21. FASE A — Continuación de auditoría contra main actual (2026-09-27)
+
+### 21.1 Estado de verificación CI
+
+El commit `1743b29c9c5fc66d2dfb08bd989bb84de8060efa` disparó CI run `36300571303` / run #3090.
+
+Resultado observado en GitHub Actions:
+- Ubuntu: FAILED en `Compile source and tests`.
+- Windows: FAILED en `Compile source and tests`.
+- `pytest` NO llegó a ejecutarse en ninguno de los dos runners.
+
+Errores reportados por compilación:
+- `src/bot/handlers/drop_handler.py:37` — f-string sin terminar.
+- `src/bot/handlers/support_handler.py:39` — string sin terminar.
+- `src/discord/bot.py:110` — f-string sin terminar.
+
+Esto es un **BLOQUEO ACTUAL DE CI**, no una conclusión sobre el funcionamiento de las funciones auditadas. No se corrigieron estos archivos durante la auditoría.
+
+### 21.2 Descubrimiento de LEGACY relevante
+
+El árbol `build/lib/` contiene una arquitectura anterior mucho más amplia que la superficie actual de `src/`. No debe confundirse con el runtime actual.
+
+Dentro de ese árbol aparecen, entre otros:
+- `build/lib/app/core/jobs.py`: cola durable con deduplicación, recuperación de jobs en estado `processing`, heartbeat y backoff.
+- `build/lib/app/modules/trivia/module.py`: trivia de comunidad, scheduler periódico y publicación a Telegram.
+- `build/lib/app/game/trivia.py`: preguntas de anime y validación de respuesta, pero con solo cinco preguntas hardcodeadas.
+- `build/lib/app/db/trivia_models.py`: `TriviaRound` y `TriviaAttempt`.
+- `build/lib/app/modules/cami_media/publisher.py`: publicación durable de `MediaAsset` y pedidos mediante jobs.
+- `build/lib/app/modules/cami_media/module.py`: ingestión, catalogación, etiquetado, programación y recuperación de publicaciones.
+- `build/lib/app/services/forum_topics.py`: catálogo de topics Telegram incluyendo `noticias`, `memes`, `anime`, `trivia`, `pedidos`, etc.
+- `build/lib/app/core/social_runtime.py`, `social_wake.py`, `social_turn.py`, `social_activity.py`: runtime de actividad social programada, con gate de conversación humana y lease exclusivo por chat/ventana.
+- `build/lib/app/modules/cafe/module.py` y `build/lib/app/services/cafe_events.py`: eventos diarios y recomendaciones de Café.
+- `build/lib/app/modules/media/module.py` y servicios de catálogo/media: biblioteca de material y captura controlada.
+
+El `build/lib/app/core/bot_composition.py` de ese árbol registraba explícitamente módulos de trivia, Cami media/publisher, comunidad, juegos, moderación, social runtime y world runtime.
+
+Clasificación:
+- **LEGACY / REFERENCIA ARQUITECTÓNICA**.
+- No existe evidencia de que `build/lib` sea el entry point actual de `main`.
+- CI actual compila `src`, no `build/lib`.
+- El hecho de que estas piezas estén completas dentro de `build/lib` no demuestra que estén operativas en el sistema actual.
+- No se eliminan ni se migran automáticamente por esta auditoría.
+
+### 21.3 Web Chat compartido
+
+`src/services/web_queue.py` es la infraestructura actual conectada a la GUI:
+- `WebChatQueueManager(QObject)`.
+- FIFO de tickets.
+- lock global `_WEB_MESA_UNICA` para el ciclo completo del ticket.
+- `QWebEngineView` + `QWebEngineProfile`.
+- cookies/storage persistentes.
+- MutationObserver, timeout, circuit breaker y estados de ticket.
+
+Esto demuestra una **cola WebChat compartida dentro del runtime Qt**, pero no una infraestructura común ya conectada a todos los servicios del Café.
+
+`src/gui/task_orchestrator.py` sí tiene `Priority.HIGH/MEDIUM/LOW` y `asyncio.PriorityQueue`, pero su integración corresponde al camino Playwright/async de compatibilidad. El `main()` actual usa `_async_main()` solo si Python < 3.14; con Python 3.14 entra en `_qt_main()`. Por ello no debe declararse como la política global actual del WebChat.
+
+### 21.4 Telegram
+
+La superficie Telegram actual sí contiene:
+- routing por `(chat_id, message_thread_id)`;
+- moderación textual;
+- comentarios;
+- economía/Pity/afinidad;
+- flujo de pedidos;
+- soporte opcional de Tavern;
+- Outbox durable.
+
+Sin embargo:
+- `_run_telegram()` no demuestra la inyección de `WaitressSessionManager` en el runtime moderno;
+- la mesa Tavern sigue siendo 1 usuario + 1 mesera, no una mesa grupal;
+- `handle_photo_update()` procesa fotos para entregas de pedidos, no un sistema genérico de Aportes;
+- `TelegramOutboxStore` es real para el poller moderno, pero Tavern envía notificaciones mediante `message_sender` directo.
+
+Estado por requisito:
+- **Telegram core: CONECTADO/PARCIAL**.
+- **Tavern Telegram: PARCIAL / NO VERIFICADO E2E**.
+- **Aportes Telegram: FALTANTE como flujo de dominio**.
+- **Publicación automática: NO VERIFICADA en la superficie actual**.
+
+### 21.5 Discord
+
+Se mantienen dos superficies distintas:
+1. `src/discord/bot.py`: bot TCG con slash commands y persistencia propia.
+2. `src/bot_ia/interfaces/discord_community.py` + `discord_moderation.py`: contratos de bienvenida, BurstGate, strikes, permisos y moderación.
+
+No se demuestra que `src/discord/bot.py` consuma la infraestructura de Café/World/Social/Publications.
+
+Estado:
+- **Discord TCG: EXISTE / PARCIAL / NO VERIFICADO E2E**, además bloqueado actualmente por el error de sintaxis de `src/discord/bot.py`.
+- **Discord Café: PARCIAL / NO VERIFICADO como runtime unido**.
+- No se debe afirmar una arquitectura Telegram/Discord común ya operativa.
+
+### 21.6 Mesas de charla
+
+La implementación actual de `WaitressSessionManager` modela:
+`telegram_id -> waitress_id -> active_sessions`.
+
+Tiene:
+- sesión estándar de 3 minutos;
+- favorita de 5 minutos;
+- exclusión de una sesión activa por usuario;
+- exclusión de una sesión activa por mesera;
+- timer de expiración;
+- estado busy/resting;
+- integración con WebQueue;
+- cuenta de chocolates de Tavern.
+
+No tiene:
+- `group/server`;
+- `channel/topic`;
+- anfitrión;
+- invitados;
+- espectadores;
+- invitaciones;
+- cuenta de mesa;
+- contribuciones a cuenta;
+- límite de dos modificaciones;
+- estados `CLOSING/CLEANING/AVAILABLE`.
+
+Por tanto, la **Mesa de Charla grupal especificada NO EXISTE actualmente**.
+
+Además, hay una inconsistencia que debe tratarse como bug de diseño/implementación pendiente:
+- `expire_session()` y `_mark_resting_if_idle()` pueden dejar `is_resting=1`;
+- no se encontró una transición automática equivalente a `RESTING -> AVAILABLE`;
+- `_start_session()` tampoco rechaza explícitamente `is_resting=1`.
+
+No se corrigió durante la auditoría.
+
+### 21.7 Cuenta de mesa
+
+No se encontró una cuenta estructurada de Mesa de Charla en la base actual de Tavern.
+
+No existe evidencia de:
+- subtotal fijo de mesa;
+- consumos;
+- aportes parciales;
+- responsable de pago;
+- balance final;
+- máximo de dos modificaciones.
+
+Estado: **FALTANTE**.
+
+No debe reutilizarse `points` como transferencia libre: el requisito de contribuciones exige representar un pago parcial contra la cuenta de la mesa.
+
+### 21.8 Trivia Anime
+
+En `src/` actual no se encontró un módulo de Anime Trivia equivalente al requisito de dataset externo local.
+
+Sí existe `src/gui/mini_games.py`, pero contiene PPT, 21 y UNO locales; no es trivia anime.
+
+En `build/lib/` existe un sistema legacy de trivia:
+- publicación comunitaria;
+- scheduler;
+- botones;
+- validación en `TriviaService.answer()`;
+- persistencia de `TriviaRound` / `TriviaAttempt`.
+
+Pero `QUESTIONS` está hardcodeado con cinco preguntas.
+
+Conclusión:
+- **Trivia actual en src: FALTANTE**.
+- **Trivia legacy build: LEGACY / REUTILIZABLE CON MIGRACIÓN, NO OPERATIVA ACTUAL**.
+- El diseño solicitado de `1..1000` IDs en archivo de datos aún no existe.
+
+### 21.9 Espacios Telegram / Discord
+
+Telegram dispone de routing exacto por topic:
+`TelegramRoomRouter.resolve(chat_id, message_thread_id)`.
+
+`group_setup.py` mantiene un catálogo de rooms y `REPOST_FEEDS`.
+
+El legacy `ForumTopicService` agrega un catálogo más amplio de topics, pero pertenece a `build/lib`.
+
+Discord tiene canales configurables por nombre/propósito en `DiscordGroupSetup`, pero no se demuestra una capa común equivalente al router de Telegram que además resuelva `purpose` de forma uniforme.
+
+Conclusión:
+- **Telegram topics: CONECTADO/PARCIAL**.
+- **Discord channels: CONECTADO en setup/gestión, no probado E2E para contenido**.
+- **modelo común platform + group/server + channel/topic + purpose + permissions: PROPUESTO, no implementado**.
+
+### 21.10 Publicación automática
+
+En `src/` actual:
+- `social_publish.py` construye una publicación y abre un draft de X;
+- no publica automáticamente.
+- `group_setup.py` registra `REPOST_FEEDS`, pero no se encontró un scraper/RSS/API consumer que las procese y publique.
+
+En `build/lib/`:
+- sí existe `CamiMediaPublisher` con jobs persistentes y publicación Telegram de `MediaAsset`;
+- esa publicación se refiere a material ingerido/catalogado y pedidos, no demuestra un pipeline moderno de RSS/noticias/memes desde `REPOST_FEEDS`.
+
+Conclusión:
+- **publisher actual Café: FALTANTE/PARCIAL**.
+- **publisher legacy Cami: EXISTE dentro LEGACY**.
+- **repost automático desde fuentes configuradas: NO VERIFICADO / no conectado en src actual**.
+
+### 21.11 Noticias, imágenes y AniNoticias
+
+No existen en el árbol actual los datasets/carpets esperados `data/trivia`, `data/news` o `data/images`.
+
+No se encontró un pipeline actual que:
+1. consulte noticias;
+2. preserve fuente;
+3. resuma;
+4. seleccione imagen web;
+5. cachee la imagen;
+6. publique en un topic configurado.
+
+El sistema legacy de anime/media sí mantiene referencias y catalogación de material, pero no constituye por sí mismo AniNoticias actual.
+
+Estado:
+- **Noticias automáticas: FALTANTE**.
+- **Imagen web identificable + caché: FALTANTE**.
+- **Fuente original visible en publicación: REQUISITO, no demostrado en src actual**.
+
+### 21.12 Anime del día / aniversarios / memes
+
+No se encontró en `src/` un scheduler/publisher actual para:
+- anime del día;
+- aniversario `hace X años`;
+- meme del día.
+
+`TeaTimeScheduler` y los juegos locales no equivalen a un publisher de contenido.
+
+El legacy tiene eventos/recomendaciones y social runtime, pero esto no se demuestra como el runtime actual.
+
+Estado: **NO IMPLEMENTADO / LEGACY PARCIAL**.
+
+### 21.13 Aportes y moderación
+
+La moderación actual:
+- sí existe para texto/comandos;
+- en Telegram se ejecuta antes de comandos;
+- puede devolver `allow/delete_redirect/delete_warn/ban`.
+
+Sin embargo, el flujo de foto actual se limita a adjuntos pendientes de pedidos.
+
+No existe una cola de `Aporte` con:
+- autor;
+- timestamp;
+- referencia;
+- evaluación;
+- decisión;
+- evidencia de moderación;
+- rechazo/aprobación persistente.
+
+El sistema de quejas `ComplaintStore` es económico/administrativo y no es un moderador de aportes.
+
+Estado:
+- **Moderación textual: CONECTADA/PARCIAL**.
+- **Aportes: FALTANTE**.
+- **Moderación de imagen por IA: NO VERIFICADA**.
+
+### 21.14 Publicaciones compartidas / fuentes externas
+
+La configuración `REPOST_FEEDS` prueba que el concepto de fuentes externas existe.
+
+Fuentes actuales encontradas en `group_setup.py`:
+- `https://t.me/eltiootaku`;
+- `https://t.me/yandere_nsfw`;
+- `https://t.me/danbooru_sfw`;
+- `https://t.me/danbooru_nsfw`.
+
+Pero no se encontró en `src/`:
+- consumidor;
+- polling;
+- RSS;
+- scraper;
+- filtro;
+- scheduler;
+- publisher conectado.
+
+La configuración por sí sola queda en **EXISTE / NO CONECTADO**.
+
+El legacy `CamiMediaPublisher` demuestra que hubo un diseño real de publicaciones durables, por lo que antes de crear otro publisher se debe evaluar una migración selectiva de ese diseño.
+
+### 21.15 Sistema de contenido a puerta cerrada
+
+El legacy `SocialRuntime` muestra un patrón útil ya existente:
+`wake -> observe -> decide -> exclusive turn -> speak`.
+
+También:
+- bloquea actividad cuando hay conversación humana;
+- usa wake durable por chat;
+- usa un lease exclusivo por ventana.
+
+Esto es muy cercano al concepto solicitado de:
+`evento + tarea programada + actividad real`.
+
+Pero el compositor legacy es **authored/determinista**, no WebChat; no demuestra el pipeline moderno de Character Engine.
+
+Clasificación:
+- **LEGACY reutilizable conceptualmente**.
+- No migrar automáticamente sin revisar contratos y source of truth.
+
+### 21.16 Prioridad del WebChat
+
+Existe una prioridad HIGH/MEDIUM/LOW en `src/gui/task_orchestrator.py`, pero no es la política única demostrada de todo el sistema.
+
+`src/services/web_queue.py` actualmente muestra exclusión mutua global y FIFO de tickets.
+
+Por tanto:
+- **FIFO + mutex: VERIFICADO en código actual**.
+- **prioridad global de tareas Café: NO VERIFICADA**.
+- **política definitiva: DECISIÓN PENDIENTE DEL USUARIO**.
+
+No se debe copiar todavía HIGH/MEDIUM/LOW al WebChat principal solo por existir en el orquestador legado/compat.
+
+### 21.17 Riesgo de contexto WebChat
+
+Riesgos confirmados:
+- la cola debe evitar mezclar tarea, personaje, usuario y mesa;
+- el Qt path mantiene un `QWebEngineProfile` persistente;
+- la GUI actual tiene un solo `QWebEngineView` visible en la tarjeta WebQueue;
+- el `select_bot()` cambia la selección lógica pero no demuestra la creación de una página/perfil independiente por personaje.
+
+No se debe afirmar “seis páginas” para el runtime Qt normal.
+
+El Playwright legacy sí crea seis páginas, pero solo está alcanzable en el camino Python <3.14.
+
+Estado de continuidad crash/restart/reconstrucción de conversación: **NO VERIFICADO E2E**.
+
+### 21.18 Riesgo de RAM
+
+No existe una medición real reciente que valide el objetivo de 1.5 GB o el techo operacional de ~2.5 GB.
+
+Riesgos concretos:
+- QWebEngine/Chromium;
+- Playwright multisesión en legacy;
+- múltiples procesos TCG de `run_all.py`;
+- PySide6;
+- Ollama bajo demanda.
+
+La optimización debe basarse en medición, no en cerrar sesiones por intuición.
+
+### 21.19 Riesgo de crecimiento de datos
+
+Superficies con crecimiento potencial:
+- `MemoryStore` y FTS;
+- `active_sessions` y estado de sesiones;
+- outbox/followups;
+- economía transaccional;
+- `bot_database.db` TCG;
+- assets/media si se migra el legacy;
+- futuros attempts de trivia;
+- logs/eventos sociales si se migran.
+
+No existe aún un contrato global de retención/archivado para todo el Café.
+
+### 21.20 Mapa de reutilización
+
+| Requisito | Existe | Conectado | Prueba | Reutilización recomendada |
+|---|---|---|---|---|
+| WebChat compartido | Sí | GUI Qt | tests de contrato; E2E no | Reutilizar `src/services/web_queue.py` |
+| Mutex de Mesa Única WebChat | Sí | Sí dentro del queue | estática | Reutilizar |
+| Prompt roleplay | Sí | Tavern GUI | estática | Reutilizar `prompt_builder.py` |
+| Sesiones Tavern | Sí | GUI | tests de Tavern + estática | Reutilizar `WaitressSessionManager` como base 1:1 |
+| Mesa grupal | No | No | No | Extender, no crear segundo sistema |
+| Cuenta estructurada | No | No | No | Nuevo agregado al dominio de mesa |
+| Room routing Telegram | Sí | Sí | tests existentes | Reutilizar |
+| Discord setup | Sí | parcial | no E2E | Reutilizar contratos, unir runtime posteriormente |
+| Moderación textual | Sí | Telegram | tests/estática | Reutilizar |
+| Aportes | No | No | No | Nuevo dominio de aportes |
+| REPOST_FEEDS | Sí | No consumer | No | Reutilizar config, crear solo consumer tras decidir diseño |
+| Publisher durable Cami | Sí en build | Legacy | No runtime actual | Evaluar migración selectiva; no duplicar |
+| Trivia | Sí en build | Legacy | tests legacy no activos en src | Migrar concepto; datos deben salir de Python |
+| Social wake/turn | Sí en build | Legacy | no runtime actual | Evaluar como base del scheduler |
+| Cami media library | Sí en build | Legacy | no runtime actual | Evaluar como base de media/assets |
+| Anime catalog | Sí en build | Legacy | no runtime actual | Evaluar como fuente factual |
+| X publisher | Sí | solo draft | no E2E | No sirve como publisher Café sin ampliar contrato |
+| Economía | Sí, fragmentada | parcial | unit tests | No fusionar sin decisión |
+| TCG engine | Sí | Telegram/Discord propios | parcial | Mantener separado hasta cerrar autoridad |
+| TCG Web | Sí como HTML | roto/no E2E | no | Revalidar contrato antes de tocar UI |
+
+### 21.21 Sistemas duplicados o paralelos
+
+Se identifican al menos estas parejas/superficies que no deben fusionarse automáticamente:
+- `src/services/web_queue.py` vs `src/bot_ia/core/web_queue.py`.
+- `src/gui/task_orchestrator.py` vs cola Qt actual.
+- Tavern `chocolates_balance` vs Café `wallet.points` vs TCG `User.coins`.
+- Telegram Tavern waitresses vs GUI/Playwright/TCG maid catalogs.
+- Café Telegram modern vs TCG Telegram.
+- Café/Discord community contracts vs TCG Discord bot.
+- `build/lib/app/*` vs `src/*`.
+
+### 21.22 Propuesta de arquitectura final
+
+**PROPUESTA**, no implementada:
+
+```
+Telegram / Discord / GUI
+          ↓
+      Event Router
+          ↓
+      BOT-IA Core
+   ┌──────┼─────────┐
+ Identity State   Rules
+   │       │         │
+ Memory  Economy  Permissions
+   │       │         │
+   └──────┴──── Events
+              ↓
+       Café Services
+   ┌─────────┼──────────┐
+ Tables    Trivia    Publishers
+   │         │           │
+   └─────────┼───────────┘
+             ↓
+        Task Scheduler
+             ↓
+       Shared WebQueue
+             ↓
+ Persistent browser/session
+             ↓
+         Web Chat
+             ↓
+     text / proposal / summary
+             ↓
+         BOT-IA validates
+             ↓
+    platform adapter publishes
+```
+
+Reglas arquitectónicas:
+- las tareas locales no pasan por WebChat;
+- solo tareas que necesitan lenguaje/modelo usan la cola;
+- economía/estado/reglas son deterministas y locales;
+- las publicaciones automáticas son disparadas por scheduler/eventos, no por comandos arbitrarios del usuario;
+- cada tarea WebChat debe transportar explícitamente tipo de contexto y una clave de sesión aislada.
+
+### 21.23 Decisiones pendientes actualizadas
+
+Antes de implementar Mesa/Publisher/Trivia, quedan pendientes:
+1. source of truth de identidad de usuario entre Telegram, Discord, Tavern, Café y TCG;
+2. catálogo oficial de meseras y aliases;
+3. si `chocolates`, `points` y `coins` son monedas distintas;
+4. regla exacta de precio de Mesa compartida y cómo se calcula consumo;
+5. significado de las 2 modificaciones de cuenta;
+6. política de espectadores y reacciones por plataforma;
+7. duración de CLEANING dentro del rango 5–10 min y reglas de busy/resting;
+8. contrato de trivia y tamaño real del dataset;
+9. fuentes externas autorizadas para noticias/reposts y sus términos de uso;
+10. fuente de imágenes, caché, retención y licencias;
+11. política de moderación de Aportes e intervención humana;
+12. si el publisher legacy Cami es base a migrar;
+13. prioridad global WebChat;
+14. lifecycle hot/warm/cold de sesiones;
+15. definición de un task context ID que aisle personaje/usuario/mesa;
+16. superficie TCG Web oficial y contrato API;
+17. límites de retención de memoria, outbox, assets y eventos.
+
+### 21.24 Resultado de FASE A
+
+La auditoría actual **NO autoriza todavía una implementación grande**.
+
+La reutilización prioritaria queda:
+- **WebQueue Qt actual** para infraestructura compartida;
+- **WaitressSessionManager** como base de sesiones 1:1;
+- **TelegramRoomRouter** para routing exacto;
+- **moderación existente** para la capa textual;
+- **configuración REPOST_FEEDS** como inventario de fuentes, sin asumir consumer;
+- **legacy Cami publisher / JobQueue / Trivia / SocialRuntime / AnimeCatalog** como material de migración controlada, no como runtime activo.
+
+Bloqueadores actuales:
+- CI rojo por tres SyntaxError en `src/`;
+- Tavern Telegram no inyectado en runtime moderno;
+- ausencia de Mesa grupal;
+- ausencia de cuenta de mesa;
+- absence de Trivia dataset 1..1000 en `src/`;
+- ausencia de pipeline de noticias/imágenes/reposts en `src/`;
+- falta de Aportes con moderación persistente;
+- duplicidad de economías e identidades;
+- continuidad WebChat y RAM aún no verificadas mediante ejecución real.
+
+No se modificó código funcional durante esta FASE A.
