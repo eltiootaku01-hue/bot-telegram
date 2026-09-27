@@ -341,5 +341,79 @@ class TavernTests(unittest.TestCase):
             manager.shutdown()
 
 
+    def test_ticket_reuses_ticket_id_as_task_id_and_completes_once(self):
+        notifications = []
+
+        def sender(chat_id, text):
+            notifications.append((chat_id, text))
+            return {"message_id": 1}
+
+        with tempfile.TemporaryDirectory() as directory:
+            queue = FakeWebQueue()
+            manager = self.manager(directory, queue=queue, sender=sender)
+            manager.start_standard_session("1", "cari")
+            ticket_id = manager.queue_user_message("1", "hola")
+            self.assertEqual(
+                TaskState.RUNNING,
+                manager.task_engine.snapshot(ticket_id).state,
+            )
+
+            for callback in queue.ticket_processed.callbacks:
+                callback(ticket_id, "respuesta válida")
+            self.assertEqual(
+                TaskState.COMPLETED,
+                manager.task_engine.snapshot(ticket_id).state,
+            )
+            self.assertEqual(1, len(notifications))
+
+            for callback in queue.ticket_processed.callbacks:
+                callback(ticket_id, "respuesta duplicada")
+            self.assertEqual(1, len(notifications))
+            manager.shutdown()
+
+    def test_cancelled_ticket_discards_late_web_queue_response(self):
+        notifications = []
+
+        def sender(chat_id, text):
+            notifications.append((chat_id, text))
+            return {"message_id": 1}
+
+        with tempfile.TemporaryDirectory() as directory:
+            queue = FakeWebQueue()
+            manager = self.manager(directory, queue=queue, sender=sender)
+            manager.start_standard_session("1", "cari")
+            ticket_id = manager.queue_user_message("1", "hola")
+            manager.task_engine.cancel(ticket_id)
+
+            for callback in queue.ticket_processed.callbacks:
+                callback(ticket_id, "respuesta tardía")
+
+            self.assertEqual(
+                TaskState.CANCELLED,
+                manager.task_engine.snapshot(ticket_id).state,
+            )
+            self.assertEqual([], notifications)
+            manager.shutdown()
+
+    def test_expire_session_cancels_live_task(self):
+        with tempfile.TemporaryDirectory() as directory:
+            queue = FakeWebQueue()
+            manager = self.manager(directory, queue=queue)
+            session = manager.start_standard_session("1", "cari")
+            ticket_id = manager.queue_user_message("1", "hola")
+            self.assertEqual(
+                TaskState.RUNNING,
+                manager.task_engine.snapshot(ticket_id).state,
+            )
+
+            manager.expire_session(session.session_id)
+
+            self.assertEqual(
+                TaskState.CANCELLED,
+                manager.task_engine.snapshot(ticket_id).state,
+            )
+            manager.shutdown()
+
+
 if __name__ == "__main__":
     unittest.main()
