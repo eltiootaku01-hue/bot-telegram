@@ -118,8 +118,7 @@ def _process_resources() -> dict[str, int | None]:
 
 def _snapshot(label: str) -> None:
     dangling = []
-    for ref in tuple(getattr(threading, "_dangling", ())):
-        thread = ref()
+    for thread in tuple(getattr(threading, "_dangling", ())):
         if thread is not None:
             dangling.append(
                 (
