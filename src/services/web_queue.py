@@ -1087,7 +1087,7 @@ class WebChatQueueManager(QObject):
             self._on_worker_queue_error
         )
         self._worker.capacity_restored.connect(
-            self.capacity_restored.emit
+            self._on_worker_capacity_restored
         )
         self._worker.stopped.connect(
             self._thread.quit
@@ -2029,6 +2029,10 @@ class WebChatQueueManager(QObject):
         self.is_busy = busy
 
     @Slot(str, str)
+    @Slot()
+    def _on_worker_capacity_restored(self) -> None:
+        self.capacity_restored.emit()
+
     def _on_worker_queue_error(
         self,
         ticket_id: str,
