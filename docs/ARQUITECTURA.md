@@ -166,3 +166,68 @@ Durante la verificación de FASE 1B, los dos errores de compilación preexistent
 Se corrigieron únicamente sus literales con saltos de línea para restaurar el código Python válido. No se modificó la lógica funcional de drops, claims ni soporte.
 
 Estas correcciones son de desbloqueo de compilación y no forman parte del diseño del Task Engine.
+
+## Scheduler / Task Routing — FASE actual
+
+Arquitectura operativa:
+
+    TASK ENGINE
+         |
+         v
+    TASK SCHEDULER / ROUTER
+       /             \
+      /               \
+   LOCAL             WEBCHAT
+     |                  |
+  ejecutor           WebQueue
+                        |
+                 QWebEngineView
+
+Task Engine es la única autoridad de lifecycle: task_id, estado, deadline, cancelación, interrupción, parent_task_id, validez, wait_reason y return_policy.
+Task Scheduler no ejecuta WebChat ni crea una tercera cola. Mantiene un registro de pendientes, aplica HIGH/MEDIUM/LOW, FIFO por prioridad, arbitra recursos y decide cuándo una tarea elegible puede comenzar.
+WebQueue continúa siendo el ejecutor físico WebChat. Controla ticket/operation, timeout propio, captura de respuesta, cierre de interacción y exclusión física del navegador.
+GUI TaskOrchestrator sigue siendo específico del camino GUI async/legacy. No es el Scheduler global.
+
+### Recursos y concurrencia
+
+Las tareas locales sin resource_key pueden ejecutarse concurrentemente. Una resource_key exclusiva permite serialización sin crear otra instancia del recurso.
+WebChat utiliza WEB_MESA_UNICA como clave lógica correspondiente al lock físico _WEB_MESA_UNICA del WebQueue. Significa una sesión física WebChat y una tarea WebChat activa por vez. No representa las futuras mesas sociales del Café.
+Cuando el recurso WebChat está ocupado, las tareas WebChat no se duplican en otro navegador: quedan en WAITING con WAITING_WEBCHAT o permanecen pendientes según el punto de entrada.
+
+### Prioridad y starvation
+
+Las prioridades siguen la convención existente: HIGH=1, MEDIUM=2, LOW=3. Dentro de una misma prioridad se conserva FIFO mediante una secuencia monotónica.
+Para el único recurso exclusivo actual se aplica una política mínima anti-starvation: después de tres ejecuciones consecutivas de una prioridad superior, se permite seleccionar la tarea de prioridad inferior más antigua que ya sea elegible. No se introduce un sistema de fairness más complejo.
+
+### Deadlines y cooldown
+
+El Action Deadline pertenece al Task Engine y es absoluto. No se extiende por espera de recursos, timeout de WebQueue, cooldown del circuit breaker ni timers de sesión/mesera.
+En el WebQueue actual existen dos tiempos distintos: un retardo de 100 ms antes de reevaluar la cola después de un ticket resuelto, y un circuit cooldown de 10 s después de alcanzar tres fallos consecutivos. Ninguno modifica el deadline de la tarea.
+El recurso lógico del Scheduler se libera cuando el ejecutor informa que terminó físicamente mediante execution_finished(task_id), no simplemente cuando el Task Engine cambia a COMPLETED.
+
+### Cancelación y respuestas tardías
+
+El Scheduler cancela primero la tarea lógica mediante Task Engine y después solicita la cancelación física al ejecutor si la tarea está activa. Una tarea cancelada no se vuelve a encolar ni se reanima automáticamente.
+Las respuestas WebChat se aceptan únicamente mediante task_id. Si la tarea ya está CANCELLED, TIMED_OUT, FAILED, DISCARDED o en otro estado no receptivo, la respuesta se descarta.
+
+### Parent / child y retorno
+
+El Task Engine conserva la decisión de validez mediante can_return(parent_task_id). El Scheduler decide cuándo volver a poner el parent en ejecución.
+Separación explícita:
+- Task Engine: determina si A sigue siendo válida.
+- Scheduler: determina cuándo puede volver A.
+- WebQueue: determina si A puede usar ahora la única sesión física WebChat.
+El Engine no cambia automáticamente INTERRUPTED -> RUNNING al completar el child. El Scheduler puede registrar el retorno pendiente y esperar a que el ejecutor del parent termine físicamente antes de reanudarlo, evitando doble ejecución.
+
+### Integración
+
+Los tickets de Tavern continúan reutilizando ticket_id como TaskEngine.task_id. La GUI directa WebChat también crea tareas mediante el mismo Engine/Scheduler. operation_id sigue siendo un identificador interno del protocolo de navegador y no sustituye a task_id.
+La expiración de una sesión Tavern cancela las tareas vivas asociadas antes de retirar el mapping de tickets, evitando tareas huérfanas que permanezcan válidas después del cierre de la sesión.
+
+### Legacy
+
+src/bot_ia/core/web_queue.py y src/gui/task_orchestrator.py permanecen sin promoción a arquitectura global. No se elimina legacy por esta fase.
+
+### No implementado en esta fase
+
+No se añadieron Café Table, host/invitados, facturación, limpieza, Character Engine, emociones, relaciones, memoria nueva, automatización de Cari, strikes/moderation redesign, nuevos bots, nueva IA, nuevo navegador ni otra WebQueue.
