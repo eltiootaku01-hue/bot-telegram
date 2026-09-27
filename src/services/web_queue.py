@@ -453,6 +453,7 @@ class _QueueWorker(QObject):
     busy_changed = Signal(bool)
     queue_error = Signal(str, str)
     stopped = Signal()
+    capacity_restored = Signal()
 
     def __init__(
         self,
@@ -892,6 +893,7 @@ class _QueueWorker(QObject):
 
         self.circuit_open = False
         self.consecutive_failures = 0
+        self.capacity_restored.emit()
 
         self.queue_error.emit(
             "__circuit__",
@@ -930,6 +932,7 @@ class WebChatQueueManager(QObject):
     response_observed_requested = Signal(str)
     terminated_requested = Signal(str)
     health_failure_requested = Signal()
+    capacity_restored = Signal()
 
     def __init__(
         self,
@@ -1082,6 +1085,9 @@ class WebChatQueueManager(QObject):
         )
         self._worker.queue_error.connect(
             self._on_worker_queue_error
+        )
+        self._worker.capacity_restored.connect(
+            self.capacity_restored.emit
         )
         self._worker.stopped.connect(
             self._thread.quit
