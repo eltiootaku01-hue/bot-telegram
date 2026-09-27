@@ -55,6 +55,7 @@ class TelegramUiTests(unittest.TestCase):
         adapter = TelegramNovelAdapter(app)
         self.addCleanup(adapter.close)
         key = ("1", "2")
+        self.addCleanup(adapter.close)
         adapter._fallback_query[key] = "consulta pendiente"
         adapter._last_message[key] = "mensaje distinto posterior"
         update = {"callback_query": {"from": {"id": 1}, "message": {"chat": {"id": 2}}, "data": "fallback:api"}}
