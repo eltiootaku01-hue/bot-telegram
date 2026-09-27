@@ -1208,6 +1208,12 @@ class WebChatQueueManager(QObject):
     def close_current_ticket(self) -> None:
         self.close_requested.emit()
 
+    @property
+    def circuit_open(self) -> bool:
+        """Indica si el circuit breaker impide nuevas ejecuciones."""
+        worker = getattr(self, "_worker", None)
+        return bool(getattr(worker, "circuit_open", False))
+
     def register_ticket_response(
         self,
         response_text: str,
