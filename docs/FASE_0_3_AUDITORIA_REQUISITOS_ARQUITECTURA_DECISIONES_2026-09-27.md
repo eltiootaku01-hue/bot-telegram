@@ -1452,6 +1452,7 @@ WaitressSessionManager reutiliza ticket_id como task_id, entrega la ejecución a
 GUI WebChat directo también usa el mismo RuntimeComponents.task_scheduler. Esto elimina el bypass directo de WebQueue en el camino Qt normal.
 
 WebQueue recibió cancelación física por task_id. La cancelación de un ticket activo invalida operation_id, libera WEB_MESA_UNICA y emite TASK_CANCELLED sin contarlo como fallo del circuit breaker.
+El WebQueue expone capacity_restored al cerrar su circuit breaker; el Scheduler lo usa para despertar WAITING_WEBCHAT. No se añadió un temporizador o polling global.
 
 Cooldown: no se inventó un cooldown nuevo. El WebQueue actual mantiene el retardo de 100 ms tras resolución y circuit cooldown de 10 s tras tres fallos. Ninguno modifica Action Deadline.
 
