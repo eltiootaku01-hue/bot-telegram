@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from bot_ia.core.mama_mia_supervisor import MamaMiaSupervisor
+from bot_ia.core.task_engine import TaskState
 from bot_ia.core.waitress_session_manager import (
     DUEL_COST_CHOCOLATES,
     FAVORITE_DURATION_SECONDS,

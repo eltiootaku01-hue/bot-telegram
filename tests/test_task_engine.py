@@ -192,13 +192,10 @@ class TaskEngineTests(unittest.TestCase):
         with self.assertRaises(TaskTransitionError):
             self.engine.complete(task.task_id)
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     def test_get_returns_an_isolated_snapshot(self) -> None:
         task = self.engine.create_task("u1", "chat")
         snapshot = self.engine.get(task.task_id)
+        self.assertIsNotNone(snapshot)
         snapshot.state = TaskState.CANCELLED
         self.assertEqual(
             TaskState.PENDING,
@@ -211,3 +208,8 @@ if __name__ == "__main__":
         self.engine.cancel(task.task_id)
         discarded = self.engine.discard(task.task_id)
         self.assertEqual(TaskState.DISCARDED, discarded.state)
+
+
+
+if __name__ == "__main__":
+    unittest.main()
