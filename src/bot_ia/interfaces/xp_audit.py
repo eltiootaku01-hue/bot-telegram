@@ -2,6 +2,7 @@
 """XP pasivo y auditoría centralizada, sin bloquear los handlers de chat."""
 from __future__ import annotations
 
+from contextlib import closing
 import sqlite3
 import threading
 import time
@@ -81,7 +82,7 @@ class PassiveXPTracker:
         return XPResult(key[0], key[1], 10, level, True, self.role_for(level))
 
     def current_xp(self, user_id: str, platform: str) -> int:
-        with self._connect() as db:
+        with closing(self._connect()) as db:
             row = db.execute("SELECT xp FROM xp_users WHERE user_id=? AND platform=?", (user_id, platform)).fetchone()
         return int(row[0]) if row else 0
 
@@ -96,7 +97,7 @@ class PassiveXPTracker:
                 db.commit()
 
     def audit(self, platform: str, user_id: str, event: str, details: str) -> None:
-        with self._connect() as db:
+        with closing(self._connect()) as db:
             db.execute("INSERT INTO audit_log(platform,user_id,event,details,created_at) VALUES(?,?,?,?,?)", (platform, user_id, event, details, time.time()))
             db.commit()
 
