@@ -175,7 +175,19 @@ class TaskEngineTests(unittest.TestCase):
         self.engine.start_task(child.task_id)
         self.assertEqual(ResponseDisposition.DISCARDED, self.engine.validate_response(parent.task_id))
         self.engine.complete(child.task_id)
-        self.assertEqual(ResponseDisposition.ACCEPTED, self.engine.validate_response(parent.task_id))
+        self.assertEqual(
+            TaskState.INTERRUPTED,
+            self.engine.snapshot(parent.task_id).state,
+        )
+        self.assertEqual(
+            ResponseDisposition.DISCARDED,
+            self.engine.validate_response(parent.task_id),
+        )
+        self.engine.resume(parent.task_id)
+        self.assertEqual(
+            ResponseDisposition.ACCEPTED,
+            self.engine.validate_response(parent.task_id),
+        )
 
     def test_task_ids_are_isolated_from_context_text(self) -> None:
         first = self.engine.create_task("u1", "chat", context={"text": "A"})
