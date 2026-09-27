@@ -9,12 +9,14 @@ import os
 import platform
 import sys
 import threading
+from pathlib import Path
 
 
 TARGET = (
     "tests/test_telegram_runtime_safety.py::"
     "TelegramRuntimeSafetyTests::test_adapter_close_stops_xp_writer_thread"
 )
+LOG = Path("phase1b_state.log")
 
 
 def _rss_bytes() -> int | None:
@@ -55,7 +57,7 @@ def _rss_bytes() -> int | None:
 
 
 def _snapshot(label: str) -> None:
-    print(
+    line = (
         "PHASE1B_MEMORY "
         f"label={label} "
         f"python={sys.version.split()[0]} "
@@ -69,12 +71,17 @@ def _snapshot(label: str) -> None:
         f"limbo={len(getattr(threading, '_limbo', {}))} "
         f"dangling={len(getattr(threading, '_dangling', ()))}"
     )
+    with LOG.open("a", encoding="utf-8") as handle:
+        handle.write(line + "\n")
+        handle.flush()
 
 
 def pytest_sessionstart(session):
+    LOG.write_text("", encoding="utf-8")
     _snapshot("session_start")
 
 
-def pytest_runtest_setup(item):
+def pytest_runtest_protocol(item, nextitem):
     if item.nodeid == TARGET:
         _snapshot("before_failing_test")
+    return None
