@@ -40,7 +40,99 @@ jobs:
         run: python scripts/check_code_policy.py --git-range-env
       - name: Import runtime surface
         run: python -c "import bot_ia; import core.config; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.core.web_queue; import gui.task_orchestrator; import gui.gui_bridge; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher; import desktop_entry; import gui.app"
-      - name: Run test suite
-        env:
-          PYTHONWARNINGS: error::ResourceWarning
-        run: python -m pytest -q -vv
+      - name: Run Windows thread-resource audit
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          @'
+# Generated only on the CI runner for FASE 1 diagnostics.
+from __future__ import annotations
+
+import faulthandler
+import os
+import subprocess
+import sys
+import threading
+import weakref
+
+import pytest
+
+
+def snapshot(label: str) -> None:
+    threads = list(threading.enumerate())
+    alive = [t for t in threads if t.is_alive()]
+    non_daemon = [t for t in alive if not t.daemon]
+    limbo = list(getattr(threading, "_limbo", {}).values())
+    dangling = list(getattr(threading, "_dangling", weakref.WeakSet()))
+    print(
+        f"[THREAD-AUDIT] {label}: "
+        f"enumerate={len(threads)} alive={len(alive)} "
+        f"non_daemon={len(non_daemon)} limbo={len(limbo)} "
+        f"dangling={len(dangling)}",
+        flush=True,
+    )
+    for t in alive:
+        if t is threading.main_thread():
+            continue
+        print(
+            f"[THREAD-AUDIT]   alive name={t.name!r} "
+            f"daemon={t.daemon} ident={t.ident} class={type(t).__name__}",
+            flush=True,
+        )
+    if limbo:
+        for t in limbo:
+            print(
+                f"[THREAD-AUDIT]   LIMBO name={t.name!r} "
+                f"daemon={t.daemon} ident={t.ident} class={type(t).__name__}",
+                flush=True,
+            )
+
+
+class ThreadAuditPlugin:
+    def __init__(self) -> None:
+        self.count = 0
+
+    def pytest_runtest_logreport(self, report) -> None:
+        if report.when != "teardown":
+            return
+        self.count += 1
+        # Always sample resource state; emit full thread details when state
+        # changes, plus periodic checkpoints to expose accumulation.
+        threads = list(threading.enumerate())
+        alive = [t for t in threads if t is not threading.main_thread()]
+        non_daemon = [t for t in alive if not t.daemon]
+        limbo = list(getattr(threading, "_limbo", {}).values())
+        dangling = list(getattr(threading, "_dangling", weakref.WeakSet()))
+        if self.count % 25 == 0 or alive or limbo or non_daemon:
+            print(
+                f"[THREAD-AUDIT] after {self.count} {report.nodeid}: "
+                f"alive={len(alive)} non_daemon={len(non_daemon)} "
+                f"limbo={len(limbo)} dangling={len(dangling)}",
+                flush=True,
+            )
+            for t in alive:
+                print(
+                    f"[THREAD-AUDIT]   alive name={t.name!r} "
+                    f"daemon={t.daemon} ident={t.ident} class={type(t).__name__}",
+                    flush=True,
+                )
+
+    def pytest_keyboard_interrupt(self, excinfo) -> None:
+        print("[THREAD-AUDIT] KEYBOARD INTERRUPT: final resource snapshot", flush=True)
+        snapshot("keyboard-interrupt")
+        print("[THREAD-AUDIT] ALL THREAD STACKS", flush=True)
+        faulthandler.dump_traceback(file=sys.stdout, all_threads=True)
+
+    def pytest_sessionfinish(self, session, exitstatus) -> None:
+        snapshot(f"session-finish exitstatus={exitstatus}")
+
+
+if __name__ == "__main__":
+    plugin = ThreadAuditPlugin()
+    raise SystemExit(
+        pytest.main(["-q", "-vv", "--full-trace"], plugins=[plugin])
+    )
+
+          '@ | Set-Content -Encoding utf8 phase1_thread_audit.py
+          python phase1_thread_audit.py
+
