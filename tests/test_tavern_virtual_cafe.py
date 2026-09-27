@@ -321,6 +321,24 @@ class TavernTests(unittest.TestCase):
 
 
 
+    def test_shutdown_cancels_live_task(self):
+        with tempfile.TemporaryDirectory() as directory:
+            queue = FakeWebQueue()
+            manager = self.manager(directory, queue=queue)
+            manager.start_standard_session("1", "cari")
+            ticket_id = manager.queue_user_message("1", "hola")
+            self.assertEqual(
+                TaskState.RUNNING,
+                manager.task_engine.snapshot(ticket_id).state,
+            )
+
+            manager.shutdown()
+
+            self.assertEqual(
+                TaskState.CANCELLED,
+                manager.task_engine.snapshot(ticket_id).state,
+            )
+
     def test_expire_session_cancels_live_task(self):
         with tempfile.TemporaryDirectory() as directory:
             queue = FakeWebQueue()
