@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import copy
 from datetime import datetime, timezone
 from enum import Enum
 import threading
@@ -162,7 +163,7 @@ class TaskEngine:
                 return_policy=return_policy,
             )
             self._tasks[task_id] = task
-            return task
+            return self._snapshot_locked(task_id)
 
     def get(self, task_id: str) -> Task | None:
         """Devuelve una copia: las mutaciones sólo pasan por TaskEngine."""
@@ -173,12 +174,10 @@ class TaskEngine:
             task = self._tasks.get(str(task_id).strip())
             if task is None:
                 return None
-            return Task(
-                task.task_id, task.requester, task.task_type, dict(task.context),
-                task.priority, task.state, task.created_at, task.started_at,
-                task.deadline, task.timeout_policy, task.parent_task_id,
-                task.interrupted_by, task.return_policy, task.wait_reason,
-            )
+            return self._snapshot_locked(task_id)
+
+    def _snapshot_locked(self, task_id: str) -> Task:
+        return copy.deepcopy(self._tasks[task_id])
 
     def is_valid(self, task_id: str) -> bool:
         with self._lock:
@@ -203,7 +202,7 @@ class TaskEngine:
             task.state = TaskState.RUNNING
             task.started_at = now
             task.wait_reason = None
-            return task
+            return self._snapshot_locked(task.task_id)
 
     def wait(self, task_id: str, reason: TaskWaitReason) -> Task:
         if not isinstance(reason, TaskWaitReason):
@@ -218,7 +217,7 @@ class TaskEngine:
                 raise TaskTransitionError(f"cannot wait task in state {task.state.value}")
             task.state = TaskState.WAITING
             task.wait_reason = reason
-            return task
+            return self._snapshot_locked(task.task_id)
 
     def resume(self, task_id: str) -> Task:
         with self._lock:
@@ -229,7 +228,7 @@ class TaskEngine:
             task.state = TaskState.RUNNING
             task.wait_reason = None
             task.interrupted_by = None
-            return task
+            return self._snapshot_locked(task.task_id)
 
     def interrupt(self, task_id: str, *, interrupted_by: str) -> Task:
         interrupted_by = self._text(interrupted_by, "interrupted_by")
@@ -239,7 +238,7 @@ class TaskEngine:
             if task.state not in {TaskState.PENDING, TaskState.RUNNING, TaskState.WAITING}:
                 raise TaskTransitionError(f"cannot interrupt task in state {task.state.value}")
             self._interrupt_locked(task, interrupted_by)
-            return task
+            return self._snapshot_locked(task.task_id)
 
     def begin_cancellation(self, task_id: str) -> Task:
         with self._lock:
@@ -249,7 +248,7 @@ class TaskEngine:
                 raise TaskTransitionError(f"cannot cancel task in state {task.state.value}")
             task.state = TaskState.CANCELLING
             task.wait_reason = None
-            return task
+            return self._snapshot_locked(task.task_id)
 
     def cancel(self, task_id: str) -> Task:
         with self._lock:
@@ -258,12 +257,12 @@ class TaskEngine:
             if task.state in self._LIVE_STATES:
                 task.state = TaskState.CANCELLING
             if task.state is TaskState.CANCELLED:
-                return task
+                return self._snapshot_locked(task.task_id)
             if task.state is not TaskState.CANCELLING:
                 raise TaskTransitionError(f"cannot cancel task in state {task.state.value}")
             task.state = TaskState.CANCELLED
             task.wait_reason = None
-            return task
+            return self._snapshot_locked(task.task_id)
 
     def fail(self, task_id: str) -> Task:
         with self._lock:
@@ -272,20 +271,20 @@ class TaskEngine:
                 raise TaskTransitionError(f"cannot fail task in state {task.state.value}")
             task.state = TaskState.FAILED
             task.wait_reason = None
-            return task
+            return self._snapshot_locked(task.task_id)
 
     def complete(self, task_id: str) -> Task:
         with self._lock:
             task = self._require(task_id)
             now = self._now()
             if self._expire_if_needed_locked(task, now):
-                return task
+                return self._snapshot_locked(task.task_id)
             if task.state not in self._COMPLETABLE_STATES:
                 raise TaskTransitionError(f"cannot complete task in state {task.state.value}")
             task.state = TaskState.COMPLETED
             task.wait_reason = None
             self._apply_return_policy_locked(task, now)
-            return task
+            return self._snapshot_locked(task.task_id)
 
     def discard(self, task_id: str) -> Task:
         with self._lock:
@@ -298,9 +297,9 @@ class TaskEngine:
             }:
                 task.state = TaskState.DISCARDED
                 task.wait_reason = None
-                return task
+                return self._snapshot_locked(task.task_id)
             if task.state is TaskState.DISCARDED:
-                return task
+                return self._snapshot_locked(task.task_id)
             raise TaskTransitionError(f"cannot discard active task in state {task.state.value}")
 
     def check_deadlines(self, *, now: datetime | None = None) -> tuple[str, ...]:
@@ -314,6 +313,19 @@ class TaskEngine:
                 if self._expire_if_needed_locked(task, current):
                     expired.append(task.task_id)
             return tuple(expired)
+
+    def can_return(self, task_id: str) -> bool:
+        """Indica si un parent interrumpido sigue autorizado para volver."""
+        with self._lock:
+            task = self._tasks.get(str(task_id).strip())
+            if task is None:
+                return False
+            if self._expire_if_needed_locked(task, self._now()):
+                return False
+            return (
+                task.state is TaskState.INTERRUPTED
+                and task.return_policy is ReturnPolicy.RETURN_IF_VALID
+            )
 
     def validate_response(self, task_id: str) -> ResponseDisposition:
         """Valida un evento por task_id; nunca por texto o contexto."""
@@ -362,14 +374,13 @@ class TaskEngine:
         self._expire_if_needed_locked(parent, now)
         if parent.state is not TaskState.INTERRUPTED:
             return
-        if parent.return_policy is ReturnPolicy.RETURN_IF_VALID:
-            parent.state = TaskState.RUNNING
-            parent.interrupted_by = None
-            parent.wait_reason = None
-        elif parent.return_policy is ReturnPolicy.DISCARD_PARENT:
+        if parent.return_policy is ReturnPolicy.DISCARD_PARENT:
             parent.state = TaskState.DISCARDED
             parent.wait_reason = None
 
+
+# Todas las mutaciones públicas devuelven snapshots; el estado interno
+# sólo puede cambiar mediante TaskEngine.
 
 __all__ = [
     "ResponseDisposition",
