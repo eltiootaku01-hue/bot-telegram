@@ -1353,23 +1353,25 @@ class WaitressSessionManager:
         _reason: str,
     ) -> None:
         task = self._task_engine.get(ticket_id)
-        if task is None or task.state not in {
-            TaskState.PENDING,
-            TaskState.RUNNING,
-            TaskState.WAITING,
-            TaskState.INTERRUPTED,
-        }:
+        if task is None:
             with self._ticket_lock:
                 self._ticket_sessions.pop(ticket_id, None)
             return
+
         try:
-            self._task_scheduler.fail_from_executor(ticket_id)
+            task = self._task_scheduler.fail_from_executor(ticket_id)
         except (KeyError, RuntimeError):
+            with self._ticket_lock:
+                self._ticket_sessions.pop(ticket_id, None)
             return
+
         with self._ticket_lock:
             session_id = self._ticket_sessions.pop(ticket_id, None)
         if session_id is None:
             return
+        if task.state is not TaskState.FAILED:
+            return
+
         session = self._session_by_id(session_id)
         if session is not None:
             self._set_waitress_state(
