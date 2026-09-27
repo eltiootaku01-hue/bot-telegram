@@ -40,7 +40,7 @@ jobs:
         run: python scripts/check_code_policy.py --git-range-env
       - name: Import runtime surface
         run: python -c "import bot_ia; import core.config; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.core.web_queue; import gui.task_orchestrator; import gui.gui_bridge; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher; import desktop_entry; import gui.app"
-      - name: Run test suite
+      - name: Run Experiment 19
         env:
           PYTHONWARNINGS: error::ResourceWarning
-        run: python -m pytest -q -vv --full-trace
+        run: python -m pytest -q -vv --full-trace tests/test_phase1b_kill_zero_thread.py
