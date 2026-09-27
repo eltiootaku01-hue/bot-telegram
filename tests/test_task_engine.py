@@ -98,7 +98,11 @@ class TaskEngineTests(unittest.TestCase):
         self.engine.start_task(parent.task_id)
         self.engine.start_task(child.task_id)
         self.engine.complete(child.task_id)
-        self.assertEqual(TaskState.RUNNING, self.engine.snapshot(parent.task_id).state)
+        self.assertEqual(
+            TaskState.INTERRUPTED,
+            self.engine.snapshot(parent.task_id).state,
+        )
+        self.assertTrue(self.engine.can_return(parent.task_id))
 
     def test_expired_parent_is_not_resumed(self) -> None:
         parent = self.engine.create_task(
@@ -200,6 +204,19 @@ class TaskEngineTests(unittest.TestCase):
         self.assertEqual(
             TaskState.PENDING,
             self.engine.snapshot(task.task_id).state,
+        )
+
+    def test_deep_snapshot_is_isolated(self) -> None:
+        task = self.engine.create_task(
+            "u1",
+            "chat",
+            context={"nested": {"state": "live"}},
+        )
+        snapshot = self.engine.snapshot(task.task_id)
+        snapshot.context["nested"]["state"] = "changed"
+        self.assertEqual(
+            "live",
+            self.engine.snapshot(task.task_id).context["nested"]["state"],
         )
 
     def test_discard_is_a_terminal_state(self) -> None:
