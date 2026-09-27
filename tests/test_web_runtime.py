@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 import http.client
-import io
 import json
 import os
 import platform
-import socket
 import sys
 import threading
 import time
@@ -42,18 +40,20 @@ class FakeApplication:
 
 
 class _Phase1HWriteProbe:
-    def __init__(self, wrapped, log, request_number):
+    def __init__(self, wrapped, log, request_number, handler):
         self._wrapped = wrapped
         self._log = log
         self._request_number = request_number
+        self._handler = handler
 
     def write(self, data):
         written = self._wrapped.write(data)
-        self._log(
-            "response_body_sent",
-            request_number=self._request_number,
-            bytes_written=written,
-        )
+        if getattr(self._handler, "_phase1h_headers_finished", False):
+            self._log(
+                "response_body_sent",
+                request_number=self._request_number,
+                bytes_written=written,
+            )
         return written
 
     def flush(self):
@@ -372,10 +372,12 @@ class WebRuntimeTests(unittest.TestCase):
             result = original["setup"](handler)
             request_number = self._phase1h_request_counter + 1
             handler._phase1h_request_number = request_number
+            handler._phase1h_headers_finished = False
             handler.wfile = _Phase1HWriteProbe(
                 handler.wfile,
                 self._phase1h_log,
                 request_number,
+                handler,
             )
             state = self._phase1h_endpoint_state(handler.connection)
             self._phase1h_log(
@@ -406,6 +408,7 @@ class WebRuntimeTests(unittest.TestCase):
 
         def end_headers(handler):
             result = original["end_headers"](handler)
+            handler._phase1h_headers_finished = True
             self._phase1h_log(
                 "response_headers_sent",
                 request_number=getattr(handler, "_phase1h_request_number", None),
@@ -465,6 +468,11 @@ class WebRuntimeTests(unittest.TestCase):
         self._phase1h_request_counter = 0
         self._phase1h_patch_client()
         self.server = create_web_server(WebApi(FakeApplication(), api_token="t" * 32), port=0)
+        self._phase1h_log(
+            "server_created",
+            server_address=repr(self.server.server_address),
+            server_port=self.server.server_port,
+        )
         self._phase1h_instrument_server()
         self._phase1h_patch_handler_base()
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True, name="phase1h-serve_forever")
@@ -475,11 +483,6 @@ class WebRuntimeTests(unittest.TestCase):
             thread_ident=self.thread.ident,
             daemon=self.thread.daemon,
             alive=self.thread.is_alive(),
-        )
-        self._phase1h_log(
-            "server_created",
-            server_address=repr(self.server.server_address),
-            server_port=self.server.server_port,
         )
         self.base = f"http://127.0.0.1:{self.server.server_port}"
 
