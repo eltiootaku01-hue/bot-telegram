@@ -266,6 +266,7 @@ class TelegramAdapter:
         return self._waifu_registry.affinity_level(user_id, maid)
 
     def _admin_ids(self) -> frozenset[str]:
+        # TELEGRAM_ADMIN_USER_IDS remains the configured Telegram admin allowlist.
         return self._authority.admin_user_ids(AuthorityCore.TELEGRAM)
 
     def room_key_for_update(self, update: dict[str, object]) -> str:
@@ -295,7 +296,8 @@ class TelegramAdapter:
                     "message_thread_id Telegram inválido"
                 ) from error
 
-        authorization = self._authority.authorize(
+        authority = getattr(self, "_authority", None) or AuthorityCore()
+        authorization = authority.authorize(
             AuthorizationRequest(
                 platform=AuthorityCore.TELEGRAM,
                 user_id=user_id,

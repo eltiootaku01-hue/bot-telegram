@@ -2420,7 +2420,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         ordinary = scan_cami_guard("texto normal", username="cliente")
         self.assertEqual("allow", ordinary.action)
         self.assertFalse(ordinary.strike_exempt)
-        with patch.dict(os.environ, {"TELEGRAM_SUPERADMIN_ID": "100"}, clear=False):
+        with patch.dict(os.environ, {"TELEGRAM_SUPERADMIN_ID": "100"}, clear=True):
             self.assertTrue(is_superadmin(user_id="100", username="@otro"))
 
     def test_cami_guard_gui_alert_contract(self):

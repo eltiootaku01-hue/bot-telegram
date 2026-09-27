@@ -81,6 +81,11 @@ class TaskEngine:
         TaskState.RUNNING,
         TaskState.WAITING,
     })
+    _COMPLETABLE_STATES = frozenset({
+        TaskState.RUNNING,
+        TaskState.WAITING,
+        TaskState.INTERRUPTED,
+    })
 
     def __init__(self, *, now_provider: Callable[[], datetime] | None = None) -> None:
         self._now_provider = now_provider or (lambda: datetime.now(timezone.utc))
@@ -275,7 +280,7 @@ class TaskEngine:
             now = self._now()
             if self._expire_if_needed_locked(task, now):
                 return task
-            if task.state not in self._LIVE_STATES:
+            if task.state not in self._COMPLETABLE_STATES:
                 raise TaskTransitionError(f"cannot complete task in state {task.state.value}")
             task.state = TaskState.COMPLETED
             task.wait_reason = None
