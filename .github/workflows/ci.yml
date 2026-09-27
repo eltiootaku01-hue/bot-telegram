@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, audit/phase1-windows-thread-resources]
   pull_request:
     branches: [main]
 
