@@ -2381,6 +2381,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         self.assertIn("class BurstGate", community)
         self.assertIn("REQUIRED_PLATFORM_ENV", schrodinger)
 
+    @patch.dict(os.environ, {"TELEGRAM_SUPERADMIN_ID": "100"}, clear=False)
     def test_cami_guard_superadmin_content_contract(self):
         from bot_ia.interfaces.cami_guard import is_superadmin, scan_cami_guard
         from bot_ia.interfaces.cafe_immersion import supervise_admin_publication

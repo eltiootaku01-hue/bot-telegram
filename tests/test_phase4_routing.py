@@ -56,6 +56,7 @@ class Phase4RoutingTests(unittest.TestCase):
                     adapter.room_key_for_update(
                         {
                             "message": {
+                                "from": {"id": 200},
                                 "message_thread_id": 42,
                                 "is_topic_message": True,
                                 "chat": {
@@ -87,6 +88,7 @@ class Phase4RoutingTests(unittest.TestCase):
                     adapter.room_key_for_update(
                         {
                             "message": {
+                                "from": {"id": 200},
                                 "message_thread_id": 99,
                                 "is_topic_message": True,
                                 "chat": {
