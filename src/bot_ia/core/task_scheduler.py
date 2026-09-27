@@ -82,6 +82,9 @@ class TaskScheduler:
         with self._lock:
             self._executors[route] = executor
             self._default_resources[route] = default_resource_key
+            binder = getattr(executor, "bind_scheduler", None)
+            if callable(binder):
+                binder(self)
 
     def schedule(
         self,
@@ -437,6 +440,23 @@ class WebChatTaskExecutor:
 
     def __init__(self, web_queue: object) -> None:
         self._web_queue = web_queue
+        self._scheduler: TaskScheduler | None = None
+        self._capacity_signal_connected = False
+
+    def bind_scheduler(self, scheduler: TaskScheduler) -> None:
+        self._scheduler = scheduler
+        if self._capacity_signal_connected:
+            return
+        signal = getattr(self._web_queue, "capacity_restored", None)
+        connector = getattr(signal, "connect", None)
+        if callable(connector):
+            connector(self._on_capacity_restored)
+            self._capacity_signal_connected = True
+
+    def _on_capacity_restored(self) -> None:
+        scheduler = self._scheduler
+        if scheduler is not None:
+            scheduler.dispatch()
 
     def submit(self, task: Task) -> None:
         context = task.context
