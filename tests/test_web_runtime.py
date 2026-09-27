@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import multiprocessing
 import threading
 import unittest
 from urllib.error import HTTPError
@@ -34,11 +35,37 @@ class FakeApplication:
         return Response()
 
 
+def _web_runtime_process(control):
+    server = create_web_server(
+        WebApi(FakeApplication(), api_token="t" * 32),
+        port=0,
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    control.send(server.server_port)
+    try:
+        control.recv()
+    finally:
+        shutdown_thread = threading.Thread(
+            target=server.shutdown,
+            daemon=True,
+        )
+        shutdown_thread.start()
+        shutdown_thread.join(timeout=3)
+        if shutdown_thread.is_alive():
+            raise RuntimeError("HTTP server shutdown did not complete")
+        server.server_close()
+        thread.join(timeout=2)
+        if thread.is_alive():
+            raise RuntimeError("HTTP server thread did not terminate")
+        control.close()
+
+
 class WebRuntimeTests(unittest.TestCase):
     _opener = build_opener(ProxyHandler({}))
 
     def _http_request(self, path, *, method="GET", body=None, headers=None):
-        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
         connection.request(
             method,
             path,
@@ -50,19 +77,24 @@ class WebRuntimeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.server = create_web_server(
-            WebApi(FakeApplication(), api_token="t" * 32),
-            port=0,
+        context = multiprocessing.get_context("spawn")
+        parent, child = context.Pipe()
+        cls.control = parent
+        cls.process = context.Process(
+            target=_web_runtime_process,
+            args=(child,),
         )
-        cls.thread = threading.Thread(
-            target=cls.server.serve_forever,
-            daemon=True,
-        )
-        cls.thread.start()
+        cls.process.start()
+        child.close()
+        if not parent.poll(5):
+            cls.process.terminate()
+            cls.process.join(timeout=5)
+            raise AssertionError("HTTP runtime process did not start")
+        cls.port = parent.recv()
 
         connection = http.client.HTTPConnection(
             "127.0.0.1",
-            cls.server.server_port,
+            cls.port,
             timeout=3,
         )
         try:
@@ -79,28 +111,26 @@ class WebRuntimeTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        shutdown_thread = threading.Thread(
-            target=cls.server.shutdown,
-            daemon=True,
-        )
-        shutdown_thread.start()
-        shutdown_thread.join(timeout=3)
-        if shutdown_thread.is_alive():
-            raise AssertionError(
-                "HTTP server shutdown did not complete within 3 seconds"
-            )
-        cls.server.server_close()
-        cls.thread.join(timeout=2)
-        if cls.thread.is_alive():
-            raise AssertionError(
-                "HTTP server thread did not terminate within 2 seconds"
-            )
+        try:
+            cls.control.send("stop")
+            cls.process.join(timeout=5)
+            if cls.process.is_alive():
+                cls.process.terminate()
+                cls.process.join(timeout=5)
+                raise AssertionError(
+                    "HTTP runtime process did not terminate"
+                )
+            if cls.process.exitcode != 0:
+                raise AssertionError(
+                    f"HTTP runtime process exited with code {cls.process.exitcode}"
+                )
+        finally:
+            cls.control.close()
         super().tearDownClass()
 
     def setUp(self):
-        self.server = type(self).server
-        self.thread = type(self).thread
-        self.base = f"http://127.0.0.1:{self.server.server_port}"
+        self.port = type(self).port
+        self.base = f"http://127.0.0.1:{self.port}"
 
     def test_health_and_openapi_are_reachable(self):
         connection = self._http_request("/health")
