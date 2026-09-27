@@ -10,8 +10,10 @@ from bot_ia.interfaces.telegram import TelegramAdapter, TelegramApiClient, Teleg
 class TelegramRuntimeSafetyTests(unittest.TestCase):
     def test_adapter_close_stops_xp_writer_thread(self):
         adapter = TelegramAdapter(object())
+        adapter._xp_tracker.record_message("shutdown-test", "telegram")
         thread = adapter._xp_tracker._thread
         self.addCleanup(adapter.close)
+        self.assertIsNotNone(thread)
         self.assertTrue(thread.is_alive())
 
         adapter.close()
