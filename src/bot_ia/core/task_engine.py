@@ -160,8 +160,8 @@ class TaskEngine:
             return task
 
     def get(self, task_id: str) -> Task | None:
-        with self._lock:
-            return self._tasks.get(str(task_id).strip())
+        """Devuelve una copia: las mutaciones sólo pasan por TaskEngine."""
+        return self.snapshot(task_id)
 
     def snapshot(self, task_id: str) -> Task | None:
         with self._lock:

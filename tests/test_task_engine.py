@@ -195,3 +195,19 @@ class TaskEngineTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_get_returns_an_isolated_snapshot(self) -> None:
+        task = self.engine.create_task("u1", "chat")
+        snapshot = self.engine.get(task.task_id)
+        snapshot.state = TaskState.CANCELLED
+        self.assertEqual(
+            TaskState.PENDING,
+            self.engine.snapshot(task.task_id).state,
+        )
+
+    def test_discard_is_a_terminal_state(self) -> None:
+        task = self.engine.create_task("u1", "chat")
+        self.engine.start_task(task.task_id)
+        self.engine.cancel(task.task_id)
+        discarded = self.engine.discard(task.task_id)
+        self.assertEqual(TaskState.DISCARDED, discarded.state)
