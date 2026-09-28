@@ -84,3 +84,12 @@ FASE 2F-2; FASE 2F-3; `src/bot_ia/core/task_engine.py`; `src/bot_ia/core/task_sc
 
 
 - [TESTED] CI del HEAD de implementación `5fea2df4a54eddeb8ff0949b5258767bce297712` pasa en Ubuntu y Windows después de corregir el escenario WAITING/RESUME conforme a la propiedad real de TaskScheduler de no despertar una tarea todavía activa.
+
+
+## FASE 2F-8R — Repair & Re-verification
+
+- [TESTED] F-001 was repaired: RuntimeObservation.transition() now classifies before/after snapshot comparison as OBSERVED, not TESTED, and explicitly records that transition_source is contextual metadata rather than causal proof.
+- [TESTED] An adversarial runtime test confirms a caller-supplied transition_source cannot promote a snapshot difference to causal TESTED evidence.
+- [TESTED] F-002 was repaired: ScopeLock is now frozen after construction, matching the immutability contract already used by WriteAuthorization.
+- [TESTED] Mutation attempts against allowed_paths, allowed_operations and status are rejected.
+- [UNKNOWN] Causal transition evidence remains unimplemented; no second state machine or runtime execution was introduced.
