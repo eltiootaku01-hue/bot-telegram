@@ -105,3 +105,26 @@ FASE 2F-2; FASE 2F-3; `src/bot_ia/core/task_engine.py`; `src/bot_ia/core/task_sc
 - [CONFLICT] F-006 no es un caso de legacy/no-operativo: ambos componentes están activos. Tampoco es correcto declarar un scheduler global único, porque existen dos mecanismos de scheduling/orchestration operativos en la aplicación GUI.
 - [CONFLICT] Ambos caminos pueden realizar trabajo WebChat, pero no comparten `task_id`, `session_id`, Task Contract ni la misma instancia de WebQueue: `TaskOrchestrator` usa el `WebQueueManager` async de `bot_ia.core.web_queue`; el runtime TaskEngine usa `WebChatQueueManager` de `services.web_queue`.
 - [DECIDED] F-006 queda clasificado como `CONFLICT — ARCHITECTURAL OWNERSHIP`, no como legacy. La resolución de ownership definitivo entre ambos queda fuera de esta fase; no se fusionan ni se elimina ninguno.
+
+
+## FASE 2F-8B — Decisión arquitectónica WebChat
+
+### F-006
+
+[DECIDED] El objetivo arquitectónico futuro es **CANDIDATO A — convergencia en TaskEngine/TaskScheduler** para el trabajo WebChat operacional.
+
+La evidencia actual no justifica tratar GUI TaskOrchestrator como runtime WebChat independiente a largo plazo: ambos caminos aceptan la misma identidad lógica de waitress, pero sólo el camino TaskEngine/Scheduler posee identidad operacional `task_id`, lifecycle común, resource arbitration y boundary observable por Supervisor.
+
+[OBSERVED] GUI TaskOrchestrator permanece operativo hoy para quick actions y no se elimina en esta fase.
+
+[OBSERVED] TaskOrchestrator puede ejecutar `bot_ia.core.web_queue.WebQueueManager` sin pasar por `TaskScheduler` ni por `WEB_MESA_UNICA` de `services.web_queue`.
+
+[OBSERVED] El camino TaskEngine/Scheduler utiliza `services.web_queue.WebChatQueueManager`, cuyo recurso `WEB_MESA_UNICA` sólo coordina instancias de ese módulo; no constituye un lock entre ambos runtimes.
+
+[INFERRED] Existe riesgo real de concurrencia/ownership sobre la misma waitress lógica porque quick actions usan `cari`/ `sunna` y el chat Web GUI puede seleccionar esas mismas waitresses. No se demostró que compartan la misma cuenta, navegador o sesión web; por tanto esas dimensiones permanecen UNKNOWN.
+
+[OBSERVED] El historial muestra que TaskOrchestrator fue creado el 2026-09-24, mientras TaskScheduler fue introducido posteriormente el 2026-09-27 y WebChatQueueManager recibió después adaptaciones explícitas para cancelación, estado de circuit breaker y recuperación de capacidad del Scheduler.
+
+[DECIDED] F-006 deja de ser una decisión abierta de ownership: la arquitectura objetivo es una única ruta operacional WebChat basada en TaskEngine/TaskScheduler. La implementación de la convergencia queda para una fase posterior autorizada.
+
+[PROPOSED] En una futura implementación, GUI TaskOrchestrator deberá convertirse en adapter/orquestación de presentación o retirarse gradualmente, pero no se decide aquí el mecanismo exacto de migración.
