@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Observation Core mínimo del Supervisor."""
+"""Contratos del Supervisor y Observation Core."""
 
+from .claims import Claim, ClaimStatus, ClaimStore, ClaimValidation
 from .core import ObservationCore
 from .models import (
     AuditEvent,
@@ -16,10 +17,16 @@ from .observers import (
     FileObserver,
     RepositoryObserver,
 )
+from .scope import ChangeBudget, ScopeLock, ScopeOperation, ScopeStatus
 from .store import EvidenceStore
 
 __all__ = [
     "AuditEvent",
+    "ChangeBudget",
+    "Claim",
+    "ClaimStatus",
+    "ClaimStore",
+    "ClaimValidation",
     "CommandNotAuthorized",
     "CommandObserver",
     "Confidence",
@@ -31,4 +38,7 @@ __all__ = [
     "Observation",
     "ObservationCore",
     "RepositoryObserver",
+    "ScopeLock",
+    "ScopeOperation",
+    "ScopeStatus",
 ]
