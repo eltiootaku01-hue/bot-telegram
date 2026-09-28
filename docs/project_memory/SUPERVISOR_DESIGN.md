@@ -104,3 +104,25 @@ State Machine
 
 [DECIDED] Sin persistencia de Authorization ni servicio de revocación.
 
+
+## Hypothesis / Repair Contract
+
+[DECIDED] Hypothesis no es Claim y no puede elevarse automáticamente a VERIFIED/FACT.
+
+[DECIDED] RepairProposal describe una posible reparación y permanece separada de Authorization. APPROVED no significa EXECUTING ni SUCCEEDED.
+
+[DECIDED] RepairAttempt registra cada intento individual; FAILED no elimina evidencia ni intentos anteriores.
+
+[DECIDED] RepairBudget es un techo contractual: attempts, files, lines, changes, duration y operaciones explícitamente permitidas. No puede ampliar ScopeLock.
+
+[DECIDED] VerificationResult requiere evidencia y se enlaza a repair_id + attempt_id.
+
+[DECIDED] repair_audit_event genera el AuditEvent ya existente para que la capa de persistencia existente pueda registrarlo; no introduce un sistema paralelo.
+
+[DECIDED] No existe WriteExecutor/FileWriter/GitWriter en esta fase.
+
+[UNKNOWN] Persistencia definitiva de Hypothesis/Repair, rollback físico y enforcement runtime permanecen abiertos.
+
+## Fuera de alcance FASE 2F-5
+
+[DECIDED] Sin escritura de archivos, git commit/push/merge, DB mutation, runtime config mutation, TaskEngine, TaskScheduler, WebQueue, Telegram, Discord, TCG, TMA, GUI o AuthorityCore.

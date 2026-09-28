@@ -50,3 +50,10 @@
 - Pregunta: ¿Cómo se persistirá y auditará Authorization a través de reinicios o procesos?
 - Conocido: FASE 2F-4 no implementa almacenamiento ni revocación persistente.
 
+
+## Persistencia de Hypothesis/Repair
+
+- Estado: [UNKNOWN]
+- Pregunta: ¿Debe Hypothesis/Repair persistirse en el mismo almacenamiento JSONL existente o mediante otra capa futura?
+- Conocido: FASE 2F-5 solo mantiene historial contractual de intentos en memoria y no añade una base de datos.
+- [UNKNOWN] Auditoría y reconciliación de Hypothesis/Repair entre reinicios/procesos.

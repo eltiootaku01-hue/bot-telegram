@@ -40,3 +40,17 @@
 - Repair attempts: 0.
 - Fecha: [UNKNOWN].
 
+
+## FASE 2F-5
+
+- Estado: [TESTED]
+- Branch: feature/supervisor-repair-hypothesis.
+- HEAD base: 958c7eb84d0e5831547a347099edb88c88c46231.
+- Alcance: Hypothesis, RepairProposal, RepairAttempt, RepairBudget y VerificationResult contractuales.
+- Producción creada: src/bot_ia/supervisor/repair.py.
+- Tests creados: tests/test_supervisor_repair.py.
+- Ejecución física: NO.
+- Persistencia nueva: NO.
+- AuthorityCore/TaskEngine/TaskScheduler/WebQueue/Telegram/Discord/TCG/TMA/GUI/DB/workflows/dependencias: NO modificados.
+- Repair attempts de implementación: 3; los dos primeros ciclos CI detectaron fallos de tests y el tercer ciclo terminó con CI verde.
+- Fecha: [UNKNOWN].

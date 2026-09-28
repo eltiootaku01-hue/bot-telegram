@@ -44,3 +44,13 @@
 - No implica: autoridad física definitiva ni integración runtime.
 - Fuentes: FASE 2F-4.
 
+
+### DEC-012 — Hypothesis y Repair como contratos no ejecutores
+
+- Estado: [DECIDED]
+- Origen: FASE 2F-5.
+- Decisión: Hypothesis, RepairProposal, RepairAttempt, RepairBudget y VerificationResult forman una capa contractual sin escritura física.
+- Motivo: preservar la separación OBSERVATION → EVIDENCE → CLAIM → HYPOTHESIS → REPAIR PROPOSAL → AUTHORIZATION → EXECUTION → VERIFICATION.
+- Evidencia: src/bot_ia/supervisor/repair.py y tests de FASE 2F-5.
+- Impacto: futuras reparaciones deben respetar hipótesis, propuesta, ScopeLock, autorización y presupuesto antes de cualquier ejecución.
+- No implica: WriteExecutor, FileWriter, GitWriter, persistencia definitiva ni integración runtime.

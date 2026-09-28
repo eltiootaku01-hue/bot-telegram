@@ -42,3 +42,15 @@ FASE 2F-2; FASE 2F-3; `src/bot_ia/core/task_engine.py`; `src/bot_ia/core/task_sc
 - [TESTED] Expiración se valida contra current_time sin timers ni mutación.
 - [UNKNOWN] La autoridad física definitiva, su autenticación y su integración futura con AuthorityCore continúan abiertas.
 
+
+## FASE 2F-5
+
+- [TESTED] Se añade un contrato separado de Hypothesis/Repair sin ejecución física.
+- [DECIDED] Hypothesis conserva estado propio y no puede usar Confidence.VERIFIED.
+- [DECIDED] Supporting evidence y refutation evidence son referencias separadas.
+- [DECIDED] RepairProposal permanece separada de Authorization y Execution.
+- [DECIDED] RepairAttempt es inmutable y el historial es append-only en memoria.
+- [DECIDED] RepairBudget falla cerrado y no permite expansión automática de operaciones o ScopeLock.
+- [TESTED] Proposal fuera de ScopeLock queda BLOCKED.
+- [TESTED] Intento sin aprobación, sin authorization o fuera de presupuesto queda BLOCKED.
+- [UNKNOWN] Persistencia definitiva de Hypothesis/Repair y auditoría entre reinicios siguen abiertas.

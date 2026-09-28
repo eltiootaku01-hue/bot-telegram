@@ -229,7 +229,12 @@ class Hypothesis:
             evidence_ids=tuple(dict.fromkeys((*self.evidence_ids, *ids))),
             updated_at=datetime.now(timezone.utc),
         )
-        return updated.transition(HypothesisStatus.INCONCLUSIVE, reason=reason)
+        target_status = (
+            HypothesisStatus.BLOCKED
+            if verification is VerificationStatus.BLOCKED
+            else HypothesisStatus.INCONCLUSIVE
+        )
+        return updated.transition(target_status, reason=reason)
 
 
 @dataclass(frozen=True, slots=True)
@@ -530,7 +535,11 @@ class RepairAttempt:
                 rollback_required=False,
                 authorization_id=authorization_id,
             )
-        if authorization_id is None:
+        if (
+            authorization_id is None
+            or repair.authorization_id is None
+            or authorization_id != repair.authorization_id
+        ):
             return cls(
                 attempt_id=new_id("attempt"),
                 repair_id=repair.repair_id,
@@ -543,9 +552,9 @@ class RepairAttempt:
                 evidence_before=tuple(evidence_before),
                 evidence_after=(),
                 verification_result=None,
-                failure_reason="authorization is required before execution",
+                failure_reason="matching authorization is required before execution",
                 rollback_required=False,
-                authorization_id=None,
+                authorization_id=authorization_id,
             )
         if not budget.check(attempt_number=attempt_number):
             return cls(
