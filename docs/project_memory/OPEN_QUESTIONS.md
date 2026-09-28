@@ -65,3 +65,12 @@
 - [UNKNOWN] El mecanismo definitivo para convertir una solicitud contractual aceptada en una llamada operacional al TaskEngine no se implementa todavía.
 - [UNKNOWN] La semántica final de BLOCK/REQUEST/CANCEL_REQUEST entre Supervisor y TaskEngine queda pendiente de una futura fase controlada.
 - [DECIDED] Esta incertidumbre no justifica modificar TaskEngine ni TaskScheduler en FASE 2F-6.
+
+
+## FASE 2F-7 — Runtime Observation
+
+- [TESTED] El Supervisor puede observar snapshots del TaskEngine y pending/active IDs del Scheduler sin mutarlos.
+- [TESTED] task_id permanece estable en los snapshots observados, incluyendo parent/child.
+- [UNKNOWN] No existe todavía una interfaz de handoff operacional desde una decisión contractual ALLOWED hacia TaskEngine/Scheduler.
+- [UNKNOWN] No existe todavía autoridad física definida para ejecución desde Supervisor.
+- [UNKNOWN] Las transiciones que no están expuestas por el runtime actual no deben inferirse ni fabricarse.
