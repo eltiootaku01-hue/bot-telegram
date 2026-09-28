@@ -166,3 +166,20 @@ State Machine
 
 
 [TESTED] La observación de WAITING/RESUME no introduce un comando de ejecución en Supervisor: el test conduce el runtime por las interfaces existentes y `RuntimeObservation` solamente captura snapshots antes/después.
+
+
+## FASE 2F-8R — Evidence semantics
+
+[DECIDED] Una diferencia before/after de RuntimeObservation es una observación de snapshots, no una prueba causal de una transición.
+
+[TESTED] RuntimeObservation.transition() no puede elevar causalidad mediante transition_source; devuelve OBSERVED salvo UNKNOWN/BLOCKED por las validaciones existentes.
+
+## FASE 2F-8R — ScopeLock immutability
+
+[DECIDED] ScopeLock es immutable después de construcción.
+
+[TESTED] La normalización inicial se realiza durante construcción y los intentos posteriores de modificar campos de alcance son rechazados.
+
+[DECIDED] Authorization continúa siendo inmutable y ScopeLock ahora comparte esa propiedad contractual.
+
+[UNKNOWN] Ninguna de estas garantías constituye enforcement físico de escritura.
