@@ -129,3 +129,15 @@
 - TaskEngine/TaskScheduler/WebQueue/AuthorityCore: NO modificados.
 - Ejecución física del Supervisor: NO implementada.
 - FASE 2F-8R repair budget: permanece históricamente en 2/3; esta fase usa su propio presupuesto y no consume ese intento.
+
+
+## FASE 2F-8B — Decisión de arquitectura WebChat
+
+- [DECIDED] F-006 → CANDIDATO A: convergencia futura en TaskEngine/TaskScheduler.
+- [OBSERVED] TaskOrchestrator permanece operativo actualmente; no fue eliminado ni modificado.
+- [OBSERVED] El historial muestra evolución posterior de TaskScheduler y adaptaciones de WebChatQueueManager para cancellation/circuit/capacity.
+- [INFERRED] Existe riesgo de solapamiento sobre la misma waitress lógica porque ambos caminos pueden recibir IDs como `cari`/ `sunna`; no se demostró compartir cuenta/browser/session.
+- [PROPOSED] TaskOrchestrator será adapter/capa GUI o será retirado gradualmente en una fase posterior; el mecanismo exacto queda abierto.
+- [PROPOSED] Quick actions deberán migrar a identidad `TaskEngine.task_id` si se integran al runtime común.
+- Esta fase no modifica TaskEngine, TaskScheduler, WebQueue, AuthorityCore, TaskOrchestrator ni WaitressSessionManager.
+- FASE 2F-9: NO iniciada.
