@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import Any
 
 from .boundary import TaskEngineBoundary
 from .models import Evidence, EvidenceStatus, EvidenceType
@@ -15,7 +14,7 @@ from .models import Evidence, EvidenceStatus, EvidenceType
 class TaskRuntimeSnapshot:
     task_id: str
     requester: str
-    state: TaskState
+    state: str
     priority: int
     parent_task_id: str | None
     wait_reason: str | None
@@ -58,24 +57,29 @@ class RuntimeObservation:
                     "reason": "unknown task_id",
                 },
             )
-        value = asdict(
-            TaskRuntimeSnapshot(
-                task_id=snapshot.task_id,
-                requester=snapshot.requester,
-                state=snapshot.state,
-                priority=snapshot.priority,
-                parent_task_id=snapshot.parent_task_id,
-                wait_reason=(
-                    snapshot.wait_reason.value
-                    if snapshot.wait_reason is not None
-                    else None
-                ),
-                created_at=snapshot_created_at(self._boundary, snapshot.task_id),
-                started_at=snapshot_started_at(self._boundary, snapshot.task_id),
-                deadline=snapshot_deadline(self._boundary, snapshot.task_id),
-            )
+        value = TaskRuntimeSnapshot(
+            task_id=snapshot.task_id,
+            requester=snapshot.requester,
+            state=snapshot.state.value,
+            priority=snapshot.priority,
+            parent_task_id=snapshot.parent_task_id,
+            wait_reason=(
+                snapshot.wait_reason.value
+                if snapshot.wait_reason is not None
+                else None
+            ),
+            created_at=snapshot.created_at.isoformat(),
+            started_at=(
+                snapshot.started_at.isoformat()
+                if snapshot.started_at is not None
+                else None
+            ),
+            deadline=(
+                snapshot.deadline.isoformat()
+                if snapshot.deadline is not None
+                else None
+            ),
         )
-        value["state"] = snapshot.state.value
         return Evidence.create(
             evidence_type=EvidenceType.RUNTIME_EVIDENCE,
             source="supervisor.runtime_observation",
@@ -85,7 +89,7 @@ class RuntimeObservation:
                 "task_id": snapshot.task_id,
                 "scenario": scenario,
                 "observation_timestamp": timestamp,
-                "snapshot": value,
+                "snapshot": asdict(value),
             },
         )
 
@@ -95,8 +99,8 @@ class RuntimeObservation:
         scenario: str = "",
         observed_at: datetime | None = None,
     ) -> Evidence:
-        snapshot = self._boundary.observe_scheduler()
         timestamp = _timestamp(observed_at)
+        snapshot = self._boundary.observe_scheduler()
         if snapshot is None:
             return Evidence.create(
                 evidence_type=EvidenceType.RUNTIME_EVIDENCE,
@@ -152,12 +156,12 @@ class RuntimeObservation:
                     "after_task_id": after_id,
                 },
             )
-        if before.result is EvidenceStatus.UNKNOWN or after.result is EvidenceStatus.UNKNOWN:
-            result = EvidenceStatus.UNKNOWN
-        else:
-            result = EvidenceStatus.TESTED
-        before_snapshot = before.metadata.get("snapshot", {})
-        after_snapshot = after.metadata.get("snapshot", {})
+        result = (
+            EvidenceStatus.UNKNOWN
+            if before.result is EvidenceStatus.UNKNOWN
+            or after.result is EvidenceStatus.UNKNOWN
+            else EvidenceStatus.TESTED
+        )
         return Evidence.create(
             evidence_type=EvidenceType.RUNTIME_EVIDENCE,
             source="supervisor.runtime_observation",
@@ -167,8 +171,8 @@ class RuntimeObservation:
                 "task_id": before_id,
                 "scenario": scenario,
                 "transition_source": transition_source,
-                "before": before_snapshot,
-                "after": after_snapshot,
+                "before": before.metadata.get("snapshot", {}),
+                "after": after.metadata.get("snapshot", {}),
             },
         )
 
@@ -178,22 +182,3 @@ def _timestamp(value: datetime | None) -> str:
     if current.tzinfo is None:
         raise ValueError("observation timestamp must be timezone-aware")
     return current.astimezone(timezone.utc).isoformat()
-
-
-def _task_snapshot(engine: TaskEngine, task_id: str):
-    return engine.snapshot(task_id)
-
-
-def snapshot_created_at(boundary: TaskEngineBoundary, task_id: str) -> str:
-    task = _task_snapshot(boundary._engine_for_observation(), task_id)
-    return task.created_at.isoformat() if task is not None else ""
-
-
-def snapshot_started_at(boundary: TaskEngineBoundary, task_id: str) -> str | None:
-    task = _task_snapshot(boundary._engine_for_observation(), task_id)
-    return task.started_at.isoformat() if task is not None and task.started_at else None
-
-
-def snapshot_deadline(boundary: TaskEngineBoundary, task_id: str) -> str | None:
-    task = _task_snapshot(boundary._engine_for_observation(), task_id)
-    return task.deadline.isoformat() if task is not None and task.deadline else None
