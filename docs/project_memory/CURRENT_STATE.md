@@ -81,3 +81,6 @@ FASE 2F-2; FASE 2F-3; `src/bot_ia/core/task_engine.py`; `src/bot_ia/core/task_sc
 - [TESTED] La evidencia de runtime se representa mediante el `Evidence` existente con `EvidenceType.RUNTIME_EVIDENCE`; no se crea otro EvidenceStore.
 - [DECIDED] Runtime Observation queda como capa read-only: observar y registrar evidencia no equivale a ejecutar, despachar ni controlar el Scheduler.
 - [UNKNOWN] Las transiciones no soportadas por el runtime actual no se inventan; cualquier futura integración de handoff operacional continúa fuera de alcance.
+
+
+- [TESTED] CI del HEAD de implementación `5fea2df4a54eddeb8ff0949b5258767bce297712` pasa en Ubuntu y Windows después de corregir el escenario WAITING/RESUME conforme a la propiedad real de TaskScheduler de no despertar una tarea todavía activa.
