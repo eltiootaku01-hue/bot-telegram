@@ -50,6 +50,9 @@ class TaskObservation:
     priority: int
     parent_task_id: str | None
     wait_reason: object | None
+    created_at: datetime
+    started_at: datetime | None
+    deadline: datetime | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,6 +218,9 @@ class TaskEngineBoundary:
             priority=task.priority,
             parent_task_id=task.parent_task_id,
             wait_reason=task.wait_reason,
+            created_at=task.created_at,
+            started_at=task.started_at,
+            deadline=task.deadline,
         )
 
 
