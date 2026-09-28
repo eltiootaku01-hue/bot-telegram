@@ -105,3 +105,13 @@
 - Evidencia: test de mutación de paths, operations y status.
 - Impacto: una modificación contractual requiere crear otro ScopeLock en lugar de alterar el existente.
 - No implica: enforcement físico de ScopeLock.
+
+
+### DEC-016 — Reconciliación F-006: alcance del TaskScheduler y GUI TaskOrchestrator
+
+- Estado: [DECIDED / F-006 CONFLICT]
+- `TaskScheduler` conserva ownership de scheduling/routing/resource arbitration dentro de su runtime `TaskEngine`; no es scheduler global del repositorio.
+- `GUI TaskOrchestrator` mantiene un runtime asíncrono GUI separado, con su propia cola de prioridad, timeout, fallback y CircuitBreaker. No debe etiquetarse como legacy con la evidencia actual.
+- Ambos caminos tienen responsabilidades WebChat operativas, pero utilizan identidades y componentes distintos: el TaskScheduler consume Tasks con `task_id`; TaskOrchestrator usa `waitress_id` + payload y no participa del Task Contract.
+- La coexistencia operacional se clasifica como conflicto de ownership arquitectónico pendiente. Esta fase documenta el conflicto; no lo resuelve mediante refactorización.
+- La formulación anterior de DEC-013 sobre autoridades "únicas" queda limitada al runtime TaskEngine/TaskScheduler y no debe interpretarse como unicidad global.
