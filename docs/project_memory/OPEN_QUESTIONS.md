@@ -90,3 +90,29 @@
 - Estado: [TESTED]
 - ScopeLock quedó frozen después de creación.
 - [UNKNOWN] El enforcement físico del ScopeLock continúa sin implementarse.
+
+
+## FASE 2F-8A — F-006 Ownership
+
+- Estado: [CONFLICT]
+- `TaskScheduler` no es scheduler global; su ownership queda limitado al runtime `TaskEngine` al que está asociado.
+- `GUI TaskOrchestrator` no es legacy/no-activo: tiene instanciación y uso operativo comprobables.
+- Ambos caminos realizan trabajo WebChat, pero no comparten Task Contract, `task_id`, `session_id` ni instancia de WebQueue.
+- Pregunta pendiente: ¿debe existir una futura convergencia arquitectónica entre el quick-action async de GUI y el runtime TaskEngine/Scheduler? Esta fase no toma esa decisión.
+
+## FASE 2F-8A — Task Contract reconciliation
+
+- Estado: [UNKNOWN]
+- No existe reconciliación automática demostrada entre `TaskContractStore` y `TaskEngine`.
+- El contrato puede aceptar un `task_id` suministrado, pero no verifica contra el registro interno del TaskEngine ni mantiene un vínculo automático con él.
+
+## FASE 2F-8A — Supervisor handoff
+
+- Estado: [UNKNOWN]
+- Existe `REQUEST`, `CANCEL_REQUEST`, `ALLOWED` y `BLOCKED` como contrato de `TaskEngineBoundary`.
+- No existe handoff operativo Supervisor → TaskEngine/TaskScheduler demostrado: `ALLOWED` termina en una decisión contractual y declara explícitamente que la ejecución permanece externa.
+
+## FASE 2F-8A — AuthorityCore adapter
+
+- Estado: [UNKNOWN]
+- No se encontró adapter/validator integrado entre `AuthorityCore` y `WriteAuthorization`; el contrato del Supervisor sólo acepta un validador independiente abstracto.
