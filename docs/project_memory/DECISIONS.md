@@ -65,3 +65,14 @@
 - Impacto: el Task Contract de Supervisor queda como contrato superior/adaptador, no como segundo lifecycle.
 - No implica: ejecución, dispatch, cancelación física ni integración automática.
 - Fuentes: FASE 2F-6.
+
+
+### DEC-014 — Runtime Observation es read-only
+
+- Estado: [DECIDED] + [TESTED]
+- Origen: FASE 2F-7.
+- Decisión: `RuntimeObservation` utiliza exclusivamente snapshots de `TaskEngineBoundary` y registra evidencia mediante el modelo `Evidence` existente.
+- Motivo: demostrar comportamiento real sin convertir Supervisor en TaskEngine, Scheduler o executor.
+- Evidencia: `src/bot_ia/supervisor/runtime_observation.py` y `tests/test_supervisor_runtime_observation.py`.
+- Impacto: lifecycle y scheduling continúan teniendo un único propietario operacional.
+- No implica: ejecución física, dispatch desde Supervisor, WebQueue integration ni handoff automático.
