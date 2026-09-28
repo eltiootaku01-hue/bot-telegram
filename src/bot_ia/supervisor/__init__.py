@@ -19,6 +19,19 @@ from .observers import (
 )
 from .scope import ChangeBudget, ScopeLock, ScopeOperation, ScopeStatus
 from .store import EvidenceStore
+from .task_contract import (
+    ResponseDisposition,
+    ReturnPolicy,
+    TERMINAL_STATES,
+    Task,
+    TaskContractStore,
+    TaskPriority,
+    TaskResult,
+    TaskState,
+    TaskStateMachine,
+    TaskTransitionError,
+    TaskWaitReason,
+)
 
 __all__ = [
     "AuditEvent",
@@ -38,7 +51,18 @@ __all__ = [
     "Observation",
     "ObservationCore",
     "RepositoryObserver",
+    "ResponseDisposition",
+    "ReturnPolicy",
     "ScopeLock",
     "ScopeOperation",
     "ScopeStatus",
+    "TERMINAL_STATES",
+    "Task",
+    "TaskContractStore",
+    "TaskPriority",
+    "TaskResult",
+    "TaskState",
+    "TaskStateMachine",
+    "TaskTransitionError",
+    "TaskWaitReason",
 ]

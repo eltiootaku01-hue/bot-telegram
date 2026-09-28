@@ -1,66 +1,71 @@
 # Project Memory — Supervisor Design
 
-## Estado general
+## Cadena contractual
 
-- [TESTED] Observation Core fue implementado y validado en PR #62.
-- [TESTED] Claims y Scope Lock fueron implementados y validados en PR #63, HEAD `cf5a190ca7cdd872ba33554fea3b711f6007e0fb`.
-- [DECIDED] Claims y Scope Lock son una capa contractual sobre Observation Core.
-- [PROPOSED] Las capacidades posteriores del Supervisor siguen siendo diseño, no implementación.
+[DECIDED]
 
-## Claims
+```
+Observation
+    ↓
+Evidence
+    ↓
+Claims
+    ↓
+Scope Lock
+    ↓
+Task Contract
+    ↓
+State Machine
+```
 
-[DECIDED] Un Claim contiene claim_id, statement, status, confidence, evidence_ids, source, timestamps, scope y relaciones opcionales task/parent.
+## Task Contract
 
-[DECIDED] Estados de claim: OBSERVED, TESTED, INFERRED, UNKNOWN y BLOCKED.
+[DECIDED] El contrato representa identidad, requester, tipo, contexto pequeño, prioridad, estado, timestamps, deadline, timeout policy, parent/child, interrupción, return policy, wait reason, resultado, error y metadata.
 
-[DECIDED] Confidence reutiliza la semántica existente del Observation Core.
+[DECIDED] Puede referenciar scope_id, claim_ids y evidence_ids. No copia objetos de EvidenceStore o ClaimStore.
 
-[DECIDED] VERIFIED requiere evidencia existente. La generación de un claim no concede VERIFIED automáticamente.
+[DECIDED] Prioridad: HIGH / MEDIUM / LOW.
 
-[DECIDED] La pérdida de evidencia no se ignora: validate/effective_confidence la hacen observable.
+[DECIDED] Wait reasons: WAITING_USER / WAITING_EXTERNAL / WAITING_WEBCHAT / WAITING_TIMER.
 
-## Evidence
+[DECIDED] Return policies: RETURN_IF_VALID / DISCARD_PARENT / NO_RETURN.
 
-[DECIDED] ClaimStore utiliza el EvidenceStore existente mediante evidence_id.
+## State Machine
 
-[DECIDED] No se crea un segundo EvidenceStore, DB, vector DB, Redis ni embeddings.
+[DECIDED] Estados terminales: COMPLETED, FAILED, TIMED_OUT, CANCELLED, DISCARDED.
 
-## Scope Lock
+[DECIDED] WAITING exige wait_reason.
 
-[DECIDED] ScopeLock representa task_id, allowed_paths, forbidden_paths, allowed_operations, forbidden_operations, scope_owner, authorization, expires_at y status.
+[DECIDED] No se permite transición desde estado terminal.
 
-[DECIDED] Operaciones contractuales: READ, WRITE, CREATE, DELETE, EXECUTE.
+[DECIDED] CANCELLED no vuelve a RUNNING.
 
-[DECIDED] Default deny: aquello que no está explícitamente permitido queda denegado.
+[DECIDED] CANCELLING solo continúa a CANCELLED o FAILED.
 
-[DECIDED] Forbidden paths y operations tienen precedencia.
+## Parent / Child
 
-[DECIDED] Path containment resuelve contra repository_root y rechaza traversal, absolute paths externas y symlink escapes.
+[DECIDED] parent_task_id permite relaciones padre/hijo sin introducir ejecución paralela.
 
-[DECIDED] ChangeBudget representa max_files_changed, max_lines_added, max_lines_deleted, max_commits y max_repair_attempts.
+[TESTED] Se rechazan self-parent, parent inexistente, parent terminal y ciclos.
 
-[UNKNOWN] El enforcement físico de ScopeLock sobre una escritura real.
+## Late responses
 
-## Autoridad
+[DECIDED] La respuesta debe identificarse por task_id.
 
-[DECIDED] ScopeLock representa owner y authorization como contrato.
+[TESTED] Solo RUNNING y WAITING aceptan respuestas. Terminal/unknown se descartan.
 
-[UNKNOWN] Quién posee la autoridad física definitiva de escritura.
+## Scope
 
-[PROPOSED] FASE 2F-4 puede abordar la autoridad física, si el contrato futuro permanece vigente.
+[DECIDED] Task referencia ScopeLock existente; no crea permisos paralelos.
 
-## Integración
+## Compatibilidad
 
-[DECIDED] ObservationCore continúa siendo la capa de observación/evidencia.
+[OBSERVED] TaskEngine y TaskScheduler existentes fueron inspeccionados.
 
-[DECIDED] Claims y ScopeLock agregan semántica contractual sin invertir la autoridad.
+[UNKNOWN] El adapter futuro para reconciliar ambos contratos.
 
-[UNKNOWN] Adapter físico Supervisor → TaskEngine.
+[DECIDED] FASE 2F-3 no modifica TaskEngine, TaskScheduler, WebQueue ni runtimes.
 
 ## Fuera de alcance
 
-[DECIDED] No se implementaron planificación autónoma completa, repair loop operativo, TaskEngine, Scheduler, runtime integration, Character System, Café Otaku, personajes vivos, percepción diegética, economía ni fusión TCG/TMA.
-
-## Fuentes
-
-FASE 2E; FASE 2F-1V; FASE 2F-2; PR #62; PR #63; CI `36432587482`.
+[DECIDED] Sin integración física Supervisor → TaskEngine/Scheduler, sin persistencia de Tasks, sin repair operativo, sin runtime observation, sin verifier independiente completo, sin Character System, Café Otaku ni TCG/TMA fusion.

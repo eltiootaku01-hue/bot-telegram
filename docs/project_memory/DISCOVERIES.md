@@ -1,51 +1,37 @@
 # Project Memory — Discoveries
 
-## [TESTED] Observation Core
+## [TESTED] Task Contract
 
-PR #62 implementa el Observation Core mínimo con modelos de observación/evidencia, observers, verificación, persistencia local y auditoría. FASE 2F-1V confirmó su CI en Ubuntu y Windows.
+El contrato de tarea existe en `src/bot_ia/supervisor/task_contract.py` y contiene modelo, prioridades, estados, wait reasons, return policies, resultados y referencias contractuales.
 
-## [TESTED] Claims sobre EvidenceStore
+## [TESTED] State Machine
 
-FASE 2F-2 añadió un ClaimStore que consulta el EvidenceStore existente. Las referencias de evidencia se validan por evidence_id.
+Las transiciones válidas e inválidas son evaluables mediante `can_transition` y `transition`. Los estados terminales no tienen transiciones salientes.
 
-Limitación: ClaimStore no constituye una base de datos ni un segundo EvidenceStore.
+## [TESTED] Wait reasons
 
-## [TESTED] Integridad claim → evidence
+WAITING requiere uno de: WAITING_USER, WAITING_EXTERNAL, WAITING_WEBCHAT o WAITING_TIMER.
 
-Un claim con referencias inexistentes no puede obtener confianza VERIFIED. Si la evidencia deja de estar disponible, la validación lo hace observable y la confianza efectiva se presenta como UNKNOWN.
+## [TESTED] Parent/child
 
-## [TESTED] Scope Lock
+Se rechazan parent inexistente, self-parent, parent terminal y ciclos detectables en la cadena de parent_task_id.
 
-ScopeLock representa operaciones READ, WRITE, CREATE, DELETE y EXECUTE, paths permitidos/prohibidos, owner, authorization, expiración y change budget.
+## [TESTED] Late responses
 
-## [TESTED] Path containment
+Solo RUNNING y WAITING aceptan respuestas contractualmente. Unknown y terminal se descartan. Adjuntar resultado a una tarea terminal falla.
 
-La implementación resuelve la ruta contra repository_root y rechaza traversal, rutas absolutas externas y escapes mediante symlink. Las pruebas de FASE 2F-2 cubren estos casos.
+## [TESTED] Scope reference
 
-## [TESTED] Default deny
+Un scope_id no puede introducirse sin un ScopeLock válido. Si se proporciona ScopeLock, su task_id debe coincidir con el task_id de la tarea.
 
-Una operación solo se autoriza cuando la operación está explícitamente permitida y la ruta pertenece a un patrón permitido; una operación o ruta prohibida prevalece.
+## [OBSERVED] Diferencia con runtime existente
 
-## [OBSERVED] Límite contractual
+El TaskEngine existente posee reglas operativas adicionales y no debe modificarse en esta fase. La reconciliación mediante adapter permanece pendiente.
 
-Scope Lock representa autorización contractual, pero la autoridad física final de escritura permanece fuera de esta fase.
+## [UNKNOWN] Persistencia
 
-## [UNKNOWN] Conflictos entre claims
+El Task Contract es actualmente un registro en memoria. No existe persistencia independiente de Tasks implementada por esta fase.
 
-El sistema actual no define un estado formal adicional llamado CONFLICT. FASE 2F-2 no inventó ese estado; claims incompatibles permanecen como claims separados y requieren análisis posterior.
+## [UNKNOWN] Integración física
 
-## [UNKNOWN] Persistencia de claims
-
-ClaimStore es actualmente un registro en memoria. No existe persistencia independiente de claims implementada en esta fase.
-
-## [UNKNOWN] Autoridad física de escritura
-
-La identidad o mecanismo que autorizará una escritura real continúa abierto para fases posteriores.
-
-## [OBSERVED] Runtimes protegidos
-
-FASE 2F-2 no modificó TaskEngine, TaskScheduler, WebQueue, Telegram, Discord, TCG, TMA ni GUI.
-
-## Fuentes
-
-FASE 2F-2; PR #63; CI `36432587482`; FASE 2F-1V.
+No existe todavía integración Supervisor → TaskEngine ni Supervisor → Scheduler.
