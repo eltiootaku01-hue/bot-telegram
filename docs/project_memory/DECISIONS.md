@@ -115,3 +115,16 @@
 - Ambos caminos tienen responsabilidades WebChat operativas, pero utilizan identidades y componentes distintos: el TaskScheduler consume Tasks con `task_id`; TaskOrchestrator usa `waitress_id` + payload y no participa del Task Contract.
 - La coexistencia operacional se clasifica como conflicto de ownership arquitectónico pendiente. Esta fase documenta el conflicto; no lo resuelve mediante refactorización.
 - La formulación anterior de DEC-013 sobre autoridades "únicas" queda limitada al runtime TaskEngine/TaskScheduler y no debe interpretarse como unicidad global.
+
+
+### DEC-017 — FASE 2F-8B: convergencia WebChat
+
+- Estado: [DECIDED / PROPOSED IMPLEMENTATION]
+- F-006 se resuelve arquitectónicamente mediante **CANDIDATO A**: el runtime operacional WebChat objetivo será `TaskEngine → TaskScheduler → WebChatQueueManager`.
+- Motivo principal: es el único camino que integra identidad `task_id`, lifecycle TaskEngine, resource arbitration, dispatch, cancellation y el boundary observable por Supervisor.
+- GUI TaskOrchestrator sigue siendo código operativo actual, pero no se considera el owner definitivo del WebChat operacional.
+- CANDIDATO B se descarta como arquitectura objetivo porque no existen fronteras de recurso suficientes entre ambos caminos: `WEB_MESA_UNICA` pertenece al WebChatQueueManager del runtime TaskScheduler y no coordina la cola Playwright del TaskOrchestrator.
+- CANDIDATO C no describe el estado actual: TaskOrchestrator sí posee scheduling propio (PriorityQueue, prioridades, timeout y CircuitBreaker). Sólo podría convertirse en capa GUI mediante una migración futura.
+- CANDIDATO D no está sustentado: TaskOrchestrator tiene instanciación y uso operativo actual.
+- No se modifica ningún runtime protegido en esta fase.
+- La convergencia, adapter futuro, migración de quick actions y retirada eventual del TaskOrchestrator son PROPOSED y requieren una fase de implementación separada.
