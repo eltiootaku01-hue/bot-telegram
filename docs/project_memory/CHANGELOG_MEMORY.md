@@ -108,7 +108,7 @@
 
 ## FASE 2F-8R — Repair & Re-verification
 
-- Estado: [IN_PROGRESS]
+- Estado: [TESTED]
 - Branch: `feature/supervisor-runtime-observation`.
 - HEAD base: `7cabafdc4f8ee3d8737074d783951ae6daa204af`.
 - Alcance: reparación controlada de F-001 y F-002 sin ejecución física.
@@ -116,4 +116,4 @@
 - Repair 2 / F-002: ScopeLock pasó a frozen y se añadió prueba de inmutabilidad.
 - No se modificaron TaskEngine, TaskScheduler, WebQueue ni AuthorityCore.
 - No se creó executor, scheduler, store ni sistema de autorización adicional.
-- CI final de esta reparación: pendiente.
+- CI de re-verificación: workflow `36491889698`, Ubuntu/Windows success, 710 passed.
