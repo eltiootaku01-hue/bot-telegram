@@ -83,6 +83,7 @@ def test_wait_resume_lifecycle_is_observed_without_observer_mutation():
     assert waiting.metadata["snapshot"]["state"] == "WAITING"
     assert waiting.metadata["snapshot"]["wait_reason"] == "WAITING_TIMER"
 
+    scheduler.execution_finished("TASK-WAIT")
     scheduler.wake("TASK-WAIT")
     running = observer.task("TASK-WAIT", scenario="resumed")
     assert running.metadata["snapshot"]["state"] == "RUNNING"
