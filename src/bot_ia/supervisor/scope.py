@@ -45,7 +45,7 @@ class ChangeBudget:
             raise ValueError("change budget values cannot be negative")
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class ScopeLock:
     scope_id: str
     task_id: str
@@ -63,11 +63,27 @@ class ScopeLock:
     )
 
     def __post_init__(self) -> None:
-        self.repository_root = self.repository_root.expanduser().resolve()
-        self.allowed_paths = tuple(self._normalize_pattern(item) for item in self.allowed_paths)
-        self.forbidden_paths = tuple(self._normalize_pattern(item) for item in self.forbidden_paths)
-        self.allowed_operations = frozenset(ScopeOperation(item) for item in self.allowed_operations)
-        self.forbidden_operations = frozenset(ScopeOperation(item) for item in self.forbidden_operations)
+        object.__setattr__(self, "repository_root", self.repository_root.expanduser().resolve())
+        object.__setattr__(
+            self,
+            "allowed_paths",
+            tuple(self._normalize_pattern(item) for item in self.allowed_paths),
+        )
+        object.__setattr__(
+            self,
+            "forbidden_paths",
+            tuple(self._normalize_pattern(item) for item in self.forbidden_paths),
+        )
+        object.__setattr__(
+            self,
+            "allowed_operations",
+            frozenset(ScopeOperation(item) for item in self.allowed_operations),
+        )
+        object.__setattr__(
+            self,
+            "forbidden_operations",
+            frozenset(ScopeOperation(item) for item in self.forbidden_operations),
+        )
         if not self.task_id:
             raise ValueError("task_id is required")
         if not self.scope_id:
