@@ -163,3 +163,6 @@ State Machine
 [TESTED] Las inconsistencias de identidad se conservan fail-closed: task desconocido → UNKNOWN como evidencia y BLOCKED en el boundary; mismatch entre snapshots → BLOCKED.
 
 [DECIDED] Runtime Observation no habilita ejecución física ni constituye una segunda autoridad operacional.
+
+
+[TESTED] La observación de WAITING/RESUME no introduce un comando de ejecución en Supervisor: el test conduce el runtime por las interfaces existentes y `RuntimeObservation` solamente captura snapshots antes/después.
