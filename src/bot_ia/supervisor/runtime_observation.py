@@ -7,9 +7,6 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from bot_ia.core.task_engine import TaskEngine, TaskState
-from bot_ia.core.task_scheduler import TaskScheduler
-
 from .boundary import TaskEngineBoundary
 from .models import Evidence, EvidenceStatus, EvidenceType
 
