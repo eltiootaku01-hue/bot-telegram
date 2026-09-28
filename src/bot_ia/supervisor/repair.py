@@ -190,21 +190,20 @@ class Hypothesis:
         additions = tuple(dict.fromkeys(str(item) for item in evidence_ids if str(item).strip()))
         if not additions:
             raise ValueError("at least one evidence_id is required")
-        existing = set(self.evidence_ids)
-        existing.update(additions)
-        support = set(self.supporting_evidence_ids)
-        refute = set(self.refutation_evidence_ids)
-        if supporting:
-            support.update(additions)
-        else:
-            refute.update(additions)
-        if support & refute:
+        evidence = tuple(dict.fromkeys((*self.evidence_ids, *additions)))
+        support = tuple(dict.fromkeys(
+            (*self.supporting_evidence_ids, *additions)
+        )) if supporting else self.supporting_evidence_ids
+        refute = tuple(dict.fromkeys(
+            (*self.refutation_evidence_ids, *additions)
+        )) if refuting else self.refutation_evidence_ids
+        if set(support) & set(refute):
             raise ValueError("evidence cannot support and refute the same hypothesis")
         return replace(
             self,
-            evidence_ids=tuple(existing),
-            supporting_evidence_ids=tuple(support),
-            refutation_evidence_ids=tuple(refute),
+            evidence_ids=evidence,
+            supporting_evidence_ids=support,
+            refutation_evidence_ids=refute,
             updated_at=datetime.now(timezone.utc),
         )
 
@@ -225,14 +224,11 @@ class Hypothesis:
         if verification is VerificationStatus.FAIL:
             updated = self.add_evidence(ids, refuting=True)
             return updated.transition(HypothesisStatus.REFUTED, reason=reason)
-        if verification is VerificationStatus.BLOCKED:
-            updated = self.add_evidence(ids, refuting=False, supporting=False)
-        else:
-            updated = replace(
-                self,
-                evidence_ids=tuple(dict.fromkeys((*self.evidence_ids, *ids))),
-                updated_at=datetime.now(timezone.utc),
-            )
+        updated = replace(
+            self,
+            evidence_ids=tuple(dict.fromkeys((*self.evidence_ids, *ids))),
+            updated_at=datetime.now(timezone.utc),
+        )
         return updated.transition(HypothesisStatus.INCONCLUSIVE, reason=reason)
 
 
@@ -605,7 +601,8 @@ class RepairAttempt:
             raise ValueError("finish status cannot be STARTED")
         files = tuple(dict.fromkeys(changed_files))
         if budget is not None:
-            duration = (finished_at or datetime.now(timezone.utc) - self.started_at).total_seconds()
+            end = finished_at or datetime.now(timezone.utc)
+            duration = (end - self.started_at).total_seconds()
             if not budget.check(
                 attempt_number=self.attempt_number,
                 files_changed=len(files),
@@ -619,6 +616,8 @@ class RepairAttempt:
         ):
             raise ValueError("failed attempt requires failure_reason")
         end = finished_at or datetime.now(timezone.utc)
+        if end < self.started_at:
+            raise ValueError("finished_at cannot precede started_at")
         return replace(
             self,
             finished_at=end,
