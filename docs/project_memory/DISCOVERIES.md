@@ -118,3 +118,7 @@ No se estableció quién autentica finalmente a la autoridad física de escritur
 
 - No se implementa ni demuestra un handoff de solicitudes contractuales hacia ejecución física.
 - No se define todavía la interfaz futura de integración Supervisor → TaskEngine/Scheduler para ejecución.
+
+
+- [TESTED] En el runtime real, `TaskScheduler.wake()` rechaza una tarea WAITING que todavía figura como activa; la liberación del registro activo ocurre antes del wake.
+- [TESTED] Tras modelar ese handoff con las interfaces existentes, WAITING → RUNNING queda observable sin modificar TaskEngine/TaskScheduler.
