@@ -2,68 +2,65 @@
 
 ## Estado general
 
-- [TESTED] Observation Core implementado y validado en PR #62.
-- [DECIDED] El contrato del Supervisor de FASE 2E define una capa superior de coordinación y verificación.
-- [PROPOSED] Las capacidades no implementadas de este documento son diseño de memoria, no especificación final de implementación.
+- [TESTED] Observation Core fue implementado y validado en PR #62.
+- [TESTED] Claims y Scope Lock fueron implementados y validados en PR #63, HEAD `cf5a190ca7cdd872ba33554fea3b711f6007e0fb`.
+- [DECIDED] Claims y Scope Lock son una capa contractual sobre Observation Core.
+- [PROPOSED] Las capacidades posteriores del Supervisor siguen siendo diseño, no implementación.
 
-## Autoridad y límites
+## Claims
 
-[DECIDED] El Supervisor puede observar estado, controlar transiciones autorizadas, validar evidencia, validar diffs, ejecutar verificaciones y autorizar escrituras según alcance.
+[DECIDED] Un Claim contiene claim_id, statement, status, confidence, evidence_ids, source, timestamps, scope y relaciones opcionales task/parent.
 
-[DECIDED] Por defecto no escribe cualquier archivo directamente, no modifica arquitectura sin autorización, no reemplaza Cerebro/Obrero/TaskEngine, no decide políticas de contenido y no inventa hechos.
+[DECIDED] Estados de claim: OBSERVED, TESTED, INFERRED, UNKNOWN y BLOCKED.
 
-## Máquina de estados
+[DECIDED] Confidence reutiliza la semántica existente del Observation Core.
 
-[PROPOSED] El contrato de FASE 2E establece conceptualmente:
+[DECIDED] VERIFIED requiere evidencia existente. La generación de un claim no concede VERIFIED automáticamente.
 
-`INIT → REPO_SCAN → UNDERSTANDING → PLAN → PRECHECK → IMPLEMENT → DIFF_REVIEW → TEST → POSTCHECK → REPORT → CONTINUE/COMPLETE`
+[DECIDED] La pérdida de evidencia no se ignora: validate/effective_confidence la hacen observable.
 
-Este flujo pertenece al diseño del Supervisor; no implica que todas las transiciones estén implementadas.
+## Evidence
 
-## Evidencia y confianza
+[DECIDED] ClaimStore utiliza el EvidenceStore existente mediante evidence_id.
 
-[DECIDED] Las afirmaciones deben estar respaldadas por evidencia.
+[DECIDED] No se crea un segundo EvidenceStore, DB, vector DB, Redis ni embeddings.
 
-[DECIDED] Estados de confianza: VERIFIED, INSPECTED, INFERRED, BLOCKED, UNKNOWN.
+## Scope Lock
 
-[DECIDED] INFERRED no se eleva automáticamente a VERIFIED.
+[DECIDED] ScopeLock representa task_id, allowed_paths, forbidden_paths, allowed_operations, forbidden_operations, scope_owner, authorization, expires_at y status.
 
-[PROPOSED] Los tipos conceptuales de evidencia incluyen FILE_EVIDENCE, GIT_EVIDENCE, TEST_EVIDENCE, RUNTIME_EVIDENCE, WEB_EVIDENCE y USER_PROVIDED_EVIDENCE.
+[DECIDED] Operaciones contractuales: READ, WRITE, CREATE, DELETE, EXECUTE.
 
-## Scope Lock y Change Budget
+[DECIDED] Default deny: aquello que no está explícitamente permitido queda denegado.
 
-[DECIDED] FASE 2E define Scope Lock con archivos permitidos/prohibidos, operaciones, directorios y change budget.
+[DECIDED] Forbidden paths y operations tienen precedencia.
 
-[DECIDED] El incumplimiento del alcance debe bloquear la operación.
+[DECIDED] Path containment resuelve contra repository_root y rechaza traversal, absolute paths externas y symlink escapes.
 
-[PROPOSED] Límites conceptuales: max_files, max_lines_added, max_lines_removed, max_commits, max_repair_attempts y max_scope_expansion.
+[DECIDED] ChangeBudget representa max_files_changed, max_lines_added, max_lines_deleted, max_commits y max_repair_attempts.
 
-[UNKNOWN] El mecanismo físico definitivo para hacer cumplir esos límites.
+[UNKNOWN] El enforcement físico de ScopeLock sobre una escritura real.
 
-## Recursos y reparación
+## Autoridad
 
-[PROPOSED] El contrato contempla TOKEN_BUDGET, API_CALL_BUDGET, CPU_BUDGET, RAM_BUDGET, TIME_BUDGET, WEB_CALL_BUDGET y REPAIR_BUDGET.
+[DECIDED] ScopeLock representa owner y authorization como contrato.
 
-[PROPOSED] El repair loop conceptual es IMPLEMENT → VERIFY → FAIL → ANALYZE → REPAIR → VERIFY, con límite de intentos.
+[UNKNOWN] Quién posee la autoridad física definitiva de escritura.
 
-[UNKNOWN] La implementación física de ambos mecanismos.
+[PROPOSED] FASE 2F-4 puede abordar la autoridad física, si el contrato futuro permanece vigente.
 
-## Integración con runtimes
+## Integración
 
-[DECIDED] Relación conceptual: Supervisor → TaskEngine → TaskScheduler → Executor.
+[DECIDED] ObservationCore continúa siendo la capa de observación/evidencia.
 
-[DECIDED] Para WebQueue: Supervisor observa/valida; no controla directamente el navegador.
-
-[DECIDED] BOT-IA moderno y TCG/TMA permanecen como runtimes diferenciados mientras la arquitectura siga sin decisión de integración.
+[DECIDED] Claims y ScopeLock agregan semántica contractual sin invertir la autoridad.
 
 [UNKNOWN] Adapter físico Supervisor → TaskEngine.
 
-## Completion y auditoría
+## Fuera de alcance
 
-[PROPOSED] Completion requiere scope satisfecho, claims verificados, diff verificado, tests verificados, postcheck verificado y blockers resueltos.
-
-[DECIDED] La trazabilidad conceptual debe seguir REQUEST → PLAN → SCOPE → CHANGE → DIFF → TEST → POSTCHECK → REPORT.
+[DECIDED] No se implementaron planificación autónoma completa, repair loop operativo, TaskEngine, Scheduler, runtime integration, Character System, Café Otaku, personajes vivos, percepción diegética, economía ni fusión TCG/TMA.
 
 ## Fuentes
 
-FASE 2E; PR #62; FASE 2F-1V; `README.md`; `docs/ARQUITECTURA.md`.
+FASE 2E; FASE 2F-1V; FASE 2F-2; PR #62; PR #63; CI `36432587482`.

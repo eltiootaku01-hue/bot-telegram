@@ -6,48 +6,52 @@ Esta memoria externa conserva únicamente estados con etiqueta epistemológica. 
 
 ## Repository
 
-- [OBSERVED] Branch: `feature/supervisor-observation-core`.
-- [OBSERVED] HEAD de partida de esta operación: `298748830af133079946f4d1eb8c87dedb8f4ea4`.
-- [TESTED] El HEAD de la rama fue verificado antes de escribir y coincidió exactamente con el SHA autorizado.
-- [OBSERVED] El HEAD corresponde al commit `test(supervisor): enforce evidence storage isolation`.
+- [OBSERVED] Branch de implementación: `feature/supervisor-claims-scope-lock`.
+- [OBSERVED] HEAD base de FASE 2F-2: `2488dbef2037cdc70678ff414a817b48d376bce7`.
+- [TESTED] HEAD final de implementación: `cf5a190ca7cdd872ba33554fea3b711f6007e0fb`.
+- [OBSERVED] Base/main: `48545826ab7ccd6278b7a6dc714a5bf40caf461a`.
 
 ## Supervisor
 
-- [TESTED] La FASE 2E definió un contrato de Supervisor por encima de los runtimes existentes.
-- [DECIDED] El Supervisor no sustituye Cerebro, Obrero, TaskEngine, TaskScheduler ni WebQueue.
-- [DECIDED] El Supervisor observa, valida evidencia, controla transiciones autorizadas y verifica cambios; no debe inventar hechos ni marcar como verificado algo sin evidencia.
-- [PROPOSED] Las fases posteriores pueden implementar los componentes restantes del contrato, pero esta memoria no autoriza su implementación.
+- [TESTED] FASE 2E definió el contrato del Supervisor por encima de los runtimes existentes.
+- [DECIDED] Claims, Evidence y Scope Lock forman una segunda capa contractual sobre Observation Core; no sustituyen Observation Core.
+- [DECIDED] Esta fase no implementa planificación autónoma, reparación automática, TaskEngine, Scheduler ni integración runtime.
+- [UNKNOWN] La autoridad física definitiva para una escritura real continúa abierta.
 
 ## Observation Core
 
-- [TESTED] Observation Core existe en la rama como seis archivos nuevos bajo `src/bot_ia/supervisor/` y su prueba correspondiente.
-- [TESTED] PR #62 corresponde a la implementación del Observation Core.
-- [TESTED] HEAD validado: `298748830af133079946f4d1eb8c87dedb8f4ea4`.
-- [TESTED] CI de referencia: `36392137591` y `36392275545`; en la validación previa ambos tuvieron jobs Linux y Windows exitosos.
-- [TESTED] La validación FASE 2F-1V confirmó compilación, política de código, superficie de imports y suite de tests en los jobs reportados.
-- [DECIDED] El Observation Core mantiene observación de solo lectura sobre el sistema observado y bloquea por defecto la escritura sobre ese sistema.
-- [OBSERVED] El almacenamiento de evidencia se diseñó fuera del repositorio observado y existe una prueba que rechaza almacenamiento dentro del repositorio.
+- [TESTED] PR #62 implementó y validó Observation Core.
+- [TESTED] CI de FASE 2F-1V: `36392137591` y `36392275545`.
+- [TESTED] FASE 2F-2 CI `36432587482`: Ubuntu y Windows completaron compilación, política, imports y suite con éxito.
+- [DECIDED] Claims reutiliza `EvidenceStore`; no existe un segundo EvidenceStore.
+- [DECIDED] Scope Lock es contractual y no constituye todavía la autoridad física final de escritura.
+
+## Claims
+
+- [TESTED] Existe `Claim`, `ClaimStatus`, `ClaimStore` y `ClaimValidation`.
+- [TESTED] Un claim puede enlazarse a evidence IDs existentes y puede detectar referencias ausentes.
+- [DECIDED] Un claim no puede recibir confianza `VERIFIED` sin referencias de evidencia existentes.
+- [DECIDED] La pérdida posterior de evidencia se hace observable mediante validación y degrada la confianza efectiva a `UNKNOWN`; no modifica silenciosamente el registro histórico.
+
+## Scope Lock
+
+- [TESTED] Existe `ScopeLock` con operaciones READ, WRITE, CREATE, DELETE y EXECUTE.
+- [TESTED] Default deny, forbidden paths/operations, containment de rutas, expiración y change budget están representados.
+- [DECIDED] Una operación solo queda autorizada si está explícitamente permitida y no está prohibida.
+- [TESTED] El containment resuelve rutas contra la raíz del repositorio y rechaza traversal, rutas absolutas externas y escapes mediante symlink.
+- [DECIDED] El change budget de esta fase cubre archivos, líneas añadidas/eliminadas, commits y repair attempts; Resource Budget permanece fuera de alcance.
 
 ## Arquitectura y runtimes protegidos
 
-- [OBSERVED] BOT-IA moderno usa un backend común para consola, Telegram y API web; README documenta biblioteca, evidencia, memoria y EvidenceGate.
-- [DECIDED] Durante las fases 2F-1 y 2F-1V no se modificaron los runtimes protegidos ni sus infraestructuras.
-- [DECIDED] TaskEngine, TaskScheduler y WebQueue no se reemplazan por un segundo mecanismo equivalente dentro del Observation Core.
-- [DECIDED] La integración física del Supervisor con esos componentes permanece fuera de esta fase.
-
-## TCG/TMA
-
-- [OBSERVED] TCG/TMA constituye un dominio funcional diferenciado dentro del repositorio.
-- [INFERRED] La separación arquitectónica actual reduce el acoplamiento con el BOT-IA moderno.
-- [UNKNOWN] No existe evidencia suficiente en esta memoria para convertir en decisión histórica permanente la separación TCG/TMA.
-- [DECIDED] No se realiza fusión TCG/TMA durante esta operación.
+- [DECIDED] TaskEngine, TaskScheduler, WebQueue, Telegram, Discord, TCG, TMA y GUI no fueron modificados por FASE 2F-2.
+- [DECIDED] No se realizó fusión TCG/TMA.
+- [OBSERVED] La separación histórica permanente TCG/TMA continúa sin evidencia suficiente para elevarse a decisión histórica.
 
 ## Documentación
 
-- [OBSERVED] Existían documentos de arquitectura, auditoría, roadmap y acciones de ChatGPT antes de esta operación.
-- [OBSERVED] No existía previamente el directorio canónico `docs/project_memory/` identificado durante FASE 2F-MEM.
-- [DECIDED] Esta operación crea nueve documentos de memoria externa y no altera código, tests, workflows, dependencias, configuración ni DB.
+- [TESTED] La memoria externa ya existía en `docs/project_memory/` antes de FASE 2F-2.
+- [TESTED] FASE 2F-2 actualizó únicamente memoria documental directamente relacionada con el Supervisor: CURRENT_STATE, DECISIONS, DISCOVERIES, OPEN_QUESTIONS, SUPERVISOR_DESIGN y CHANGELOG_MEMORY.
 
 ## Fuentes
 
-[OBSERVED] `README.md`; `docs/ARQUITECTURA.md`; `docs/FASE_0_3_AUDITORIA_REQUISITOS_ARQUITECTURA_DECISIONES_2026-09-27.md`; `docs/ROADMAP.md`; `docs/ROADMAP_AUDIT_2026-09.md`; `docs/CHATGPT_ACTIONS.md`; auditorías FASE 2A–2F-MEM; PR #62 y CI indicadas arriba.
+FASE 2E; FASE 2F-1; FASE 2F-1V; FASE 2F-MEM-W2; FASE 2F-2; PR #62; PR #63; CI `36432587482`; documentación existente del repositorio.
