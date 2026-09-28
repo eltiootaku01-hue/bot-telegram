@@ -148,3 +148,18 @@ State Machine
 ## Fuera de alcance FASE 2F-6
 
 [DECIDED] Sin TaskEngine mutation desde Supervisor, sin Scheduler dispatch desde Supervisor, sin runtime observation residente, sin WebQueue integration, sin ejecución física y sin cambios en TaskEngine/TaskScheduler.
+
+
+## FASE 2F-7 — Runtime Observation
+
+[OBSERVED] `TaskEngineBoundary.observe_task()` obtiene snapshots desde la instancia real de TaskEngine; no devuelve referencias mutables al estado interno.
+
+[OBSERVED] `TaskEngineBoundary.observe_scheduler()` obtiene únicamente pending/active IDs del Scheduler existente.
+
+[DECIDED] `RuntimeObservation` transforma esos snapshots en `RUNTIME_EVIDENCE` usando el modelo `Evidence` existente. No mantiene cola, lifecycle ni scheduler propios.
+
+[TESTED] La observación no cambia TaskEngine/Scheduler y no provoca dispatch. Las pruebas ejercitan el runtime real con un executor de prueba controlado, sin WebQueue ni ejecución física.
+
+[TESTED] Las inconsistencias de identidad se conservan fail-closed: task desconocido → UNKNOWN como evidencia y BLOCKED en el boundary; mismatch entre snapshots → BLOCKED.
+
+[DECIDED] Runtime Observation no habilita ejecución física ni constituye una segunda autoridad operacional.
