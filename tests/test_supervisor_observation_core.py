@@ -35,7 +35,7 @@ class ObservationCoreTests(unittest.TestCase):
             cwd=self.repo,
             check=True,
         )
-        (self.repo / "sample.txt").write_text("hello\n", encoding="utf-8")
+        (self.repo / "sample.txt").write_bytes(b"hello\n")
         subprocess.run(["git", "add", "sample.txt"], cwd=self.repo, check=True)
         subprocess.run(
             ["git", "commit", "-q", "-m", "initial"],
@@ -57,7 +57,7 @@ class ObservationCoreTests(unittest.TestCase):
         self.assertEqual([], working.value)
 
     def test_repository_detects_changes(self) -> None:
-        (self.repo / "sample.txt").write_text("changed\n", encoding="utf-8")
+        (self.repo / "sample.txt").write_bytes(b"changed\n")
         result = self.core.observe_repository()
         changed = result["changed_files_observation"]
         self.assertEqual(["sample.txt"], changed.value)
@@ -126,10 +126,12 @@ class ObservationCoreTests(unittest.TestCase):
 
     def test_exit_code_mismatch_is_not_verified(self) -> None:
         evidence = self.core.run_command(["git", "rev-parse", "HEAD"])
-        self.assertFalse(self.core.verify_command_result(evidence, expected_exit_code=1))
+        self.assertFalse(
+            self.core.verify_command_result(evidence, expected_exit_code=1)
+        )
 
     def test_basic_diff_is_read_only_evidence(self) -> None:
-        (self.repo / "sample.txt").write_text("changed\n", encoding="utf-8")
+        (self.repo / "sample.txt").write_bytes(b"changed\n")
         evidence = self.core.diff()
         self.assertEqual(EvidenceStatus.TESTED, evidence.result)
         self.assertEqual(0, evidence.exit_code)
