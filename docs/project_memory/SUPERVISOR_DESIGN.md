@@ -69,3 +69,38 @@ State Machine
 ## Fuera de alcance
 
 [DECIDED] Sin integración física Supervisor → TaskEngine/Scheduler, sin persistencia de Tasks, sin repair operativo, sin runtime observation, sin verifier independiente completo, sin Character System, Café Otaku ni TCG/TMA fusion.
+
+## Write Authorization
+
+[DECIDED] Authorization responde a la pregunta "¿quién/qué ha autorizado este write específico?" y no sustituye ScopeLock ni ejecuta la operación.
+
+[DECIDED] Los campos críticos son authorization_id, task_id, scope_id, requester, authority, source, operation, target, status, created_at, expires_at, reason, evidence_ids y claim_ids.
+
+[DECIDED] Operaciones reutilizadas de ScopeLock: READ, WRITE, CREATE, DELETE y EXECUTE. No se infieren permisos entre operaciones.
+
+[DECIDED] Una autorización solo es válida dentro del ScopeLock asociado. ScopeLock conserva default deny, forbidden rules, containment y estado.
+
+[DECIDED] AUTHORIZED requiere una validación independiente de authority. La implementación no declara a Supervisor, AuthorityCore, Admin o cualquier otro actor como autoridad física definitiva.
+
+[DECIDED] Expiration se valida en el momento de check; no hay timers.
+
+[DECIDED] Revocation es representable como un nuevo registro REVOKED; no existe servicio persistente de revocación en esta fase.
+
+[DECIDED] Los registros son inmutables. Para cambiar campos críticos se crea otro registro; no se muta el AUTHORIZED existente.
+
+## AuthorityCore
+
+[OBSERVED] `src/bot_ia/security/authority.py` define `AuthorityCore` para identidad, administración, destinos Telegram/Discord y decisiones de acceso remoto.
+
+[DECIDED] FASE 2F-4 no duplica AuthorityCore ni cambia su implementación.
+
+[UNKNOWN] El adapter exacto entre AuthorityCore y la autoridad contractual de escritura.
+
+## Fuera de alcance
+
+[DECIDED] Sin file.write, file.delete, git commit, git push, git merge, subprocess write, database mutation, runtime configuration mutation o cualquier WriteExecutor.
+
+[DECIDED] Sin integración física Supervisor → TaskEngine/Scheduler, WebQueue, Telegram, Discord, TCG, TMA, GUI o ProviderManager.
+
+[DECIDED] Sin persistencia de Authorization ni servicio de revocación.
+

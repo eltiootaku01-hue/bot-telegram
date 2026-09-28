@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
 """Contratos del Supervisor y Observation Core."""
 
+from .authorization import (
+    AuthorizationCheckResult,
+    AuthorizationDecision,
+    AuthorizationSource,
+    AuthorizationStatus,
+    AuthorityValidator,
+    WriteAuthorization,
+    check_authorization,
+)
 from .claims import Claim, ClaimStatus, ClaimStore, ClaimValidation
 from .core import ObservationCore
 from .models import (
@@ -35,6 +44,11 @@ from .task_contract import (
 
 __all__ = [
     "AuditEvent",
+    "AuthorizationCheckResult",
+    "AuthorizationDecision",
+    "AuthorizationSource",
+    "AuthorizationStatus",
+    "AuthorityValidator",
     "ChangeBudget",
     "Claim",
     "ClaimStatus",
@@ -65,4 +79,6 @@ __all__ = [
     "TaskStateMachine",
     "TaskTransitionError",
     "TaskWaitReason",
+    "WriteAuthorization",
+    "check_authorization",
 ]

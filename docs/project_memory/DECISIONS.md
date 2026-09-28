@@ -32,3 +32,15 @@
 - Impacto: scope_id requiere un ScopeLock válido en esta capa.
 - No implica: enforcement físico.
 - Fuentes: FASE 2F-3.
+
+### DEC-011 — Authorization separada de Scope y Execution
+
+- Estado: [DECIDED]
+- Origen: FASE 2F-4.
+- Decisión: WriteAuthorization es una capa contractual entre ScopeLock y cualquier ejecución futura; no ejecuta ni persiste escrituras.
+- Motivo: separar permiso específico de alcance potencial y ejecución física.
+- Evidencia: `src/bot_ia/supervisor/authorization.py` y tests de FASE 2F-4.
+- Impacto: futuras escrituras deben presentar una autorización válida dentro de un ScopeLock válido.
+- No implica: autoridad física definitiva ni integración runtime.
+- Fuentes: FASE 2F-4.
+

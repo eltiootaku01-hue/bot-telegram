@@ -35,3 +35,24 @@ El Task Contract es actualmente un registro en memoria. No existe persistencia i
 ## [UNKNOWN] Integración física
 
 No existe todavía integración Supervisor → TaskEngine ni Supervisor → Scheduler.
+
+## [TESTED] Write Authorization
+
+`WriteAuthorization` representa authorization_id, task_id, scope_id, requester, authority, source, operation, target, status, created_at, expires_at, reason, evidence_ids y claim_ids. `check_authorization` no realiza ninguna mutación física.
+
+## [TESTED] Fail-closed authority validation
+
+Un estado AUTHORIZED sin un validador independiente de authority produce DENIED. Una autoridad que no valida independientemente produce DENIED.
+
+## [TESTED] Scope containment
+
+Authorization no puede exceder ScopeLock: target fuera del allowlist, target forbidden, operación no permitida o ScopeLock no activo producen DENIED.
+
+## [TESTED] Immutability and revocation
+
+Los campos críticos del registro son inmutables por dataclass frozen. La revocación devuelve un nuevo registro REVOKED y conserva el registro original intacto.
+
+## [UNKNOWN] Physical write authority
+
+No se estableció quién autentica finalmente a la autoridad física de escritura, cómo se integra AuthorityCore, ni cómo se persiste/audita la autorización entre reinicios.
+

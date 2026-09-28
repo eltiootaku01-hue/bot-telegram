@@ -37,3 +37,16 @@
 
 - Estado: [UNKNOWN]
 - No existe estado CONFLICT formal en Claims.
+
+## Integración con AuthorityCore
+
+- Estado: [UNKNOWN]
+- Pregunta: ¿Cómo debe adaptarse `AuthorityCore` existente a la autoridad contractual del Supervisor?
+- Conocido: `src/bot_ia/security/authority.py` sigue intacto y su alcance actual es identidad/destino/permiso de interfaces remotas.
+
+## Persistencia y auditoría
+
+- Estado: [UNKNOWN]
+- Pregunta: ¿Cómo se persistirá y auditará Authorization a través de reinicios o procesos?
+- Conocido: FASE 2F-4 no implementa almacenamiento ni revocación persistente.
+

@@ -30,3 +30,15 @@
 ## Fuentes
 
 FASE 2F-2; FASE 2F-3; `src/bot_ia/core/task_engine.py`; `src/bot_ia/core/task_scheduler.py`; PR #63.
+
+## Write Authorization
+
+- [TESTED] FASE 2F-4 añade un contrato separado para autorización de escritura; no ejecuta ninguna escritura.
+- [DECIDED] Authorization requiere binding explícito a task_id, scope_id, operation y target.
+- [DECIDED] Authorization no puede ampliar ScopeLock: la operación y el target deben pasar el ScopeLock existente.
+- [DECIDED] Un registro AUTHORIZED requiere validación independiente de la autoridad; sin validador externo la comprobación es DENIED.
+- [DECIDED] Supervisor no puede autoautorizarse cuando requester y authority representan la misma identidad del Supervisor.
+- [DECIDED] Authorization es inmutable; una revocación produce un nuevo registro REVOKED.
+- [TESTED] Expiración se valida contra current_time sin timers ni mutación.
+- [UNKNOWN] La autoridad física definitiva, su autenticación y su integración futura con AuthorityCore continúan abiertas.
+
