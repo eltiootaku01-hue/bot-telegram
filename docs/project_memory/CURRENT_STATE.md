@@ -70,3 +70,14 @@ FASE 2F-2; FASE 2F-3; `src/bot_ia/core/task_engine.py`; `src/bot_ia/core/task_sc
 - [DECIDED] `ALLOWED` en el boundary significa "contrato aceptado para una futura frontera"; no significa ejecución física.
 - [DECIDED] El adaptador `_AuthorizationTaskView` adapta únicamente identidad/requester/scope para reutilizar `check_authorization`; no duplica el lifecycle de TaskEngine.
 - [UNKNOWN] La interfaz futura que entregará una solicitud aceptada al TaskEngine/Scheduler todavía no está definida y no se implementó en esta fase.
+
+
+## FASE 2F-7 — Runtime Observation
+
+- [OBSERVED] La implementación real de TaskEngine mantiene el lifecycle operacional: creación, start, wait/resume, interrupt, cancellation, failure, completion, discard y deadline checks.
+- [OBSERVED] La implementación real de TaskScheduler mantiene pending/active registrations, candidate selection, prioridad, recursos y dispatch hacia executors.
+- [TESTED] `TaskEngineBoundary` y `RuntimeObservation` consumen snapshots del runtime y no poseen métodos para mutar TaskEngine/Scheduler.
+- [TESTED] Los escenarios de runtime cubren lifecycle normal, WAITING/RESUME, cancellation, failure, timeout, task desconocido, estado terminal, identidad parent/child y observación read-only.
+- [TESTED] La evidencia de runtime se representa mediante el `Evidence` existente con `EvidenceType.RUNTIME_EVIDENCE`; no se crea otro EvidenceStore.
+- [DECIDED] Runtime Observation queda como capa read-only: observar y registrar evidencia no equivale a ejecutar, despachar ni controlar el Scheduler.
+- [UNKNOWN] Las transiciones no soportadas por el runtime actual no se inventan; cualquier futura integración de handoff operacional continúa fuera de alcance.
