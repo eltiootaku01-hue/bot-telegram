@@ -91,3 +91,30 @@ No se estableció quién autentica finalmente a la autoridad física de escritur
 - Interfaz definitiva para entregar una solicitud `ALLOWED` al TaskEngine/Scheduler.
 - Cómo se representará una aceptación/rechazo contractual dentro del lifecycle operacional sin duplicar estados.
 - Autoridad física de ejecución y su enforcement.
+
+
+## [OBSERVED] FASE 2F-7 — Runtime real
+
+- TaskEngine expone snapshots copiados y concentra las mutaciones de lifecycle.
+- TaskScheduler consulta el mismo TaskEngine, mantiene pending/active y despacha al executor registrado.
+- WAITING utiliza las razones USER, EXTERNAL, WEBCHAT y TIMER en el runtime real.
+- Cancellation desde Scheduler sincroniza el estado del TaskEngine y solicita cancelación al executor.
+- Failure desde executor se sincroniza mediante `fail_from_executor` y libera el registro activo.
+- Deadline checking puede llevar una tarea pendiente a TIMED_OUT sin que Supervisor la ejecute.
+
+## [TESTED] FASE 2F-7 — Evidencia de runtime
+
+- Scenario A: PENDING → RUNNING → COMPLETED.
+- Scenario B: RUNNING → WAITING → RUNNING.
+- Scenario C: RUNNING → CANCELLED.
+- Scenario D: RUNNING → FAILED.
+- Scenario E: task_id desconocido produce evidencia UNKNOWN y boundary BLOCKED.
+- Scenario F: solicitud operacional sobre tarea terminal produce BLOCKED.
+- Scenario G: observación no cambia snapshots de TaskEngine ni Scheduler.
+- Scenario H: observación de Scheduler no selecciona ni despacha tareas.
+- Scenario adicional: deadline expirada produce TIMED_OUT y parent/child conserva task_id estable.
+
+## [UNKNOWN] FASE 2F-7
+
+- No se implementa ni demuestra un handoff de solicitudes contractuales hacia ejecución física.
+- No se define todavía la interfaz futura de integración Supervisor → TaskEngine/Scheduler para ejecución.
