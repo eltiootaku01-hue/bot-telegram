@@ -57,7 +57,7 @@
 
 ## FASE 2F-6
 
-- Estado: [PROPOSED]
+- Estado: [TESTED]
 - Branch: `feature/supervisor-taskengine-boundary`.
 - HEAD base: `0e3d04ee8d15e58ffeb7e635f526cbe5e1aa36e5`.
 - Alcance: frontera contractual/read-only entre Supervisor, TaskEngine y TaskScheduler.
@@ -75,7 +75,7 @@
 - Runtime observation residente: NO.
 - Commits de implementación antes de memoria: 2.
 - Repair attempts de implementación: 0.
-- CI final: pendiente hasta que el HEAD de memoria esté construido.
+- CI final: workflow `36454348810`, Ubuntu/Windows success.
 
 
 ## FASE 2F-7
@@ -93,8 +93,8 @@
 - Ejecución física desde Supervisor: NO.
 - Persistencia nueva: NO.
 - Runtime observation residente: NO.
-- Repair attempts de implementación: 1.
-- CI final: pendiente sobre el HEAD final de esta fase.
+- Repair attempts de implementación: 2.
+- CI final: workflow `36488124932`, Ubuntu/Windows success.
 
 
 ### Corrección final FASE 2F-7
@@ -104,3 +104,16 @@
 - [TESTED] Repair 2 corrigió únicamente el escenario de prueba para modelar `execution_finished → wake`.
 - [TESTED] CI del HEAD `5fea2df4a54eddeb8ff0949b5258767bce297712`: Ubuntu y Windows success.
 - [TESTED] Repair attempts consumidos: 2 de 3.
+
+
+## FASE 2F-8R — Repair & Re-verification
+
+- Estado: [IN_PROGRESS]
+- Branch: `feature/supervisor-runtime-observation`.
+- HEAD base: `7cabafdc4f8ee3d8737074d783951ae6daa204af`.
+- Alcance: reparación controlada de F-001 y F-002 sin ejecución física.
+- Repair 1 / F-001: RuntimeObservation.transition() dejó de etiquetar diferencias de snapshots como TESTED causal; ahora registra OBSERVED y causal_transition_verified=false.
+- Repair 2 / F-002: ScopeLock pasó a frozen y se añadió prueba de inmutabilidad.
+- No se modificaron TaskEngine, TaskScheduler, WebQueue ni AuthorityCore.
+- No se creó executor, scheduler, store ni sistema de autorización adicional.
+- CI final de esta reparación: pendiente.
