@@ -149,3 +149,46 @@ La demostración causal de una transición futura requerirá evidencia producida
 - [OBSERVED] `AuthorityCore` representa identidad, administración y destinos autorizados de Telegram/Discord. La autorización contractual del Supervisor usa un `authority_validator` abstracto; no existe un adapter demostrado entre ambos.
 - [OBSERVED] `AuthorityCore` no realiza la operación física autorizada; su API devuelve una decisión allow/deny.
 - [CONFLICT] F-006 es duplicación operacional acotada de scheduling/orchestration para WebChat dentro de la aplicación GUI, con ownership local distinto y sin integración contractual común.
+
+
+## FASE 2F-8B — Evidencia para la decisión WebChat
+
+### Responsabilidades
+
+[OBSERVED] TaskScheduler: lifecycle coordinado con TaskEngine, scheduling, prioridades heredadas del Task, resource arbitration, starvation bypass, dispatch, cancellation, response acceptance, failure synchronization y wake/resume.
+
+[OBSERVED] TaskOrchestrator: PriorityQueue async propia, prioridades HIGH/MEDIUM/LOW, worker lifecycle, timeout 12 s, CircuitBreaker por waitress y fallback. No posee TaskEngine lifecycle, resource arbitration común, Task Contract, ScopeLock, Authorization ni Evidence.
+
+[OBSERVED] WebChatQueueManager: cola FIFO en QThread, QTimer de timeout/circuit breaker, cancelación, protocol/DOM monitoring, operation_id, `_WEB_MESA_UNICA` y QWebEngineView.
+
+[OBSERVED] WebQueueManager: pool Playwright async de seis páginas, un browser/contexto, contadores por waitress y soft reset; no posee lock equivalente a `_WEB_MESA_UNICA`.
+
+### Recursos
+
+[OBSERVED] `services.web_queue.WebChatQueueManager` usa el QWebEngineView/perfil persistente de la GUI.
+
+[OBSERVED] `bot_ia.core.web_queue.WebQueueManager` lanza un Chromium propio con Playwright y un BrowserContext nuevo; no recibe `browser_profile`, storage_state ni cookies de la GUI en su constructor.
+
+[UNKNOWN] No existe evidencia de que ambos compartan la misma cuenta autenticada, browser process, BrowserContext, cookies o sesión web.
+
+[OBSERVED] Sí pueden coexistir en el mismo proceso/aplicación: `_async_main` crea WebQueueManager + TaskOrchestrator mientras CommandCenterWindow crea WebChatQueueManager.
+
+### Concurrencia
+
+[OBSERVED] Las quick actions pueden dirigirse a `cari` o `sunna`; el chat Web GUI puede seleccionar cualquier bot de `BOT_MAP`, incluidos esos IDs.
+
+[INFERRED] Por tanto existe un escenario de solapamiento sobre la misma waitress lógica, sin un árbitro compartido entre ambos caminos.
+
+[CONFLICT RESOLVED ARCHITECTURALLY] Esta evidencia impide considerar CANDIDATO B como frontera segura por defecto.
+
+### Historial
+
+[OBSERVED] `TaskOrchestrator` fue introducido por commit `3a571b2e154c` (2026-09-24).
+
+[OBSERVED] `WebQueueManager` Playwright core fue introducido por `20774b4db5` (2026-09-24).
+
+[OBSERVED] `TaskScheduler` fue introducido posteriormente por `9e0d4390ee` (2026-09-27) como routing/resource arbitration.
+
+[OBSERVED] Posteriormente `services.web_queue.py` recibió commits `a71b227522` (scheduler cancellation), `14ad4bc973` (circuit state), `85c508ea5a` (capacity signal) y `3fe425105f` (capacity bridge).
+
+[INFERRED] La secuencia histórica es consistente con una integración/migración progresiva del WebChat hacia TaskScheduler, aunque no demuestra que el TaskOrchestrator haya sido formalmente marcado como legacy.
