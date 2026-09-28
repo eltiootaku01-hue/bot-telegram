@@ -116,3 +116,19 @@
 
 - Estado: [UNKNOWN]
 - No se encontró adapter/validator integrado entre `AuthorityCore` y `WriteAuthorization`; el contrato del Supervisor sólo acepta un validador independiente abstracto.
+
+
+## FASE 2F-8B — Estado posterior a la decisión
+
+- F-006: [DECIDED — CANDIDATO A]
+- Arquitectura objetivo WebChat: `GUI → TaskEngine → TaskScheduler → WebChatQueueManager`.
+- TaskOrchestrator actual: [ACTIVE / MIGRATION PENDING], no legacy.
+- Adapter futuro o retirada gradual de TaskOrchestrator: [PROPOSED]
+- Migración de quick actions a TaskEngine/Scheduler: [PROPOSED]
+- Identidad futura de quick actions: [PROPOSED] reutilizar `TaskEngine.task_id`, sin inventar una segunda identidad.
+- Recurso futuro común: [PROPOSED] `WEB_MESA_UNICA` bajo el único WebChat executor; requiere diseño/implementación posterior.
+- Misma cuenta/browser/session entre los dos caminos actuales: [UNKNOWN]
+- Enforcement físico de Authorization/ScopeLock: [UNKNOWN]
+- Supervisor → execution handoff: [UNKNOWN]
+
+La decisión arquitectónica no autoriza implementación ni inicia FASE 2F-9.
