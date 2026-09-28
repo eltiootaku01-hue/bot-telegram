@@ -84,3 +84,24 @@
 - Origen: FASE 2F-7.
 - Evidencia: el runtime real exige liberar el registro activo antes de `wake()`; la prueba se corrigió para representar la secuencia executor-finish → wake → dispatch.
 - Decisión: la evidencia de WAITING/RESUME debe modelar el handoff existente y no inventar una transición Supervisor → wake.
+
+
+### DEC-016 — Snapshot difference is not causal transition proof
+
+- Estado: [DECIDED] + [TESTED]
+- Origen: FASE 2F-8R F-001.
+- Decisión: RuntimeObservation.transition() representa únicamente una diferencia observada entre snapshots. No eleva la evidencia a TESTED causal basándose en transition_source.
+- Motivo: un string suministrado por el caller no demuestra que TaskEngine/TaskScheduler haya producido la transición.
+- Evidencia: test adversarial de RuntimeObservation.
+- Impacto: se evita sobreafirmar causalidad sin crear una segunda state machine.
+- No implica: ejecución ni acceso directo de RuntimeObservation al Scheduler.
+
+### DEC-017 — ScopeLock inmutable después de creación
+
+- Estado: [DECIDED] + [TESTED]
+- Origen: FASE 2F-8R F-002.
+- Decisión: ScopeLock es frozen después de construcción; las normalizaciones internas se realizan durante __post_init__ mediante object.__setattr__.
+- Motivo: impedir expansión o reducción silenciosa del alcance contractual después de su creación.
+- Evidencia: test de mutación de paths, operations y status.
+- Impacto: una modificación contractual requiere crear otro ScopeLock en lugar de alterar el existente.
+- No implica: enforcement físico de ScopeLock.
