@@ -93,3 +93,15 @@ FASE 2F-2; FASE 2F-3; `src/bot_ia/core/task_engine.py`; `src/bot_ia/core/task_sc
 - [TESTED] F-002 was repaired: ScopeLock is now frozen after construction, matching the immutability contract already used by WriteAuthorization.
 - [TESTED] Mutation attempts against allowed_paths, allowed_operations and status are rejected.
 - [UNKNOWN] Causal transition evidence remains unimplemented; no second state machine or runtime execution was introduced.
+
+
+## FASE 2F-8A — F-006 Ownership reconciliation
+
+- [OBSERVED] `TaskScheduler` es la autoridad de scheduling dentro del runtime gobernado por `TaskEngine`: pending/active, prioridad, recursos, rutas y dispatch.
+- [OBSERVED] `GUI TaskOrchestrator` es un componente operativo propio del runtime asíncrono de GUI: mantiene `asyncio.PriorityQueue`, prioridades HIGH/MEDIUM/LOW, timeout de 12 s, fallback y CircuitBreaker por mesera.
+- [OBSERVED] `TaskOrchestrator` recibe un callback de worker y en `_async_main` ese callback es `WebQueueManager.process_task`; no recibe `TaskEngine`, `TaskScheduler`, `Task Contract`, `ScopeLock` ni `Supervisor`.
+- [OBSERVED] La GUI mantiene además una ruta independiente `TaskEngine -> TaskScheduler -> WebChatQueueManager` para `gui_chat` y para las sesiones de `WaitressSessionManager`.
+- [TESTED] Las pruebas de ownership confirman que ambas rutas están explícitamente separadas en código y que Supervisor no importa ni alcanza directamente `TaskOrchestrator` o WebQueue.
+- [CONFLICT] F-006 no es un caso de legacy/no-operativo: ambos componentes están activos. Tampoco es correcto declarar un scheduler global único, porque existen dos mecanismos de scheduling/orchestration operativos en la aplicación GUI.
+- [CONFLICT] Ambos caminos pueden realizar trabajo WebChat, pero no comparten `task_id`, `session_id`, Task Contract ni la misma instancia de WebQueue: `TaskOrchestrator` usa el `WebQueueManager` async de `bot_ia.core.web_queue`; el runtime TaskEngine usa `WebChatQueueManager` de `services.web_queue`.
+- [DECIDED] F-006 queda clasificado como `CONFLICT — ARCHITECTURAL OWNERSHIP`, no como legacy. La resolución de ownership definitivo entre ambos queda fuera de esta fase; no se fusionan ni se elimina ninguno.
