@@ -90,8 +90,9 @@ def test_wait_resume_lifecycle_is_observed_without_observer_mutation():
     transition = observer.transition(
         before_wait, running, transition_source="TaskScheduler.wake", scenario="wait-resume"
     )
-    assert transition.result is EvidenceStatus.TESTED
+    assert transition.result is EvidenceStatus.OBSERVED
     assert transition.metadata["task_id"] == "TASK-WAIT"
+    assert transition.metadata["causal_transition_verified"] is False
 
 
 def test_cancellation_is_owned_by_scheduler_and_engine():
@@ -202,6 +203,26 @@ def test_parent_child_identity_is_preserved_in_runtime():
     snapshot = evidence.metadata["snapshot"]
     assert snapshot["task_id"] == "CHILD"
     assert snapshot["parent_task_id"] == "PARENT"
+
+
+def test_transition_is_snapshot_difference_not_causal_proof():
+    _, _, _, _, observer = make_runtime()
+    engine = observer._boundary._engine
+    create_task(engine, "TASK-FAKE")
+    before = observer.task("TASK-FAKE", scenario="before")
+    engine.start_task("TASK-FAKE")
+    after = observer.task("TASK-FAKE", scenario="after")
+
+    result = observer.transition(
+        before,
+        after,
+        transition_source="caller-supplied",
+        scenario="adversarial",
+    )
+
+    assert result.result is EvidenceStatus.OBSERVED
+    assert result.metadata["causal_transition_verified"] is False
+    assert "snapshot difference only" in result.metadata["note"]
 
 
 def test_task_id_mismatch_in_runtime_transition_is_blocked():
