@@ -67,3 +67,27 @@ No se estableció quién autentica finalmente a la autoridad física de escritur
 - [TESTED] RepairAttempt no sobrescribe historial; RepairAttemptLedger exige numeración secuencial.
 - [TESTED] VerificationResult exige evidencia.
 - [TESTED] AuditEvent existente se reutiliza mediante repair_audit_event; no se crea un segundo AuditStore.
+
+## [OBSERVED] FASE 2F-6 — Runtime ownership
+
+- TaskEngine posee la máquina operativa real y todas las mutaciones de lifecycle.
+- TaskScheduler posee la cola pending/active, selección de candidatos, prioridad, recursos y dispatch.
+- TaskScheduler referencia una instancia concreta de TaskEngine y no constituye un lifecycle paralelo.
+- Supervisor Task Contract contiene una máquina contractual separada, con solapamiento de estados pero diferencias de representación y reglas; no debe convertirse en autoridad operacional.
+- El boundary contractual usa snapshots de TaskEngine y observación del Scheduler sin mutar ninguno.
+
+## [TESTED] FASE 2F-6 — Boundary
+
+- `TaskEngineBoundary` conserva task_id como identidad estable.
+- ScopeLock con task_id incompatible produce BLOCKED.
+- Solicitudes operacionales sobre tareas terminales producen BLOCKED.
+- Authorization válida puede pasar el boundary solamente con binding de task/scope/operation/target y autoridad independiente, pero no ejecuta la tarea.
+- Una solicitud con operación sin autorización produce DENIED.
+- Observar TaskEngine/Scheduler no cambia estado ni despacha tareas.
+- Scheduler perteneciente a otro TaskEngine es rechazado al construir el boundary.
+
+## [UNKNOWN] FASE 2F-6
+
+- Interfaz definitiva para entregar una solicitud `ALLOWED` al TaskEngine/Scheduler.
+- Cómo se representará una aceptación/rechazo contractual dentro del lifecycle operacional sin duplicar estados.
+- Autoridad física de ejecución y su enforcement.

@@ -25,13 +25,15 @@
 
 ## Integración Supervisor → TaskEngine
 
-- Estado: [UNKNOWN]
-- No se implementó adapter en esta fase.
+- Estado: [TESTED]
+- FASE 2F-6 implementa únicamente una frontera read-only/contractual `TaskEngineBoundary`.
+- [UNKNOWN] No se definió todavía la interfaz futura que entregará solicitudes ALLOWED al lifecycle operacional.
 
 ## Integración Supervisor → Scheduler
 
-- Estado: [UNKNOWN]
-- No se implementó integración ni un segundo scheduler.
+- Estado: [TESTED]
+- FASE 2F-6 puede observar pending/active IDs del Scheduler existente y verifica que comparte la misma instancia de TaskEngine.
+- [UNKNOWN] No se implementó entrega de comandos ni selección desde Supervisor.
 
 ## Conflictos entre Claims
 
@@ -57,3 +59,9 @@
 - Pregunta: ¿Debe Hypothesis/Repair persistirse en el mismo almacenamiento JSONL existente o mediante otra capa futura?
 - Conocido: FASE 2F-5 solo mantiene historial contractual de intentos en memoria y no añade una base de datos.
 - [UNKNOWN] Auditoría y reconciliación de Hypothesis/Repair entre reinicios/procesos.
+
+## FASE 2F-6 — Boundary operativo
+
+- [UNKNOWN] El mecanismo definitivo para convertir una solicitud contractual aceptada en una llamada operacional al TaskEngine no se implementa todavía.
+- [UNKNOWN] La semántica final de BLOCK/REQUEST/CANCEL_REQUEST entre Supervisor y TaskEngine queda pendiente de una futura fase controlada.
+- [DECIDED] Esta incertidumbre no justifica modificar TaskEngine ni TaskScheduler en FASE 2F-6.

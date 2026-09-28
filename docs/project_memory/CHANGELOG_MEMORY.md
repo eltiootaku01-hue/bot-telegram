@@ -54,3 +54,25 @@
 - AuthorityCore/TaskEngine/TaskScheduler/WebQueue/Telegram/Discord/TCG/TMA/GUI/DB/workflows/dependencias: NO modificados.
 - Repair attempts de implementación: 3; los dos primeros ciclos CI detectaron fallos de tests y el tercer ciclo terminó con CI verde.
 - Fecha: [UNKNOWN].
+
+## FASE 2F-6
+
+- Estado: [PROPOSED]
+- Branch: `feature/supervisor-taskengine-boundary`.
+- HEAD base: `0e3d04ee8d15e58ffeb7e635f526cbe5e1aa36e5`.
+- Alcance: frontera contractual/read-only entre Supervisor, TaskEngine y TaskScheduler.
+- Producción creada: `src/bot_ia/supervisor/boundary.py`.
+- Tests creados: `tests/test_supervisor_taskengine_boundary.py`.
+- TaskEngine modificado: NO.
+- TaskScheduler modificado: NO.
+- WebQueue modificado: NO.
+- AuthorityCore modificado: NO.
+- Telegram/Discord/TCG/TMA/GUI modificado: NO.
+- DB: NO.
+- Workflows: NO.
+- Dependencias: NO.
+- Ejecución física: NO.
+- Runtime observation residente: NO.
+- Commits de implementación antes de memoria: 2.
+- Repair attempts de implementación: 0.
+- CI final: pendiente hasta que el HEAD de memoria esté construido.

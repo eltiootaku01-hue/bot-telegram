@@ -123,6 +123,28 @@ State Machine
 
 [UNKNOWN] Persistencia definitiva de Hypothesis/Repair, rollback físico y enforcement runtime permanecen abiertos.
 
-## Fuera de alcance FASE 2F-5
+## FASE 2F-6 — Supervisor ↔ TaskEngine / TaskScheduler
 
-[DECIDED] Sin escritura de archivos, git commit/push/merge, DB mutation, runtime config mutation, TaskEngine, TaskScheduler, WebQueue, Telegram, Discord, TCG, TMA, GUI o AuthorityCore.
+[OBSERVED] TaskEngine es la autoridad operacional única del lifecycle. Sus métodos públicos crean y mutan tareas; sus snapshots son copias y no permiten mutación externa del estado interno.
+
+[OBSERVED] TaskScheduler es la autoridad operacional de scheduling: mantiene pending/active, registra rutas/executors, selecciona candidatos, aplica prioridades, recursos y starvation bypass, y despacha al executor.
+
+[OBSERVED] TaskScheduler está ligado a una instancia concreta de TaskEngine; el boundary rechaza combinar instancias diferentes.
+
+[OBSERVED] Supervisor `task_contract.py` contiene una state machine contractual separada. Aunque comparte estados con TaskEngine, existen diferencias de representación y reglas; no debe convertirse en una segunda autoridad operacional.
+
+[DECIDED] `TaskEngineBoundary` es el contrato/adaptador mínimo: observa snapshots, valida identidad/scope/authorization y devuelve una decisión contractual sin ejecutar, despachar, cancelar ni mutar tareas.
+
+[DECIDED] `ALLOWED` significa que la solicitud pasó la frontera contractual y puede ser considerada por una integración futura; no autoriza al Supervisor a ejecutar directamente.
+
+[TESTED] Observation es read-only y no cambia TaskEngine ni Scheduler.
+
+[TESTED] task_id mismatch, unknown task, terminal operational request, scope mismatch y authorization mismatch se bloquean/deniegan de forma fail-closed.
+
+[DECIDED] No se duplica scheduler, lifecycle, WebChat queue, resource arbitration ni executor ownership.
+
+[UNKNOWN] La interfaz futura de handoff desde una solicitud ALLOWED hacia el TaskEngine/Scheduler queda abierta para una fase posterior.
+
+## Fuera de alcance FASE 2F-6
+
+[DECIDED] Sin TaskEngine mutation desde Supervisor, sin Scheduler dispatch desde Supervisor, sin runtime observation residente, sin WebQueue integration, sin ejecución física y sin cambios en TaskEngine/TaskScheduler.

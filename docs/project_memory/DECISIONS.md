@@ -44,7 +44,6 @@
 - No implica: autoridad física definitiva ni integración runtime.
 - Fuentes: FASE 2F-4.
 
-
 ### DEC-012 — Hypothesis y Repair como contratos no ejecutores
 
 - Estado: [DECIDED]
@@ -54,3 +53,15 @@
 - Evidencia: src/bot_ia/supervisor/repair.py y tests de FASE 2F-5.
 - Impacto: futuras reparaciones deben respetar hipótesis, propuesta, ScopeLock, autorización y presupuesto antes de cualquier ejecución.
 - No implica: WriteExecutor, FileWriter, GitWriter, persistencia definitiva ni integración runtime.
+- Fuentes: FASE 2F-5.
+
+### DEC-013 — TaskEngine y TaskScheduler como autoridades operacionales únicas
+
+- Estado: [DECIDED] + [TESTED]
+- Origen: FASE 2F-6.
+- Decisión: TaskEngine conserva la autoridad operacional sobre lifecycle; TaskScheduler conserva scheduling/routing/resource arbitration. Supervisor solo valida/observa mediante `TaskEngineBoundary`.
+- Motivo: impedir un segundo TaskEngine o Scheduler y conservar una única fuente de verdad operacional.
+- Evidencia: inspección de `src/bot_ia/core/task_engine.py`, `src/bot_ia/core/task_scheduler.py`, `src/bot_ia/supervisor/task_contract.py` y tests de `tests/test_supervisor_taskengine_boundary.py`.
+- Impacto: el Task Contract de Supervisor queda como contrato superior/adaptador, no como segundo lifecycle.
+- No implica: ejecución, dispatch, cancelación física ni integración automática.
+- Fuentes: FASE 2F-6.

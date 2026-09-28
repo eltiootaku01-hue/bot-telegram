@@ -54,3 +54,19 @@ FASE 2F-2; FASE 2F-3; `src/bot_ia/core/task_engine.py`; `src/bot_ia/core/task_sc
 - [TESTED] Proposal fuera de ScopeLock queda BLOCKED.
 - [TESTED] Intento sin aprobación, sin authorization o fuera de presupuesto queda BLOCKED.
 - [UNKNOWN] Persistencia definitiva de Hypothesis/Repair y auditoría entre reinicios siguen abiertas.
+
+## FASE 2F-6
+
+- [OBSERVED] TaskEngine es la autoridad operativa del lifecycle: crea tareas y aplica start, wait, resume, interrupt, cancellation, fail, complete, discard y deadline transitions.
+- [OBSERVED] TaskScheduler es la autoridad operacional de scheduling/routing: mantiene pending/active registrations, selecciona candidatos, arbitra recursos y despacha hacia executors.
+- [OBSERVED] TaskScheduler recibe un TaskEngine concreto y consulta/muta su lifecycle mediante esa instancia; el Scheduler no constituye un segundo TaskEngine.
+- [OBSERVED] WebChat utiliza `WEB_MESA_UNICA` como resource key dentro del Scheduler; Supervisor no accede directamente a WebQueue.
+- [OBSERVED] Supervisor `TaskContract` y runtime `TaskEngine.Task` representan información solapada, pero no son el mismo objeto ni tienen idénticas reglas operativas.
+- [DECIDED] FASE 2F-6 trata TaskEngine como source of truth operacional y TaskScheduler como source of truth de scheduling; Supervisor conserva únicamente la frontera contractual.
+- [TESTED] `TaskEngineBoundary` observa snapshots read-only y puede observar pending/active IDs del Scheduler sin seleccionar ni despachar tareas.
+- [TESTED] `TaskEngineBoundary` rechaza task_id desconocido, ScopeLock incompatible, estados terminales para solicitudes operacionales y autorizaciones incompatibles.
+- [TESTED] El boundary exige que un Scheduler asociado utilice exactamente la misma instancia de TaskEngine.
+- [TESTED] Una solicitud contractual válida no cambia el estado del TaskEngine.
+- [DECIDED] `ALLOWED` en el boundary significa "contrato aceptado para una futura frontera"; no significa ejecución física.
+- [DECIDED] El adaptador `_AuthorizationTaskView` adapta únicamente identidad/requester/scope para reutilizar `check_authorization`; no duplica el lifecycle de TaskEngine.
+- [UNKNOWN] La interfaz futura que entregará una solicitud aceptada al TaskEngine/Scheduler todavía no está definida y no se implementó en esta fase.

@@ -180,14 +180,25 @@ class TaskEngineBoundary:
                 supervisor_identity=supervisor_identity,
             )
             if decision.result is not AuthorizationCheckResult.AUTHORIZED:
+                identity_or_binding = {
+                    "task identity mismatch",
+                    "scope identity mismatch",
+                    "requester mismatch",
+                    "task is not bound to the authorization scope",
+                    "operation or target exceeds ScopeLock",
+                }
                 boundary = (
-                    BoundaryDecision.DENIED
-                    if decision.result in {
-                        AuthorizationCheckResult.DENIED,
-                        AuthorizationCheckResult.REVOKED,
-                        AuthorizationCheckResult.EXPIRED,
-                    }
-                    else BoundaryDecision.INVALID
+                    BoundaryDecision.BLOCKED
+                    if decision.reason in identity_or_binding
+                    else (
+                        BoundaryDecision.DENIED
+                        if decision.result in {
+                            AuthorizationCheckResult.DENIED,
+                            AuthorizationCheckResult.REVOKED,
+                            AuthorizationCheckResult.EXPIRED,
+                        }
+                        else BoundaryDecision.INVALID
+                    )
                 )
                 return BoundaryResult(boundary, clean_id, decision.reason)
         elif operation is not None:
