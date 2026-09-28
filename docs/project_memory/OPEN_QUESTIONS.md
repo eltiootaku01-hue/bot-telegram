@@ -77,3 +77,16 @@
 
 
 - [TESTED] El escenario WAITING/RESUME requiere respetar la propiedad operacional existente de active registration; no implica una nueva autoridad para Supervisor.
+
+
+## FASE 2F-8R — Runtime transition causality
+
+- Estado: [UNKNOWN]
+- La diferencia entre snapshots puede observarse, pero no existe todavía un mecanismo independiente que pruebe causalidad de una transición.
+- Restricción: no convertir RuntimeObservation en executor ni crear una segunda state machine.
+
+## FASE 2F-8R — ScopeLock immutability
+
+- Estado: [TESTED]
+- ScopeLock quedó frozen después de creación.
+- [UNKNOWN] El enforcement físico del ScopeLock continúa sin implementarse.
