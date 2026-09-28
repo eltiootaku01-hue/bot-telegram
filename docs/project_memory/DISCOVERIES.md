@@ -135,3 +135,17 @@ ScopeLock es inmutable después de construcción. Las operaciones de normalizaci
 ## [UNKNOWN] FASE 2F-8R
 
 La demostración causal de una transición futura requerirá evidencia producida por el runtime real; no se implementa en esta reparación.
+
+
+## FASE 2F-8A — F-006
+
+- [OBSERVED] `TaskOrchestrator` sólo se define en `src/gui/task_orchestrator.py` y se instancia operativamente desde `src/gui/app.py::_async_main`; sus tests directos están en `tests/test_task_orchestrator.py`.
+- [OBSERVED] `TaskScheduler` se construye en `build_runtime()` y también puede ser creado por `WaitressSessionManager` cuando no recibe uno; en la GUI principal el manager de Taberna reutiliza el scheduler del runtime.
+- [OBSERVED] `WaitressSessionManager` crea `tavern_chat` con `task_id=ticket_id`, lo registra en TaskScheduler y usa `WEB_MESA_UNICA` como recurso.
+- [OBSERVED] La ruta GUI de `_send_web_persona` crea `gui_chat` con `task_id=ticket_id`, lo agenda en TaskScheduler y lo despacha.
+- [OBSERVED] La ruta async de quick actions no crea Task ni task_id; encola `QueueItem(waitress_id, payload)` y entrega el payload a un `WebQueueManager` Playwright independiente.
+- [OBSERVED] No existe en los componentes auditados un adapter Supervisor → TaskOrchestrator ni Supervisor → WebQueue.
+- [OBSERVED] No existe reconciliación automática entre `TaskContractStore` y `TaskEngine`: el contrato genera su propio id si no se suministra uno, mientras TaskEngine también genera el suyo si no se suministra. El contrato permite recibir un `task_id` externo, pero no contiene un mecanismo de descubrimiento/reconciliación con TaskEngine.
+- [OBSERVED] `AuthorityCore` representa identidad, administración y destinos autorizados de Telegram/Discord. La autorización contractual del Supervisor usa un `authority_validator` abstracto; no existe un adapter demostrado entre ambos.
+- [OBSERVED] `AuthorityCore` no realiza la operación física autorizada; su API devuelve una decisión allow/deny.
+- [CONFLICT] F-006 es duplicación operacional acotada de scheduling/orchestration para WebChat dentro de la aplicación GUI, con ownership local distinto y sin integración contractual común.
