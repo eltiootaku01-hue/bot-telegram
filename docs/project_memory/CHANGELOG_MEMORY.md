@@ -95,3 +95,12 @@
 - Runtime observation residente: NO.
 - Repair attempts de implementación: 1.
 - CI final: pendiente sobre el HEAD final de esta fase.
+
+
+### Corrección final FASE 2F-7
+
+- [TESTED] Primer CI del HEAD de implementación: 700 passed / 8 failed por referencia interna inexistente del observador.
+- [TESTED] Repair 1 eliminó la referencia interna y dejó 707 passed / 1 failed: el fallo reveló que `TaskScheduler.wake()` requiere que la tarea WAITING no esté activa.
+- [TESTED] Repair 2 corrigió únicamente el escenario de prueba para modelar `execution_finished → wake`.
+- [TESTED] CI del HEAD `5fea2df4a54eddeb8ff0949b5258767bce297712`: Ubuntu y Windows success.
+- [TESTED] Repair attempts consumidos: 2 de 3.
