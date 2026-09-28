@@ -183,3 +183,34 @@ State Machine
 [DECIDED] Authorization continúa siendo inmutable y ScopeLock ahora comparte esa propiedad contractual.
 
 [UNKNOWN] Ninguna de estas garantías constituye enforcement físico de escritura.
+
+
+## FASE 2F-8A — Ownership reconciliation
+
+[OBSERVED] `TaskScheduler` es la autoridad de scheduling/routing/resource arbitration dentro del runtime TaskEngine, no una autoridad global del repositorio.
+
+[OBSERVED] `GUI TaskOrchestrator` es un orquestador operativo separado del runtime TaskEngine. Mantiene su propia cola async y su propio control de timeout/fallback/circuit breaker.
+
+[CONFLICT] Ambos caminos pueden ejecutar trabajo WebChat en la aplicación GUI: TaskScheduler entrega a `services.web_queue.WebChatQueueManager`; TaskOrchestrator entrega a `bot_ia.core.web_queue.WebQueueManager`. No comparten Task Contract ni identidad de tarea.
+
+[DECIDED] F-006 se mantiene como conflicto de ownership arquitectónico pendiente. No se elimina ni se absorbe TaskOrchestrator en TaskScheduler en esta fase.
+
+[UNKNOWN] El mecanismo definitivo de convergencia, si corresponde, y el recurso físico común entre ambas rutas quedan fuera de evidencia suficiente para decidirse aquí.
+
+## FASE 2F-8A — Handoff
+
+[OBSERVED] `TaskEngineBoundary` expone comandos contractuales `REQUEST`, `BLOCK`, `CANCEL_REQUEST` y decisiones `ALLOWED/BLOCKED/DENIED/UNKNOWN/INVALID`.
+
+[UNKNOWN] No existe un handoff operacional que convierta `ALLOWED` en una llamada a TaskEngine/TaskScheduler. `ALLOWED` no equivale a ejecución.
+
+## FASE 2F-8A — Task identity
+
+[OBSERVED] TaskEngine y TaskContractStore pueden generar ids independientes. El Task Contract permite recibir un id externo, pero no reconcilia automáticamente ese id con TaskEngine.
+
+[UNKNOWN] La interfaz futura para compartir/reconciliar identidad debe definirse antes de cualquier integración de ejecución.
+
+## FASE 2F-8A — AuthorityCore
+
+[OBSERVED] AuthorityCore sigue limitado a identidad, administración y destinos Telegram/Discord. No se modificó.
+
+[UNKNOWN] No existe evidencia suficiente de un adapter AuthorityCore → WriteAuthorization ni de enforcement físico derivado de AuthorityCore.
