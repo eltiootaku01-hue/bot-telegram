@@ -20,16 +20,21 @@ from .store import EvidenceStore
 class ObservationCore:
     """Capa read-only respecto del sistema observado."""
 
-    def __init__(self, repository_root: str | Path, evidence_directory: str | Path) -> None:
+    def __init__(
+        self,
+        repository_root: str | Path,
+        evidence_directory: str | Path,
+    ) -> None:
         self.repository_root = Path(repository_root).expanduser().resolve()
-        self.store = EvidenceStore(evidence_directory)
+        evidence_path = Path(evidence_directory).expanduser().resolve()
+        if evidence_path == self.repository_root or self.repository_root in evidence_path.parents:
+            raise ValueError("evidence storage must be outside the observed repository")
+        self.store = EvidenceStore(evidence_path)
         self.commands = CommandObserver(self.repository_root)
         self.files = FileObserver(self.repository_root)
         self.repository = RepositoryObserver(self.repository_root, self.commands)
 
     def record_observation(self, observation: Observation) -> Observation:
-        from .models import Evidence
-
         evidence = Evidence.create(
             evidence_type=EvidenceType.FILE_EVIDENCE,
             source=observation.source,
