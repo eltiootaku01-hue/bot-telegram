@@ -76,3 +76,11 @@
 - Evidencia: `src/bot_ia/supervisor/runtime_observation.py` y `tests/test_supervisor_runtime_observation.py`.
 - Impacto: lifecycle y scheduling continúan teniendo un único propietario operacional.
 - No implica: ejecución física, dispatch desde Supervisor, WebQueue integration ni handoff automático.
+
+
+### DEC-015 — WAITING/RESUME respeta ownership del Scheduler
+
+- Estado: [TESTED]
+- Origen: FASE 2F-7.
+- Evidencia: el runtime real exige liberar el registro activo antes de `wake()`; la prueba se corrigió para representar la secuencia executor-finish → wake → dispatch.
+- Decisión: la evidencia de WAITING/RESUME debe modelar el handoff existente y no inventar una transición Supervisor → wake.
