@@ -122,3 +122,16 @@ No se estableció quién autentica finalmente a la autoridad física de escritur
 
 - [TESTED] En el runtime real, `TaskScheduler.wake()` rechaza una tarea WAITING que todavía figura como activa; la liberación del registro activo ocurre antes del wake.
 - [TESTED] Tras modelar ese handoff con las interfaces existentes, WAITING → RUNNING queda observable sin modificar TaskEngine/TaskScheduler.
+
+
+## [TESTED] FASE 2F-8R — F-001
+
+RuntimeObservation.transition() no dispone de evidencia causal independiente. La reparación degrada el resultado de comparación de snapshots a OBSERVED y marca causal_transition_verified=false. El transition_source queda como metadata contextual.
+
+## [TESTED] FASE 2F-8R — F-002
+
+ScopeLock es inmutable después de construcción. Las operaciones de normalización inicial siguen siendo compatibles con frozen dataclass mediante object.__setattr__. No se creó un sistema de versionado paralelo.
+
+## [UNKNOWN] FASE 2F-8R
+
+La demostración causal de una transición futura requerirá evidencia producida por el runtime real; no se implementa en esta reparación.
