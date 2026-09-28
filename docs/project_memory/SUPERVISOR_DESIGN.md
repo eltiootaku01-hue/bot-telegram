@@ -214,3 +214,18 @@ State Machine
 [OBSERVED] AuthorityCore sigue limitado a identidad, administración y destinos Telegram/Discord. No se modificó.
 
 [UNKNOWN] No existe evidencia suficiente de un adapter AuthorityCore → WriteAuthorization ni de enforcement físico derivado de AuthorityCore.
+
+
+## FASE 2F-8B — WebChat y Supervisor
+
+[DECIDED] El runtime WebChat objetivo para futura integración operacional es `TaskEngine → TaskScheduler → WebChatQueueManager`.
+
+[OBSERVED] Este camino es el que actualmente posee `task_id`, lifecycle TaskEngine, resource arbitration, dispatch, cancellation y observación mediante `TaskEngineBoundary`/RuntimeObservation.
+
+[OBSERVED] GUI TaskOrchestrator no tiene integración contractual con Supervisor y mantiene una identidad basada en `waitress_id + payload`.
+
+[PROPOSED] Una futura integración deberá entrar por el contrato/boundary de TaskEngine y conservar `task_id` como identidad operacional. No se debe crear una identidad paralela para WebChat.
+
+[PROPOSED] Authorization, ScopeLock y Evidence deberán seguir siendo aplicados/observados por las capas contractuales existentes; esta fase no establece enforcement físico.
+
+[UNKNOWN] El handoff físico futuro entre Supervisor y TaskEngine continúa fuera de alcance.
