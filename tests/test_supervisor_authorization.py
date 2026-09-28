@@ -17,7 +17,11 @@ from bot_ia.supervisor.task_contract import Task
 NOW = datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc)
 
 
-def make_task_and_scope(*, operation=ScopeOperation.WRITE):
+def make_task_and_scope(
+    *,
+    operation=ScopeOperation.WRITE,
+    expires_at=None,
+):
     task = Task(
         task_id="TASK-A",
         requester="requester-A",
@@ -32,6 +36,7 @@ def make_task_and_scope(*, operation=ScopeOperation.WRITE):
         allowed_operations=(operation,),
         scope_owner="contract-owner",
         authorization="scope-contract",
+        expires_at=expires_at,
         change_budget=ChangeBudget(2, 20, 20, 1, 0),
     )
     return task, scope
@@ -288,8 +293,9 @@ def test_invalid_time_is_not_allowed():
 
 
 def test_scope_expiration_denies_authorization():
-    task, scope = make_task_and_scope()
-    scope.expires_at = (NOW - timedelta(seconds=1)).isoformat()
+    task, scope = make_task_and_scope(
+        expires_at=(NOW - timedelta(seconds=1)).isoformat()
+    )
     assert check_authorization(
         make_authorization(),
         task,
