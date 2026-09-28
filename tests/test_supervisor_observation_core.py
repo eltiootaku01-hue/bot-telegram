@@ -48,6 +48,10 @@ class ObservationCoreTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
+    def test_evidence_storage_inside_repository_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            ObservationCore(self.repo, self.repo / ".supervisor")
+
     def test_repository_head_branch_and_clean_state(self) -> None:
         result = self.core.observe_repository()
         head = result["head_observation"]
