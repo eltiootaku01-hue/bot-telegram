@@ -117,3 +117,15 @@
 - No se modificaron TaskEngine, TaskScheduler, WebQueue ni AuthorityCore.
 - No se creó executor, scheduler, store ni sistema de autorización adicional.
 - CI de re-verificación: workflow `36491889698`, Ubuntu/Windows success, 710 passed.
+
+
+## FASE 2F-8A — F-006 Ownership reconciliation
+
+- Alcance: auditoría y documentación de ownership; sin ejecución física.
+- [TESTED] Se añadieron pruebas read-only para separar TaskScheduler/TaskEngine de GUI TaskOrchestrator y comprobar ausencia de acceso directo del Supervisor a GUI TaskOrchestrator/WebQueue.
+- [DECIDED] TaskScheduler se describe como scheduler del runtime TaskEngine, no como scheduler global.
+- [CONFLICT] GUI TaskOrchestrator permanece activo y separado; no se clasifica como legacy.
+- [CONFLICT] Ambos caminos tienen trabajo WebChat operativo con colas/control distintos; la decisión de convergencia queda pendiente.
+- TaskEngine/TaskScheduler/WebQueue/AuthorityCore: NO modificados.
+- Ejecución física del Supervisor: NO implementada.
+- FASE 2F-8R repair budget: permanece históricamente en 2/3; esta fase usa su propio presupuesto y no consume ese intento.
