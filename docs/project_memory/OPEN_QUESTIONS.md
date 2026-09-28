@@ -74,3 +74,6 @@
 - [UNKNOWN] No existe todavía una interfaz de handoff operacional desde una decisión contractual ALLOWED hacia TaskEngine/Scheduler.
 - [UNKNOWN] No existe todavía autoridad física definida para ejecución desde Supervisor.
 - [UNKNOWN] Las transiciones que no están expuestas por el runtime actual no deben inferirse ni fabricarse.
+
+
+- [TESTED] El escenario WAITING/RESUME requiere respetar la propiedad operacional existente de active registration; no implica una nueva autoridad para Supervisor.
