@@ -206,8 +206,7 @@ def test_parent_child_identity_is_preserved_in_runtime():
 
 
 def test_transition_is_snapshot_difference_not_causal_proof():
-    _, _, _, _, observer = make_runtime()
-    engine = observer._boundary._engine
+    engine, _, _, _, observer = make_runtime()
     create_task(engine, "TASK-FAKE")
     before = observer.task("TASK-FAKE", scenario="before")
     engine.start_task("TASK-FAKE")
