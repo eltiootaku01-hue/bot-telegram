@@ -160,7 +160,7 @@ class RuntimeObservation:
             EvidenceStatus.UNKNOWN
             if before.result is EvidenceStatus.UNKNOWN
             or after.result is EvidenceStatus.UNKNOWN
-            else EvidenceStatus.TESTED
+            else EvidenceStatus.OBSERVED
         )
         return Evidence.create(
             evidence_type=EvidenceType.RUNTIME_EVIDENCE,
@@ -171,8 +171,13 @@ class RuntimeObservation:
                 "task_id": before_id,
                 "scenario": scenario,
                 "transition_source": transition_source,
+                "causal_transition_verified": False,
                 "before": before.metadata.get("snapshot", {}),
                 "after": after.metadata.get("snapshot", {}),
+                "note": (
+                    "snapshot difference only; transition_source is contextual metadata "
+                    "and is not proof of a causal TaskEngine/TaskScheduler transition"
+                ),
             },
         )
 
