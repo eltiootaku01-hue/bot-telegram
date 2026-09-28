@@ -76,3 +76,22 @@
 - Commits de implementación antes de memoria: 2.
 - Repair attempts de implementación: 0.
 - CI final: pendiente hasta que el HEAD de memoria esté construido.
+
+
+## FASE 2F-7
+
+- Estado: [TESTED]
+- Branch: `feature/supervisor-runtime-observation`.
+- HEAD base: `490721c22761bdccf088da91efe0c82786532b3a`.
+- Alcance: observación read-only del TaskEngine y TaskScheduler reales mediante el boundary existente.
+- Producción creada: `src/bot_ia/supervisor/runtime_observation.py`.
+- Producción modificada: `src/bot_ia/supervisor/boundary.py` para incluir timestamps/deadline en snapshots read-only.
+- Tests creados: `tests/test_supervisor_runtime_observation.py`.
+- TaskEngine modificado: NO.
+- TaskScheduler modificado: NO.
+- WebQueue/AuthorityCore/Telegram/Discord/TCG/TMA/GUI/DB/workflows/dependencias: NO.
+- Ejecución física desde Supervisor: NO.
+- Persistencia nueva: NO.
+- Runtime observation residente: NO.
+- Repair attempts de implementación: 1.
+- CI final: pendiente sobre el HEAD final de esta fase.
