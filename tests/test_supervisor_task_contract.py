@@ -89,6 +89,16 @@ def test_terminal_states():
         assert not TaskStateMachine.can_transition(state, TaskState.RUNNING)
         assert not TaskStateMachine.can_transition(state, TaskState.WAITING)
 
+def test_scope_lock_is_immutable_after_creation():
+    scope = make_scope("TASK-IMMUTABLE")
+    with pytest.raises(AttributeError):
+        scope.allowed_paths = ("src/**",)
+    with pytest.raises(AttributeError):
+        scope.allowed_operations = frozenset({ScopeOperation.WRITE})
+    with pytest.raises(AttributeError):
+        scope.status = scope.status
+
+
 def test_scope_reference():
     store = make_store()
     task = store.create("user", "audit", task_id="TASK-S", scope_lock=make_scope("TASK-S"))
