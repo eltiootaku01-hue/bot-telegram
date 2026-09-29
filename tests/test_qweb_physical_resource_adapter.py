@@ -3,6 +3,8 @@
 
 import unittest
 
+from bot_ia.core.web_physical_identity import AuthenticationState
+
 from bot_ia.core.physical_resource_authority import (
     PhysicalResourceIdentityError,
     PhysicalResourceState,
@@ -26,7 +28,11 @@ def _adapter(authority=None):
         session_identity="qweb-session-A",
         canonical_interaction_surface="controlled://webchat",
     )
-    return QWebPhysicalResourceAdapter(authority, descriptor), authority
+    return QWebPhysicalResourceAdapter(
+        authority,
+        descriptor,
+        authentication_state=AuthenticationState.VERIFIED,
+    ), authority
 
 
 class QWebPhysicalResourceAdapterContractTests(unittest.TestCase):
@@ -247,11 +253,13 @@ class QWebPhysicalResourceAdapterContractTests(unittest.TestCase):
         first_adapter = QWebPhysicalResourceAdapter(
             authority,
             descriptor,
+            authentication_state=AuthenticationState.VERIFIED,
             requester_identity="qweb-worker-a",
         )
         second_adapter = QWebPhysicalResourceAdapter(
             authority,
             descriptor,
+            authentication_state=AuthenticationState.VERIFIED,
             requester_identity="qweb-worker-b",
         )
         first = first_adapter.claim_resource()
@@ -337,5 +345,87 @@ class QWebPhysicalResourceAdapterContractTests(unittest.TestCase):
         worker._finish_current()
 
 
+    def test_q14_unknown_authentication_state_blocks_claim(self):
+        authority = PhysicalWebChatResourceAuthority()
+        descriptor = authority.resolve_resource(
+            "controlled-provider",
+            "account-A",
+            "qweb-session-A",
+            "https://controlled.local/chat",
+        )
+        adapter = QWebPhysicalResourceAdapter(
+            authority,
+            descriptor,
+            authentication_state=AuthenticationState.UNKNOWN,
+        )
+        with self.assertRaises(RuntimeError):
+            adapter.claim_resource()
+
+    def test_q15_surface_validation_is_canonical_and_fail_closed(self):
+        authority = PhysicalWebChatResourceAuthority()
+        descriptor = authority.resolve_resource(
+            "controlled-provider",
+            "account-A",
+            "qweb-session-A",
+            "https://controlled.local/chat",
+        )
+        adapter = QWebPhysicalResourceAdapter(
+            authority,
+            descriptor,
+            authentication_state=AuthenticationState.VERIFIED,
+        )
+        self.assertTrue(
+            adapter.validate_interaction_surface(
+                "HTTPS://CONTROLLED.LOCAL:443/chat/"
+            )
+        )
+        self.assertFalse(
+            adapter.validate_interaction_surface(
+                "https://different.example/chat"
+            )
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+    def test_q14_unknown_authentication_state_blocks_claim(self):
+        authority = PhysicalWebChatResourceAuthority()
+        descriptor = authority.resolve_resource(
+            "controlled-provider",
+            "account-A",
+            "qweb-session-A",
+            "https://controlled.local/chat",
+        )
+        adapter = QWebPhysicalResourceAdapter(
+            authority,
+            descriptor,
+            authentication_state=AuthenticationState.UNKNOWN,
+        )
+        with self.assertRaises(RuntimeError):
+            adapter.claim_resource()
+
+    def test_q15_surface_validation_is_canonical_and_fail_closed(self):
+        authority = PhysicalWebChatResourceAuthority()
+        descriptor = authority.resolve_resource(
+            "controlled-provider",
+            "account-A",
+            "qweb-session-A",
+            "https://controlled.local/chat",
+        )
+        adapter = QWebPhysicalResourceAdapter(
+            authority,
+            descriptor,
+            authentication_state=AuthenticationState.VERIFIED,
+        )
+        self.assertTrue(
+            adapter.validate_interaction_surface(
+                "HTTPS://CONTROLLED.LOCAL:443/chat/"
+            )
+        )
+        self.assertFalse(
+            adapter.validate_interaction_surface(
+                "https://different.example/chat"
+            )
+        )

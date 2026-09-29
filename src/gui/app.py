@@ -67,6 +67,11 @@ from PySide6.QtWidgets import (
 from bot_ia.core.application import ApplicationRequest
 from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.web_queue import WebQueueManager
+from bot_ia.core.physical_resource_authority import PhysicalWebChatResourceAuthority
+from bot_ia.core.web_physical_identity import (
+    WebPhysicalIdentityConfigError,
+    WebPhysicalIdentityRegistry,
+)
 from bot_ia.core.task_engine import ResponseDisposition, TaskEngine
 from bot_ia.core.task_scheduler import TaskRoute, TaskScheduler
 from .task_orchestrator import Priority, TaskOrchestrator
@@ -355,6 +360,7 @@ class MatrixBotSpec:
     column: int
     default_system_prompt: str
     default_provider: str = "gemini"
+    web_identity_binding: str = ""
 
 
 MATRIX_BOT_SPECS = (
@@ -367,6 +373,7 @@ MATRIX_BOT_SPECS = (
         "Actúa como Cari, anfitriona del Café Otaku. "
         "Temas: bienvenida, atención, coordinación del lobby y tono cálido. "
         "Aplica esta directiva antes de ejecutar cualquier comando.",
+        web_identity_binding="cari_gemini",
     ),
     MatrixBotSpec(
         "sunna",
@@ -377,6 +384,7 @@ MATRIX_BOT_SPECS = (
         "Actúa como Sunna, responsable de lore y trivia del Café Otaku. "
         "Temas: continuidad, datos del universo, trivia y precisión contextual. "
         "Aplica esta directiva antes de ejecutar cualquier comando.",
+        web_identity_binding="sunna_gemini",
     ),
     MatrixBotSpec(
         "cami",
@@ -387,6 +395,7 @@ MATRIX_BOT_SPECS = (
         "Actúa como Cami, moderadora del Café Otaku. "
         "Temas: orden de conversación, moderación, seguridad y coordinación. "
         "Aplica esta directiva antes de ejecutar cualquier comando.",
+        web_identity_binding="cami_gemini",
     ),
     MatrixBotSpec(
         "chie",
@@ -397,6 +406,7 @@ MATRIX_BOT_SPECS = (
         "Actúa como Chie, gestora de XP del Café Otaku. "
         "Temas: progreso, XP, recompensas y seguimiento de actividad. "
         "Aplica esta directiva antes de ejecutar cualquier comando.",
+        web_identity_binding="chie_gemini",
     ),
 )
 
@@ -2903,6 +2913,16 @@ class CommandCenterWindow(QMainWindow):
         self._web_ticket_ids: dict[str, str] = {}
         self._web_ticket_sequence = 0
         self._selected_bot_id = "cari"
+        self._web_physical_identity_registry = None
+        self._web_physical_identity = None
+        self._web_physical_identity_error = ""
+        self._web_physical_authority = PhysicalWebChatResourceAuthority()
+        try:
+            self._web_physical_identity_registry = WebPhysicalIdentityRegistry.from_toml(
+                ROOT / "config" / "runtime.toml"
+            )
+        except (OSError, ValueError, WebPhysicalIdentityConfigError) as error:
+            self._web_physical_identity_error = f"{type(error).__name__}: {error}"
         self._web_queue = None
         self._tavern: WaitressSessionManager | None = None
         self._telegram_process: subprocess.Popen[str] | None = None
@@ -3623,9 +3643,21 @@ class CommandCenterWindow(QMainWindow):
         header.addWidget(label)
         header.addStretch(1)
 
-        self.web_url = QLineEdit(
-            os.getenv("BOT_IA_WEB_CHAT_URL", "").strip()
-        )
+        declared_web_url = os.getenv("BOT_IA_WEB_CHAT_URL", "").strip()
+        try:
+            profile_spec = next(
+                spec for spec in MATRIX_BOT_SPECS
+                if spec.bot_id == self._selected_bot_id
+            )
+            if self._web_physical_identity_registry is not None:
+                declared_web_url = self._web_physical_identity_registry.resolve_binding(
+                    profile_spec.web_identity_binding,
+                    expected_provider=profile_spec.default_provider,
+                    expected_logical_actor=profile_spec.bot_id,
+                ).canonical_interaction_surface
+        except Exception:
+            pass
+        self.web_url = QLineEdit(declared_web_url)
         self.web_url.setPlaceholderText(
             "https://tu-chat-web.example/"
         )
@@ -3694,14 +3726,47 @@ class CommandCenterWindow(QMainWindow):
     # Backend
     # ------------------------------------------------------------------
 
+    def _resolve_web_physical_identity(self, spec: MatrixBotSpec):
+        registry = self._web_physical_identity_registry
+        if registry is None:
+            raise WebPhysicalIdentityConfigError(
+                "WEB_PHYSICAL_IDENTITY_SOURCE_UNAVAILABLE"
+            )
+        identity = registry.resolve_binding(
+            spec.web_identity_binding,
+            expected_provider=spec.default_provider,
+            expected_logical_actor=spec.bot_id,
+        )
+        profile_path = identity.browser_profile_path(project_root=ROOT)
+        if profile_path != self.web_browser_profile_path:
+            raise WebPhysicalIdentityConfigError(
+                "WEB_IDENTITY_PROFILE_BINDING_MISMATCH"
+            )
+        return identity
+
     def _wire_backend(self) -> None:
         try:
             from services.web_queue import WebChatQueueManager
+            from services.qweb_physical_resource_adapter import (
+                QWebPhysicalResourceAdapter,
+            )
 
+            profile_spec = next(
+                spec for spec in MATRIX_BOT_SPECS
+                if spec.bot_id == self._selected_bot_id
+            )
+            identity = self._resolve_web_physical_identity(profile_spec)
+            self._web_physical_identity = identity
+            adapter = QWebPhysicalResourceAdapter(
+                self._web_physical_authority,
+                identity.descriptor,
+                authentication_state=identity.authentication_state,
+            )
             self._web_queue = WebChatQueueManager(
                 self.web_view,
                 parent=self,
                 browser_profile=self.web_browser_profile_path,
+                physical_resource_adapter=adapter,
             )
             self._web_queue.ticket_processed.connect(
                 self._on_web_ticket_processed
@@ -3718,11 +3783,17 @@ class CommandCenterWindow(QMainWindow):
             self._web_queue.queue_error.connect(
                 self._on_web_queue_error
             )
+            if not identity.can_execute_physically:
+                self._on_web_state(
+                    "Identidad Web declarada; autenticación UNKNOWN. "
+                    "La ejecución física queda bloqueada hasta VERIFICATION."
+                )
         except Exception as error:
+            self._web_physical_identity = None
             self._web_queue = None
-            self._log_error("WebQueue initialization", error)
+            self._log_error("Web physical identity / WebQueue initialization", error)
             self._on_web_state(
-                "WebQueue no disponible. Revisa el estado del servicio."
+                "WebQueue no disponible: identidad física Web no resuelta."
             )
 
         self._tavern = self.runtime.build_tavern_manager(
@@ -4232,6 +4303,35 @@ class CommandCenterWindow(QMainWindow):
             )
             self.send_button.setEnabled(True)
             return
+        current_identity = self._web_physical_identity
+        if current_identity is None:
+            self._append_system(
+                "La identidad física Web no está disponible; envío bloqueado."
+            )
+            self.send_button.setEnabled(True)
+            return
+
+        try:
+            selected_spec = next(
+                spec for spec in MATRIX_BOT_SPECS
+                if spec.bot_id == self._selected_bot_id
+            )
+            selected_identity = self._resolve_web_physical_identity(selected_spec)
+        except Exception:
+            self._append_system(
+                "El bot seleccionado no tiene una identidad física Web válida."
+            )
+            self.send_button.setEnabled(True)
+            return
+
+        if selected_identity.physical_resource_id != current_identity.physical_resource_id:
+            self._append_system(
+                "La selección lógica no coincide con el recurso físico Web "
+                "activo; envío bloqueado para evitar cruzar identidades."
+            )
+            self.send_button.setEnabled(True)
+            return
+
         self._web_ticket_sequence += 1
         ticket_id = f"gui-{self._web_ticket_sequence}-{datetime.now().strftime('%H%M%S%f')}"
         self._web_ticket_ids[ticket_id] = self._selected_bot_id

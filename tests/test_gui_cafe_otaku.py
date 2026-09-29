@@ -369,6 +369,12 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "matrix_grid.addWidget(",
             "layout.addWidget(matrix)",
             "def _enable_manual_setup_mode",
+            "WebPhysicalIdentityRegistry",
+            "web_identity_binding",
+            "PhysicalWebChatResourceAuthority",
+            "physical_resource_adapter=adapter",
+            "authentication_state=identity.authentication_state",
+            "WEB_IDENTITY_PROFILE_BINDING_MISMATCH",
         ):
             self.assertIn(token, source)
 

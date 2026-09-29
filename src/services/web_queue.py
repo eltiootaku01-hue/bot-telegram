@@ -1732,6 +1732,12 @@ class WebChatQueueManager(QObject):
                     self._cancel_web_operation()
                     self.health_failure_requested.emit()
                     return
+                if not adapter.validate_interaction_surface(
+                    self.web_view.url().toString()
+                ):
+                    self._cancel_web_operation()
+                    self.health_failure_requested.emit()
+                    return
 
         self._inject_to_browser(
             prompt,

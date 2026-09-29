@@ -16,6 +16,10 @@ from bot_ia.core.physical_resource_authority import (
     PhysicalResourceSnapshot,
     PhysicalWebChatResourceAuthority,
 )
+from bot_ia.core.web_physical_identity import (
+    AuthenticationState,
+    canonicalize_interaction_surface,
+)
 
 
 class QWebPhysicalResourceError(RuntimeError):
@@ -47,6 +51,7 @@ class QWebPhysicalResourceAdapter:
         authority: PhysicalWebChatResourceAuthority,
         descriptor: PhysicalResourceDescriptor,
         *,
+        authentication_state: AuthenticationState = AuthenticationState.UNKNOWN,
         requester_identity: str = "qweb-worker",
     ) -> None:
         if not isinstance(authority, PhysicalWebChatResourceAuthority):
@@ -57,9 +62,20 @@ class QWebPhysicalResourceAdapter:
             )
         if not isinstance(requester_identity, str) or not requester_identity.strip():
             raise QWebPhysicalResourceError("REQUESTER_IDENTITY_REQUIRED")
+        try:
+            authentication_state = (
+                authentication_state
+                if isinstance(authentication_state, AuthenticationState)
+                else AuthenticationState(str(authentication_state))
+            )
+        except ValueError as error:
+            raise QWebPhysicalResourceIdentityError(
+                "AUTHENTICATION_STATE_INVALID"
+            ) from error
 
         self._authority = authority
         self._descriptor = descriptor
+        self._authentication_state = authentication_state
         self._requester_identity = requester_identity.strip()
 
     @classmethod
@@ -71,6 +87,7 @@ class QWebPhysicalResourceAdapter:
         authenticated_account_identity: str,
         session_identity: str,
         canonical_interaction_surface: str,
+        authentication_state: AuthenticationState = AuthenticationState.UNKNOWN,
         requester_identity: str = "qweb-worker",
     ) -> "QWebPhysicalResourceAdapter":
         """Create an adapter only from explicit identity evidence."""
@@ -83,6 +100,7 @@ class QWebPhysicalResourceAdapter:
         return cls(
             authority,
             descriptor,
+            authentication_state=authentication_state,
             requester_identity=requester_identity,
         )
 
@@ -97,7 +115,23 @@ class QWebPhysicalResourceAdapter:
     def resolve_resource(self) -> PhysicalResourceDescriptor:
         return self._descriptor
 
+    @property
+    def authentication_state(self) -> AuthenticationState:
+        return self._authentication_state
+
+    def validate_interaction_surface(self, raw_url: str) -> bool:
+        try:
+            normalized = canonicalize_interaction_surface(raw_url)
+        except Exception:
+            return False
+        return normalized == self._descriptor.canonical_interaction_surface
+
     def claim_resource(self) -> PhysicalResourceClaim:
+        if self._authentication_state is not AuthenticationState.VERIFIED:
+            raise QWebPhysicalResourceIdentityError(
+                "PHYSICAL_EXECUTION_REQUIRES_VERIFIED_AUTHENTICATION:"
+                f"{self._authentication_state.value}"
+            )
         return self._authority.claim(
             self._descriptor.physical_resource_id,
             self._requester_identity,

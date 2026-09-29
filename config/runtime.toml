@@ -109,3 +109,54 @@ reference_universe_id = "attack_on_titan"
 reference_display_name = "Attack on Titan"
 spoiler_policy = "strict"
 language = "es"
+
+# Non-secret Web physical identity declarations.
+# These aliases declare the intended principal/session only; they do not prove
+# provider authentication and remain UNKNOWN until runtime evidence exists.
+[web_identities.cari_gemini]
+provider = "gemini"
+principal_identity = "declared-web-principal-cari"
+provider_session_identity = "declared-web-session-cari"
+canonical_interaction_surface = "https://gemini.google.com/app/"
+browser_profile = "./browser_data/cari"
+authentication_state = "UNKNOWN"
+
+[web_identities.cami_gemini]
+provider = "gemini"
+principal_identity = "declared-web-principal-cami"
+provider_session_identity = "declared-web-session-cami"
+canonical_interaction_surface = "https://gemini.google.com/app/"
+browser_profile = "./browser_data/cami"
+authentication_state = "UNKNOWN"
+
+[web_identities.sunna_gemini]
+provider = "gemini"
+principal_identity = "declared-web-principal-sunna"
+provider_session_identity = "declared-web-session-sunna"
+canonical_interaction_surface = "https://gemini.google.com/app/"
+browser_profile = "./browser_data/sunna"
+authentication_state = "UNKNOWN"
+
+[web_identities.chie_gemini]
+provider = "gemini"
+principal_identity = "declared-web-principal-chie"
+provider_session_identity = "declared-web-session-chie"
+canonical_interaction_surface = "https://gemini.google.com/app/"
+browser_profile = "./browser_data/chie"
+authentication_state = "UNKNOWN"
+
+[web_identity_bindings.cari_gemini]
+logical_actor = "cari"
+identity_id = "cari_gemini"
+
+[web_identity_bindings.cami_gemini]
+logical_actor = "cami"
+identity_id = "cami_gemini"
+
+[web_identity_bindings.sunna_gemini]
+logical_actor = "sunna"
+identity_id = "sunna_gemini"
+
+[web_identity_bindings.chie_gemini]
+logical_actor = "chie"
+identity_id = "chie_gemini"

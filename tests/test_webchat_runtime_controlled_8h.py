@@ -11,6 +11,10 @@ from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication
 
+from bot_ia.core.web_physical_identity import (
+    AuthenticationState,
+    WebPhysicalIdentity,
+)
 from bot_ia.core.physical_resource_authority import (
     PhysicalResourceState,
     PhysicalWebChatResourceAuthority,
@@ -297,7 +301,7 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
             "qweb-session-A",
             "controlled://webchat",
         )
-        adapter = QWebPhysicalResourceAdapter(authority, descriptor)
+        adapter = QWebPhysicalResourceAdapter(\n            authority,\n            descriptor,\n            authentication_state=AuthenticationState.VERIFIED,\n        )
         execution = adapter.begin_execution(
             adapter.claim_resource(),
             ticket_id="ticket-m01",
@@ -433,3 +437,41 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+    def test_h10_identity_source_to_qweb_authority_local(self) -> None:
+        identity = WebPhysicalIdentity(
+            "controlled-local",
+            "gemini",
+            "declared-controlled-principal",
+            "declared-controlled-session",
+            "http://controlled.local",
+            "./browser_data/controlled",
+            AuthenticationState.VERIFIED,
+        )
+        authority = PhysicalWebChatResourceAuthority()
+        adapter = QWebPhysicalResourceAdapter(
+            authority,
+            identity.descriptor,
+            authentication_state=identity.authentication_state,
+        )
+        self.assertEqual(
+            identity.physical_resource_id,
+            adapter.descriptor.physical_resource_id,
+        )
+        self.assertTrue(
+            adapter.validate_interaction_surface(
+                self.harness.view.url().toString()
+            )
+        )
+        claim = adapter.claim_resource()
+        execution = adapter.begin_execution(
+            claim,
+            ticket_id="identity-local",
+            operation_id="qweb-identity-local-1",
+        )
+        self.assertTrue(adapter.validate_execution(execution))
+        adapter.confirm_termination(
+            execution,
+            evidence="controlled local QWeb surface",
+        )
