@@ -72,7 +72,11 @@ from bot_ia.core.web_physical_identity import (
     WebPhysicalIdentityRegistry,
 )
 from bot_ia.core.task_engine import ResponseDisposition, TaskEngine
-from bot_ia.core.task_scheduler import TaskRoute, TaskScheduler
+from bot_ia.core.task_scheduler import (
+    TaskRoute,
+    TaskScheduler,
+    WebChatTaskExecutor,
+)
 from .task_orchestrator import Priority, TaskOrchestrator
 from bot_ia.core.waitress_session_manager import (
     InsufficientBalanceError,
@@ -3755,10 +3759,6 @@ class CommandCenterWindow(QMainWindow):
             from services.qweb_physical_resource_adapter import (
                 QWebPhysicalResourceAdapter,
             )
-            from services.web_chat_task_executor import (
-                WebChatTaskExecutor,
-            )
-
             profile_spec = next(
                 spec for spec in MATRIX_BOT_SPECS
                 if spec.bot_id == self._selected_bot_id
