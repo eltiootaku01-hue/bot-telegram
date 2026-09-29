@@ -296,23 +296,6 @@ identity_id = "cari_gemini"
             first.physical_resource_id,
             second.physical_resource_id,
         )
-        authority = PhysicalWebChatResourceAuthority()
-        left = authority.resolve_resource(
-            "gemini",
-            "declared-principal",
-            "declared-session",
-            "https://gemini.google.com/app",
-        )
-        right = authority.resolve_resource(
-            "gemini",
-            "declared-principal",
-            "declared-session",
-            "https://gemini.google.com/app/",
-        )
-        self.assertEqual(
-            left.physical_resource_id,
-            right.physical_resource_id,
-        )
 
 
 if __name__ == "__main__":

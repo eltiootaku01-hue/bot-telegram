@@ -181,7 +181,11 @@ class QWebPhysicalResourceAdapterContractTests(unittest.TestCase):
             "qweb-session-A",
             "controlled://webchat",
         )
-        adapter = ReleaseFailAdapter(authority, descriptor)
+        adapter = ReleaseFailAdapter(
+            authority,
+            descriptor,
+            authentication_state=AuthenticationState.VERIFIED,
+        )
         worker = _QueueWorker(
             timeout_ms=45000,
             circuit_threshold=3,
