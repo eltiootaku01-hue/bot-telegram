@@ -3,8 +3,6 @@
 
 import unittest
 
-from PySide6.QtCore import QCoreApplication
-
 from bot_ia.core.physical_resource_authority import (
     PhysicalResourceIdentityError,
     PhysicalResourceState,
@@ -32,10 +30,6 @@ def _adapter(authority=None):
 
 
 class QWebPhysicalResourceAdapterContractTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.app = QCoreApplication.instance() or QCoreApplication([])
-
     def test_q01_identity_is_explicit_and_fail_closed(self):
         authority = PhysicalWebChatResourceAuthority()
         with self.assertRaises(PhysicalResourceIdentityError):
