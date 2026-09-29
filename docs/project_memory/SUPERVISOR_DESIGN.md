@@ -229,3 +229,67 @@ State Machine
 [PROPOSED] Authorization, ScopeLock y Evidence deberán seguir siendo aplicados/observados por las capas contractuales existentes; esta fase no establece enforcement físico.
 
 [UNKNOWN] El handoff físico futuro entre Supervisor y TaskEngine continúa fuera de alcance.
+
+
+## FASE 2F-8C — Migration Compatibility Requirements
+
+[DECIDED] La futura ruta WebChat de quick actions debe ser compatible con el modelo ya establecido:
+
+```
+GUI request
+    ↓
+TaskEngine Task (task_id único)
+    ↓
+TaskEngineBoundary / contractual checks
+    ↓
+TaskScheduler
+    ↓
+WebChatTaskExecutor
+    ↓
+WebChatQueueManager
+```
+
+### Task Contract
+
+[PROPOSED] El TaskEngine Task deberá conservar, como mínimo, requester, task_type, target waitress_id en context/metadata, payload de acción, priority, deadline/timeout_policy y route/resource metadata.
+
+[DECIDED] El Supervisor Task Contract no se convierte en segundo TaskEngine. Si se requiere reconciliación contractual, debe existir un adapter explícito que preserve el mismo task_id operacional.
+
+### ScopeLock
+
+[PROPOSED] ScopeLock deberá referirse al mismo task_id de la ejecución futura y limitar explícitamente cualquier operación física que llegue a estar autorizada.
+
+[DECIDED] ScopeLock no debe usarse como sustituto de resource arbitration: `WEB_MESA_UNICA` pertenece al Scheduler/ejecutor.
+
+### Authorization
+
+[PROPOSED] Una autorización futura deberá estar vinculada al mismo task_id, scope_id, operation y target que la operación WebChat.
+
+[DECIDED] Esta fase no implementa enforcement físico ni convierte AuthorityCore en executor.
+
+### RuntimeObservation
+
+[DECIDED] RuntimeObservation sólo observará snapshots/eventos del TaskEngine/Scheduler convergido.
+
+[PROPOSED] La evidencia futura deberá demostrar, como mínimo, identidad task_id estable, ruta WEBCHAT, resource_key WEB_MESA_UNICA, transición de lifecycle y resultado físico correlacionado.
+
+### Boundary / Handoff
+
+[UNKNOWN] El handoff físico Supervisor → TaskEngine/Scheduler permanece abierto.
+
+[DECIDED] Una decisión contractual ALLOWED no equivale a dispatch ni a ejecución.
+
+[DECIDED] No se permite que Supervisor llame directamente a WebChatQueueManager, WebQueueManager o TaskOrchestrator.
+
+### Single-owner requirements
+
+[DECIDED] TaskEngine = lifecycle owner.
+
+[DECIDED] TaskScheduler = scheduling/routing/resource arbitration owner.
+
+[PROPOSED] WebChatTaskExecutor → WebChatQueueManager = physical WebChat execution owner.
+
+[DECIDED] GUI = requester/presentation owner; no lifecycle paralelo.
+
+[DECIDED] No se crea una segunda state machine, scheduler, TaskEngine, executor físico o WebChat resource lock.
+
