@@ -149,3 +149,16 @@
 - [PROPOSED] La identidad de sesión no se fusiona con task_id: session_id sigue siendo owner de WaitressSessionManager y ticket_id puede continuar como alias histórico sólo donde el runtime ya lo exige; la convergencia futura debe evitar crear otro task_id.
 - [PROPOSED] Authorization y ScopeLock deberán vincularse al mismo task_id antes de cualquier enforcement físico futuro; esta fase no implementa enforcement.
 - [PROPOSED] RuntimeObservation seguirá siendo read-only y observará el TaskEngine/Scheduler convergido, no al executor directamente.
+
+
+### DEC-019 — FASE 2F-8D: MIG-0 Capability Verification & Migration Gates
+
+- Estado: [DECIDED / MIG-0 PARTIAL]
+- MIG-0 sólo define gates, evidencia y requisitos de verificación; no aprueba MIG-3 ni ninguna migración física.
+- [DECIDED] Ninguna afirmación de paridad Playwright/QWebEngine se considera cerrada por inspección estática.
+- [DECIDED] task_id continúa siendo la identidad de lifecycle; waitress_id, session_id, ticket_id y operation_id conservan sus scopes separados.
+- [DECIDED] No se copian cookies, storage_state, perfiles ni credenciales para cerrar UNKNOWNs.
+- [DECIDED] Quick actions WebChat futuras deberán entrar por TaskEngine/TaskScheduler y WEB_MESA_UNICA.
+- [CONFIRMED RISK] El callback actual de quick action depende de _selected_bot_id mutable al momento de completion.
+- [DECIDED] Este riesgo se documenta pero no se repara en MIG-0.
+- [DECIDED] MIG-1..MIG-6 permanecen sin iniciar.
