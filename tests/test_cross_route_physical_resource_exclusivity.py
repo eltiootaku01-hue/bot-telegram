@@ -511,7 +511,7 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
             )
         )
         with self.assertRaises(PhysicalResourceOwnershipError):
-            self.qweb.confirm_termination(
+            qweb.confirm_termination(
                 old_execution,
                 evidence="x09 stale callback release",
             )
@@ -768,10 +768,14 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
             production_descriptor,
             registered_production_descriptor,
         )
+        self.assertIs(
+            production_identity.authentication_state,
+            AuthenticationState.UNKNOWN,
+        )
         production_qweb = QWebPhysicalResourceAdapter(
             self.authority,
-            production_identity.descriptor,
-            authentication_state=production_identity.authentication_state,
+            production_descriptor,
+            authentication_state=AuthenticationState.UNKNOWN,
             requester_identity="qweb-production-guard",
         )
         with self.assertRaises(RuntimeError):
@@ -903,6 +907,18 @@ identity_id = "shared"
             self.skipTest("playwright unavailable")
 
         runtime = CrossRouteWebRuntimeFixture()
+        x20_descriptor = self.authority.resolve_resource(
+            "test",
+            "test-principal",
+            "test-session",
+            runtime.url,
+        )
+        qweb = QWebPhysicalResourceAdapter(
+            self.authority,
+            x20_descriptor,
+            authentication_state=AuthenticationState.VERIFIED,
+            requester_identity="qweb-controlled",
+        )
         worker = CrossRoutePlaywrightWorker(
             self.authority,
             runtime.url,
@@ -922,8 +938,8 @@ identity_id = "shared"
                 ),
             )
 
-            qweb_claim = self.qweb.claim_resource()
-            qweb_execution = self.qweb.begin_execution(
+            qweb_claim = qweb.claim_resource()
+            qweb_execution = qweb.begin_execution(
                 qweb_claim,
                 ticket_id="x20-qweb",
                 operation_id="qweb-x20-1",
@@ -984,13 +1000,13 @@ identity_id = "shared"
                 ).state,
             )
             self.assertFalse(
-                self.qweb.validate_callback(
+                qweb.validate_callback(
                     qweb_execution,
                     ticket_id="x20-qweb",
                 )
             )
             with self.assertRaises(PhysicalResourceClaimError):
-                self.qweb.claim_resource()
+                qweb.claim_resource()
             self.assertEqual(
                 qweb_count,
                 int(
