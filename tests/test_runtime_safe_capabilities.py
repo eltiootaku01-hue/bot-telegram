@@ -45,7 +45,7 @@ class RuntimeSafeTimeoutAndBreakerTests(unittest.IsolatedAsyncioTestCase):
 
         await orchestrator._process_item(await orchestrator.queue.get())
         self.assertEqual(1, len(received))
-        self.assertIn("Respuesta temporal", received[0])
+        self.assertEqual("¡Uy! Se me cayó la bandeja... ¿Me repetís lo que necesitabas?", received[0])
 
     async def test_orchestrator_breaker_opens_after_three_failures_and_recovers(self) -> None:
         breaker = CircuitBreaker(max_failures=3, recovery_time_seconds=30.0)
