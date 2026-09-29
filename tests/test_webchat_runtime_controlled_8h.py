@@ -262,6 +262,8 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
         )
 
     def test_g07_controlled_navigation_reloads_local_page_and_reestablishes_bridge(self) -> None:
+        self.harness.loaded = False
+        self.harness.events.clear()
         self.harness.view.setHtml(
             "<!doctype html><html><body><section id='assistant'></section></body></html>",
             QUrl("http://controlled.local/second"),
@@ -272,7 +274,6 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
                 and self.harness.run_js("document.readyState") == "complete"
             )
         )
-        self.harness.events.clear()
         self.harness.install_monitor()
         self.assertTrue(
             any(event == "MONITOR_READY" for event, _ in self.harness.events)
