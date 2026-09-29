@@ -238,8 +238,20 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                 terminated.physical_state,
             )
             self.assertEqual(
-                ReconciliationStatus.ALIGNED,
+                ReconciliationStatus.DIVERGED,
                 terminated.reconciliation_status,
+            )
+
+            task = runtime.task_engine.complete(task.task_id)
+            self.assertEqual(TaskState.COMPLETED, task.state)
+            reconciled = (
+                runtime.physical_lifecycle_reconciliation.get_reconciliation(
+                    task.task_id
+                )
+            )
+            self.assertEqual(
+                ReconciliationStatus.ALIGNED,
+                reconciled.reconciliation_status,
             )
         finally:
             fixture.close()

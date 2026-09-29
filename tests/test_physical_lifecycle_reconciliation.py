@@ -367,6 +367,65 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
             record.reconciliation_status,
         )
 
+    def test_r11_reconciliation_status_preserves_logical_physical_semantics(self) -> None:
+        task = self.engine.create_task(
+            "user",
+            "webchat",
+            task_id="task-status-semantics",
+        )
+        task = self.engine.start_task(task.task_id)
+        claim = self.authority.claim(
+            self.descriptor.physical_resource_id,
+            "owner-task-status-semantics",
+        )
+        self.authority.begin_execution(
+            claim,
+            backend="test",
+            waitress_id="cari",
+            operation_id="task-status-semantics:op",
+        )
+        execution = FakeExecution(
+            claim.physical_resource_id,
+            claim.claim_id,
+            claim.execution_generation,
+        )
+        busy = self.reconciliation.bind_execution(
+            task,
+            self.adapter,
+            execution,
+        )
+        self.assertEqual(
+            ReconciliationStatus.ALIGNED,
+            busy.reconciliation_status,
+        )
+        available = self.reconciliation.record_termination(
+            task.task_id,
+            evidence="controlled semantic termination",
+        )
+        self.assertEqual(
+            PhysicalResourceState.AVAILABLE,
+            available.physical_state,
+        )
+        self.assertEqual(
+            ReconciliationStatus.DIVERGED,
+            available.reconciliation_status,
+        )
+
+        self.engine.complete(task.task_id)
+        completed = self.reconciliation.get_reconciliation(task.task_id)
+        self.assertEqual(
+            TaskState.COMPLETED,
+            completed.logical_state,
+        )
+        self.assertEqual(
+            PhysicalResourceState.AVAILABLE,
+            completed.physical_state,
+        )
+        self.assertEqual(
+            ReconciliationStatus.ALIGNED,
+            completed.reconciliation_status,
+        )
+
     def test_r11_backend_failure_converges_to_quarantine(self) -> None:
         task, _ = self._task()
         record = self.reconciliation.record_backend_failure(
