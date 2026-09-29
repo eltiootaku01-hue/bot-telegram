@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import tempfile
+import threading
 import unittest
 
 from bot_ia.core.physical_resource_authority import (
@@ -60,15 +62,36 @@ CONTROLLED_HTML = """<!doctype html>
 """
 
 
-def _registry_identity(root: Path):
+def _registry_identity(
+    root: Path,
+    *,
+    surface: str = "http://controlled.local/chat",
+):
     config = root / "runtime.toml"
-    config.write_text(VALID_CONFIG, encoding="utf-8")
+    config_body = VALID_CONFIG.replace(
+        "http://controlled.local/chat",
+        surface,
+    )
+    config.write_text(config_body, encoding="utf-8")
     registry = WebPhysicalIdentityRegistry.from_toml(config)
     return registry.resolve_binding(
         "controlled",
         expected_provider="test",
         expected_logical_actor="cari",
     )
+
+
+class _ControlledHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        body = CONTROLLED_HTML.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args) -> None:
+        return
 
 
 class _FakePage:
@@ -410,18 +433,34 @@ class PlaywrightPhysicalResourceAdapterTests(
                 ],
             )
             context = await browser.new_context()
-            page = await context.new_page()
-            await page.set_content(
-                CONTROLLED_HTML,
+            server = ThreadingHTTPServer(
+                ("127.0.0.1", 0),
+                _ControlledHandler,
+            )
+            server_thread = threading.Thread(
+                target=server.serve_forever,
+                daemon=True,
+            )
+            server_thread.start()
+            surface = (
+                f"http://127.0.0.1:{server.server_port}/chat"
+            )
+
+            context_page = await context.new_page()
+            await context_page.goto(
+                surface,
                 wait_until="domcontentloaded",
             )
             manager.playwright = playwright
             manager.browser = browser
             manager.context = context
-            manager.pages["cari"] = page
+            manager.pages["cari"] = context_page
 
             with tempfile.TemporaryDirectory() as tmp:
-                identity = _registry_identity(Path(tmp))
+                identity = _registry_identity(
+                    Path(tmp),
+                    surface=surface,
+                )
             verified = replace(
                 identity,
                 authentication_state=AuthenticationState.VERIFIED,
@@ -480,6 +519,32 @@ class PlaywrightPhysicalResourceAdapterTests(
             if browser is not None:
                 await browser.close()
             await playwright.stop()
+            if "server" in locals():
+                server.shutdown()
+                server.server_close()
+
+
+    async def test_p13_claim_from_other_resource_is_denied(self):
+        adapter, authority, _ = self._adapter()
+        other_descriptor = authority.resolve_resource(
+            "test",
+            "other-principal",
+            "other-session",
+            "http://controlled.local/chat",
+        )
+        other_claim = authority.claim(
+            other_descriptor.physical_resource_id,
+            "playwright-worker",
+        )
+        with self.assertRaises(
+            PlaywrightPhysicalResourceIdentityError
+        ):
+            adapter.begin_execution(
+                other_claim,
+                ticket_id="p13",
+                operation_id="playwright-p13-1",
+                waitress_id="cari",
+            )
 
 
 if __name__ == "__main__":
