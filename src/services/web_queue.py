@@ -838,8 +838,11 @@ class _QueueWorker(QObject):
                             reason="CLAIM_RELEASE_FAILED",
                             evidence=str(error),
                         )
-                    except Exception:
-                        pass
+                    except Exception as quarantine_error:
+                        self.queue_error.emit(
+                            ticket.ticket_id,
+                            f"PHYSICAL_CLAIM_QUARANTINE_FAILED:{quarantine_error}",
+                        )
             ticket.status = "FAILED"
             self.ticket_failed.emit(
                 ticket,
@@ -882,8 +885,11 @@ class _QueueWorker(QObject):
                             reason="CLAIM_RELEASE_FAILED",
                             evidence=str(release_error),
                         )
-                    except Exception:
-                        pass
+                    except Exception as quarantine_error:
+                        self.queue_error.emit(
+                            ticket.ticket_id,
+                            f"PHYSICAL_CLAIM_QUARANTINE_FAILED:{quarantine_error}",
+                        )
                 self.current_ticket = None
                 self.is_busy = False
                 ticket.status = "FAILED"
@@ -948,8 +954,11 @@ class _QueueWorker(QObject):
         if adapter is not None and execution is not None:
             try:
                 adapter.request_cancel(execution)
-            except Exception:
-                pass
+            except Exception as cancel_error:
+                self.queue_error.emit(
+                    execution.ticket_id,
+                    f"PHYSICAL_CANCEL_REQUEST_FAILED:{cancel_error}",
+                )
             self._quarantine_physical(
                 execution,
                 reason="FAILED_WITHOUT_TERMINATION_EVIDENCE",
