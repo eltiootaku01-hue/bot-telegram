@@ -162,3 +162,20 @@
 - [CONFIRMED RISK] El callback actual de quick action depende de _selected_bot_id mutable al momento de completion.
 - [DECIDED] Este riesgo se documenta pero no se repara en MIG-0.
 - [DECIDED] MIG-1..MIG-6 permanecen sin iniciar.
+
+### DEC-0XX — MIG-3 evidence is mechanism-level, not migration parity
+
+- Estado: [DECIDED]
+- Origen: FASE 2F-8E.
+- Decisión: TESTED/OBSERVED gates in MIG-3 describe deterministic evidence of existing mechanisms; they do not certify Playwright ↔ QWebEngine parity or authorize migration.
+- Motivo: preserve evidence-before-conclusion and avoid promoting static structure into runtime equivalence.
+- Impacto: G01-G04, G07-G11 and G15 remain UNKNOWN where real browser/provider/session evidence is required.
+- No implica: MIG-1 authorization or physical routing changes.
+
+### DEC-0XY — Scheduler remains the sole resource arbiter in the target path
+
+- Estado: [DECIDED]
+- Origen: FASE 2F-8E.
+- Decisión: WEB_MESA_UNICA evidence is accepted only for the existing TaskScheduler/WebChatQueueManager path; the Playwright WebQueueManager remains outside that resource lock.
+- Motivo: current tests prove separate mechanisms, not a global cross-runtime lock.
+- Impacto: G20 remains OBSERVED and is a migration blocker for quick-action convergence.
