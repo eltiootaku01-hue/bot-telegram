@@ -114,6 +114,19 @@ class QWebPhysicalResourceAdapter:
             raise QWebPhysicalResourceError("CLAIM_RELEASE_EVIDENCE_REQUIRED")
         return self._authority.release(claim)
 
+    def quarantine_claim(
+        self,
+        claim: PhysicalResourceClaim,
+        *,
+        reason: str,
+        evidence: str | None = None,
+    ) -> PhysicalResourceSnapshot:
+        return self._authority.quarantine(
+            claim,
+            reason,
+            evidence=evidence,
+        )
+
     def begin_execution(
         self,
         claim: PhysicalResourceClaim,
