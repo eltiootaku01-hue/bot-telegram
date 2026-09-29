@@ -300,3 +300,21 @@ La demostración causal de una transición futura requerirá evidencia producida
 - [OBSERVED] TaskScheduler tiene WEB_MESA_UNICA y tests de exclusividad; las quick actions actuales lo evitan.
 - [CONFIRMED RISK] _schedule_async_quick_action captura self como cierre pero consulta self._selected_bot_id durante completion, por lo que la presentación puede cruzarse si la selección GUI cambia.
 - [BLOCKER] No existe evidencia runtime de una quick action migrada atravesando TaskEngine → TaskScheduler → WebChatTaskExecutor → WebChatQueueManager.
+
+## FASE 2F-8E — Technical discoveries
+
+[TESTED] TaskEngine rejects wrong, terminal and cancelled task responses by task_id; TaskScheduler preserves that identity through routing.
+
+[TESTED] WebChat response parsing requires both bot identity and ticket identity for the current ticket in deterministic evidence.
+
+[OBSERVED] TaskScheduler cancellation deliberately retains the active registration until execution_finished(); the executor cancellation request and physical completion/failure are separate lifecycle events.
+
+[TESTED] The current WebChat worker rejects duplicate queued ticket IDs and its circuit recovery emits capacity_restored.
+
+[OBSERVED] operation_id invalidation is monotonic and is checked by the QWeb JavaScript send path; a real asynchronous stale-JS race was not executed.
+
+[TESTED] Quick Action presentation identity is mutable: changing _selected_bot_id after enqueue changes the callback's emitted bot identity.
+
+[OBSERVED] ScopeLock, Authorization and TaskEngine use different clock injection models; TaskScheduler delegates deadline ownership to TaskEngine.
+
+[UNKNOWN] RuntimeObservation does not currently expose Scheduler resource ownership, registrations, resume requests or priority streak, so those facts cannot yet be presented as Supervisor evidence.
