@@ -821,6 +821,7 @@ class _QueueWorker(QObject):
 
         # Authority claim precedes the legacy local guard. If the local guard
         # cannot be acquired, the claim is released before any physical send.
+        # La espera ocurre únicamente en el worker, nunca en la GUI.
         acquired = _WEB_MESA_UNICA.acquire(
             timeout=max(1.0, self.timeout_ms / 1000)
         )
