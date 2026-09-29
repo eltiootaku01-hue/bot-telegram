@@ -67,7 +67,6 @@ from PySide6.QtWidgets import (
 from bot_ia.core.application import ApplicationRequest
 from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.web_queue import WebQueueManager
-from bot_ia.core.physical_resource_authority import PhysicalWebChatResourceAuthority
 from bot_ia.core.web_physical_identity import (
     WebPhysicalIdentityConfigError,
     WebPhysicalIdentityRegistry,
@@ -2916,7 +2915,7 @@ class CommandCenterWindow(QMainWindow):
         self._web_physical_identity_registry = None
         self._web_physical_identity = None
         self._web_physical_identity_error = ""
-        self._web_physical_authority = PhysicalWebChatResourceAuthority()
+        self._web_physical_authority = self.runtime.physical_web_authority
         try:
             self._web_physical_identity_registry = WebPhysicalIdentityRegistry.from_toml(
                 ROOT / "config" / "runtime.toml"
@@ -2929,6 +2928,9 @@ class CommandCenterWindow(QMainWindow):
         self._web_chat_process: subprocess.Popen[str] | None = None
         self._async_orchestrator: TaskOrchestrator | None = None
         self._async_web_queue: WebQueueManager | None = None
+        self._async_original_web_worker = None
+        self._playwright_physical_adapters: dict[str, object] = {}
+        self._playwright_operation_sequence = 0
         self._dialogs: list[QWidget] = []
         self.config_manager = DynamicConfigManager(
             ROOT,
@@ -4372,14 +4374,88 @@ class CommandCenterWindow(QMainWindow):
         orchestrator: TaskOrchestrator,
         web_queue: WebQueueManager,
     ) -> None:
+        """Inject the application-scoped physical Authority into Playwright."""
+        from services.playwright_physical_resource_adapter import (
+            PlaywrightPhysicalResourceAdapter,
+        )
+
         self._async_orchestrator = orchestrator
         self._async_web_queue = web_queue
+        self._async_original_web_worker = getattr(
+            orchestrator,
+            "web_worker",
+            None,
+        )
+        self._playwright_physical_adapters = {}
+
+        registry = self._web_physical_identity_registry
+        if registry is not None:
+            for spec in MATRIX_BOT_SPECS:
+                if not spec.web_identity_binding:
+                    continue
+                try:
+                    identity = registry.resolve_binding(
+                        spec.web_identity_binding,
+                        expected_provider=spec.default_provider,
+                        expected_logical_actor=spec.bot_id,
+                    )
+                    adapter = PlaywrightPhysicalResourceAdapter.from_identity(
+                        self.runtime.physical_web_authority,
+                        identity,
+                        web_queue,
+                        requester_identity=(
+                            f"playwright-worker:{spec.bot_id}"
+                        ),
+                    )
+                except Exception as error:
+                    self._log_error(
+                        f"Playwright physical identity {spec.bot_id}",
+                        error,
+                    )
+                    continue
+                self._playwright_physical_adapters[spec.bot_id] = adapter
+
+        orchestrator.web_worker = self._playwright_web_worker
+
+    async def _playwright_web_worker(
+        self,
+        waitress_id: str,
+        payload: dict,
+    ) -> str:
+        adapter = self._playwright_physical_adapters.get(waitress_id)
+        if adapter is None:
+            raise RuntimeError(
+                f"PLAYWRIGHT_PHYSICAL_IDENTITY_UNAVAILABLE:{waitress_id}"
+            )
+
+        self._playwright_operation_sequence += 1
+        sequence = self._playwright_operation_sequence
+        configured_ticket_id = str(
+            payload.get("ticket_id", "")
+        ).strip()
+        ticket_id = configured_ticket_id or (
+            f"playwright-gui-ticket-{sequence}"
+        )
+        operation_id = f"{ticket_id}:playwright:{sequence}"
+
+        return await adapter.execute_task(
+            waitress_id,
+            payload,
+            ticket_id=ticket_id,
+            operation_id=operation_id,
+        )
 
     async def shutdown_async_engine(self) -> None:
         orchestrator = self._async_orchestrator
         web_queue = self._async_web_queue
+        original_web_worker = self._async_original_web_worker
         self._async_orchestrator = None
         self._async_web_queue = None
+        self._async_original_web_worker = None
+
+        if orchestrator is not None and original_web_worker is not None:
+            orchestrator.web_worker = original_web_worker
+        self._playwright_physical_adapters = {}
 
         if orchestrator is not None:
             try:
