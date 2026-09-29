@@ -145,3 +145,18 @@ La evidencia actual no justifica tratar GUI TaskOrchestrator como runtime WebCha
 - [PROPOSED] La retirada de TaskOrchestrator sólo podrá ocurrir después de demostrar quick actions, cancelación, fallback, WebChat, Taberna, sesión y CI preservados.
 - [DECIDED] TaskOrchestrator sigue ACTIVE / MIGRATION PENDING. No es legacy, no fue modificado y no fue eliminado.
 - [DECIDED] Esta fase es diseño solamente: no inicia migración física ni FASE 2F-9.
+
+
+## FASE 2F-8D — MIG-0 Capability Verification
+
+- Estado: [PARTIAL]
+- HEAD base: 54ea12ac70a0e9a9ebf461cb691584ee544231cd.
+- [OBSERVED] Se verificaron los cuatro protected runtime hashes sin cambios.
+- [OBSERVED] Se inventariaron 40 capacidades críticas Playwright/QWebEngine y 20 gates MIG-3.
+- [UNKNOWN] La paridad funcional/runtime Playwright ↔ QWebEngine sigue abierta en detección de respuestas, selectors, send protocol, storage/login, counters/soft reset, timeouts, provider behavior y failure propagation.
+- [OBSERVED] Quick actions actuales: chocolatada = LOCAL; trivia = WEBCHAT mediante TaskOrchestrator, sin TaskEngine/Scheduler.
+- [OBSERVED] TaskOrchestrator sigue ACTIVE / MIGRATION PENDING; no fue modificado ni eliminado.
+- [CONFIRMED RISK] El callback de quick action lee _selected_bot_id al completar, en vez de capturar la identidad encolada.
+- [BLOCKER] Quick actions WebChat actuales no adquieren WEB_MESA_UNICA mediante TaskScheduler.
+- No se añadieron tests de migración ni se ejecutó WebChat real.
+- MIG-1..MIG-6: NO iniciados.
