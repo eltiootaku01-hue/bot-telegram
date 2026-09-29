@@ -21,6 +21,7 @@ from bot_ia.core.session_store import PersistentSessionStore
 from bot_ia.core.task_engine import TaskEngine
 from bot_ia.core.task_scheduler import TaskScheduler
 from bot_ia.core.physical_resource_authority import PhysicalWebChatResourceAuthority
+from bot_ia.core.physical_lifecycle_reconciliation import PhysicalLifecycleReconciliation
 from bot_ia.librarian import EntityIndex, SourceInventory
 from bot_ia.librarian.models import CatalogEntry
 from bot_ia.memory import MemoryStore
@@ -50,6 +51,11 @@ class RuntimeComponents:
     task_scheduler: TaskScheduler | None = field(default=None, repr=False, compare=False)
     physical_web_authority: PhysicalWebChatResourceAuthority = field(
         default_factory=PhysicalWebChatResourceAuthority,
+        repr=False,
+        compare=False,
+    )
+    physical_lifecycle_reconciliation: PhysicalLifecycleReconciliation | None = field(
+        default=None,
         repr=False,
         compare=False,
     )
@@ -178,6 +184,12 @@ def build_runtime(project_root: Path, *, key_loader=None, transports=None) -> Ru
     task_engine = TaskEngine()
     task_scheduler = TaskScheduler(task_engine)
     physical_web_authority = PhysicalWebChatResourceAuthority()
+    physical_lifecycle_reconciliation = PhysicalLifecycleReconciliation(
+        physical_web_authority
+    )
+    task_engine.add_lifecycle_listener(
+        physical_lifecycle_reconciliation.observe_logical_task
+    )
     return RuntimeComponents(
         config,
         registry,
@@ -190,4 +202,5 @@ def build_runtime(project_root: Path, *, key_loader=None, transports=None) -> Ru
         task_engine=task_engine,
         task_scheduler=task_scheduler,
         physical_web_authority=physical_web_authority,
+        physical_lifecycle_reconciliation=physical_lifecycle_reconciliation,
     )
