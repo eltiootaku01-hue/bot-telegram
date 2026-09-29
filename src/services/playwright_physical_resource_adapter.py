@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 
 from bot_ia.core.physical_resource_authority import (
@@ -182,6 +183,90 @@ class PlaywrightPhysicalResourceAdapter:
         """Start Playwright only after authentication is verified."""
         self._require_verified_authentication()
         await self._backend.init_browser_pool()
+
+    def release_claim(
+        self,
+        claim: PhysicalResourceClaim,
+        *,
+        evidence: str,
+    ) -> PhysicalResourceSnapshot:
+        """Release a claim that never reached physical execution."""
+        if not evidence.strip():
+            raise PlaywrightPhysicalResourceError(
+                "CLAIM_RELEASE_EVIDENCE_REQUIRED"
+            )
+        return self._authority.release(claim)
+
+    async def execute_task(
+        self,
+        waitress_id: str,
+        payload: dict,
+        *,
+        ticket_id: str,
+        operation_id: str,
+    ) -> str:
+        """Run the existing Playwright backend behind the shared Authority."""
+        claim = self.claim_resource()
+        execution: PlaywrightPhysicalExecution | None = None
+
+        try:
+            execution = self.begin_execution(
+                claim,
+                ticket_id=ticket_id,
+                operation_id=operation_id,
+                waitress_id=waitress_id,
+            )
+            response = await self._backend.process_task(
+                waitress_id,
+                payload,
+            )
+            self._require_current_execution(execution)
+        except asyncio.CancelledError:
+            if execution is not None:
+                try:
+                    self.quarantine_resource(
+                        execution,
+                        reason="PLAYWRIGHT_EXECUTION_CANCELLED",
+                        evidence="physical termination not confirmed",
+                    )
+                except Exception:
+                    pass
+            else:
+                try:
+                    self.release_claim(
+                        claim,
+                        evidence="cancelled before physical execution",
+                    )
+                except Exception:
+                    pass
+            raise
+        except Exception as error:
+            if execution is not None:
+                try:
+                    self.quarantine_resource(
+                        execution,
+                        reason="PLAYWRIGHT_TASK_EXECUTION_FAILURE",
+                        evidence=(
+                            f"{type(error).__name__}: {error}"
+                        ),
+                    )
+                except Exception:
+                    pass
+            else:
+                try:
+                    self.release_claim(
+                        claim,
+                        evidence="task failed before physical execution",
+                    )
+                except Exception:
+                    pass
+            raise
+
+        self.confirm_termination(
+            execution,
+            evidence="PLAYWRIGHT_TASK_COMPLETED",
+        )
+        return str(response)
 
     def resolve_resource(self) -> PhysicalResourceDescriptor:
         return self._descriptor
