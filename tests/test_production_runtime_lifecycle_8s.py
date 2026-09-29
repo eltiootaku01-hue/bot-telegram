@@ -603,10 +603,7 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
             second.physical_web_authority.release(second_claim)
             first.physical_web_authority.release(claim)
         finally:
-            try:
-                first.memory_store.close()
-            except Exception:
-                pass
+            first.memory_store.close()
             if second is not None:
                 second.memory_store.close()
 
