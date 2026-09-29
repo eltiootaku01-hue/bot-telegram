@@ -23,7 +23,10 @@ from bot_ia.core.physical_resource_authority import (
     PhysicalWebChatResourceAuthority,
 )
 from bot_ia.core.task_engine import TaskState
-from bot_ia.core.task_scheduler import TaskRoute
+from bot_ia.core.task_scheduler import (
+    TaskRoute,
+    WebChatTaskExecutor,
+)
 from bot_ia.core.web_physical_identity import (
     AuthenticationState,
     WebPhysicalIdentityRegistry,
@@ -35,7 +38,6 @@ from services.playwright_physical_resource_adapter import (
 )
 from services.qweb_physical_resource_adapter import QWebPhysicalResourceAdapter
 from services.web_queue import WebChatQueueManager
-from services.web_chat_task_executor import WebChatTaskExecutor
 
 from test_cross_route_physical_resource_exclusivity import (
     CrossRoutePlaywrightWorker,
