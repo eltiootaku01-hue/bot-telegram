@@ -247,6 +247,20 @@ class Mig3WebQueueProtocolTests(unittest.TestCase):
         manager.response_observed_requested = SignalProbe()
         manager.terminated_requested = SignalProbe()
         manager.MAX_RESPONSE_PARSE_CHARS = 20_000
+        manager._extract_terminated = (
+            lambda raw_text, ticket: WebChatQueueManager._extract_terminated(
+                manager,
+                raw_text,
+                ticket,
+            )
+        )
+        manager._extract_response_text = (
+            lambda raw_text, ticket: WebChatQueueManager._extract_response_text(
+                manager,
+                raw_text,
+                ticket,
+            )
+        )
 
         self.assertFalse(
             WebChatQueueManager._consume_response(
