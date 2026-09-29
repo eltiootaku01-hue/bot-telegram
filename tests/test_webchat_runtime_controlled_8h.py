@@ -396,7 +396,11 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
             "qweb-session-A",
             "controlled://webchat",
         )
-        adapter = QWebPhysicalResourceAdapter(authority, descriptor)
+        adapter = QWebPhysicalResourceAdapter(
+            authority,
+            descriptor,
+            authentication_state=AuthenticationState.VERIFIED,
+        )
 
         old_claim = adapter.claim_resource()
         old = adapter.begin_execution(
