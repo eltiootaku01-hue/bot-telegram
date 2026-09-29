@@ -3655,8 +3655,10 @@ class CommandCenterWindow(QMainWindow):
                     expected_provider=profile_spec.default_provider,
                     expected_logical_actor=profile_spec.bot_id,
                 ).canonical_interaction_surface
-        except Exception:
-            pass
+        except (OSError, ValueError, StopIteration) as error:
+            self._web_physical_identity_error = (
+                f"{type(error).__name__}: {error}"
+            )
         self.web_url = QLineEdit(declared_web_url)
         self.web_url.setPlaceholderText(
             "https://tu-chat-web.example/"
