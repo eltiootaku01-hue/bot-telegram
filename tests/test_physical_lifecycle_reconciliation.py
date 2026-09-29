@@ -109,12 +109,18 @@ class FakePhysicalAdapter:
             evidence=evidence,
         )
 
-    @staticmethod
-    def _claim(execution: FakeExecution) -> PhysicalResourceClaim:
+    def _claim(self, execution: FakeExecution) -> PhysicalResourceClaim:
+        snapshot = self.authority.snapshot(
+            execution.physical_resource_id
+        )
+        if snapshot.claim_id != execution.claim_id:
+            raise RuntimeError("stale fake execution")
+        if snapshot.owner is None:
+            raise RuntimeError("fake execution has no current owner")
         return PhysicalResourceClaim(
             physical_resource_id=execution.physical_resource_id,
             claim_id=execution.claim_id,
-            owner="reconciliation-test",
+            owner=snapshot.owner,
             execution_generation=execution.execution_generation,
         )
 
