@@ -286,3 +286,17 @@ La demostración causal de una transición futura requerirá evidencia producida
 
 - [INFERRED] During a temporary migration, a naive dual wiring could send one quick action to both runtimes because both are independently operational.
 - [DECIDED] The migration contract therefore requires one routing decision per request, one TaskEngine task_id for the target path, and no shadow execution.
+
+
+### FASE 2F-8D — MIG-0 Capability Verification
+
+- [OBSERVED] Playwright WebQueueManager crea seis páginas en un BrowserContext, una por waitress_id, y mantiene interaction_counters por waitress.
+- [OBSERVED] Playwright define response/page/navigation timeouts de 10/15/20 segundos y soft reset cada 20 interacciones.
+- [OBSERVED] WebChatQueueManager usa QWebEngineView/QWebChannel/MutationObserver, ticket timeout de 45 s por defecto, operation_id, cancellation y WEB_MESA_UNICA.
+- [OBSERVED] WebChatQueueManager usa QWebEngineProfile persistente con storage/cache y ForcePersistentCookies; el Playwright core queue crea un BrowserContext nuevo y no recibe storage_state/perfil GUI.
+- [UNKNOWN] Continuidad de login/cookies/storage entre ambos runtimes.
+- [UNKNOWN] Equivalencia funcional de selectors, send protocol, response detection y provider-specific behavior.
+- [UNKNOWN] Equivalencia de interaction counters y soft reset.
+- [OBSERVED] TaskScheduler tiene WEB_MESA_UNICA y tests de exclusividad; las quick actions actuales lo evitan.
+- [CONFIRMED RISK] _schedule_async_quick_action captura self como cierre pero consulta self._selected_bot_id durante completion, por lo que la presentación puede cruzarse si la selección GUI cambia.
+- [BLOCKER] No existe evidencia runtime de una quick action migrada atravesando TaskEngine → TaskScheduler → WebChatTaskExecutor → WebChatQueueManager.
