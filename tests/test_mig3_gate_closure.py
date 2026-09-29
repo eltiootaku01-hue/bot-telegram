@@ -290,6 +290,7 @@ class Mig3WebQueueProtocolTests(unittest.TestCase):
             "hola",
         )
 
+        self.worker.is_busy = True
         self.worker.enqueue(ticket)
         self.worker.enqueue(ticket)
 
