@@ -103,6 +103,17 @@ class QWebPhysicalResourceAdapter:
             self._requester_identity,
         )
 
+    def release_claim(
+        self,
+        claim: PhysicalResourceClaim,
+        *,
+        evidence: str,
+    ) -> PhysicalResourceSnapshot:
+        """Release a claim that never reached physical execution."""
+        if not evidence.strip():
+            raise QWebPhysicalResourceError("CLAIM_RELEASE_EVIDENCE_REQUIRED")
+        return self._authority.release(claim)
+
     def begin_execution(
         self,
         claim: PhysicalResourceClaim,
