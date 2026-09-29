@@ -303,3 +303,15 @@ WebChatQueueManager
 - [DECIDED] Authorization y ScopeLock, si se integran físicamente después, deben referirse al mismo task_id y no a waitress_id/session_id/ticket_id/operation_id.
 - [UNKNOWN] El handoff físico Supervisor → TaskEngine/Scheduler continúa abierto.
 - [DECIDED] MIG-0 no implementa enforcement físico ni conecta Supervisor con ejecución.
+
+## FASE 2F-8E — MIG-3 evidence boundary
+
+[DECIDED] RuntimeObservation remains read-only. MIG-3 tests may exercise TaskEngine/Scheduler with fake executors, but Supervisor is not connected to physical execution.
+
+[OBSERVED] Scheduler observation currently contains pending_task_ids and active_task_ids only. Resource ownership, registrations, resume requests and priority streak remain internal.
+
+[DECIDED] MIG-3 does not promote Scheduler internals to public Supervisor API.
+
+[TESTED] Identity/late-response/cancellation/timeout evidence uses the existing TaskEngine and TaskScheduler authorities rather than introducing a second lifecycle.
+
+[UNKNOWN] A future evidence contract for WEB_MESA_UNICA ownership and starvation/wake semantics still requires a safe observation design or runtime-safe provider harness.
