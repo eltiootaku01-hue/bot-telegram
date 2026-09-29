@@ -159,3 +159,20 @@
 - TaskEngine/TaskScheduler/WebChatQueueManager/WebQueueManager/TaskOrchestrator/WaitressSessionManager/AuthorityCore: NO modificados.
 - Tests runtime nuevos: NO.
 - FASE 2F-9: NO iniciada.
+
+
+## FASE 2F-8D — MIG-0 Capability Verification & Migration Gates
+
+- Estado: [PARTIAL]
+- HEAD base: 54ea12ac70a0e9a9ebf461cb691584ee544231cd.
+- Alcance: capability inventory, static verification, existing-test inventory, MIG-3 gate definitions and migration blockers.
+- [OBSERVED] 40 migration-critical capabilities were inventoried.
+- [OBSERVED] 20 MIG-3 gates were defined; all remain UNKNOWN until appropriate future runtime evidence is collected.
+- [OBSERVED] Quick actions: chocolatada local; trivia WebChat via TaskOrchestrator.
+- [CONFIRMED RISK] Quick-action callback depends on mutable _selected_bot_id at completion.
+- [BLOCKER] Current WebChat quick actions bypass TaskScheduler/WEB_MESA_UNICA.
+- Protected runtimes: NO modifications.
+- Migration implementation: NO.
+- Browser/WebChat runtime execution: NO.
+- Cookies/storage_state/profiles/credentials copied: NO.
+- MIG-1..MIG-6: NO.
