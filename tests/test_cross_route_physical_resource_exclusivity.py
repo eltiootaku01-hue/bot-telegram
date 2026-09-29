@@ -843,6 +843,22 @@ identity_id = "shared"
                 path.read_text(encoding="utf-8"),
             )
 
+            controlled_descriptor = verified_cari.descriptor
+            registered_controlled_descriptor = self.authority.resolve_resource(
+                provider=controlled_descriptor.provider,
+                authenticated_account_identity=(
+                    controlled_descriptor.authenticated_account_identity
+                ),
+                session_identity=controlled_descriptor.session_identity,
+                canonical_interaction_surface=(
+                    controlled_descriptor.canonical_interaction_surface
+                ),
+            )
+            self.assertEqual(
+                controlled_descriptor,
+                registered_controlled_descriptor,
+            )
+
             qweb = QWebPhysicalResourceAdapter(
                 self.authority,
                 verified_cari.descriptor,
@@ -977,7 +993,7 @@ identity_id = "shared"
                 or 0
             )
             self.assertEqual(1, qweb_count)
-            self.qweb.confirm_termination(
+            qweb.confirm_termination(
                 qweb_execution,
                 evidence="x20 qweb termination",
             )
