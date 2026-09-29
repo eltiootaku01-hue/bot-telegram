@@ -229,6 +229,26 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                 record.reconciliation_status,
             )
 
+            completed = runtime.task_engine.complete(task.task_id)
+            self.assertEqual(TaskState.COMPLETED, completed.state)
+            completed_busy = (
+                runtime.physical_lifecycle_reconciliation.get_reconciliation(
+                    task.task_id
+                )
+            )
+            self.assertEqual(
+                TaskState.COMPLETED,
+                completed_busy.logical_state,
+            )
+            self.assertEqual(
+                PhysicalResourceState.BUSY,
+                completed_busy.physical_state,
+            )
+            self.assertEqual(
+                ReconciliationStatus.DIVERGED,
+                completed_busy.reconciliation_status,
+            )
+
             terminated = runtime.physical_lifecycle_reconciliation.record_termination(
                 task.task_id,
                 evidence="#terminado controlled QWeb",
@@ -236,6 +256,10 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,
                 terminated.physical_state,
+            )
+            self.assertEqual(
+                TaskState.COMPLETED,
+                terminated.logical_state,
             )
             self.assertEqual(
                 ReconciliationStatus.ALIGNED,
