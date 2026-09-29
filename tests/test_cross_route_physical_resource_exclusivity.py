@@ -753,6 +753,12 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
             AuthenticationState.UNKNOWN,
             production_identity.authentication_state,
         )
+        self.authority.resolve_resource(
+            production_identity.descriptor.provider,
+            production_identity.descriptor.principal_identity,
+            production_identity.descriptor.provider_session_identity,
+            production_identity.descriptor.canonical_interaction_surface,
+        )
         production_qweb = QWebPhysicalResourceAdapter(
             self.authority,
             production_identity.descriptor,
@@ -1060,7 +1066,7 @@ class _CrossRouteQWebWrapper:
         self.fixture = None
 
 
-class AsyncCountingBackend:
+class AsyncCountingBackend(WebQueueManager):
     """Real async Playwright backend used only by the X20 test harness."""
 
     def __init__(self, page) -> None:
@@ -1196,16 +1202,8 @@ class CrossRoutePlaywrightWorker:
         if self.loop is None or self.thread is None:
             return
         if not self.loop.is_closed():
-            future = asyncio.run_coroutine_threadsafe(
-                self._request_loop_stop(),
-                self.loop,
-            )
-            future.result(timeout=15.0)
+            self.loop.call_soon_threadsafe(self.loop.stop)
         self.thread.join(timeout=15.0)
-
-    async def _request_loop_stop(self) -> None:
-        if self.loop is not None:
-            self.loop.stop()
 
     async def _shutdown(self) -> None:
         if self._context is not None:
