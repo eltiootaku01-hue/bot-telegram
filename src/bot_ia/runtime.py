@@ -20,6 +20,7 @@ from bot_ia.core.router import Router
 from bot_ia.core.session_store import PersistentSessionStore
 from bot_ia.core.task_engine import TaskEngine
 from bot_ia.core.task_scheduler import TaskScheduler
+from bot_ia.core.physical_resource_authority import PhysicalWebChatResourceAuthority
 from bot_ia.librarian import EntityIndex, SourceInventory
 from bot_ia.librarian.models import CatalogEntry
 from bot_ia.memory import MemoryStore
@@ -47,6 +48,11 @@ class RuntimeComponents:
     _runtime_lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
     task_engine: TaskEngine | None = field(default=None, repr=False, compare=False)
     task_scheduler: TaskScheduler | None = field(default=None, repr=False, compare=False)
+    physical_web_authority: PhysicalWebChatResourceAuthority = field(
+        default_factory=PhysicalWebChatResourceAuthority,
+        repr=False,
+        compare=False,
+    )
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "_universe_map", {item.definition.universe_id: item for item in self.universes})
@@ -171,6 +177,7 @@ def build_runtime(project_root: Path, *, key_loader=None, transports=None) -> Ru
     memory_store = MemoryStore(project_root, universe_registry)
     task_engine = TaskEngine()
     task_scheduler = TaskScheduler(task_engine)
+    physical_web_authority = PhysicalWebChatResourceAuthority()
     return RuntimeComponents(
         config,
         registry,
@@ -182,4 +189,5 @@ def build_runtime(project_root: Path, *, key_loader=None, transports=None) -> Ru
         project_root,
         task_engine=task_engine,
         task_scheduler=task_scheduler,
+        physical_web_authority=physical_web_authority,
     )
