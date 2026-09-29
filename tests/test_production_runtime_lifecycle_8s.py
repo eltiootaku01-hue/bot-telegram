@@ -205,7 +205,7 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                 "webchat",
                 task_id="s03-qweb",
             )
-            runtime.task_engine.start_task(task.task_id)
+            task = runtime.task_engine.start_task(task.task_id)
             self.assertTrue(
                 fixture.wait_until(lambda: fixture.qweb_loaded)
             )
@@ -312,13 +312,14 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                 authentication_state=AuthenticationState.VERIFIED,
                 requester_identity="s05-qweb",
             )
+            now = datetime.now(timezone.utc)
             task = runtime.task_engine.create_task(
                 "s05-user",
                 "webchat",
                 task_id="s05-timeout",
-                deadline=datetime.now(timezone.utc) - timedelta(seconds=1),
+                deadline=now + timedelta(seconds=1),
             )
-            runtime.task_engine.start_task(task.task_id)
+            task = runtime.task_engine.start_task(task.task_id)
             claim = adapter.claim_resource()
             execution = adapter.begin_execution(
                 claim,
@@ -330,7 +331,9 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                 adapter,
                 execution,
             )
-            runtime.task_engine.check_deadlines()
+            runtime.task_engine.check_deadlines(
+                now=now + timedelta(seconds=2)
+            )
             record = runtime.physical_lifecycle_reconciliation.get_reconciliation(
                 task.task_id
             )
@@ -454,8 +457,8 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
             worker.start()
             descriptor = runtime.physical_web_authority.resolve_resource(
                 "test",
-                "shared-s08-account",
-                "shared-s08-session",
+                "test-principal",
+                "test-session",
                 fixture.url,
             )
             qweb = QWebPhysicalResourceAdapter(
@@ -590,14 +593,24 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                 first.physical_web_authority,
                 second.physical_web_authority,
             )
+            second_descriptor = second.physical_web_authority.resolve_resource(
+                descriptor.provider,
+                descriptor.authenticated_account_identity,
+                descriptor.session_identity,
+                descriptor.canonical_interaction_surface,
+            )
+            self.assertEqual(
+                descriptor.physical_resource_id,
+                second_descriptor.physical_resource_id,
+            )
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,
                 second.physical_web_authority.snapshot(
-                    descriptor.physical_resource_id
+                    second_descriptor.physical_resource_id
                 ).state,
             )
             second_claim = second.physical_web_authority.claim(
-                descriptor.physical_resource_id,
+                second_descriptor.physical_resource_id,
                 "restart-owner-new-runtime",
             )
             second.physical_web_authority.release(second_claim)
