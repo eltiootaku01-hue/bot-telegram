@@ -293,3 +293,13 @@ WebChatQueueManager
 
 [DECIDED] No se crea una segunda state machine, scheduler, TaskEngine, executor físico o WebChat resource lock.
 
+
+
+### MIG-0 compatibility gates
+
+- [DECIDED] La futura quick action WebChat debe conservar un único task_id operacional generado por TaskEngine.
+- [DECIDED] La ruta objetivo debe declarar route=WEBCHAT y resource_key=WEB_MESA_UNICA antes de cualquier dispatch físico.
+- [DECIDED] RuntimeObservation sigue siendo read-only; los gates MIG-3 no pueden cerrarse mediante observación estática solamente cuando exigen comportamiento WebChat.
+- [DECIDED] Authorization y ScopeLock, si se integran físicamente después, deben referirse al mismo task_id y no a waitress_id/session_id/ticket_id/operation_id.
+- [UNKNOWN] El handoff físico Supervisor → TaskEngine/Scheduler continúa abierto.
+- [DECIDED] MIG-0 no implementa enforcement físico ni conecta Supervisor con ejecución.
