@@ -489,7 +489,7 @@ class PhysicalLifecycleReconciliation:
         logical_state: TaskState,
         physical_state: PhysicalResourceState,
     ) -> ReconciliationStatus:
-        if physical_state is PhysicalResourceState.QUARANTINED:
+        if physical_state == PhysicalResourceState.QUARANTINED:
             return ReconciliationStatus.QUARANTINED
         if physical_state in {
             PhysicalResourceState.CANCELLING,
@@ -497,38 +497,38 @@ class PhysicalLifecycleReconciliation:
         }:
             return (
                 ReconciliationStatus.CANCELLATION_PENDING
-                if physical_state is PhysicalResourceState.CANCELLING
+                if physical_state == PhysicalResourceState.CANCELLING
                 else ReconciliationStatus.RELEASE_PENDING
             )
         if logical_state in {
             TaskState.TIMED_OUT,
             TaskState.CANCELLING,
         }:
-            if physical_state is PhysicalResourceState.AVAILABLE:
+            if physical_state == PhysicalResourceState.AVAILABLE:
                 return ReconciliationStatus.DIVERGED
             return ReconciliationStatus.TERMINATION_PENDING
-        if logical_state is TaskState.COMPLETED:
+        if logical_state == TaskState.COMPLETED:
             return (
                 ReconciliationStatus.ALIGNED
-                if physical_state is PhysicalResourceState.AVAILABLE
+                if physical_state == PhysicalResourceState.AVAILABLE
                 else ReconciliationStatus.DIVERGED
             )
-        if logical_state is TaskState.CANCELLED:
+        if logical_state == TaskState.CANCELLED:
             return (
                 ReconciliationStatus.ALIGNED
-                if physical_state is PhysicalResourceState.AVAILABLE
+                if physical_state == PhysicalResourceState.AVAILABLE
                 else ReconciliationStatus.DIVERGED
             )
-        if logical_state is TaskState.FAILED:
+        if logical_state == TaskState.FAILED:
             return (
                 ReconciliationStatus.ALIGNED
-                if physical_state is PhysicalResourceState.AVAILABLE
+                if physical_state == PhysicalResourceState.AVAILABLE
                 else ReconciliationStatus.DIVERGED
             )
-        if logical_state is TaskState.PENDING:
+        if logical_state == TaskState.PENDING:
             return (
                 ReconciliationStatus.ALIGNED
-                if physical_state is PhysicalResourceState.AVAILABLE
+                if physical_state == PhysicalResourceState.AVAILABLE
                 else ReconciliationStatus.DIVERGED
             )
         if logical_state in {
