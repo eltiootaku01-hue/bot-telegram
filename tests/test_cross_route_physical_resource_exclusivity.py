@@ -511,7 +511,7 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
             )
         )
         with self.assertRaises(PhysicalResourceOwnershipError):
-            qweb.confirm_termination(
+            self.qweb.confirm_termination(
                 old_execution,
                 evidence="x09 stale callback release",
             )
@@ -947,7 +947,7 @@ identity_id = "shared"
             self.assertEqual(
                 PhysicalResourceState.BUSY,
                 self.authority.snapshot(
-                    self.descriptor.physical_resource_id
+                    x20_descriptor.physical_resource_id
                 ).state,
             )
 
@@ -996,7 +996,7 @@ identity_id = "shared"
             self.assertEqual(
                 PhysicalResourceState.BUSY,
                 self.authority.snapshot(
-                    self.descriptor.physical_resource_id
+                    x20_descriptor.physical_resource_id
                 ).state,
             )
             self.assertFalse(
@@ -1045,7 +1045,7 @@ identity_id = "shared"
                 )
             )
             snapshot = self.authority.snapshot(
-                self.descriptor.physical_resource_id
+                x20_descriptor.physical_resource_id
             )
             self.assertEqual(
                 PhysicalResourceState.BUSY,
@@ -1064,7 +1064,7 @@ identity_id = "shared"
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,
                 self.authority.snapshot(
-                    self.descriptor.physical_resource_id
+                    x20_descriptor.physical_resource_id
                 ).state,
             )
         finally:
