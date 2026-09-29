@@ -176,3 +176,23 @@
 - Browser/WebChat runtime execution: NO.
 - Cookies/storage_state/profiles/credentials copied: NO.
 - MIG-1..MIG-6: NO.
+
+## FASE 2F-8E — MIG-3 Gate Closure
+
+- Estado: [PARTIAL]
+- Branch: feature/supervisor-runtime-observation.
+- Base HEAD verified: 8e58415f96757807168141e503e126e409178108.
+- Test implementation HEAD before memory-only changes: 5fd323ec5026d7221309987a0a9a9a0a2920bfe6.
+- Alcance: deterministic MIG-3 evidence only; no physical migration.
+- Tests created: tests/test_mig3_gate_closure.py.
+- [TESTED] Evidence added for identity, late responses, cancellation, timeout/deadline, failure propagation, resource arbitration, response correlation, operation invalidation, breaker recovery and duplicate ticket protection.
+- [TESTED] Quick Action presentation-identity bug reproduced.
+- [OBSERVED] F-007 clock policies and F-008 Scheduler observation limits documented.
+- [UNKNOWN] Real provider/browser/session/storage parity remains open.
+- Repair attempts: 3 of 3.
+- CI final: workflow 36515839650, Ubuntu/Windows success, 728 passed.
+- TaskEngine/TaskScheduler/WebChatQueueManager/AuthorityCore: NO modifications.
+- TaskOrchestrator/WebQueueManager/CommandCenterWindow/WaitressSessionManager: NO modifications.
+- Browser/WebChat real interaction: NO.
+- Cookies/profiles/credentials moved: NO.
+- MIG-1..MIG-6: NO.
