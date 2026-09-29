@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 import copy
 from datetime import datetime, timezone
 from enum import Enum
+import logging
 import threading
 from typing import Callable, Mapping
 from uuid import uuid4
@@ -88,10 +89,41 @@ class TaskEngine:
         TaskState.INTERRUPTED,
     })
 
-    def __init__(self, *, now_provider: Callable[[], datetime] | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        now_provider: Callable[[], datetime] | None = None,
+        lifecycle_listeners: tuple[Callable[[Task], None], ...] = (),
+    ) -> None:
         self._now_provider = now_provider or (lambda: datetime.now(timezone.utc))
         self._tasks: dict[str, Task] = {}
+        self._lifecycle_listeners: list[Callable[[Task], None]] = list(
+            lifecycle_listeners
+        )
         self._lock = threading.RLock()
+
+    def add_lifecycle_listener(
+        self,
+        listener: Callable[[Task], None],
+    ) -> None:
+        """Register a read-only listener for logical lifecycle transitions."""
+        if not callable(listener):
+            raise TypeError("listener must be callable")
+        with self._lock:
+            if listener not in self._lifecycle_listeners:
+                self._lifecycle_listeners.append(listener)
+
+    def _notify_lifecycle(self, task: Task) -> None:
+        with self._lock:
+            listeners = tuple(self._lifecycle_listeners)
+        for listener in listeners:
+            try:
+                listener(copy.deepcopy(task))
+            except Exception:
+                logging.exception(
+                    "Task lifecycle listener failed for %s",
+                    task.task_id,
+                )
 
     def _now(self) -> datetime:
         value = self._now_provider()
@@ -248,21 +280,33 @@ class TaskEngine:
                 raise TaskTransitionError(f"cannot cancel task in state {task.state.value}")
             task.state = TaskState.CANCELLING
             task.wait_reason = None
-            return self._snapshot_locked(task.task_id)
+            snapshot = self._snapshot_locked(task.task_id)
+        self._notify_lifecycle(snapshot)
+        return snapshot
 
     def cancel(self, task_id: str) -> Task:
         with self._lock:
             task = self._require(task_id)
             self._expire_if_needed_locked(task, self._now())
-            if task.state in self._LIVE_STATES:
+            notify_cancelling = task.state in self._LIVE_STATES
+            if notify_cancelling:
                 task.state = TaskState.CANCELLING
             if task.state is TaskState.CANCELLED:
                 return self._snapshot_locked(task.task_id)
             if task.state is not TaskState.CANCELLING:
                 raise TaskTransitionError(f"cannot cancel task in state {task.state.value}")
+            cancelling_snapshot = (
+                self._snapshot_locked(task.task_id)
+                if notify_cancelling
+                else None
+            )
             task.state = TaskState.CANCELLED
             task.wait_reason = None
-            return self._snapshot_locked(task.task_id)
+            cancelled_snapshot = self._snapshot_locked(task.task_id)
+        if cancelling_snapshot is not None:
+            self._notify_lifecycle(cancelling_snapshot)
+        self._notify_lifecycle(cancelled_snapshot)
+        return cancelled_snapshot
 
     def fail(self, task_id: str) -> Task:
         with self._lock:
@@ -271,7 +315,9 @@ class TaskEngine:
                 raise TaskTransitionError(f"cannot fail task in state {task.state.value}")
             task.state = TaskState.FAILED
             task.wait_reason = None
-            return self._snapshot_locked(task.task_id)
+            snapshot = self._snapshot_locked(task.task_id)
+        self._notify_lifecycle(snapshot)
+        return snapshot
 
     def complete(self, task_id: str) -> Task:
         with self._lock:
@@ -284,7 +330,9 @@ class TaskEngine:
             task.state = TaskState.COMPLETED
             task.wait_reason = None
             self._apply_return_policy_locked(task, now)
-            return self._snapshot_locked(task.task_id)
+            snapshot = self._snapshot_locked(task.task_id)
+        self._notify_lifecycle(snapshot)
+        return snapshot
 
     def discard(self, task_id: str) -> Task:
         with self._lock:
@@ -297,12 +345,16 @@ class TaskEngine:
             }:
                 task.state = TaskState.DISCARDED
                 task.wait_reason = None
+                snapshot = self._snapshot_locked(task.task_id)
+            elif task.state is TaskState.DISCARDED:
                 return self._snapshot_locked(task.task_id)
-            if task.state is TaskState.DISCARDED:
-                return self._snapshot_locked(task.task_id)
-            raise TaskTransitionError(f"cannot discard active task in state {task.state.value}")
+            else:
+                raise TaskTransitionError(f"cannot discard active task in state {task.state.value}")
+        self._notify_lifecycle(snapshot)
+        return snapshot
 
     def check_deadlines(self, *, now: datetime | None = None) -> tuple[str, ...]:
+        expired_snapshots = []
         with self._lock:
             current = now if now is not None else self._now()
             if current.tzinfo is None:
@@ -312,7 +364,10 @@ class TaskEngine:
             for task in self._tasks.values():
                 if self._expire_if_needed_locked(task, current):
                     expired.append(task.task_id)
-            return tuple(expired)
+                    expired_snapshots.append(self._snapshot_locked(task.task_id))
+        for snapshot in expired_snapshots:
+            self._notify_lifecycle(snapshot)
+        return tuple(expired)
 
     def can_return(self, task_id: str) -> bool:
         """Indica si un parent interrumpido sigue autorizado para volver."""
