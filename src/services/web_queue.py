@@ -831,18 +831,12 @@ class _QueueWorker(QObject):
                         claim,
                         evidence="legacy_lock_not_acquired_before_execution",
                     )
-                except Exception:
+                except Exception as error:
                     try:
-                        adapter.quarantine_resource(
-                            adapter.begin_execution(
-                                claim,
-                                ticket_id=ticket.ticket_id,
-                                operation_id=(
-                                    f"qweb-abort-{ticket.ticket_id}"
-                                ),
-                            ),
+                        adapter.quarantine_claim(
+                            claim,
                             reason="CLAIM_RELEASE_FAILED",
-                            evidence="legacy_lock_not_acquired",
+                            evidence=str(error),
                         )
                     except Exception:
                         pass
@@ -881,18 +875,12 @@ class _QueueWorker(QObject):
                         claim,
                         evidence="begin_execution_failed_before_physical_send",
                     )
-                except Exception:
+                except Exception as release_error:
                     try:
-                        adapter.quarantine_resource(
-                            adapter.begin_execution(
-                                claim,
-                                ticket_id=ticket.ticket_id,
-                                operation_id=(
-                                    f"qweb-abort-{ticket.ticket_id}"
-                                ),
-                            ),
-                            reason="BEGIN_EXECUTION_FAILURE",
-                            evidence=str(error),
+                        adapter.quarantine_claim(
+                            claim,
+                            reason="CLAIM_RELEASE_FAILED",
+                            evidence=str(release_error),
                         )
                     except Exception:
                         pass
