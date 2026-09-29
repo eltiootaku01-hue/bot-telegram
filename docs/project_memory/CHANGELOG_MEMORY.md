@@ -141,3 +141,21 @@
 - [PROPOSED] Quick actions deberán migrar a identidad `TaskEngine.task_id` si se integran al runtime común.
 - Esta fase no modifica TaskEngine, TaskScheduler, WebQueue, AuthorityCore, TaskOrchestrator ni WaitressSessionManager.
 - FASE 2F-9: NO iniciada.
+
+
+## FASE 2F-8C — Migration Design WebChat
+
+- Estado: [VERIFIED — DESIGN ONLY]
+- HEAD base: `4278255af5e98746fc34c27be023b51ccba1c873`.
+- Alcance: Migration Contract + Migration Plan para convergencia futura de WebChat.
+- [DECIDED] F-006 permanece CANDIDATE A.
+- [OBSERVED] Quick actions auditadas: `chocolatada` (local, HIGH, callback inmediato) y `trivia` (WebChat, `sunna`, MEDIUM, timeout 12 s, fallback/CircuitBreaker del TaskOrchestrator).
+- [PROPOSED] Quick actions WebChat futuras deberán usar TaskEngine-generated `task_id`, TaskScheduler y `WEB_MESA_UNICA`.
+- [PROPOSED] TaskEngine será owner de lifecycle; TaskScheduler de scheduling/resource arbitration; WebChatTaskExecutor/WebChatQueueManager de ejecución física.
+- [PROPOSED] La migración deberá preservar resultados, cancellation, fallback y sesión sin crear una segunda ruta operacional.
+- [UNKNOWN] Paridad completa Playwright ↔ QWebEngine, counters/soft reset, semántica exacta de perfiles/cookies entre runtimes y handoff físico Supervisor → TaskEngine/Scheduler requieren fases posteriores.
+- [DECIDED] No se copian cookies, storage_state, perfiles ni credenciales.
+- [DECIDED] No se implementa adapter, feature flag, routing switch ni retirada de TaskOrchestrator en esta fase.
+- TaskEngine/TaskScheduler/WebChatQueueManager/WebQueueManager/TaskOrchestrator/WaitressSessionManager/AuthorityCore: NO modificados.
+- Tests runtime nuevos: NO.
+- FASE 2F-9: NO iniciada.
