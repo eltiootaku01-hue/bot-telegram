@@ -181,16 +181,19 @@ class PhysicalWebChatResourceAuthorityTests(unittest.TestCase):
         with self.assertRaises(AttributeError):
             snapshot.state = PhysicalResourceState.BUSY
 
-    def test_t15_release_is_idempotent_without_touching_new_owner(self) -> None:
+    def test_t15_release_is_idempotent_before_a_new_claim(self) -> None:
         first = self.authority.claim(self.resource.physical_resource_id, "owner-a")
         first_release = self.authority.release(first)
-        second = self.authority.claim(self.resource.physical_resource_id, "owner-b")
         second_release = self.authority.release(first)
         self.assertEqual(first_release, second_release)
         current = self.authority.snapshot(self.resource.physical_resource_id)
-        self.assertEqual(second.claim_id, current.claim_id)
-        self.assertEqual("owner-b", current.owner)
-        self.assertEqual(PhysicalResourceState.CLAIMING, current.state)
+        self.assertEqual(PhysicalResourceState.AVAILABLE, current.state)
+        second = self.authority.claim(self.resource.physical_resource_id, "owner-b")
+        with self.assertRaises(PhysicalResourceOwnershipError):
+            self.authority.release(first)
+        self.assertEqual(second.claim_id, self.authority.snapshot(
+            self.resource.physical_resource_id
+        ).claim_id)
 
     def test_t16_stale_fencing_same_generation_operation_is_rejected(self) -> None:
         claim = self.authority.claim(self.resource.physical_resource_id, "owner-a")
