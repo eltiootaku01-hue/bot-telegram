@@ -29,6 +29,7 @@ SUPPORTED_WEB_PROVIDERS = frozenset(
         "chatgpt",
         "copilot",
         "grok_claude",
+        "test",
     }
 )
 
