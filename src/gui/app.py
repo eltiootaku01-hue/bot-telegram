@@ -2923,6 +2923,7 @@ class CommandCenterWindow(QMainWindow):
         except (OSError, ValueError, WebPhysicalIdentityConfigError) as error:
             self._web_physical_identity_error = f"{type(error).__name__}: {error}"
         self._web_queue = None
+        self._web_task_executor = None
         self._tavern: WaitressSessionManager | None = None
         self._telegram_process: subprocess.Popen[str] | None = None
         self._web_chat_process: subprocess.Popen[str] | None = None
@@ -3754,6 +3755,9 @@ class CommandCenterWindow(QMainWindow):
             from services.qweb_physical_resource_adapter import (
                 QWebPhysicalResourceAdapter,
             )
+            from services.web_chat_task_executor import (
+                WebChatTaskExecutor,
+            )
 
             profile_spec = next(
                 spec for spec in MATRIX_BOT_SPECS
@@ -3771,6 +3775,18 @@ class CommandCenterWindow(QMainWindow):
                 parent=self,
                 browser_profile=self.web_browser_profile_path,
                 physical_resource_adapter=adapter,
+                task_engine=self.runtime.task_engine,
+                physical_lifecycle_reconciliation=(
+                    self.runtime.physical_lifecycle_reconciliation
+                ),
+            )
+            self._web_task_executor = WebChatTaskExecutor(
+                self._web_queue
+            )
+            self.runtime.task_scheduler.register_executor(
+                TaskRoute.WEBCHAT,
+                self._web_task_executor,
+                default_resource_key=TaskScheduler.WEBCHAT_RESOURCE,
             )
             self._web_queue.ticket_processed.connect(
                 self._on_web_ticket_processed
@@ -3795,6 +3811,7 @@ class CommandCenterWindow(QMainWindow):
         except Exception as error:
             self._web_physical_identity = None
             self._web_queue = None
+            self._web_task_executor = None
             self._log_error("Web physical identity / WebQueue initialization", error)
             self._on_web_state(
                 "WebQueue no disponible: identidad física Web no resuelta."
@@ -6204,17 +6221,38 @@ async def _async_main(app: QApplication) -> int:
         gui_signal_emitter=window.bridge_signal_adapter,
     )
 
-    try:
-        await web_queue.init_browser_pool()
-    except Exception as error:
-        window._log_error("Playwright startup", error)
+    window.set_async_engine(orchestrator, web_queue)
+    selected_adapter = window._playwright_physical_adapters.get(
+        window._selected_bot_id
+    )
+
+    if selected_adapter is None:
         window._append_system(
-            "El motor Playwright no pudo iniciar. "
-            "La interfaz principal continúa disponible."
+            "Playwright físico no disponible: identidad Web no resuelta."
         )
     else:
-        window.set_async_engine(orchestrator, web_queue)
-        asyncio.create_task(orchestrator.start_worker())
+        from services.playwright_physical_resource_adapter import (
+            PlaywrightPhysicalResourceIdentityError,
+        )
+
+        try:
+            await selected_adapter.initialize_runtime()
+        except PlaywrightPhysicalResourceIdentityError as error:
+            window._append_system(
+                "Playwright bloqueado: authentication_state=UNKNOWN; "
+                "no se inicia el BrowserPool ni ejecución de proveedor."
+            )
+            window._log_line(
+                f"Playwright startup gated: {type(error).__name__}: {error}"
+            )
+        except Exception as error:
+            window._log_error("Playwright startup", error)
+            window._append_system(
+                "El motor Playwright no pudo iniciar. "
+                "La interfaz principal continúa disponible."
+            )
+        else:
+            asyncio.create_task(orchestrator.start_worker())
 
     await quit_event.wait()
     await window.shutdown_async_engine()
