@@ -352,18 +352,22 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
             record.execution_generation,
         )
 
-    def test_r10_physical_release_reaches_logical_reconciliation(self) -> None:
+    def test_r10_physical_release_preserves_running_divergence(self) -> None:
         task, _ = self._task()
         record = self.reconciliation.record_release(
             task.task_id,
             evidence="controlled release evidence",
         )
         self.assertEqual(
+            TaskState.RUNNING,
+            record.logical_state,
+        )
+        self.assertEqual(
             PhysicalResourceState.AVAILABLE,
             record.physical_state,
         )
         self.assertEqual(
-            ReconciliationStatus.ALIGNED,
+            ReconciliationStatus.DIVERGED,
             record.reconciliation_status,
         )
 
