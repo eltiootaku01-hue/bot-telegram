@@ -63,6 +63,12 @@ def make_legacy_manager(ticket_id: str = "ticket-a"):
     manager.queue_error = SignalProbe()
     manager.health_failure_requested = SignalProbe()
     manager.MAX_RESPONSE_PARSE_CHARS = 20_000
+    manager._extract_terminated = lambda raw, ticket: WebChatQueueManager._extract_terminated(
+        manager, raw, ticket
+    )
+    manager._extract_response_text = lambda raw, ticket: WebChatQueueManager._extract_response_text(
+        manager, raw, ticket
+    )
     return manager
 
 
