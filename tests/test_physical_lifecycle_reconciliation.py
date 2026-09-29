@@ -161,7 +161,7 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
             task_id=task_id,
             deadline=deadline,
         )
-        self.engine.start_task(task.task_id)
+        task = self.engine.start_task(task.task_id)
         claim = self.authority.claim(
             self.descriptor.physical_resource_id,
             f"owner-{task_id}",
@@ -398,6 +398,22 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
             ReconciliationStatus.ALIGNED,
             busy.reconciliation_status,
         )
+        completed = self.engine.complete(task.task_id)
+        self.assertEqual(TaskState.COMPLETED, completed.state)
+        completed_busy = self.reconciliation.get_reconciliation(task.task_id)
+        self.assertEqual(
+            TaskState.COMPLETED,
+            completed_busy.logical_state,
+        )
+        self.assertEqual(
+            PhysicalResourceState.BUSY,
+            completed_busy.physical_state,
+        )
+        self.assertEqual(
+            ReconciliationStatus.DIVERGED,
+            completed_busy.reconciliation_status,
+        )
+
         available = self.reconciliation.record_termination(
             task.task_id,
             evidence="controlled semantic termination",
@@ -407,23 +423,12 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
             available.physical_state,
         )
         self.assertEqual(
-            ReconciliationStatus.DIVERGED,
-            available.reconciliation_status,
-        )
-
-        self.engine.complete(task.task_id)
-        completed = self.reconciliation.get_reconciliation(task.task_id)
-        self.assertEqual(
             TaskState.COMPLETED,
-            completed.logical_state,
-        )
-        self.assertEqual(
-            PhysicalResourceState.AVAILABLE,
-            completed.physical_state,
+            available.logical_state,
         )
         self.assertEqual(
             ReconciliationStatus.ALIGNED,
-            completed.reconciliation_status,
+            available.reconciliation_status,
         )
 
     def test_r11_backend_failure_converges_to_quarantine(self) -> None:
@@ -662,11 +667,25 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
                     lambda adapter, _backend, _page: adapter.claim_resource()
                 )
 
-            self.reconciliation.record_termination(
+            completed_a = self.engine.complete(task_a.task_id)
+            self.assertEqual(TaskState.COMPLETED, completed_a.state)
+            completed_a_record = self.reconciliation.get_reconciliation(task_a.task_id)
+            self.assertEqual(
+                PhysicalResourceState.BUSY,
+                completed_a_record.physical_state,
+            )
+            self.assertEqual(
+                ReconciliationStatus.DIVERGED,
+                completed_a_record.reconciliation_status,
+            )
+            terminated_a = self.reconciliation.record_termination(
                 task_a.task_id,
                 evidence="r20 QWeb #terminado",
             )
-            self.engine.complete(task_a.task_id)
+            self.assertEqual(
+                ReconciliationStatus.ALIGNED,
+                terminated_a.reconciliation_status,
+            )
 
             p_execution = worker.call(
                 lambda adapter, _backend, _page: adapter.begin_execution(
@@ -693,20 +712,30 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
                     lambda _adapter, backend, _page: backend.action_count
                 ),
             )
+            completed_b = self.engine.complete(task_b.task_id)
+            self.assertEqual(TaskState.COMPLETED, completed_b.state)
+            completed_b_record = self.reconciliation.get_reconciliation(
+                task_b.task_id
+            )
+            self.assertEqual(
+                PhysicalResourceState.BUSY,
+                completed_b_record.physical_state,
+            )
+            self.assertEqual(
+                ReconciliationStatus.DIVERGED,
+                completed_b_record.reconciliation_status,
+            )
             record_b = self.reconciliation.record_termination(
                 task_b.task_id,
                 evidence="r20 Playwright termination",
             )
-            self.engine.complete(task_b.task_id)
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,
                 record_b.physical_state,
             )
             self.assertEqual(
                 ReconciliationStatus.ALIGNED,
-                self.reconciliation.get_reconciliation(
-                    task_b.task_id
-                ).reconciliation_status,
+                record_b.reconciliation_status,
             )
 
             self.assertFalse(
