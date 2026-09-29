@@ -183,18 +183,31 @@ class IncidentsPanel(QWidget):
                 item.incident_id, item.kind, item.user_id, item.created_at,
                 item.rule_or_error, "Aislamiento / Incidente", item,
             ))
-        try:
-            payload = json.loads(self.complaints.path.read_text(encoding="utf-8"))
-            for item in payload.get("complaints", []):
-                if isinstance(item, dict):
-                    rows.append((
-                        str(item.get("complaint_id", "")), "Queja / Reembolso",
-                        str(item.get("user_id", "")), str(item.get("created_at", "")),
-                        str(item.get("text", "")),
-                        str(item.get("status", "OPEN")), item,
-                    ))
-        except (OSError, json.JSONDecodeError):
-            pass
+        with self.complaints.db.transaction() as connection:
+            complaint_rows = connection.execute(
+                """
+                SELECT complaint_id, user_id, text, status, created_at
+                FROM complaints
+                ORDER BY created_at DESC
+                """
+            ).fetchall()
+        for complaint_id, user_id, text_value, status, created_at in complaint_rows:
+            item = {
+                "complaint_id": str(complaint_id),
+                "user_id": str(user_id),
+                "text": str(text_value),
+                "status": str(status),
+                "created_at": str(created_at),
+            }
+            rows.append((
+                item["complaint_id"],
+                "Queja / Reembolso",
+                item["user_id"],
+                item["created_at"],
+                item["text"],
+                item["status"],
+                item,
+            ))
         self.table.setRowCount(len(rows))
         for row, values in enumerate(rows):
             for col, value in enumerate(values[:6]):
