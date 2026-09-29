@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from pathlib import Path
 
 from services.web_queue import (
@@ -49,12 +50,12 @@ def make_legacy_manager(ticket_id: str = "ticket-a"):
     manager._response_pattern = WebChatQueueManager._safe_compile(
         r'respuesta\s+a\s*\(\s*(?P<bot>[^()\n]+?)\s+'
         r'(?P<ticket>[A-Za-z0-9_.:-]+)\s*\)\s*[“"](?P<text>.*?)[”"]',
-        0x02 | 0x10,
+        re.IGNORECASE | re.DOTALL,
     )
     manager._terminated_pattern = WebChatQueueManager._safe_compile(
         r'\(\s*(?P<bot>[^()\n]+?)\s+'
         r'(?P<ticket>[A-Za-z0-9_.:-]+)\s*\)#terminado\b',
-        0x02,
+        re.IGNORECASE,
     )
     manager.ticket_processed = SignalProbe()
     manager.response_observed_requested = SignalProbe()
@@ -140,7 +141,7 @@ def test_g03_selector_behavior_ignores_hidden_candidate_and_accepts_visible() ->
             timeout_ms=100,
         )
     )
-    assert selected is manager.selectors  or selected.visible is True
+    assert selected.visible is True
 
 
 def test_g04_legacy_queue_builds_a_sendable_protocol_script_without_external_io() -> None:
