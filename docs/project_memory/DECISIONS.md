@@ -128,3 +128,24 @@
 - CANDIDATO D no está sustentado: TaskOrchestrator tiene instanciación y uso operativo actual.
 - No se modifica ningún runtime protegido en esta fase.
 - La convergencia, adapter futuro, migración de quick actions y retirada eventual del TaskOrchestrator son PROPOSED y requieren una fase de implementación separada.
+
+
+### DEC-018 — FASE 2F-8C: Migration Contract WebChat
+
+- Estado: [DECIDED / PROPOSED IMPLEMENTATION]
+- F-006 mantiene como arquitectura objetivo CANDIDATE A: `GUI → TaskEngine → TaskScheduler → WebChatTaskExecutor → WebChatQueueManager`.
+- [DECIDED] `task_id` es la única identidad operacional de una ejecución. No se sustituye por `waitress_id`, `ticket_id` ni `operation_id`; los últimos son identificadores de otras capas.
+- [PROPOSED] Quick actions WebChat deberán crear TaskEngine Tasks con `task_id` generado por TaskEngine, prioridad, deadline/timeout policy, metadata y payload/contexto; después deberán registrarse en TaskScheduler con `WEB_MESA_UNICA`.
+- [PROPOSED] El callback de TaskOrchestrator no debe migrarse como lifecycle paralelo. El resultado futuro debe pasar por la finalización/validación del TaskEngine y sólo después llegar a la GUI como notificación de presentación.
+- [PROPOSED] El owner futuro de scheduling será TaskScheduler; el owner futuro de lifecycle será TaskEngine; el owner futuro de WebChat físico será WebChatTaskExecutor → WebChatQueueManager; GUI sólo presentará/solicitará.
+- [PROPOSED] `WEB_MESA_UNICA` será el recurso común de las quick actions WebChat. No se crea un segundo lock para el mismo recurso.
+- [PROPOSED] La migración temporal debe usar un routing switch/adapter que seleccione exactamente una ruta por solicitud. No se permite shadow execution ni doble dispatch.
+- [PROPOSED] El fallback debe ser clasificado por responsabilidad: resultado alternativo de presentación puede continuar siendo GUI, pero un retry WebChat debe conservar la identidad operacional o crear explícitamente un child task mediante TaskEngine; nunca una ejecución huérfana.
+- [PROPOSED] CircuitBreaker futuro: la política de disponibilidad WebChat debe tener un owner operacional único. El CircuitBreaker del executor físico puede sobrevivir si protege exclusivamente WebChatQueueManager; el CircuitBreaker por waitress del TaskOrchestrator no debe duplicarse sin una semántica distinta demostrable.
+- [PROPOSED] Cancellation debe seguir `TaskEngine → TaskScheduler → WebChatTaskExecutor → WebChatQueueManager`; TaskEngine confirma lifecycle y el executor sólo cancela el trabajo físico asociado al mismo `task_id`.
+- [UNKNOWN] La equivalencia exacta de prioridades ya coincide en representación (`TaskOrchestrator`: HIGH=1/MEDIUM=2/LOW=3; TaskEngine: HIGH=1/MEDIUM=2/LOW=3), pero la semántica final de fairness/starvation debe seguir siendo responsabilidad de TaskScheduler.
+- [PROPOSED] Los timeouts deben separarse en deadline/lifecycle (TaskEngine), espera de scheduling/recurso (TaskScheduler, sin nuevo timeout salvo necesidad demostrada) y ejecución física WebChat (WebChatQueueManager). El timeout de 12 s del Orchestrator no se traslada automáticamente.
+- [UNKNOWN] La traducción exacta de RESPONSE_TIMEOUT_MS/PAGE_TIMEOUT_MS/NAVIGATION_TIMEOUT_MS del Playwright a QWebEngine todavía requiere pruebas funcionales.
+- [PROPOSED] La identidad de sesión no se fusiona con task_id: session_id sigue siendo owner de WaitressSessionManager y ticket_id puede continuar como alias histórico sólo donde el runtime ya lo exige; la convergencia futura debe evitar crear otro task_id.
+- [PROPOSED] Authorization y ScopeLock deberán vincularse al mismo task_id antes de cualquier enforcement físico futuro; esta fase no implementa enforcement.
+- [PROPOSED] RuntimeObservation seguirá siendo read-only y observará el TaskEngine/Scheduler convergido, no al executor directamente.
