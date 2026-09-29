@@ -13,6 +13,11 @@ from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
+from bot_ia.core.physical_lifecycle_reconciliation import (
+    PhysicalLifecycleReconciliation,
+    StaleReconciliationError,
+)
+from bot_ia.core.task_engine import TaskEngine
 from services.qweb_physical_resource_adapter import (
     QWebPhysicalExecution,
     QWebPhysicalResourceAdapter,
@@ -466,6 +471,10 @@ class _QueueWorker(QObject):
         circuit_threshold: int,
         circuit_cooldown_ms: int,
         physical_resource_adapter: QWebPhysicalResourceAdapter | None = None,
+        task_engine: TaskEngine | None = None,
+        physical_lifecycle_reconciliation: (
+            PhysicalLifecycleReconciliation | None
+        ) = None,
     ) -> None:
         super().__init__()
 
@@ -491,6 +500,10 @@ class _QueueWorker(QObject):
         self._queued_ids: set[str] = set()
         self._mesa_unica_acquired = False
         self._physical_resource_adapter = physical_resource_adapter
+        self._task_engine = task_engine
+        self._physical_lifecycle_reconciliation = (
+            physical_lifecycle_reconciliation
+        )
         self.physical_execution: QWebPhysicalExecution | None = None
 
     @Slot()
@@ -552,8 +565,42 @@ class _QueueWorker(QObject):
         evidence: str,
     ) -> None:
         adapter = self._physical_resource_adapter
+        reconciliation = self._physical_lifecycle_reconciliation
         if adapter is None or execution is None:
             return
+
+        if reconciliation is not None:
+            try:
+                reconciliation.get_reconciliation(execution.ticket_id)
+            except KeyError:
+                pass
+            except Exception as error:
+                self.queue_error.emit(
+                    execution.ticket_id,
+                    f"PHYSICAL_RECONCILIATION_LOOKUP_FAILED:{error}",
+                )
+                return
+            else:
+                try:
+                    reconciliation.record_quarantine(
+                        execution.ticket_id,
+                        reason=reason,
+                        evidence=evidence,
+                    )
+                    return
+                except StaleReconciliationError as error:
+                    self.queue_error.emit(
+                        execution.ticket_id,
+                        f"PHYSICAL_RECONCILIATION_STALE:{error}",
+                    )
+                    return
+                except Exception as error:
+                    self.queue_error.emit(
+                        execution.ticket_id,
+                        f"PHYSICAL_QUARANTINE_FAILED:{error}",
+                    )
+                    return
+
         try:
             adapter.quarantine_resource(
                 execution,
@@ -574,14 +621,38 @@ class _QueueWorker(QObject):
         execution = self.physical_execution
         adapter = self._physical_resource_adapter
         if adapter is not None and execution is not None:
-            try:
-                adapter.request_cancel(execution)
-            except Exception as error:
-                self._quarantine_physical(
-                    execution,
-                    reason="CANCELLATION_REQUEST_FAILED",
-                    evidence=str(error),
-                )
+            reconciliation = self._physical_lifecycle_reconciliation
+            if reconciliation is not None:
+                try:
+                    reconciliation.get_reconciliation(execution.ticket_id)
+                except KeyError:
+                    reconciliation = None
+                except Exception as error:
+                    self.queue_error.emit(
+                        execution.ticket_id,
+                        f"PHYSICAL_RECONCILIATION_LOOKUP_FAILED:{error}",
+                    )
+                    reconciliation = None
+            if reconciliation is not None:
+                try:
+                    reconciliation.request_physical_cancel(
+                        execution.ticket_id,
+                    )
+                except Exception as error:
+                    self._quarantine_physical(
+                        execution,
+                        reason="CANCELLATION_REQUEST_FAILED",
+                        evidence=str(error),
+                    )
+            else:
+                try:
+                    adapter.request_cancel(execution)
+                except Exception as error:
+                    self._quarantine_physical(
+                        execution,
+                        reason="CANCELLATION_REQUEST_FAILED",
+                        evidence=str(error),
+                    )
 
         ticket.status = "CANCELLED"
         if self._timeout_timer is not None:
@@ -792,6 +863,36 @@ class _QueueWorker(QObject):
         self._queued_ids.clear()
         self.stopped.emit()
 
+    def _bind_physical_execution(
+        self,
+        ticket: BotTicket,
+        execution: QWebPhysicalExecution,
+    ) -> bool:
+        engine = self._task_engine
+        reconciliation = self._physical_lifecycle_reconciliation
+        adapter = self._physical_resource_adapter
+        if engine is None or reconciliation is None or adapter is None:
+            return True
+
+        task = engine.snapshot(ticket.ticket_id)
+        if task is None:
+            return True
+
+        try:
+            reconciliation.bind_execution(
+                task,
+                adapter,
+                execution,
+            )
+        except Exception as error:
+            self._quarantine_physical(
+                execution,
+                reason="PHYSICAL_RECONCILIATION_BIND_FAILED",
+                evidence=f"{type(error).__name__}: {error}",
+            )
+            return False
+        return True
+
     def _process_next(self) -> None:
         if (
             not self._running or
@@ -870,6 +971,13 @@ class _QueueWorker(QObject):
                         f"{claim.execution_generation}"
                     ),
                 )
+                if not self._bind_physical_execution(
+                    ticket,
+                    self.physical_execution,
+                ):
+                    raise RuntimeError(
+                        "PHYSICAL_RECONCILIATION_BIND_FAILED"
+                    )
             except Exception as error:
                 self.physical_execution = None
                 _WEB_MESA_UNICA.release()
@@ -995,10 +1103,22 @@ class _QueueWorker(QObject):
         adapter = self._physical_resource_adapter
         if adapter is not None and execution is not None:
             try:
-                adapter.confirm_termination(
-                    execution,
-                    evidence="QWeb #terminado observed",
-                )
+                reconciliation = self._physical_lifecycle_reconciliation
+                if reconciliation is not None:
+                    try:
+                        reconciliation.get_reconciliation(ticket.ticket_id)
+                    except KeyError:
+                        reconciliation = None
+                if reconciliation is not None:
+                    reconciliation.record_termination(
+                        ticket.ticket_id,
+                        evidence="QWeb #terminado observed",
+                    )
+                else:
+                    adapter.confirm_termination(
+                        execution,
+                        evidence="QWeb #terminado observed",
+                    )
             except Exception as error:
                 self._quarantine_physical(
                     execution,
@@ -1127,6 +1247,10 @@ class WebChatQueueManager(QObject):
         circuit_cooldown_seconds: int = 10,
         browser_profile: str | Path | None = None,
         physical_resource_adapter: QWebPhysicalResourceAdapter | None = None,
+        task_engine: TaskEngine | None = None,
+        physical_lifecycle_reconciliation: (
+            PhysicalLifecycleReconciliation | None
+        ) = None,
     ) -> None:
         super().__init__(parent)
 
@@ -1219,6 +1343,10 @@ class WebChatQueueManager(QObject):
                 circuit_cooldown_seconds * 1000
             ),
             physical_resource_adapter=physical_resource_adapter,
+            task_engine=task_engine,
+            physical_lifecycle_reconciliation=(
+                physical_lifecycle_reconciliation
+            ),
         )
         self._worker.moveToThread(
             self._thread
@@ -1331,6 +1459,22 @@ class WebChatQueueManager(QObject):
     # ------------------------------------------------------------------
     # API PÚBLICA
     # ------------------------------------------------------------------
+
+    @property
+    def physical_resource_adapter(
+        self,
+    ) -> QWebPhysicalResourceAdapter | None:
+        return self._physical_resource_adapter
+
+    @property
+    def task_engine(self) -> TaskEngine | None:
+        return self._worker._task_engine
+
+    @property
+    def physical_lifecycle_reconciliation(
+        self,
+    ) -> PhysicalLifecycleReconciliation | None:
+        return self._worker._physical_lifecycle_reconciliation
 
     def initialize_protocol(self) -> None:
         """Instala el monitor DOM y envía las directrices una vez."""
