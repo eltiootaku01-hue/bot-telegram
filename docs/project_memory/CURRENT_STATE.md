@@ -160,3 +160,18 @@ La evidencia actual no justifica tratar GUI TaskOrchestrator como runtime WebCha
 - [BLOCKER] Quick actions WebChat actuales no adquieren WEB_MESA_UNICA mediante TaskScheduler.
 - No se añadieron tests de migración ni se ejecutó WebChat real.
 - MIG-1..MIG-6: NO iniciados.
+
+## FASE 2F-8E — MIG-3 Gate Closure / technical evidence
+
+- Estado: [PARTIAL]
+- Final implementation/test HEAD before memory update: 5fd323ec5026d7221309987a0a9a9a0a2920bfe6.
+- [TESTED] Added deterministic MIG-3 evidence for task identity, late responses, cancellation, deadline timeout, executor failure, WEB_MESA_UNICA arbitration, ticket correlation, operation invalidation, breaker recovery and duplicate ticket protection.
+- [TESTED] Ubuntu and Windows CI passed after the third and final repair attempt for this phase; 728 tests passed.
+- [UNKNOWN] Real-provider response/DOM/selector/send/navigation parity remains unverified.
+- [UNKNOWN] Real login/session/cookie/storage continuity, QWebEngine counter/soft-reset parity and provider behavior remain unverified.
+- [OBSERVED] Timeout, breaker, duplicate-route and resource policies are heterogeneous between active runtimes.
+- [TESTED] The quick-action callback presentation-identity bug is reproducible without external services.
+- [DECIDED] The callback bug is recorded only; no runtime repair is made in MIG-3.
+- [OBSERVED] F-007 shows multiple clock injection/observation policies; no common clock abstraction is introduced.
+- [OBSERVED] F-008 confirms RuntimeObservation currently exposes only pending/active Scheduler snapshots.
+- [DECIDED] MIG-1 is not started and migration remains physically uninitiated.
