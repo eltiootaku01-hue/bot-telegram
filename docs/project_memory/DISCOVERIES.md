@@ -192,3 +192,97 @@ La demostración causal de una transición futura requerirá evidencia producida
 [OBSERVED] Posteriormente `services.web_queue.py` recibió commits `a71b227522` (scheduler cancellation), `14ad4bc973` (circuit state), `85c508ea5a` (capacity signal) y `3fe425105f` (capacity bridge).
 
 [INFERRED] La secuencia histórica es consistente con una integración/migración progresiva del WebChat hacia TaskScheduler, aunque no demuestra que el TaskOrchestrator haya sido formalmente marcado como legacy.
+
+
+## FASE 2F-8C — Migration evidence
+
+### Quick Actions
+
+- [OBSERVED] `_quick_action()` routes `chocolatada` and `trivia` to `_schedule_async_quick_action()` whenever TaskOrchestrator is available.
+- [OBSERVED] `chocolatada`: caller `CommandCenterWindow._quick_action`; target `cari`; payload marks `is_local_action=true`; priority HIGH; callback is an async GUI callback; no WebChat timeout, fallback or WebQueue execution because TaskOrchestrator returns through the local-action branch.
+- [OBSERVED] `trivia`: caller `CommandCenterWindow._quick_action`; target `sunna`; payload contains the prompt "Genera una pregunta rápida de trivia sobre anime."; priority MEDIUM; callback is an async GUI callback; Web timeout is 12 s; failure invokes the TaskOrchestrator fallback for `sunna`; CircuitBreaker is per waitress.
+- [OBSERVED] Neither quick action currently creates a TaskEngine Task or task_id. Neither currently uses `WEB_MESA_UNICA`.
+- [OBSERVED] TaskOrchestrator exposes no per-item cancellation API; its shutdown stops the worker. Therefore current quick-action cancellation is not equivalent to TaskEngine/Scheduler cancellation.
+
+### Identity
+
+- [OBSERVED] TaskEngine can generate a UUID task_id or accept an explicit one. The migration contract requires generation by TaskEngine for new quick actions.
+- [OBSERVED] `ticket_id` is currently reused as task_id in `_send_web_persona` and `WaitressSessionManager`; this is an existing compatibility choice, not a rule that quick actions should use ticket_id.
+- [OBSERVED] `session_id` is owned by WaitressSessionManager and persists in active_sessions; `waitress_id` is the logical waitress identity; `operation_id` belongs to WebChatQueueManager's browser/DOM anti-zombie protocol.
+- [INFERRED] Future quick actions should not manufacture a ticket/session/operation identifier merely to replace task_id.
+
+### Callback / Result
+
+- [OBSERVED] TaskOrchestrator invokes the supplied callback with response text on local success, circuit-open fallback, worker failure and stop-state fallback; worker exceptions are converted to fallback rather than propagated to the callback.
+- [OBSERVED] The quick-action callback reads `self._selected_bot_id` at callback time while the queued request carries a fixed waitress_id. If selection changes before completion, presentation identity can diverge from execution target.
+- [PROPOSED] Future TaskEngine result handling should bind presentation to the task's immutable context/target, not to mutable GUI selection at callback time.
+- [PROPOSED] Success should become TaskEngine completion/result acceptance followed by GUI notification. Failure should become executor failure → Scheduler synchronization → TaskEngine FAILED → GUI notification. Timeout should become the lifecycle timeout outcome plus physical cancellation/cleanup as required. Fallback should be explicit result policy, not a hidden second execution.
+
+### Priority / Timeout
+
+- [OBSERVED] TaskOrchestrator defines HIGH=1, MEDIUM=2, LOW=3. TaskEngine defines the same three constants with the same values and validates them.
+- [OBSERVED] TaskScheduler consumes TaskEngine.priority and applies candidate ordering/starvation bypass; it does not define a second priority enum.
+- [OBSERVED] TaskOrchestrator WEB_TIMEOUT_SECONDS=12.0 is an end-to-end worker wait around its web_worker callback. It is not a TaskEngine deadline and not a WebChatQueueManager timeout.
+- [OBSERVED] Playwright WebQueueManager has response/navigation/page timeouts of 10 s/20 s/15 s respectively. WebChatQueueManager's ticket timeout defaults to 45 s. These are different responsibilities and cannot be collapsed by numeric equality.
+- [PROPOSED] Future contract should assign deadline/lifecycle timeout to TaskEngine, resource waiting to Scheduler policy, and browser/protocol timeout to WebChatQueueManager; each physical timeout must have one owner.
+
+### Circuit Breaker / Fallback
+
+- [OBSERVED] TaskOrchestrator has a per-waitress CircuitBreaker: 3 failures opens, 30 s recovery; local actions bypass it because they return before circuit evaluation.
+- [OBSERVED] WebChatQueueManager has its own physical CircuitBreaker: 3 failures, 10 s cooldown by default; it also exposes `capacity_restored` to TaskScheduler through WebChatTaskExecutor.
+- [OBSERVED] WebQueueManager Playwright does not expose a circuit breaker in the inspected implementation.
+- [PROPOSED] The target should retain the executor-specific circuit breaker as the physical WebChat availability gate. A separate per-waitress breaker is justified only if a future policy explicitly protects a logical waitress rather than the shared WebChat resource.
+- [OBSERVED] TaskOrchestrator fallback text is a presentation response. It does not retry the WebChat operation.
+- [PROPOSED] Any future retry that actually re-executes WebChat must remain under TaskEngine/Scheduler identity and lifecycle; no hidden retry path may call the old WebQueue directly.
+
+### Cancellation / Failure
+
+- [OBSERVED] TaskScheduler.cancel() mutates TaskEngine lifecycle and then calls the registered executor.cancel(task_id). WebChatTaskExecutor maps that call to WebChatQueueManager.cancel_ticket(task_id).
+- [OBSERVED] WebChatQueueManager cancellation is ticket/task-id based and cancels both current browser operation and queued ticket state.
+- [PROPOSED] This existing chain is the intended single cancellation authority for migrated quick actions.
+- [OBSERVED] WebChatQueueManager emits ticket_failed and ticket_finished; GUI currently maps failure to Scheduler failure and completion to execution_finished for TaskEngine tasks.
+- [PROPOSED] Error propagation should preserve task_id at every boundary and avoid translating an executor error into a new task.
+
+### Resource / Session
+
+- [OBSERVED] TaskScheduler defines `WEBCHAT_RESOURCE = "WEB_MESA_UNICA"` and arbitrates it through one active task per resource.
+- [OBSERVED] Quick actions do not currently acquire that resource.
+- [OBSERVED] Quick actions do not call WaitressSessionManager, do not create active_sessions and do not use session_id.
+- [PROPOSED] A migrated quick action should only create/use a WaitressSessionManager session if its functional semantics actually require a tavern session. The generic WebChat trivia action currently has no demonstrated session dependency, so session_id should remain absent unless a future requirement introduces one.
+- [PROPOSED] The future mapping is therefore conditional, not automatic: `Quick Action → waitress_id → optional session_id → TaskEngine task_id`. It must not fabricate a session merely to fit the model.
+
+### WebQueue Migration
+
+| Capability | Async WebQueueManager | WebChatQueueManager | Migration Action |
+|---|---|---|---|
+| waitress pages | Six Playwright pages, one per waitress | One QWebEngineView/page surface in the inspected GUI path | ADAPT |
+| browser contexts | One Playwright BrowserContext | QWebEngineProfile/page lifecycle | REPLACE |
+| cookies | Playwright context created without supplied storage_state | Persistent QWebEngineProfile | ADAPT |
+| login state | Not demonstrated as shared with GUI | Persistent GUI profile is the current authenticated surface | KEEP/ADAPT |
+| interaction counters | Per-waitress counters | No equivalent counter in inspected manager | ADAPT |
+| soft reset | Reload/GOTO and counter reset every 20 interactions | No equivalent per-waitress soft-reset contract | ADAPT |
+| timeout | 10 s response, 15 s page, 20 s navigation | 45 s ticket timeout by default plus protocol watchdogs | ADAPT |
+| circuit breaker | None in inspected Playwright manager | 3 failures / 10 s cooldown by default | KEEP |
+| cancellation | No public per-task cancellation API in inspected manager | ticket cancellation by identity | REPLACE |
+| queue | Async WebQueue internals | QThread worker FIFO `msg_queue` | REPLACE |
+| worker | asyncio/browser pool | QThread worker | REPLACE |
+| GUI integration | None; Playwright core | QWebEngineView/QWebChannel/Qt signals | KEEP |
+| persistent profile | No supplied profile/storage_state in constructor | QWebEngineProfile persistent storage | KEEP |
+| Playwright | Required by old runtime | Not part of target physical path | REMOVE, only after capability parity |
+| QWebEngineView | Not used | Core target surface | KEEP |
+
+- [UNKNOWN] Whether six per-waitress Playwright pages provide user-visible behavior that must be preserved after convergence. The target resource is single-use, so parallel page ownership is not automatically a requirement.
+- [UNKNOWN] Whether all Playwright selectors/wait conditions can be expressed by the current QWebChannel/DOM monitor protocol for every provider and response shape.
+- [UNKNOWN] Whether the old runtime's Gemini-specific DOM semantics are fully represented by `services.web_queue.WebChatQueueManager`.
+
+### Profile / Session
+
+- [OBSERVED] WebChatQueueManager configures the existing QWebEngineProfile with persistent storage and ForcePersistentCookies.
+- [OBSERVED] WebQueueManager creates a fresh Playwright BrowserContext and does not receive GUI browser profile/storage_state/cookies in its constructor.
+- [UNKNOWN] Cross-runtime cookie/login continuity is not demonstrated and must not be inferred.
+- [DECIDED] Migration must not copy credentials, cookies or storage_state. The target should preserve the already authenticated QWebEngineProfile rather than importing Playwright state.
+
+### Double Execution
+
+- [INFERRED] During a temporary migration, a naive dual wiring could send one quick action to both runtimes because both are independently operational.
+- [DECIDED] The migration contract therefore requires one routing decision per request, one TaskEngine task_id for the target path, and no shadow execution.
