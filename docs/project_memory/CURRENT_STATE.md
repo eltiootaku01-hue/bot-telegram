@@ -128,3 +128,20 @@ La evidencia actual no justifica tratar GUI TaskOrchestrator como runtime WebCha
 [DECIDED] F-006 deja de ser una decisión abierta de ownership: la arquitectura objetivo es una única ruta operacional WebChat basada en TaskEngine/TaskScheduler. La implementación de la convergencia queda para una fase posterior autorizada.
 
 [PROPOSED] En una futura implementación, GUI TaskOrchestrator deberá convertirse en adapter/orquestación de presentación o retirarse gradualmente, pero no se decide aquí el mecanismo exacto de migración.
+
+
+## FASE 2F-8C — Migration Contract WebChat
+
+- [DECIDED] F-006 permanece resuelto arquitectónicamente como CANDIDATE A: `GUI → TaskEngine → TaskScheduler → WebChatTaskExecutor → services.web_queue.WebChatQueueManager`.
+- [PROPOSED] La migración no debe crear otro TaskEngine, Scheduler, executor físico ni cola operacional paralela.
+- [OBSERVED] Quick actions actuales: `chocolatada` es una acción local que responde directamente por callback y no llega a WebQueue; `trivia` es una acción WebChat que usa `sunna`, prioridad MEDIUM, timeout de 12 s, fallback del TaskOrchestrator y CircuitBreaker por waitress.
+- [PROPOSED] Toda quick action WebChat futura debe recibir un `task_id` generado por TaskEngine y usar `WEB_MESA_UNICA` mediante TaskScheduler; `waitress_id` sólo identifica el destino lógico.
+- [PROPOSED] El callback de quick action debe dejar de ser el mecanismo de lifecycle y representar la entrega de un resultado ya aceptado por TaskEngine; la GUI recibe después una notificación de presentación. No se crea un sistema paralelo de eventos.
+- [OBSERVED] TaskScheduler no define timeout propio; TaskEngine soporta deadline/timeout_policy y WebChatQueueManager posee timeout físico de ticket. La política futura debe asignar un owner único a cada nivel, evitando que el timeout de 12 s del Orchestrator sea copiado sin justificación.
+- [OBSERVED] WebQueueManager Playwright tiene RESPONSE_TIMEOUT_MS=10 s, PAGE_TIMEOUT_MS=15 s, NAVIGATION_TIMEOUT_MS=20 s y soft reset cada 20 interacciones; WebChatQueueManager tiene timeout de ticket configurable, por defecto 45 s, y CircuitBreaker 3 fallos/10 s de cooldown.
+- [UNKNOWN] La equivalencia funcional exacta entre Playwright y QWebEngine para capacidades avanzadas del runtime antiguo requiere pruebas de migración; no se presume equivalencia.
+- [PROPOSED] La continuidad de login/cookies debe conservar el QWebEngineProfile persistente existente; no se copiarán cookies, storage_state ni credenciales desde Playwright.
+- [PROPOSED] La convivencia temporal debe tener un único routing por solicitud; una misma quick action nunca puede ser enviada simultáneamente a TaskOrchestrator y TaskEngine.
+- [PROPOSED] La retirada de TaskOrchestrator sólo podrá ocurrir después de demostrar quick actions, cancelación, fallback, WebChat, Taberna, sesión y CI preservados.
+- [DECIDED] TaskOrchestrator sigue ACTIVE / MIGRATION PENDING. No es legacy, no fue modificado y no fue eliminado.
+- [DECIDED] Esta fase es diseño בלבד: no inicia migración física ni FASE 2F-9.
