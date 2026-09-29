@@ -195,3 +195,15 @@ La decisión arquitectónica no autoriza implementación ni inicia FASE 2F-9.
 - [BLOCKER] Login/storage continuity entre Playwright y QWebEngine no está demostrada.
 - [BLOCKER] MIG-3 requiere runtime/provider evidence; MIG-0 no la ejecuta.
 - [CONFIRMED RISK] callback de quick action depende de _selected_bot_id mutable.
+
+## FASE 2F-8E — Remaining MIG-3 questions
+
+- [UNKNOWN] Does QWebEngine produce the same provider response semantics as the Playwright path under real authenticated use?
+- [UNKNOWN] Are selector/send/navigation behaviors equivalent for the actual provider?
+- [UNKNOWN] Does authenticated session/storage continuity remain valid across the target QWebEngine lifecycle without copying credentials?
+- [UNKNOWN] What replaces Playwright interaction counters and soft reset in the target path?
+- [UNKNOWN] Which timeout is the final lifecycle owner when TaskEngine, physical queue and legacy TaskOrchestrator timers overlap?
+- [UNKNOWN] Are breaker ownership and cooldown semantics converged or intentionally layered?
+- [UNKNOWN] Can a real stale JS callback race be reproduced safely without using a real account?
+- [UNKNOWN] Can RuntimeObservation obtain resource/priority/wake evidence without exposing mutable Scheduler internals?
+- [UNKNOWN] How will cross-route duplicate execution be prevented during the eventual compatibility window?
