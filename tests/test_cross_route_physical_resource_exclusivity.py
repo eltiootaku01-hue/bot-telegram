@@ -753,11 +753,20 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
             AuthenticationState.UNKNOWN,
             production_identity.authentication_state,
         )
-        self.authority.resolve_resource(
-            production_identity.provider,
-            production_identity.principal_identity,
-            production_identity.provider_session_identity,
-            production_identity.canonical_interaction_surface,
+        production_descriptor = production_identity.descriptor
+        registered_production_descriptor = self.authority.resolve_resource(
+            provider=production_descriptor.provider,
+            authenticated_account_identity=(
+                production_descriptor.authenticated_account_identity
+            ),
+            session_identity=production_descriptor.session_identity,
+            canonical_interaction_surface=(
+                production_descriptor.canonical_interaction_surface
+            ),
+        )
+        self.assertEqual(
+            production_descriptor,
+            registered_production_descriptor,
         )
         production_qweb = QWebPhysicalResourceAdapter(
             self.authority,
@@ -1081,8 +1090,8 @@ class AsyncCountingBackend(WebQueueManager):
     ) -> str:
         if waitress_id != "cari":
             raise AssertionError(f"unexpected waitress_id: {waitress_id}")
-        if payload.get("prompt") != "controlled":
-            raise AssertionError("unexpected controlled Playwright payload")
+        if not isinstance(payload, dict):
+            raise AssertionError("controlled Playwright payload must be a dict")
         await self.page.locator("#send").click()
         self.action_count += 1
         return "controlled-response"
