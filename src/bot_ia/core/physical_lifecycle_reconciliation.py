@@ -135,6 +135,13 @@ class PhysicalLifecycleReconciliation:
             self._logical_tasks[task.task_id] = replace(task)
             binding = self._bindings.get(task.task_id)
             record = self._records.get(task.task_id)
+            if record is not None:
+                record = replace(
+                    record,
+                    logical_state=task.state,
+                    last_reconciled_at=datetime.now(timezone.utc),
+                )
+                self._records[task.task_id] = record
             if binding is None or record is None:
                 return
 
