@@ -754,10 +754,10 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
             production_identity.authentication_state,
         )
         self.authority.resolve_resource(
-            production_identity.descriptor.provider,
-            production_identity.descriptor.principal_identity,
-            production_identity.descriptor.provider_session_identity,
-            production_identity.descriptor.canonical_interaction_surface,
+            production_identity.provider,
+            production_identity.principal_identity,
+            production_identity.provider_session_identity,
+            production_identity.canonical_interaction_surface,
         )
         production_qweb = QWebPhysicalResourceAdapter(
             self.authority,
@@ -1071,6 +1071,7 @@ class AsyncCountingBackend(WebQueueManager):
 
     def __init__(self, page) -> None:
         self.page = page
+        self.pages = {"cari": page}
         self.action_count = 0
 
     async def process_task(
