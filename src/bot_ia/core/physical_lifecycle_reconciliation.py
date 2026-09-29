@@ -489,62 +489,74 @@ class PhysicalLifecycleReconciliation:
         logical_state: TaskState,
         physical_state: PhysicalResourceState,
     ) -> ReconciliationStatus:
-        if physical_state == PhysicalResourceState.QUARANTINED:
+        logical_value = (
+            logical_state.value
+            if isinstance(logical_state, TaskState)
+            else str(logical_state)
+        )
+        physical_value = (
+            physical_state.value
+            if isinstance(physical_state, PhysicalResourceState)
+            else str(physical_state)
+        )
+
+        if physical_value == PhysicalResourceState.QUARANTINED.value:
             return ReconciliationStatus.QUARANTINED
-        if physical_state in {
-            PhysicalResourceState.CANCELLING,
-            PhysicalResourceState.RELEASING,
+        if physical_value in {
+            PhysicalResourceState.CANCELLING.value,
+            PhysicalResourceState.RELEASING.value,
         }:
             return (
                 ReconciliationStatus.CANCELLATION_PENDING
-                if physical_state == PhysicalResourceState.CANCELLING
+                if physical_value == PhysicalResourceState.CANCELLING.value
                 else ReconciliationStatus.RELEASE_PENDING
             )
-        if logical_state in {
-            TaskState.TIMED_OUT,
-            TaskState.CANCELLING,
+        if logical_value in {
+            TaskState.TIMED_OUT.value,
+            TaskState.CANCELLING.value,
         }:
-            if physical_state == PhysicalResourceState.AVAILABLE:
+            if physical_value == PhysicalResourceState.AVAILABLE.value:
                 return ReconciliationStatus.DIVERGED
             return ReconciliationStatus.TERMINATION_PENDING
-        if logical_state == TaskState.COMPLETED:
+        if logical_value == TaskState.COMPLETED.value:
             return (
                 ReconciliationStatus.ALIGNED
-                if physical_state == PhysicalResourceState.AVAILABLE
+                if physical_value == PhysicalResourceState.AVAILABLE.value
                 else ReconciliationStatus.DIVERGED
             )
-        if logical_state == TaskState.CANCELLED:
+        if logical_value == TaskState.CANCELLED.value:
             return (
                 ReconciliationStatus.ALIGNED
-                if physical_state == PhysicalResourceState.AVAILABLE
+                if physical_value == PhysicalResourceState.AVAILABLE.value
                 else ReconciliationStatus.DIVERGED
             )
-        if logical_state == TaskState.FAILED:
+        if logical_value == TaskState.FAILED.value:
             return (
                 ReconciliationStatus.ALIGNED
-                if physical_state == PhysicalResourceState.AVAILABLE
+                if physical_value == PhysicalResourceState.AVAILABLE.value
                 else ReconciliationStatus.DIVERGED
             )
-        if logical_state == TaskState.PENDING:
+        if logical_value == TaskState.PENDING.value:
             return (
                 ReconciliationStatus.ALIGNED
-                if physical_state == PhysicalResourceState.AVAILABLE
+                if physical_value == PhysicalResourceState.AVAILABLE.value
                 else ReconciliationStatus.DIVERGED
             )
-        if logical_state in {
-            TaskState.RUNNING,
-            TaskState.WAITING,
-            TaskState.INTERRUPTED,
+        if logical_value in {
+            TaskState.RUNNING.value,
+            TaskState.WAITING.value,
+            TaskState.INTERRUPTED.value,
         }:
             return (
                 ReconciliationStatus.ALIGNED
-                if physical_state in {
-                    PhysicalResourceState.CLAIMING,
-                    PhysicalResourceState.BUSY,
+                if physical_value in {
+                    PhysicalResourceState.CLAIMING.value,
+                    PhysicalResourceState.BUSY.value,
                 }
                 else ReconciliationStatus.DIVERGED
             )
         return ReconciliationStatus.DIVERGED
+
 
 
 __all__ = [
