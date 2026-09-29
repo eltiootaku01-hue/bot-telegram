@@ -11,6 +11,13 @@ from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication
 
+from bot_ia.core.physical_resource_authority import (
+    PhysicalResourceState,
+    PhysicalWebChatResourceAuthority,
+)
+from services.qweb_physical_resource_adapter import (
+    QWebPhysicalResourceAdapter,
+)
 from services.web_queue import WEB_MONITOR_JS
 
 
@@ -277,6 +284,150 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
         self.harness.install_monitor()
         self.assertTrue(
             any(event == "MONITOR_READY" for event, _ in self.harness.events)
+        )
+
+
+
+
+    def test_m01_qweb_adapter_authorizes_real_local_qweb_execution(self) -> None:
+        authority = PhysicalWebChatResourceAuthority()
+        descriptor = authority.resolve_resource(
+            "controlled-provider",
+            "account-A",
+            "qweb-session-A",
+            "controlled://webchat",
+        )
+        adapter = QWebPhysicalResourceAdapter(authority, descriptor)
+        execution = adapter.begin_execution(
+            adapter.claim_resource(),
+            ticket_id="ticket-m01",
+            operation_id="qweb-ticket-m01-1",
+        )
+
+        self.assertEqual(PhysicalResourceState.BUSY, adapter.snapshot().state)
+        self.assertTrue(adapter.validate_execution(execution))
+
+        self.harness.run_js(
+            "window.__casaComandoWebQueue.beginSend('ticket-m01', 301);"
+            "window.__casaComandoWebQueue.markSendClicked();"
+        )
+        self.harness.run_js(
+            "document.querySelector('#assistant').textContent = 'respuesta controlada';"
+        )
+        self.assertTrue(
+            self.harness.wait_until(
+                lambda: any(
+                    event == "RESPONSE_COMPLETE"
+                    for event, _ in self.harness.events
+                ),
+                timeout_ms=4000,
+            )
+        )
+        payload = next(
+            json.loads(payload)
+            for event, payload in self.harness.events
+            if event == "RESPONSE_COMPLETE"
+        )
+        self.assertTrue(
+            adapter.validate_callback(
+                execution,
+                ticket_id=payload["ticket_id"],
+            )
+        )
+        adapter.confirm_termination(
+            execution,
+            evidence="controlled QWeb response followed by simulated #terminado",
+        )
+        self.assertEqual(
+            PhysicalResourceState.AVAILABLE,
+            adapter.snapshot().state,
+        )
+
+    def test_m02_invalid_authority_execution_blocks_controlled_send(self) -> None:
+        authority = PhysicalWebChatResourceAuthority()
+        descriptor = authority.resolve_resource(
+            "controlled-provider",
+            "account-A",
+            "qweb-session-A",
+            "controlled://webchat",
+        )
+        adapter = QWebPhysicalResourceAdapter(authority, descriptor)
+        claim = adapter.claim_resource()
+        execution = adapter.begin_execution(
+            claim,
+            ticket_id="ticket-m02",
+            operation_id="qweb-ticket-m02-1",
+        )
+        authority.quarantine(
+            claim,
+            "invalid controlled execution",
+            evidence="test",
+        )
+        self.assertFalse(adapter.validate_execution(execution))
+        self.harness.run_js(
+            "window.__casaComandoWebQueue.beginSend('ticket-m02', 302);"
+            "window.__casaComandoWebQueue.cancelOperation();"
+        )
+        self.harness.wait_until(lambda: False, timeout_ms=400)
+        self.assertFalse(
+            any(
+                event == "RESPONSE_COMPLETE"
+                for event, _ in self.harness.events
+            )
+        )
+
+    def test_m03_late_controlled_callback_cannot_affect_new_generation(self) -> None:
+        authority = PhysicalWebChatResourceAuthority()
+        descriptor = authority.resolve_resource(
+            "controlled-provider",
+            "account-A",
+            "qweb-session-A",
+            "controlled://webchat",
+        )
+        adapter = QWebPhysicalResourceAdapter(authority, descriptor)
+
+        old_claim = adapter.claim_resource()
+        old = adapter.begin_execution(
+            old_claim,
+            ticket_id="ticket-old",
+            operation_id="qweb-old-1",
+        )
+        authority.quarantine(
+            old_claim,
+            "old generation invalidated",
+            evidence="controlled cancellation",
+        )
+        authority.reconcile(
+            old.physical_resource_id,
+            evidence="controlled reconciliation",
+        )
+        new = adapter.begin_execution(
+            adapter.claim_resource(),
+            ticket_id="ticket-new",
+            operation_id="qweb-new-2",
+        )
+        self.assertFalse(
+            adapter.validate_callback(old, ticket_id="ticket-old")
+        )
+        self.assertTrue(
+            adapter.validate_callback(new, ticket_id="ticket-new")
+        )
+        self.harness.run_js(
+            "window.__casaComandoWebQueue.beginSend('ticket-old', 303);"
+            "window.__casaComandoWebQueue.cancelOperation();"
+            "document.querySelector('#assistant').textContent = 'late old response';"
+        )
+        self.harness.wait_until(lambda: False, timeout_ms=700)
+        self.assertFalse(
+            any(
+                event == "RESPONSE_COMPLETE"
+                for event, _ in self.harness.events
+            )
+        )
+        authority.quarantine(
+            new and adapter._claim_for_execution(new),
+            "cleanup after late callback test",
+            evidence="controlled test cleanup",
         )
 
 
