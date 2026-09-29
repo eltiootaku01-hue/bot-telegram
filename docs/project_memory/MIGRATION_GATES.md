@@ -87,32 +87,91 @@ Static inspection does not prove Playwright/QWebEngine behavioral or operational
 
 Structural availability is not behavioral parity. No matrix row authorizes migration.
 
-## MIG-3 Gates
+## MIG-3 Gates — FASE 2F-8E technical evidence
 
-| Gate | Requirement | State | Evidence basis |
+The gate state below is evidence about the current mechanisms. It is not a declaration that Playwright and QWebEngine are behaviorally equivalent or that migration has occurred.
+
+| Gate | Requirement | State | Evidence |
 |---|---|---|---|
-| MIG-3-G01 Response Detection | required response semantics preserved | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G02 DOM Monitoring | mutation/settle behavior preserved | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G03 Selector Behavior | required provider selectors resolve | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G04 Send Protocol | provider send behavior preserved | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G05 Response Correlation | response maps to same task/request | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G06 Late Response Rejection | stale response cannot complete another task | UNKNOWN | CODE_EVIDENCE + TEST_EVIDENCE |
-| MIG-3-G07 Navigation | navigation/reload preserves required behavior | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G08 Session/Login State | authenticated state survives target lifecycle | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G09 Cookies/Storage | required storage continuity preserved | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G10 Interaction Counter | counter semantics preserved | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G11 Soft Reset | reset semantics preserved | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G12 Timeout Semantics | ownership and precedence are unambiguous | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G13 Cancellation | cancellation reaches physical operation safely | UNKNOWN | CODE_EVIDENCE + TEST_EVIDENCE |
-| MIG-3-G14 Operation ID / Anti-Zombie | stale browser operation cannot complete current task | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G15 Provider Behavior | provider-specific behavior preserved | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G16 Circuit Breaker | one physical availability policy is preserved | UNKNOWN | CODE_EVIDENCE + TEST_EVIDENCE |
-| MIG-3-G17 Capacity Recovery | scheduler resumes after recovery | UNKNOWN | TEST_EVIDENCE |
-| MIG-3-G18 Failure Propagation | executor failure reaches lifecycle/GUI once | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G19 Duplicate Execution Protection | one request has one route and task identity | UNKNOWN | CODE_EVIDENCE |
-| MIG-3-G20 Resource Arbitration | migrated WebChat uses WEB_MESA_UNICA | UNKNOWN | CODE_EVIDENCE |
+| MIG-3-G01 Response Detection | required response semantics preserved | UNKNOWN | Existing Playwright/QWebEngine implementations differ; no safe real-provider parity test |
+| MIG-3-G02 DOM Monitoring | mutation/settle behavior preserved | UNKNOWN | QWebEngine MutationObserver is statically present; Playwright polling is separately tested; cross-runtime parity not proven |
+| MIG-3-G03 Selector Behavior | required provider selectors resolve | UNKNOWN | Playwright selector tests pass; QWebEngine provider selector parity not runtime-proven |
+| MIG-3-G04 Send Protocol | provider send behavior preserved | UNKNOWN | Playwright fake-page send path is tested; QWebEngine JS/Qt send path requires real provider/browser evidence |
+| MIG-3-G05 Response Correlation | response maps to exact task/request identity | TESTED | TaskEngine/Scheduler reject wrong/terminal task IDs; WebChat response parser rejects wrong ticket/bot in deterministic fake |
+| MIG-3-G06 Late Response Rejection | terminal/cancelled response cannot re-open or complete a task | TESTED | Deterministic TaskEngine/Scheduler tests cover terminal and cancelled late responses; queue current-ticket absence also rejects late response |
+| MIG-3-G07 Navigation | navigation/reload preserves required behavior | UNKNOWN | Playwright reload/goto behavior is tested in isolation; no safe provider parity evidence for QWebEngine |
+| MIG-3-G08 Session/Login State | authenticated state survives target lifecycle | UNKNOWN | QWebEngine persistent profile exists; authenticated continuity cannot be proven without real account/session testing |
+| MIG-3-G09 Cookies/Storage | required storage continuity preserved | UNKNOWN | Persistent QWebEngine profile is structurally present; no cookie/storage continuity test is safe without real session state |
+| MIG-3-G10 Interaction Counter | counter semantics preserved | UNKNOWN | Playwright counter/threshold is tested; no QWebEngine equivalent demonstrated |
+| MIG-3-G11 Soft Reset | reset semantics preserved | UNKNOWN | Playwright reload/goto fallback is tested; no QWebEngine equivalent demonstrated |
+| MIG-3-G12 Timeout Semantics | ownership and precedence are unambiguous | OBSERVED | TaskEngine deadline is deterministic and tested; physical 10/15/20/45 s layers and 12 s TaskOrchestrator timeout remain heterogeneous, so final precedence is unresolved |
+| MIG-3-G13 Cancellation | cancellation reaches physical operation safely | TESTED | TaskEngine → Scheduler → executor cancellation chain is tested with fake executor; WebQueue worker cancellation/resource release is tested separately; end-to-end browser cancellation remains unproven |
+| MIG-3-G14 Operation ID / Anti-Zombie | stale browser operation cannot affect current task | OBSERVED | WebChat operation_id increments on cancellation and JS compares operation_id; deterministic monotonic invalidation is tested, but a real late JS callback race is not |
+| MIG-3-G15 Provider Behavior | provider-specific behavior preserved | UNKNOWN | Gemini/provider-specific behavior has no safe real-provider parity evidence |
+| MIG-3-G16 Circuit Breaker | one physical availability policy is preserved | OBSERVED | TaskOrchestrator and WebChatQueueManager breakers/recovery are independently tested; thresholds/scopes differ and equivalence is not proven |
+| MIG-3-G17 Capacity Recovery | scheduler resumes after physical recovery | TESTED | WebQueue capacity_restored signal and scheduler binding/dispatch are covered by existing and new deterministic evidence; no real browser recovery required |
+| MIG-3-G18 Failure Propagation | executor failure reaches lifecycle once | OBSERVED | Synthetic executor failure reaches TaskEngine.FAILED and terminal responses are discarded; callback/timeout/cancel error matrix is not fully end-to-end |
+| MIG-3-G19 Duplicate Execution Protection | one request has one route/task identity | OBSERVED | Duplicate task_id, ticket_id and cancellation protections are tested independently; current GUI still has two active physical routes, so cross-route exclusivity is not proven |
+| MIG-3-G20 Resource Arbitration | WebChat uses WEB_MESA_UNICA without cross-runtime races | OBSERVED | Scheduler resource arbitration and WebChatQueueManager lock are separately tested; Playwright WebQueueManager is outside that lock and quick actions bypass Scheduler |
 
-No MIG-3 gate is approved by MIG-0.
+### Identity evidence
+
+- "task_id": TaskEngine lifecycle identity; deterministic duplicate rejection and response validation are tested.
+- "ticket_id": WebChat compatibility identity; current TaskEngine WebChat executor maps task_id into ticket_id.
+- "operation_id": browser-operation identity; incremented on cancellation/new injection and checked by QWeb JS.
+- "session_id": WaitressSessionManager session identity; not used as TaskEngine lifecycle identity.
+- "waitress_id": logical character identity; not a lifecycle identity.
+- No test or implementation was introduced that aliases these identities.
+
+### Timeout evidence
+
+- TaskOrchestrator: 12 s worker timeout.
+- Playwright: 10 s response, 15 s page, 20 s navigation.
+- WebChatQueueManager: 45 s default ticket timeout.
+- TaskEngine: injected-clock deadline and timeout state transition.
+- TaskScheduler: no independent timeout policy identified.
+- [TESTED] TaskEngine deadline expiration prevents dispatch and causes later response discard.
+- [UNKNOWN] Cross-layer timeout precedence and duplicate-notification behavior remain unresolved.
+
+### Cancellation evidence
+
+- [TESTED] Scheduler cancellation calls the registered executor cancellation method.
+- [OBSERVED] Scheduler retains an active registration until execution_finished(), allowing physical executor completion/failure to release resource ownership.
+- [TESTED] Repeated TaskEngine/Scheduler cancellation is idempotent at the lifecycle level.
+- [TESTED] WebChatQueueManager worker cancellation marks the ticket CANCELLED and releases WEB_MESA_UNICA without incrementing the circuit failure count.
+- [UNKNOWN] A real QWebEngine/Playwright cancellation race is not executed in this phase.
+
+### Circuit and capacity evidence
+
+- [TESTED] WebChatQueueManager worker opens after 3 failures and half-opens after its configured 10 s cooldown.
+- [TESTED] capacity_restored is emitted on half-open recovery.
+- [TESTED] WebChatTaskExecutor binds that signal to TaskScheduler dispatch.
+- [OBSERVED] TaskOrchestrator has a separate per-waitress 3-failure/30 s breaker.
+- [UNKNOWN] The two breaker policies are not equivalent and are not unified in MIG-3.
+
+### Quick Action evidence
+
+- chocolatada remains LOCAL and is not a WebChat migration candidate.
+- trivia remains WEBCHAT through TaskOrchestrator and currently bypasses TaskEngine/Scheduler/WEB_MESA_UNICA.
+- [TESTED] A deterministic GUI callback test reproduces the existing PRESENTATION IDENTITY bug: the callback reads self._selected_bot_id at completion rather than a captured request identity.
+- [DECIDED] The bug is recorded only; it is not repaired in MIG-3.
+
+### F-007 — Clock determinism
+
+- [OBSERVED] TaskEngine accepts an injectable timezone-aware clock.
+- [OBSERVED] Authorization accepts an explicit current_time.
+- [OBSERVED] ScopeLock expiration calls the module wall clock directly.
+- [OBSERVED] TaskScheduler has no independent clock and delegates lifecycle deadline checks to TaskEngine.
+- [TESTED] A deterministic TaskEngine clock test confirms injected creation/deadline time.
+- [UNKNOWN] A single clock abstraction spanning ScopeLock, Authorization and operational runtime has not been established.
+- No protected runtime was modified to unify clocks.
+
+### F-008 — Scheduler observation sufficiency
+
+- [OBSERVED] RuntimeObservation exposes Scheduler pending_task_ids and active_task_ids.
+- [UNKNOWN] It does not expose _resource_active, _registrations, _resume_requests or _priority_streak.
+- [DECIDED] Those internal structures are not promoted to public API in MIG-3.
+- [UNKNOWN] Full Supervisor evidence for resource ownership, starvation bypass, wake/resume and registration state therefore remains limited to read-only pending/active snapshots.
 
 ## Existing Test Inventory
 
