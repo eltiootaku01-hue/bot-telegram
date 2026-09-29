@@ -229,16 +229,20 @@ class PlaywrightPhysicalResourceAdapter:
                         reason="PLAYWRIGHT_EXECUTION_CANCELLED",
                         evidence="physical termination not confirmed",
                     )
-                except Exception:
-                    pass
+                except Exception as cleanup_error:
+                    raise PlaywrightPhysicalResourceError(
+                        "PLAYWRIGHT_CANCELLATION_QUARANTINE_FAILED"
+                    ) from cleanup_error
             else:
                 try:
                     self.release_claim(
                         claim,
                         evidence="cancelled before physical execution",
                     )
-                except Exception:
-                    pass
+                except Exception as cleanup_error:
+                    raise PlaywrightPhysicalResourceError(
+                        "PLAYWRIGHT_CANCELLATION_CLAIM_RELEASE_FAILED"
+                    ) from cleanup_error
             raise
         except Exception as error:
             if execution is not None:
@@ -250,16 +254,20 @@ class PlaywrightPhysicalResourceAdapter:
                             f"{type(error).__name__}: {error}"
                         ),
                     )
-                except Exception:
-                    pass
+                except Exception as cleanup_error:
+                    raise PlaywrightPhysicalResourceError(
+                        "PLAYWRIGHT_FAILURE_QUARANTINE_FAILED"
+                    ) from cleanup_error
             else:
                 try:
                     self.release_claim(
                         claim,
                         evidence="task failed before physical execution",
                     )
-                except Exception:
-                    pass
+                except Exception as cleanup_error:
+                    raise PlaywrightPhysicalResourceError(
+                        "PLAYWRIGHT_FAILURE_CLAIM_RELEASE_FAILED"
+                    ) from cleanup_error
             raise
 
         self.confirm_termination(
