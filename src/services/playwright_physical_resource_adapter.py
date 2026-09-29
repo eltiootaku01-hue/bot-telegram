@@ -148,9 +148,15 @@ class PlaywrightPhysicalResourceAdapter:
             WebPhysicalIdentity,
         ):
             raise TypeError("identity must be WebPhysicalIdentity")
+        descriptor = authority.resolve_resource(
+            provider=identity.provider,
+            authenticated_account_identity=identity.principal_identity,
+            session_identity=identity.provider_session_identity,
+            canonical_interaction_surface=identity.canonical_interaction_surface,
+        )
         return cls(
             authority,
-            identity.descriptor,
+            descriptor,
             backend,
             authentication_state=identity.authentication_state,
             requester_identity=requester_identity,
