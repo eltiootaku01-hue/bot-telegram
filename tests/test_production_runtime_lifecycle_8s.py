@@ -23,7 +23,11 @@ from bot_ia.core.physical_resource_authority import (
     PhysicalWebChatResourceAuthority,
 )
 from bot_ia.core.task_engine import TaskState
-from bot_ia.core.web_physical_identity import AuthenticationState, WebPhysicalIdentityRegistry
+from bot_ia.core.task_scheduler import TaskRoute
+from bot_ia.core.web_physical_identity import (
+    AuthenticationState,
+    WebPhysicalIdentityRegistry,
+)
 from bot_ia.runtime import build_runtime
 from services.playwright_physical_resource_adapter import (
     PlaywrightPhysicalResourceAdapter,
@@ -79,9 +83,14 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                 runtime.physical_lifecycle_reconciliation.authority,
                 runtime.physical_web_authority,
             )
-            self.assertIs(
-                runtime.physical_lifecycle_reconciliation.observe_logical_task,
-                runtime.task_engine._lifecycle_listeners[0],
+            listener = runtime.task_engine._lifecycle_listeners[0]
+            self.assertEqual(
+                runtime.physical_lifecycle_reconciliation,
+                listener.__self__,
+            )
+            self.assertEqual(
+                PhysicalLifecycleReconciliation.observe_logical_task,
+                listener.__func__,
             )
         finally:
             runtime.memory_store.close()
@@ -132,12 +141,7 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
             self.assertIs(
                 window._web_task_executor,
                 runtime.task_scheduler._executors.get(
-                    window._web_task_executor_route
-                    if hasattr(window, "_web_task_executor_route")
-                    else __import__(
-                        "bot_ia.core.task_scheduler",
-                        fromlist=["TaskRoute"],
-                    ).TaskRoute.WEBCHAT
+                    TaskRoute.WEBCHAT
                 ),
             )
 
@@ -171,10 +175,12 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
             self.assertIsNone(web_queue.browser)
         finally:
             if window is not None:
-                asyncio.run(window.shutdown_async_engine())
-                window.close()
-                self.app.processEvents()
-            if web_queue is not None and web_queue is not getattr(window, "_async_web_queue", None):
+                try:
+                    asyncio.run(window.shutdown_async_engine())
+                finally:
+                    window.close()
+                    self.app.processEvents()
+            elif web_queue is not None:
                 asyncio.run(web_queue.close_browser_pool())
             runtime.memory_store.close()
 
@@ -556,13 +562,7 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
             self.app.processEvents()
             self.assertTrue(window._closing)
         finally:
-            if not runtime._runtime_lock:
-                pass
-            if getattr(runtime, "memory_store", None) is not None:
-                try:
-                    runtime.memory_store.close()
-                except Exception:
-                    pass
+            runtime.memory_store.close()
 
     def test_s10_restart_creates_fresh_runtime_authority(self):
         first = self._runtime()
