@@ -371,12 +371,113 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             "def _enable_manual_setup_mode",
             "WebPhysicalIdentityRegistry",
             "web_identity_binding",
-            "PhysicalWebChatResourceAuthority",
             "physical_resource_adapter=adapter",
             "authentication_state=identity.authentication_state",
             "WEB_IDENTITY_PROFILE_BINDING_MISMATCH",
         ):
             self.assertIn(token, source)
+
+        from bot_ia.core.physical_resource_authority import (
+            PhysicalWebChatResourceAuthority,
+        )
+        from bot_ia.runtime import build_runtime
+        from bot_ia.core.web_physical_identity import (
+            AuthenticationState,
+            WebPhysicalIdentityRegistry,
+        )
+        from services.qweb_physical_resource_adapter import (
+            QWebPhysicalResourceAdapter,
+        )
+
+        runtime = build_runtime(self.ROOT)
+        try:
+            self.assertIsInstance(
+                runtime.physical_web_authority,
+                PhysicalWebChatResourceAuthority,
+            )
+
+            tree = ast.parse(source)
+            authority_assignment = [
+                node
+                for node in ast.walk(tree)
+                if isinstance(node, ast.Assign)
+                and any(
+                    isinstance(target, ast.Attribute)
+                    and target.attr == "_web_physical_authority"
+                    for target in node.targets
+                )
+            ]
+            self.assertTrue(authority_assignment)
+            self.assertTrue(
+                any(
+                    isinstance(node.value, ast.Attribute)
+                    and isinstance(node.value.value, ast.Attribute)
+                    and isinstance(node.value.value.value, ast.Name)
+                    and node.value.value.value.id == "self"
+                    and node.value.value.attr == "runtime"
+                    and node.value.attr == "physical_web_authority"
+                    for node in authority_assignment
+                )
+            )
+
+            qweb_calls = [
+                node
+                for node in ast.walk(tree)
+                if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "QWebPhysicalResourceAdapter"
+            ]
+            self.assertTrue(qweb_calls)
+            self.assertTrue(
+                any(
+                    node.args
+                    and isinstance(node.args[0], ast.Attribute)
+                    and isinstance(node.args[0].value, ast.Name)
+                    and node.args[0].value.id == "self"
+                    and node.args[0].attr == "_web_physical_authority"
+                    for node in qweb_calls
+                )
+            )
+
+            authority_constructions = [
+                node
+                for node in ast.walk(tree)
+                if isinstance(node, ast.Call)
+                and (
+                    (
+                        isinstance(node.func, ast.Name)
+                        and node.func.id == "PhysicalWebChatResourceAuthority"
+                    )
+                    or (
+                        isinstance(node.func, ast.Attribute)
+                        and node.func.attr == "PhysicalWebChatResourceAuthority"
+                    )
+                )
+            ]
+            self.assertFalse(
+                authority_constructions,
+                "GUI no debe construir una segunda PhysicalWebChatResourceAuthority",
+            )
+
+            production_registry = WebPhysicalIdentityRegistry.from_toml(
+                self.ROOT / "config" / "runtime.toml"
+            )
+            cari = production_registry.resolve_binding(
+                "cari_gemini",
+                expected_provider="gemini",
+                expected_logical_actor="cari",
+            )
+            self.assertEqual(AuthenticationState.UNKNOWN, cari.authentication_state)
+
+            qweb = QWebPhysicalResourceAdapter(
+                runtime.physical_web_authority,
+                cari.descriptor,
+                authentication_state=cari.authentication_state,
+                requester_identity="gui-contract-test",
+            )
+            self.assertIs(qweb.authority, runtime.physical_web_authority)
+        finally:
+            runtime.memory_store.close()
 
         module = __import__(
             "gui.app",
