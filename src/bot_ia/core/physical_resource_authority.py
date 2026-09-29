@@ -158,6 +158,7 @@ class PhysicalWebChatResourceAuthority:
         self._resources: dict[str, _ResourceRecord] = {}
         self._now = now_provider or (lambda: datetime.now(timezone.utc))
         self._claim_counter = 0
+        self._last_released_claims: dict[str, PhysicalResourceClaim] = {}
 
     def resolve_resource(
         self,
@@ -206,6 +207,7 @@ class PhysicalWebChatResourceAuthority:
                     f"RESOURCE_NOT_AVAILABLE:{record.state.value}"
                 )
 
+            self._last_released_claims.pop(physical_resource_id, None)
             self._claim_counter += 1
             claim_id = f"claim-{self._claim_counter}"
             generation = (record.execution_generation or 0) + 1
@@ -274,8 +276,28 @@ class PhysicalWebChatResourceAuthority:
                 return False
             return True
 
+    def request_cancel(self, claim: PhysicalResourceClaim) -> PhysicalResourceSnapshot:
+        with self._lock:
+            record = self._require_owned_record(claim)
+            if record.state is not PhysicalResourceState.BUSY:
+                raise PhysicalResourceStateError(
+                    f"CANCEL_INVALID_STATE:{record.state.value}"
+                )
+            record.state = PhysicalResourceState.CANCELLING
+            self._assert_invariants_locked(record)
+            return self._snapshot_locked(record)
+
     def release(self, claim: PhysicalResourceClaim) -> PhysicalResourceSnapshot:
         with self._lock:
+            record = self._resources.get(claim.physical_resource_id)
+            if record is None:
+                raise KeyError(f"UNKNOWN_PHYSICAL_RESOURCE:{claim.physical_resource_id}")
+            if (
+                record.claim_id is None
+                and self._last_released_claims.get(record.descriptor.physical_resource_id)
+                == claim
+            ):
+                return self._snapshot_locked(record)
             record = self._require_owned_record(claim)
             if record.state not in {
                 PhysicalResourceState.CLAIMING,
@@ -298,7 +320,9 @@ class PhysicalWebChatResourceAuthority:
             record.quarantine_reason = None
             record.last_error = None
             self._assert_invariants_locked(record)
-            return self._snapshot_locked(record)
+            released = self._snapshot_locked(record)
+            self._last_released_claims[claim.physical_resource_id] = claim
+            return released
 
     def quarantine(
         self,
