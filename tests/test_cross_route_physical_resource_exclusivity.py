@@ -852,6 +852,12 @@ identity_id = "shared"
                     "./browser_data/cross-route-controlled",
                     AuthenticationState.VERIFIED,
                 )
+                self.authority.resolve_resource(
+                    "test",
+                    "test-principal",
+                    "test-session",
+                    runtime.url,
+                )
                 qweb = QWebPhysicalResourceAdapter(
                     self.authority,
                     identity.descriptor,
