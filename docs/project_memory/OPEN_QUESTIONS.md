@@ -132,3 +132,48 @@
 - Supervisor → execution handoff: [UNKNOWN]
 
 La decisión arquitectónica no autoriza implementación ni inicia FASE 2F-9.
+
+
+## FASE 2F-8C — Migration blockers / open questions
+
+### Capability parity
+
+- [BLOCKER / UNKNOWN] ¿Qué capacidades concretas del Playwright WebQueueManager son required para quick actions y no están demostradas en QWebEngine/QWebChannel/MutationObserver?
+- [UNKNOWN] ¿Debe conservarse la semántica de seis páginas por waitress o basta la arbitraje de una única superficie WebChat?
+- [UNKNOWN] ¿Cómo se preservarán interaction counters y el soft reset cada 20 interacciones si la arquitectura objetivo mantiene una sola superficie?
+- [UNKNOWN] ¿Los timeouts de respuesta, navegación y page operation del runtime Playwright tienen equivalentes funcionales en el protocolo Qt actual?
+- [UNKNOWN] ¿Existe alguna dependencia de storage_state/IndexedDB del Playwright que no esté cubierta por el QWebEngineProfile persistente?
+
+### Identity / lifecycle
+
+- [DECIDED] El futuro quick-action WebChat debe tener un task_id generado por TaskEngine.
+- [UNKNOWN] ¿Qué metadata mínima debe convertirse en Task.context para conservar target waitress, payload, acción y datos de presentación sin introducir una identidad nueva?
+- [UNKNOWN] ¿Debe una quick action que no usa WaitressSessionManager continuar sin session_id? La evidencia actual indica que sí; no se debe fabricar una sesión.
+- [UNKNOWN] ¿Qué política de deadline debe usar TaskEngine para sustituir el timeout global de 12 s del TaskOrchestrator sin duplicar el timeout físico de WebChatQueueManager?
+
+### Cancellation / failure / fallback
+
+- [UNKNOWN] ¿La GUI necesitará un control explícito de cancelación para quick actions o sólo cancelación por shutdown/parent task?
+- [UNKNOWN] ¿Qué fallos deben terminar en FAILED y cuáles deben producir una respuesta fallback sin marcar la operación física como fallida?
+- [UNKNOWN] Si una política futura agrega retry real, ¿debe representarse como el mismo task lifecycle o como child task? No se permite decidirlo implícitamente dentro de un executor.
+- [UNKNOWN] ¿Qué parte del CircuitBreaker por waitress del TaskOrchestrator, si alguna, expresa una política diferente del breaker físico de WebChatQueueManager?
+
+### Temporal compatibility
+
+- [UNKNOWN] ¿El routing switch de migración será una feature flag, adapter explícito o configuración de modo? La decisión queda para MIG-1.
+- [DECIDED] No se permite que el modo de compatibilidad ejecute ambas rutas para una misma solicitud.
+- [UNKNOWN] ¿Cuándo puede declararse el antiguo Playwright runtime sin consumidores operativos y por tanto elegible para archival/removal?
+
+### Supervisor compatibility
+
+- [UNKNOWN] ¿Cuál será el handoff físico exacto desde una decisión contractual ALLOWED hacia TaskEngine/Scheduler?
+- [UNKNOWN] ¿Dónde se materializará el binding físico de Authorization y ScopeLock antes de ejecutar una quick action?
+- [DECIDED] RuntimeObservation seguirá siendo read-only; no se convertirá en dispatcher.
+- [UNKNOWN] ¿Qué evidencia runtime deberá demostrar que el nuevo quick-action path realmente pasó por TaskEngine/Scheduler y por `WEB_MESA_UNICA`?
+
+### Migration safety
+
+- [DECIDED] No se copian cookies, perfiles, credenciales ni storage_state durante la migración.
+- [DECIDED] No se crean un segundo Scheduler, TaskEngine, WebChat executor ni cola operacional paralela.
+- [UNKNOWN] ¿Qué prueba de idempotencia demostrará que un routing switch no puede reenviar una solicitud ya aceptada?
+- [UNKNOWN] ¿Qué rollback preservará una sesión QWebEngine autenticada sin reactivar simultáneamente el Playwright runtime?
