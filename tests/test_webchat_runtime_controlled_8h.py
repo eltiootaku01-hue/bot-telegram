@@ -301,7 +301,11 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
             "qweb-session-A",
             "controlled://webchat",
         )
-        adapter = QWebPhysicalResourceAdapter(\n            authority,\n            descriptor,\n            authentication_state=AuthenticationState.VERIFIED,\n        )
+        adapter = QWebPhysicalResourceAdapter(
+            authority,
+            descriptor,
+            authentication_state=AuthenticationState.VERIFIED,
+        )
         execution = adapter.begin_execution(
             adapter.claim_resource(),
             ticket_id="ticket-m01",
@@ -445,7 +449,7 @@ if __name__ == "__main__":
             "gemini",
             "declared-controlled-principal",
             "declared-controlled-session",
-            "http://controlled.local",
+            self.harness.view.url().toString(),
             "./browser_data/controlled",
             AuthenticationState.VERIFIED,
         )

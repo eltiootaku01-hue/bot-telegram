@@ -345,7 +345,7 @@ class QWebPhysicalResourceAdapterContractTests(unittest.TestCase):
         worker._finish_current()
 
 
-    def test_q14_unknown_authentication_state_blocks_claim(self):
+    def test_q16_unknown_authentication_state_blocks_claim(self):
         authority = PhysicalWebChatResourceAuthority()
         descriptor = authority.resolve_resource(
             "controlled-provider",
@@ -361,7 +361,7 @@ class QWebPhysicalResourceAdapterContractTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             adapter.claim_resource()
 
-    def test_q15_surface_validation_is_canonical_and_fail_closed(self):
+    def test_q17_surface_validation_is_canonical_and_fail_closed(self):
         authority = PhysicalWebChatResourceAuthority()
         descriptor = authority.resolve_resource(
             "controlled-provider",
