@@ -13,6 +13,11 @@ from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
+from services.qweb_physical_resource_adapter import (
+    QWebPhysicalExecution,
+    QWebPhysicalResourceAdapter,
+)
+
 
 PROTOCOL_DIRECTIVE = """[DIRECTRIZ SISTEMA - PROTOCOLO CASA DE COMANDO]
 
@@ -460,6 +465,7 @@ class _QueueWorker(QObject):
         timeout_ms: int,
         circuit_threshold: int,
         circuit_cooldown_ms: int,
+        physical_resource_adapter: QWebPhysicalResourceAdapter | None = None,
     ) -> None:
         super().__init__()
 
@@ -484,6 +490,8 @@ class _QueueWorker(QObject):
         self._running = True
         self._queued_ids: set[str] = set()
         self._mesa_unica_acquired = False
+        self._physical_resource_adapter = physical_resource_adapter
+        self.physical_execution: QWebPhysicalExecution | None = None
 
     @Slot()
     def start(self) -> None:
@@ -536,10 +544,44 @@ class _QueueWorker(QObject):
             self.ticket_failed.emit(cancelled, "TASK_CANCELLED")
             QTimer.singleShot(0, self._process_next)
 
+    def _quarantine_physical(
+        self,
+        execution: QWebPhysicalExecution | None,
+        *,
+        reason: str,
+        evidence: str,
+    ) -> None:
+        adapter = self._physical_resource_adapter
+        if adapter is None or execution is None:
+            return
+        try:
+            adapter.quarantine_resource(
+                execution,
+                reason=reason,
+                evidence=evidence,
+            )
+        except Exception as error:
+            self.queue_error.emit(
+                execution.ticket_id,
+                f"PHYSICAL_QUARANTINE_FAILED:{error}",
+            )
+
     def _cancel_current(self) -> None:
         ticket = self.current_ticket
         if ticket is None:
             return
+
+        execution = self.physical_execution
+        adapter = self._physical_resource_adapter
+        if adapter is not None and execution is not None:
+            try:
+                adapter.request_cancel(execution)
+            except Exception as error:
+                self._quarantine_physical(
+                    execution,
+                    reason="CANCELLATION_REQUEST_FAILED",
+                    evidence=str(error),
+                )
 
         ticket.status = "CANCELLED"
         if self._timeout_timer is not None:
@@ -548,9 +590,21 @@ class _QueueWorker(QObject):
         self.is_busy = False
         self.awaiting_terminated = False
         self.close_in_flight = False
+
+        # cancelOperation() invalidates local callbacks but is not proof of
+        # physical termination. Therefore an active Authority claim is
+        # quarantined until a later reconciliation can prove termination.
+        if adapter is not None and execution is not None:
+            self._quarantine_physical(
+                execution,
+                reason="CANCELLED_WITHOUT_TERMINATION_EVIDENCE",
+                evidence="QWeb cancelOperation invalidated callbacks only",
+            )
+            self.physical_execution = None
         if self._mesa_unica_acquired:
             _WEB_MESA_UNICA.release()
             self._mesa_unica_acquired = False
+
         self.ticket_failed.emit(ticket, "TASK_CANCELLED")
         self.busy_changed.emit(False)
         if self._running and not self.circuit_open:
@@ -707,11 +761,19 @@ class _QueueWorker(QObject):
         # instancias del proceso o hacer imposible un reinicio limpio.
         if self.current_ticket is not None:
             ticket = self.current_ticket
+            execution = self.physical_execution
             ticket.status = "FAILED"
             self.current_ticket = None
             self.is_busy = False
             self.awaiting_terminated = False
             self.close_in_flight = False
+            if execution is not None:
+                self._quarantine_physical(
+                    execution,
+                    reason="QWEB_SHUTDOWN_WITHOUT_TERMINATION_EVIDENCE",
+                    evidence="QThread shutdown did not observe #terminado",
+                )
+                self.physical_execution = None
             if self._mesa_unica_acquired:
                 _WEB_MESA_UNICA.release()
                 self._mesa_unica_acquired = False
@@ -740,16 +802,50 @@ class _QueueWorker(QObject):
             return
 
         ticket = self.msg_queue.get()
-        self._queued_ids.discard(
-            ticket.ticket_id
-        )
+        self._queued_ids.discard(ticket.ticket_id)
 
-        # La espera ocurre únicamente en el worker, nunca en la GUI.
-        # El ticket conserva el orden FIFO de esta WebQueue.
+        claim = None
+        adapter = self._physical_resource_adapter
+        if adapter is not None:
+            try:
+                claim = adapter.claim_resource()
+            except Exception as error:
+                ticket.status = "FAILED"
+                self.ticket_failed.emit(
+                    ticket,
+                    f"PHYSICAL_RESOURCE_CLAIM_DENIED:{error}",
+                )
+                self.busy_changed.emit(False)
+                QTimer.singleShot(0, self._process_next)
+                return
+
+        # Authority claim precedes the legacy local guard. If the local guard
+        # cannot be acquired, the claim is released before any physical send.
         acquired = _WEB_MESA_UNICA.acquire(
             timeout=max(1.0, self.timeout_ms / 1000)
         )
         if not acquired:
+            if adapter is not None and claim is not None:
+                try:
+                    adapter.release_claim(
+                        claim,
+                        evidence="legacy_lock_not_acquired_before_execution",
+                    )
+                except Exception:
+                    try:
+                        adapter.quarantine_resource(
+                            adapter.begin_execution(
+                                claim,
+                                ticket_id=ticket.ticket_id,
+                                operation_id=(
+                                    f"qweb-abort-{ticket.ticket_id}"
+                                ),
+                            ),
+                            reason="CLAIM_RELEASE_FAILED",
+                            evidence="legacy_lock_not_acquired",
+                        )
+                    except Exception:
+                        pass
             ticket.status = "FAILED"
             self.ticket_failed.emit(
                 ticket,
@@ -765,6 +861,51 @@ class _QueueWorker(QObject):
         self.is_busy = True
         self.awaiting_terminated = False
         self.close_in_flight = False
+
+        if adapter is not None and claim is not None:
+            try:
+                self.physical_execution = adapter.begin_execution(
+                    claim,
+                    ticket_id=ticket.ticket_id,
+                    operation_id=(
+                        f"qweb-{ticket.ticket_id}-"
+                        f"{claim.execution_generation}"
+                    ),
+                )
+            except Exception as error:
+                self.physical_execution = None
+                _WEB_MESA_UNICA.release()
+                self._mesa_unica_acquired = False
+                try:
+                    adapter.release_claim(
+                        claim,
+                        evidence="begin_execution_failed_before_physical_send",
+                    )
+                except Exception:
+                    try:
+                        adapter.quarantine_resource(
+                            adapter.begin_execution(
+                                claim,
+                                ticket_id=ticket.ticket_id,
+                                operation_id=(
+                                    f"qweb-abort-{ticket.ticket_id}"
+                                ),
+                            ),
+                            reason="BEGIN_EXECUTION_FAILURE",
+                            evidence=str(error),
+                        )
+                    except Exception:
+                        pass
+                self.current_ticket = None
+                self.is_busy = False
+                ticket.status = "FAILED"
+                self.ticket_failed.emit(
+                    ticket,
+                    f"PHYSICAL_EXECUTION_BEGIN_FAILED:{error}",
+                )
+                self.busy_changed.emit(False)
+                QTimer.singleShot(0, self._process_next)
+                return
 
         if self._timeout_timer is not None:
             self._timeout_timer.start(
@@ -804,6 +945,8 @@ class _QueueWorker(QObject):
         if ticket is None:
             return
 
+        execution = self.physical_execution
+        adapter = self._physical_resource_adapter
         ticket.status = "FAILED"
 
         if self._timeout_timer is not None:
@@ -813,6 +956,19 @@ class _QueueWorker(QObject):
         self.is_busy = False
         self.awaiting_terminated = False
         self.close_in_flight = False
+
+        if adapter is not None and execution is not None:
+            try:
+                adapter.request_cancel(execution)
+            except Exception:
+                pass
+            self._quarantine_physical(
+                execution,
+                reason="FAILED_WITHOUT_TERMINATION_EVIDENCE",
+                evidence=reason,
+            )
+            self.physical_execution = None
+
         if self._mesa_unica_acquired:
             _WEB_MESA_UNICA.release()
             self._mesa_unica_acquired = False
@@ -836,6 +992,36 @@ class _QueueWorker(QObject):
 
         if ticket is None:
             return
+
+        execution = self.physical_execution
+        adapter = self._physical_resource_adapter
+        if adapter is not None and execution is not None:
+            try:
+                adapter.confirm_termination(
+                    execution,
+                    evidence="QWeb #terminado observed",
+                )
+            except Exception as error:
+                self._quarantine_physical(
+                    execution,
+                    reason="RELEASE_FAILED_AFTER_TERMINATION",
+                    evidence=str(error),
+                )
+                self.physical_execution = None
+                ticket.status = "FAILED"
+                if self._timeout_timer is not None:
+                    self._timeout_timer.stop()
+                self.current_ticket = None
+                self.is_busy = False
+                self.awaiting_terminated = False
+                self.close_in_flight = False
+                if self._mesa_unica_acquired:
+                    _WEB_MESA_UNICA.release()
+                    self._mesa_unica_acquired = False
+                self.ticket_failed.emit(ticket, "PHYSICAL_RELEASE_FAILED")
+                self.busy_changed.emit(False)
+                return
+            self.physical_execution = None
 
         ticket.status = "RESOLVED"
 
@@ -942,6 +1128,7 @@ class WebChatQueueManager(QObject):
         circuit_threshold: int = 3,
         circuit_cooldown_seconds: int = 10,
         browser_profile: str | Path | None = None,
+        physical_resource_adapter: QWebPhysicalResourceAdapter | None = None,
     ) -> None:
         super().__init__(parent)
 
@@ -974,6 +1161,7 @@ class WebChatQueueManager(QObject):
         self._protocol_pending = False
         self._shutdown_started = False
         self._web_operation_id = 0
+        self._physical_resource_adapter = physical_resource_adapter
 
         self._protocol_send_timer = QTimer(self)
         self._protocol_send_timer.setSingleShot(True)
@@ -1032,6 +1220,7 @@ class WebChatQueueManager(QObject):
             circuit_cooldown_ms=(
                 circuit_cooldown_seconds * 1000
             ),
+            physical_resource_adapter=physical_resource_adapter,
         )
         self._worker.moveToThread(
             self._thread
@@ -1459,6 +1648,18 @@ class WebChatQueueManager(QObject):
                 # Respuesta tardía de un ticket anterior.
                 return
 
+            adapter = self._physical_resource_adapter
+            execution = self._worker.physical_execution
+            if adapter is not None:
+                if (
+                    execution is None
+                    or not adapter.validate_callback(
+                        execution,
+                        ticket_id=ticket_id,
+                    )
+                ):
+                    return
+
             self._consume_response(
                 text,
                 expected_ticket_id=ticket_id,
@@ -1525,6 +1726,15 @@ class WebChatQueueManager(QObject):
         ticket_id: str,
         prompt: str,
     ) -> None:
+        if action_kind in {"ticket", "close"}:
+            adapter = self._physical_resource_adapter
+            execution = self._worker.physical_execution
+            if adapter is not None:
+                if execution is None or not adapter.validate_execution(execution):
+                    self._cancel_web_operation()
+                    self.health_failure_requested.emit()
+                    return
+
         self._inject_to_browser(
             prompt,
             action_kind=action_kind,
