@@ -159,7 +159,6 @@ class PhysicalWebChatResourceAuthority:
         self._now = now_provider or (lambda: datetime.now(timezone.utc))
         self._claim_counter = 0
         self._last_released_claims: dict[str, PhysicalResourceClaim] = {}
-        self._last_released_claims: dict[str, PhysicalResourceClaim] = {}
 
     def resolve_resource(
         self,
@@ -208,7 +207,6 @@ class PhysicalWebChatResourceAuthority:
                     f"RESOURCE_NOT_AVAILABLE:{record.state.value}"
                 )
 
-            self._last_released_claims.pop(physical_resource_id, None)
             self._last_released_claims.pop(physical_resource_id, None)
             self._claim_counter += 1
             claim_id = f"claim-{self._claim_counter}"
