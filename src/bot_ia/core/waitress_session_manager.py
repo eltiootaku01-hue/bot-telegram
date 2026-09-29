@@ -160,11 +160,17 @@ class WaitressSessionManager:
                 "task_scheduler and task_engine must share the same lifecycle authority"
             )
         if self._web_queue is not None:
-            self._task_scheduler.register_executor(
-                TaskRoute.WEBCHAT,
-                WebChatTaskExecutor(self._web_queue),
-                default_resource_key=TaskScheduler.WEBCHAT_RESOURCE,
-            )
+            existing_executor = getattr(
+                self._task_scheduler,
+                "_executors",
+                {},
+            ).get(TaskRoute.WEBCHAT)
+            if existing_executor is None:
+                self._task_scheduler.register_executor(
+                    TaskRoute.WEBCHAT,
+                    WebChatTaskExecutor(self._web_queue),
+                    default_resource_key=TaskScheduler.WEBCHAT_RESOURCE,
+                )
         self._message_deleter = message_deleter
         self._notification_pool = ThreadPoolExecutor(
             max_workers=max_notification_workers,
