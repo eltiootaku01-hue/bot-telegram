@@ -198,6 +198,8 @@ class Mig3TimeoutFailureAndResourceTests(unittest.TestCase):
         self.assertEqual(["resource-b"], executor.submitted[-1:])
 
         scheduler.cancel(second.task_id)
+        self.assertEqual(("resource-b",), scheduler.active_task_ids())
+        scheduler.execution_finished(second.task_id)
         self.assertEqual((), scheduler.active_task_ids())
 
 
@@ -215,7 +217,14 @@ class Mig3WebQueueProtocolTests(unittest.TestCase):
             self.worker._mesa_unica_acquired = False
 
     def test_ticket_response_correlation_rejects_wrong_ticket_and_accepts_exact_identity(self) -> None:
-        manager = WebChatQueueManager.__new__(WebChatQueueManager)
+        class SignalProbe:
+            def __init__(self) -> None:
+                self.events = []
+
+            def emit(self, *args) -> None:
+                self.events.append(args)
+
+        manager = type("FakeWebQueue", (), {})()
         manager.current_ticket = BotTicket(
             "ticket-a",
             "Cari",
@@ -234,29 +243,34 @@ class Mig3WebQueueProtocolTests(unittest.TestCase):
             r'(?P<ticket>[A-Za-z0-9_.:-]+)\s*\)#terminado',
             re.IGNORECASE,
         )
-        received = []
-        manager.ticket_processed = type(
-            "SignalProbe",
-            (),
-            {"emit": lambda _self, ticket_id, text: received.append((ticket_id, text))},
-        )()
+        manager.ticket_processed = SignalProbe()
+        manager.response_observed_requested = SignalProbe()
+        manager.terminated_requested = SignalProbe()
+        manager.MAX_RESPONSE_PARSE_CHARS = 20_000
 
         self.assertFalse(
-            manager.register_ticket_response(
+            WebChatQueueManager._consume_response(
+                manager,
+                
                 'respuesta a (Cari ticket-b) “vieja”'
             )
         )
         self.assertTrue(
-            manager.register_ticket_response(
-                'respuesta a (Cari ticket-a) “correcta”'
+            WebChatQueueManager._consume_response(
+                manager,
+                'respuesta a (Cari ticket-a) “correcta”',
             )
         )
-        self.assertEqual([("ticket-a", "correcta")], received)
+        self.assertEqual(
+            [("ticket-a", "correcta")],
+            manager.ticket_processed.events,
+        )
 
         manager.current_ticket = None
         self.assertFalse(
-            manager.register_ticket_response(
-                'respuesta a (Cari ticket-a) “tardía”'
+            WebChatQueueManager._consume_response(
+                manager,
+                'respuesta a (Cari ticket-a) “tardía”',
             )
         )
 
@@ -269,13 +283,13 @@ class Mig3WebQueueProtocolTests(unittest.TestCase):
             def page(self) -> FakePage:
                 return FakePage()
 
-        manager = object.__new__(WebChatQueueManager)
+        manager = type("FakeWebQueue", (), {})()
         manager._web_operation_id = 4
         manager.web_view = FakeWebView()
 
-        manager._cancel_web_operation()
+        WebChatQueueManager._cancel_web_operation(manager)
         self.assertEqual(5, manager._web_operation_id)
-        manager._cancel_web_operation()
+        WebChatQueueManager._cancel_web_operation(manager)
         self.assertEqual(6, manager._web_operation_id)
 
     def test_queue_worker_duplicate_ticket_id_is_rejected(self) -> None:
