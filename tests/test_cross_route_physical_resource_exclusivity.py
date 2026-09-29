@@ -736,6 +736,32 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
             )
 
     def test_x18_shared_logical_actor_uses_one_physical_identity(self) -> None:
+        from dataclasses import replace
+
+        root = Path(__file__).resolve().parents[1]
+        production_config = root / "config" / "runtime.toml"
+        production_before = production_config.read_text(encoding="utf-8")
+        production_registry = WebPhysicalIdentityRegistry.from_toml(
+            production_config
+        )
+        production_identity = production_registry.resolve_binding(
+            "cari_gemini",
+            expected_provider="gemini",
+            expected_logical_actor="cari",
+        )
+        self.assertEqual(
+            AuthenticationState.UNKNOWN,
+            production_identity.authentication_state,
+        )
+        production_qweb = QWebPhysicalResourceAdapter(
+            self.authority,
+            production_identity.descriptor,
+            authentication_state=production_identity.authentication_state,
+            requester_identity="qweb-production-guard",
+        )
+        with self.assertRaises(RuntimeError):
+            production_qweb.claim_resource()
+
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "runtime.toml"
             path.write_text(
@@ -746,7 +772,7 @@ principal_identity = "shared-principal"
 provider_session_identity = "shared-session"
 canonical_interaction_surface = "http://controlled.local/chat"
 browser_profile = "./browser_data/shared"
-authentication_state = "VERIFIED"
+authentication_state = "UNKNOWN"
 
 [web_identity_bindings.cari]
 logical_actor = "cari"
@@ -762,21 +788,53 @@ identity_id = "shared"
             cari = registry.resolve_binding("cari")
             sunna = registry.resolve_binding("sunna")
             self.assertEqual(
+                AuthenticationState.UNKNOWN,
+                cari.authentication_state,
+            )
+            self.assertEqual(
+                AuthenticationState.UNKNOWN,
+                sunna.authentication_state,
+            )
+            self.assertEqual(
                 cari.physical_resource_id,
                 sunna.physical_resource_id,
             )
 
+            # CONTROLLED TEST IDENTITY:
+            # verification is an in-memory runtime transition and is never
+            # persisted in production configuration.
+            verified_cari = replace(
+                cari,
+                authentication_state=AuthenticationState.VERIFIED,
+            )
+            verified_sunna = replace(
+                sunna,
+                authentication_state=AuthenticationState.VERIFIED,
+            )
+            self.assertEqual(
+                AuthenticationState.VERIFIED,
+                verified_cari.authentication_state,
+            )
+            self.assertEqual(
+                AuthenticationState.VERIFIED,
+                verified_sunna.authentication_state,
+            )
+            self.assertIn(
+                'authentication_state = "UNKNOWN"',
+                path.read_text(encoding="utf-8"),
+            )
+
             qweb = QWebPhysicalResourceAdapter(
                 self.authority,
-                cari.descriptor,
-                authentication_state=AuthenticationState.VERIFIED,
+                verified_cari.descriptor,
+                authentication_state=verified_cari.authentication_state,
                 requester_identity="qweb-cari",
             )
             playwright = PlaywrightPhysicalResourceAdapter(
                 self.authority,
-                sunna.descriptor,
+                verified_sunna.descriptor,
                 CountingBackend(page=ControlledPage()),
-                authentication_state=AuthenticationState.VERIFIED,
+                authentication_state=verified_sunna.authentication_state,
                 requester_identity="playwright-sunna",
             )
             self.assertIs(qweb.authority, playwright.authority)
@@ -785,8 +843,13 @@ identity_id = "shared"
                 playwright.claim_resource()
             qweb.release_claim(
                 claim,
-                evidence="x18 cleanup",
+                evidence="x18 controlled test cleanup",
             )
+
+        self.assertEqual(
+            production_before,
+            production_config.read_text(encoding="utf-8"),
+        )
 
     def test_x19_production_authentication_unknown_blocks_both_routes(self) -> None:
         root = Path(__file__).resolve().parents[1]
@@ -820,145 +883,161 @@ identity_id = "shared"
 
     def test_x20_controlled_cross_route_runtime_with_real_qweb_and_playwright(self) -> None:
         try:
-            from playwright.sync_api import sync_playwright
+            from playwright.async_api import async_playwright
         except ImportError:
             self.skipTest("playwright unavailable")
 
         runtime = CrossRouteWebRuntimeFixture()
+        worker = CrossRoutePlaywrightWorker(
+            self.authority,
+            runtime.url,
+        )
         try:
             self.assertTrue(
                 runtime.qweb.wait_until(
                     lambda: runtime.qweb.qweb_loaded
                 )
             )
-            with sync_playwright() as playwright_sync:
-                browser = playwright_sync.chromium.launch(
-                    headless=True,
-                    args=["--no-sandbox", "--disable-gpu"],
-                )
-                context = browser.new_context()
-                page = context.new_page()
-                page.goto(
-                    runtime.url,
-                    wait_until="domcontentloaded",
-                )
+            worker.start()
 
-                identity = WebPhysicalIdentity(
-                    "cross-route-controlled",
-                    "test",
-                    "test-principal",
-                    "test-session",
-                    runtime.url,
-                    "./browser_data/cross-route-controlled",
-                    AuthenticationState.VERIFIED,
-                )
-                self.authority.resolve_resource(
-                    "test",
-                    "test-principal",
-                    "test-session",
-                    runtime.url,
-                )
-                qweb = QWebPhysicalResourceAdapter(
-                    self.authority,
-                    identity.descriptor,
-                    authentication_state=AuthenticationState.VERIFIED,
-                    requester_identity="qweb-controlled",
-                )
-                backend = CountingBackend(page=page)
-                playwright_adapter = PlaywrightPhysicalResourceAdapter(
-                    self.authority,
-                    identity.descriptor,
-                    backend,
-                    authentication_state=AuthenticationState.VERIFIED,
-                    requester_identity="playwright-controlled",
-                )
+            self.assertIs(
+                self.authority,
+                worker.call(
+                    lambda adapter, _backend, _page: adapter.authority
+                ),
+            )
 
-                qweb_claim = qweb.claim_resource()
-                qweb_execution = qweb.begin_execution(
-                    qweb_claim,
-                    ticket_id="x20-qweb",
-                    operation_id="qweb-x20-1",
-                )
-                with self.assertRaises(PhysicalResourceClaimError):
-                    asyncio.run(
-                        playwright_adapter.execute_task(
-                            "cari",
-                            {"prompt": "blocked"},
-                            ticket_id="x20-pw-blocked",
-                            operation_id="playwright-x20-blocked",
-                        )
+            qweb_claim = self.qweb.claim_resource()
+            qweb_execution = self.qweb.begin_execution(
+                qweb_claim,
+                ticket_id="x20-qweb",
+                operation_id="qweb-x20-1",
+            )
+            self.assertEqual(
+                PhysicalResourceState.BUSY,
+                self.authority.snapshot(
+                    self.descriptor.physical_resource_id
+                ).state,
+            )
+
+            with self.assertRaises(PhysicalResourceClaimError):
+                worker.call(
+                    lambda adapter, _backend, _page: adapter.execute_task(
+                        "cari",
+                        {"prompt": "blocked"},
+                        ticket_id="x20-pw-blocked",
+                        operation_id="playwright-x20-blocked",
                     )
-                self.assertEqual(
-                    0,
-                    backend.action_count,
                 )
+            self.assertEqual(
+                0,
+                worker.call(
+                    lambda _adapter, backend, _page: backend.action_count
+                ),
+            )
+
+            runtime.qweb.run_js(
+                "document.querySelector('#send').click();"
+            )
+            qweb_count = int(
                 runtime.qweb.run_js(
-                    "document.querySelector('#send').click();"
+                    "window.__actionCount || 0"
                 )
-                qweb_count = int(
-                    runtime.qweb.run_js(
-                        "window.__actionCount || 0"
-                    )
-                    or 0
-                )
-                self.assertEqual(1, qweb_count)
-                qweb.confirm_termination(
-                    qweb_execution,
-                    evidence="x20 qweb termination",
-                )
+                or 0
+            )
+            self.assertEqual(1, qweb_count)
+            self.qweb.confirm_termination(
+                qweb_execution,
+                evidence="x20 qweb termination",
+            )
 
-                playwright_claim = playwright_adapter.claim_resource()
-                playwright_execution = playwright_adapter.begin_execution(
+            playwright_claim = worker.call(
+                lambda adapter, _backend, _page: adapter.claim_resource()
+            )
+            playwright_execution = worker.call(
+                lambda adapter, _backend, _page: adapter.begin_execution(
                     playwright_claim,
                     ticket_id="x20-pw",
                     operation_id="playwright-x20-2",
                     waitress_id="cari",
                 )
-                before_qweb_count = qweb_count
-                with self.assertRaises(PhysicalResourceClaimError):
-                    qweb.claim_resource()
-                self.assertEqual(
-                    before_qweb_count,
-                    int(
-                        runtime.qweb.run_js(
-                            "window.__actionCount || 0"
-                        )
-                        or 0
-                    ),
+            )
+            self.assertEqual(
+                PhysicalResourceState.BUSY,
+                self.authority.snapshot(
+                    self.descriptor.physical_resource_id
+                ).state,
+            )
+            self.assertFalse(
+                self.qweb.validate_callback(
+                    qweb_execution,
+                    ticket_id="x20-qweb",
                 )
-                asyncio.run(
-                    backend.process_task(
-                        "cari",
-                        {"prompt": "controlled"},
+            )
+            with self.assertRaises(PhysicalResourceClaimError):
+                self.qweb.claim_resource()
+            self.assertEqual(
+                qweb_count,
+                int(
+                    runtime.qweb.run_js(
+                        "window.__actionCount || 0"
+                    )
+                    or 0
+                ),
+            )
+
+            worker.call(
+                lambda _adapter, backend, _page: backend.process_task(
+                    "cari",
+                    {"prompt": "controlled"},
+                )
+            )
+            self.assertEqual(
+                1,
+                worker.call(
+                    lambda _adapter, backend, _page: backend.action_count
+                ),
+            )
+            self.assertEqual(
+                1,
+                worker.call(
+                    lambda _adapter, _backend, page: page.evaluate(
+                        "() => window.__actionCount || 0"
+                    )
+                ),
+            )
+            self.assertTrue(
+                worker.call(
+                    lambda adapter, _backend, _page: adapter.validate_execution(
+                        playwright_execution
                     )
                 )
-                self.assertEqual(1, backend.action_count)
-                self.assertEqual(
-                    1,
-                    int(
-                        page.evaluate(
-                            "() => window.__actionCount || 0"
-                        )
-                        or 0
-                    ),
-                )
-                snapshot = self.authority.snapshot(
-                    identity.physical_resource_id
-                )
-                self.assertEqual(
-                    PhysicalResourceState.BUSY,
-                    snapshot.state,
-                )
-                self.assertEqual(
-                    "playwright",
-                    snapshot.backend,
-                )
-                playwright_adapter.confirm_termination(
+            )
+            snapshot = self.authority.snapshot(
+                self.descriptor.physical_resource_id
+            )
+            self.assertEqual(
+                PhysicalResourceState.BUSY,
+                snapshot.state,
+            )
+            self.assertEqual(
+                "playwright",
+                snapshot.backend,
+            )
+            worker.call(
+                lambda adapter, _backend, _page: adapter.confirm_termination(
                     playwright_execution,
                     evidence="x20 playwright termination",
                 )
-                browser.close()
+            )
+            self.assertEqual(
+                PhysicalResourceState.AVAILABLE,
+                self.authority.snapshot(
+                    self.descriptor.physical_resource_id
+                ).state,
+            )
         finally:
+            worker.close()
             runtime.qweb.close()
 
     def test_x20_fencing_contract_does_not_allow_backend_specific_identity(self) -> None:
@@ -979,6 +1058,162 @@ identity_id = "shared"
 class _CrossRouteQWebWrapper:
     def __init__(self) -> None:
         self.fixture = None
+
+
+class AsyncCountingBackend:
+    """Real async Playwright backend used only by the X20 test harness."""
+
+    def __init__(self, page) -> None:
+        self.page = page
+        self.action_count = 0
+
+    async def process_task(
+        self,
+        waitress_id: str,
+        payload: dict,
+    ) -> str:
+        if waitress_id != "cari":
+            raise AssertionError(f"unexpected waitress_id: {waitress_id}")
+        if payload.get("prompt") != "controlled":
+            raise AssertionError("unexpected controlled Playwright payload")
+        await self.page.locator("#send").click()
+        self.action_count += 1
+        return "controlled-response"
+
+    async def close_browser_pool(self) -> None:
+        return
+
+
+class CrossRoutePlaywrightWorker:
+    """Owns async Playwright objects in one dedicated worker event loop."""
+
+    def __init__(
+        self,
+        authority: PhysicalWebChatResourceAuthority,
+        url: str,
+    ) -> None:
+        self.authority = authority
+        self.url = url
+        self.thread = None
+        self.loop = None
+        self.ready = threading.Event()
+        self.start_error = None
+        self._playwright = None
+        self._browser = None
+        self._context = None
+        self._page = None
+        self._backend = None
+        self._adapter = None
+
+    def start(self) -> None:
+        self.thread = threading.Thread(
+            target=self._run,
+            name="x20-playwright",
+            daemon=True,
+        )
+        self.thread.start()
+        if not self.ready.wait(timeout=15.0):
+            raise AssertionError("X20 Playwright worker did not initialize")
+        if self.start_error is not None:
+            raise AssertionError(
+                "X20 Playwright worker initialization failed"
+            ) from self.start_error
+
+    def _run(self) -> None:
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        try:
+            self.loop.run_until_complete(self._bootstrap())
+            self.ready.set()
+            self.loop.run_forever()
+        except BaseException as error:
+            self.start_error = error
+            self.ready.set()
+        finally:
+            if self.loop is not None and not self.loop.is_closed():
+                self.loop.run_until_complete(self._shutdown())
+                self.loop.close()
+
+    async def _bootstrap(self) -> None:
+        from playwright.async_api import async_playwright
+
+        self._playwright = await async_playwright().start()
+        self._browser = await self._playwright.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-gpu"],
+        )
+        self._context = await self._browser.new_context()
+        self._page = await self._context.new_page()
+        await self._page.goto(
+            self.url,
+            wait_until="domcontentloaded",
+        )
+        identity = WebPhysicalIdentity(
+            "cross-route-controlled",
+            "test",
+            "test-principal",
+            "test-session",
+            self.url,
+            "./browser_data/cross-route-controlled",
+            AuthenticationState.VERIFIED,
+        )
+        self.authority.resolve_resource(
+            "test",
+            "test-principal",
+            "test-session",
+            self.url,
+        )
+        self._backend = AsyncCountingBackend(self._page)
+        self._adapter = PlaywrightPhysicalResourceAdapter(
+            self.authority,
+            identity.descriptor,
+            self._backend,
+            authentication_state=AuthenticationState.VERIFIED,
+            requester_identity="playwright-controlled",
+        )
+
+    def call(self, callback, timeout: float = 15.0):
+        if self.loop is None or self.loop.is_closed():
+            raise AssertionError("X20 Playwright worker loop is unavailable")
+
+        async def invoke():
+            result = callback(
+                self._adapter,
+                self._backend,
+                self._page,
+            )
+            if hasattr(result, "__await__"):
+                return await result
+            return result
+
+        future = asyncio.run_coroutine_threadsafe(
+            invoke(),
+            self.loop,
+        )
+        return future.result(timeout=timeout)
+
+    def close(self) -> None:
+        if self.loop is None or self.thread is None:
+            return
+        if not self.loop.is_closed():
+            future = asyncio.run_coroutine_threadsafe(
+                self._request_loop_stop(),
+                self.loop,
+            )
+            future.result(timeout=15.0)
+        self.thread.join(timeout=15.0)
+
+    async def _request_loop_stop(self) -> None:
+        if self.loop is not None:
+            self.loop.stop()
+
+    async def _shutdown(self) -> None:
+        if self._context is not None:
+            await self._context.close()
+        if self._browser is not None:
+            await self._browser.close()
+        if self._playwright is not None:
+            await self._playwright.stop()
 
 
 class CrossRouteWebRuntimeFixture:
