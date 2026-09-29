@@ -177,3 +177,21 @@ La decisión arquitectónica no autoriza implementación ni inicia FASE 2F-9.
 - [DECIDED] No se crean un segundo Scheduler, TaskEngine, WebChat executor ni cola operacional paralela.
 - [UNKNOWN] ¿Qué prueba de idempotencia demostrará que un routing switch no puede reenviar una solicitud ya aceptada?
 - [UNKNOWN] ¿Qué rollback preservará una sesión QWebEngine autenticada sin reactivar simultáneamente el Playwright runtime?
+
+
+## FASE 2F-8D — MIG-0 Gates
+
+### New UNKNOWNs
+
+- [UNKNOWN] ¿Qué matriz de providers y respuestas reales es necesaria para cerrar MIG-3-G01..G05?
+- [UNKNOWN] ¿Qué mecanismo futuro reemplazará interaction_counters y soft_reset_page sin perder el comportamiento requerido?
+- [UNKNOWN] ¿Cuál será la precedencia exacta entre TaskEngine deadline y timeout físico de WebChatQueueManager?
+- [UNKNOWN] ¿Qué parte del fallback de trivia es presentación y qué parte, si alguna, debería convertirse en política de lifecycle?
+- [UNKNOWN] ¿Cómo se demostrará una sola ruta por solicitud durante la transición sin shadow execution?
+
+### Confirmed blockers
+
+- [BLOCKER] Quick actions WebChat actuales no usan TaskScheduler ni WEB_MESA_UNICA.
+- [BLOCKER] Login/storage continuity entre Playwright y QWebEngine no está demostrada.
+- [BLOCKER] MIG-3 requiere runtime/provider evidence; MIG-0 no la ejecuta.
+- [CONFIRMED RISK] callback de quick action depende de _selected_bot_id mutable.
