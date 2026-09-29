@@ -144,4 +144,4 @@ La evidencia actual no justifica tratar GUI TaskOrchestrator como runtime WebCha
 - [PROPOSED] La convivencia temporal debe tener un único routing por solicitud; una misma quick action nunca puede ser enviada simultáneamente a TaskOrchestrator y TaskEngine.
 - [PROPOSED] La retirada de TaskOrchestrator sólo podrá ocurrir después de demostrar quick actions, cancelación, fallback, WebChat, Taberna, sesión y CI preservados.
 - [DECIDED] TaskOrchestrator sigue ACTIVE / MIGRATION PENDING. No es legacy, no fue modificado y no fue eliminado.
-- [DECIDED] Esta fase es diseño בלבד: no inicia migración física ni FASE 2F-9.
+- [DECIDED] Esta fase es diseño solamente: no inicia migración física ni FASE 2F-9.
