@@ -105,6 +105,8 @@ class Mig3IdentityAndLifecycleTests(unittest.TestCase):
         cancelled = scheduler.cancel(task.task_id)
         self.assertIs(TaskState.CANCELLED, cancelled.state)
         self.assertEqual(["cancel-chain"], executor.cancelled)
+        self.assertEqual(("cancel-chain",), scheduler.active_task_ids())
+        scheduler.execution_finished(task.task_id)
         self.assertEqual((), scheduler.active_task_ids())
         self.assertIs(
             ResponseDisposition.DISCARDED,
@@ -193,7 +195,7 @@ class Mig3TimeoutFailureAndResourceTests(unittest.TestCase):
         scheduler.execution_finished(first.task_id)
         self.assertEqual(["resource-a", "resource-b"], executor.submitted)
         self.assertEqual(("resource-b",), scheduler.active_task_ids())
-        self.assertEqual(("resource-b",), executor.submitted[-1:])
+        self.assertEqual(["resource-b"], executor.submitted[-1:])
 
         scheduler.cancel(second.task_id)
         self.assertEqual((), scheduler.active_task_ids())
@@ -213,7 +215,7 @@ class Mig3WebQueueProtocolTests(unittest.TestCase):
             self.worker._mesa_unica_acquired = False
 
     def test_ticket_response_correlation_rejects_wrong_ticket_and_accepts_exact_identity(self) -> None:
-        manager = object.__new__(WebChatQueueManager)
+        manager = WebChatQueueManager.__new__(WebChatQueueManager)
         manager.current_ticket = BotTicket(
             "ticket-a",
             "Cari",
