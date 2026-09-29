@@ -10,7 +10,6 @@ import sys
 import tempfile
 import threading
 import unittest
-from types import SimpleNamespace
 
 import os
 
@@ -39,15 +38,10 @@ from bot_ia.core.web_physical_identity import (
     canonicalize_interaction_surface,
 )
 from bot_ia.runtime import build_runtime
-from gui.app import CommandCenterWindow, MATRIX_BOT_SPECS
 from services.playwright_physical_resource_adapter import (
     PlaywrightPhysicalResourceAdapter,
-    PlaywrightPhysicalResourceExecutionError,
 )
-from services.qweb_physical_resource_adapter import (
-    QWebPhysicalResourceAdapter,
-    QWebPhysicalResourceExecution,
-)
+from services.qweb_physical_resource_adapter import QWebPhysicalResourceAdapter
 from bot_ia.core.web_queue import WebQueueManager
 
 
@@ -851,6 +845,7 @@ identity_id = "shared"
 
                 identity = WebPhysicalIdentity(
                     "cross-route-controlled",
+                    "test",
                     "test-principal",
                     "test-session",
                     runtime.url,
