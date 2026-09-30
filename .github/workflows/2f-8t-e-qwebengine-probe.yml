@@ -2,12 +2,14 @@
 name: 2F-8T-E minimal QWebEngine probe
 
 on:
-  push:
+  pull_request:
     branches:
-      - diagnostic/2f-8t-qwebengine-clean
+      - main
+    paths-ignore:
+      - "diagnostics/results/**"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   qwebengine-probe:
