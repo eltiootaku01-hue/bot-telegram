@@ -30,6 +30,6 @@ Las mejoras posteriores deben entrar mediante commits directos sobre `main` y co
 
 ## Checkpoint de continuidad — 2026-09-30
 
-El punto operativo actual es `main@78d5fa6d0b539991aba1ee700121404678c21e59`. 2F-8R tiene evidencia CI verde (`857 passed` en Ubuntu y Windows, CI `36611033279`). 2F-8S/D3 está implementado y la suite S01-S13 existe en el estado actual, pero la evidencia cross-platform de `78d5` fue parcial: Windows `872 passed`; Ubuntu `863 passed, 9 errors` por carga de QWebEngine local. El provider real y la autenticación real siguen UNKNOWN/BLOCKED.
+El CURRENT MAIN HEAD es `main@1763974f4dc27fb5ea5f66452c0f9b57297aaa76`; su parent inmediato y LAST FUNCTIONAL BASELINE son `78d5fa6d0b539991aba1ee700121404678c21e59`. 2F-8R tiene evidencia CI verde (`857 passed` en Ubuntu y Windows, CI `36611033279`). 2F-8S/D3 está implementado y la suite S01-S13 existe en el estado actual, pero la evidencia cross-platform de `78d5` fue parcial: Windows `872 passed`; Ubuntu `863 passed, 9 errors` por carga de QWebEngine local. El provider real y la autenticación real siguen UNKNOWN/BLOCKED.
 
-La memoria D3 se conserva en `603266...` y `b6265...`; el punto de continuidad permanece en `main@78d5...`.
+La memoria D3 se conserva en `603266...` y `b6265...`; esos objetos siguen accesibles por SHA mientras los archive refs declarados históricamente permanecen ausentes/no resolubles. El punto de continuidad actual es `main@1763974...`; `78d5...` es el LAST FUNCTIONAL BASELINE.

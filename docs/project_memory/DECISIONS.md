@@ -180,10 +180,11 @@
 - Motivo: current tests prove separate mechanisms, not a global cross-runtime lock.
 - Impacto: G20 remains OBSERVED and is a migration blocker for quick-action convergence.
 
-### DEC-020 — main@78d5 es el punto de continuidad actual
+### DEC-020 — checkpoint histórico main@78d5
 
-- [DECIDED] La rama canónica es `main@78d5fa6d0b539991aba1ee700121404678c21e59`.
-- [DECIDED] La línea válida es `2902...` → `9fe...` → `78d5...`.
+- [DECIDED] En ese checkpoint histórico, la rama canónica era `main@78d5fa6d0b539991aba1ee700121404678c21e59`.
+- [DECIDED] La línea funcional válida es `2902...` → `9fe...` → `78d5...`.
+- [CURRENT] El HEAD actual de `main` es `1763974f4dc27fb5ea5f66452c0f9b57297aaa76`, descendiente directo de `78d5...`; `78d5...` permanece como LAST FUNCTIONAL BASELINE.
 - [DECIDED] `603266...` permanece archivado como artefacto lateral y no se integra automáticamente.
 - [DECIDED] `b6265...` se conserva como validación histórica D3; no es ancestro de `main`.
 

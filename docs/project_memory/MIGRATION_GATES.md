@@ -345,7 +345,11 @@ This result does not approve MIG-1, MIG-2, MIG-3, MIG-4, MIG-5 or MIG-6.
 - Authorization/ScopeLock physical enforcement not enabled.
 - MIG-1 through MIG-6 not started.
 
-## Current continuity checkpoint — main@78d5
+## Historical continuity checkpoint — main@78d5
+
+CURRENT MAIN HEAD: `1763974f4dc27fb5ea5f66452c0f9b57297aaa76`
+PARENT / LAST FUNCTIONAL BASELINE: `78d5fa6d0b539991aba1ee700121404678c21e59`
+CONSOLIDATION COMMIT: `1763974f4dc27fb5ea5f66452c0f9b57297aaa76`
 
 ### 2F-8R
 

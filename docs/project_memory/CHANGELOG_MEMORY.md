@@ -199,10 +199,12 @@
 
 ## 2026-09-30 — Consolidación de continuidad 2F-8R / 2F-8S / D3
 
-- [OBSERVED] `main` está en `78d5fa6d0b539991aba1ee700121404678c21e59`.
+- [HISTORICAL] En el checkpoint previo a la consolidación documental, `main` estaba en `78d5fa6d0b539991aba1ee700121404678c21e59`.
+- [CURRENT] `main` ahora apunta a `1763974f4dc27fb5ea5f66452c0f9b57297aaa76`; su parent inmediato y LAST FUNCTIONAL BASELINE son `78d5fa6d0b539991aba1ee700121404678c21e59`.
 - [TESTED] 2F-8R: `2902ac7d019aac4f9d0f35d7ee578d88b1fc334b`, CI `36611033279`, Ubuntu/Windows PASS, `857 passed`, code policy sin violations.
 - [TESTED] 2F-8S en `main`: S01-S13 y D3 S03 están presentes. CI `36631685318`: Windows `872 passed`; Ubuntu `863 passed, 9 errors` por carga QWebEngine local. Code policy PASS en ambos.
 - [HISTORICAL] `603266bad1cabcd23ab3ec49284e84917a6e1dca` es artefacto D3 lateral desde `48545826ab7ccd6278b7a6dc714a5bf40caf461a`.
 - [HISTORICAL] `b6265c7d9c15f94014bb318065d0cf59d07111d5` es validación D3 sobre `9feaf5b7d45da388d992df3565a45ee2fb9036d6`.
-- [DECIDED] `78d5...` es el punto de continuidad; los archive refs son evidencia histórica, no la línea activa.
+- [DECIDED] `78d5...` es el LAST FUNCTIONAL BASELINE; el CURRENT MAIN HEAD es `1763974...`.
+- [OBSERVED] Los objetos D3 son preservados por SHA; los refs `archive/2f-8s-d3-orphaned-main` y `archive/2f-8s-d3-validation` están actualmente ausentes/no resolubles.
 - [UNKNOWN] Provider real, autenticación real y evidencia externa continúan sin demostración.

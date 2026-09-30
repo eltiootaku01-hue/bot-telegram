@@ -204,16 +204,18 @@ Fuera de esta fase: Café Table, Character Engine, emociones, relaciones, memori
 
 ### Main
 
-- [CURRENT] `main → 78d5fa6d0b539991aba1ee700121404678c21e59`.
-- [CURRENT] La línea válida continúa `2902...` → `9fe...` → `78d5...`.
+- [CURRENT] `main → 1763974f4dc27fb5ea5f66452c0f9b57297aaa76`.
+- [CURRENT] Parent inmediato y LAST FUNCTIONAL BASELINE: `78d5fa6d0b539991aba1ee700121404678c21e59`.
+- [HISTORICAL] La línea funcional válida continúa `2902...` → `9fe...` → `78d5...`; `1763974` es consolidación documental descendiente de `78d5`.
 - [CURRENT] `9fe → 78d5` es una relación lineal de 5 commits y la comparación muestra cambios sólo en tests.
 
 ### D3 / continuidad histórica
 
 - [HISTORICAL] `603266bad1cabcd23ab3ec49284e84917a6e1dca` desciende de `48545826ab7ccd6278b7a6dc714a5bf40caf461a` y añade `tests/test_production_runtime_lifecycle_8s.py`.
 - [HISTORICAL] `b6265c7d9c15f94014bb318065d0cf59d07111d5` desciende directamente de `9feaf5b7d45da388d992df3565a45ee2fb9036d6` y modifica sólo ese test.
-- [CURRENT] El archivo S03 de `main@78d5`, `603266` y `b6265` comparte el mismo blob SHA `54d3a94159c00b72df4bcd86924ad99cfe9365dd`; la coincidencia de contenido no implica ascendencia Git.
-- [DECIDED] Los archive refs son evidencia histórica, no ramas activas de desarrollo.
+- [HISTORICAL] El archivo S03 del LAST FUNCTIONAL BASELINE `78d5`, `603266` y `b6265` comparte el mismo blob SHA `54d3a94159c00b72df4bcd86924ad99cfe9365dd`; la coincidencia de contenido no implica ascendencia Git.
+- [OBSERVED] `archive/2f-8s-d3-orphaned-main` = REF ABSENT / NOT RESOLVABLE; object `603266...` sigue accesible por SHA.
+- [OBSERVED] `archive/2f-8s-d3-validation` = REF ABSENT / NOT RESOLVABLE; object `b6265...` sigue accesible por SHA.
 
 ### Evidence status
 
@@ -223,4 +225,4 @@ Fuera de esta fase: Café Table, Character Engine, emociones, relaciones, memori
 
 ### CONTINUATION POINT
 
-Un agente futuro debe comenzar en `main@78d5...`, consultar los archive refs sin modificarlos y separar evidencia de test controlado, runtime y provider real.
+Un agente futuro debe comenzar en `main@1763974...`, distinguir `78d5...` como LAST FUNCTIONAL BASELINE y consultar los archive refs como REF ABSENT / NOT RESOLVABLE sin recrearlos; la preservación de los objetos D3 se verifica por SHA.

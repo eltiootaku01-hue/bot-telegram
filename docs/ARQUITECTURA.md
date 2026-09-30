@@ -248,7 +248,7 @@ Durante la auditoría de CI Windows se observaron decenas de esos hilos vivos si
 
 Los tests que crean adapters directamente también registran `close()` como cleanup para que cada caso libere su propio recurso.
 
-## Arquitectura física WebChat — estado actual de main@78d5
+## Arquitectura física WebChat — main@1763974 / LAST FUNCTIONAL BASELINE 78d5
 
 La implementación actual separa lifecycle lógico y físico sin sustituir las capas existentes:
 
