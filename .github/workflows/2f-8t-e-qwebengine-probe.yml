@@ -2,9 +2,9 @@
 name: 2F-8T-E minimal QWebEngine probe
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - diagnostic/2f-8t-qwebengine-clean
     paths-ignore:
       - "diagnostics/results/**"
 
@@ -63,6 +63,22 @@ jobs:
             echo "run=$n exit=$code"
           done
 
+      - name: Run probe under historical 2F-8T harness environment
+        shell: bash
+        run: |
+          set +e
+          for n in 1 2 3 4 5; do
+            echo "===== HISTORICAL RUN $n =====" | tee "artifacts/historical-run-$n.log"
+            env -u QT_QPA_PLATFORM -u QTWEBENGINE_CHROMIUM_FLAGS -u QTWEBENGINEPROCESS_PATH \
+              -u QT_LOGGING_RULES -u QT_DEBUG_PLUGINS -u DISPLAY -u WAYLAND_DISPLAY -u XDG_SESSION_TYPE \
+              QT_QPA_PLATFORM="offscreen" \
+              QTWEBENGINE_CHROMIUM_FLAGS="--headless --disable-gpu --disable-software-rasterizer" \
+              python diagnostics/qwebengine_probe_minimal.py >>"artifacts/historical-run-$n.log" 2>&1
+            code=$?
+            echo "PROCESS_EXIT_CODE=$code" >>"artifacts/historical-run-$n.log"
+            echo "historical_run=$n exit=$code"
+          done
+
       - name: Build result summary
         if: always()
         shell: python
@@ -81,6 +97,16 @@ jobs:
                   f"LOAD_FINISHED={load[-1] if load else 'MISSING'} "
                   f"ELAPSED_MS={elapsed[-1] if elapsed else 'MISSING'} "
                   f"PROCESS_EXIT_CODE={code[-1] if code else 'MISSING'}"
+              )
+              htext = Path(f"artifacts/historical-run-{n}.log").read_text(errors="replace")
+              hload = re.findall(r"^LOAD_FINISHED=(.+)$", htext, re.M)
+              helapsed = re.findall(r"^ELAPSED_MS=(.+)$", htext, re.M)
+              hcode = re.findall(r"^PROCESS_EXIT_CODE=(.+)$", htext, re.M)
+              lines.append(
+                  f"HISTORICAL_RUN_{n}: "
+                  f"LOAD_FINISHED={hload[-1] if hload else 'MISSING'} "
+                  f"ELAPSED_MS={helapsed[-1] if helapsed else 'MISSING'} "
+                  f"PROCESS_EXIT_CODE={hcode[-1] if hcode else 'MISSING'}"
               )
           Path("artifacts/summary.txt").write_text("\n".join(lines) + "\n")
           print("\n".join(lines))
