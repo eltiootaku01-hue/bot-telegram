@@ -344,3 +344,29 @@ This result does not approve MIG-1, MIG-2, MIG-3, MIG-4, MIG-5 or MIG-6.
 - Supervisor execution not enabled.
 - Authorization/ScopeLock physical enforcement not enabled.
 - MIG-1 through MIG-6 not started.
+
+## Current continuity checkpoint — main@78d5
+
+### 2F-8R
+
+- [TESTED] Base `2902ac7d019aac4f9d0f35d7ee578d88b1fc334b`.
+- [TESTED] CI `36611033279`: Ubuntu PASS, Windows PASS, `857 passed`, code policy `violations=0`.
+
+### 2F-8S / D3
+
+- [IMPLEMENTED] PhysicalLifecycleReconciliation, runtime wiring, QWeb/Playwright physical adapters y suite S01-S13 están presentes en `main`.
+- [TESTED] S03 actual conserva el orden D3: completar lógicamente antes de cerrar físicamente.
+- [PARTIAL] CI `36631685318`: Windows `872 passed`; Ubuntu `863 passed, 9 errors` por `QWebEngine local page did not load` en runtime controlado. Code policy PASS en ambos.
+- [DECIDED] Esta evidencia de test controlado no verifica autenticación real ni provider real.
+
+### Physical architecture gate
+
+- [DECIDED] Cada instancia de `RuntimeComponents` crea una autoridad física propia.
+- [DECIDED] QWeb, Playwright y la reconciliación comparten esa instancia.
+- [DECIDED] TaskEngine y TaskScheduler conservan ownership lógico/scheduling.
+- [DECIDED] `_WEB_MESA_UNICA` permanece vigente hasta disponer de evidencia de equivalencia completa para retirarlo.
+- [UNKNOWN] Provider autenticado, sesión real y evidencia externa de producción.
+
+### Gate status
+
+2F-8S no debe considerarse completamente verde mientras la evidencia cross-platform continúe con los errores QWebEngine anteriores. 2F-8T no queda autorizado por este checkpoint.

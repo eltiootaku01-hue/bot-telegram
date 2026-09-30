@@ -179,3 +179,22 @@
 - Decisión: WEB_MESA_UNICA evidence is accepted only for the existing TaskScheduler/WebChatQueueManager path; the Playwright WebQueueManager remains outside that resource lock.
 - Motivo: current tests prove separate mechanisms, not a global cross-runtime lock.
 - Impacto: G20 remains OBSERVED and is a migration blocker for quick-action convergence.
+
+### DEC-020 — main@78d5 es el punto de continuidad actual
+
+- [DECIDED] La rama canónica es `main@78d5fa6d0b539991aba1ee700121404678c21e59`.
+- [DECIDED] La línea válida es `2902...` → `9fe...` → `78d5...`.
+- [DECIDED] `603266...` permanece archivado como artefacto lateral y no se integra automáticamente.
+- [DECIDED] `b6265...` se conserva como validación histórica D3; no es ancestro de `main`.
+
+### DEC-021 — Lifecycle lógico y físico son autoridades distintas
+
+- [DECIDED] `TaskEngine` es owner del lifecycle lógico y nunca decide por sí solo `AVAILABLE` físico.
+- [DECIDED] `PhysicalWebChatResourceAuthority` es la única fuente de verdad del ownership/estado físico dentro de un runtime.
+- [DECIDED] `PhysicalLifecycleReconciliation` es puente y metadata, no segunda autoridad.
+- [DECIDED] `COMPLETED`, `CANCELLED` y `TIMED_OUT` no implican automáticamente recurso físico `AVAILABLE`.
+
+### DEC-022 — D3 preserva el orden de S03
+
+- [DECIDED] `RUNNING + BUSY → TaskEngine.complete() → COMPLETED + BUSY → record_termination() → COMPLETED + AVAILABLE → ALIGNED`.
+- [DECIDED] La terminación física requiere evidencia separada y binding/generation actuales.

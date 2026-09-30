@@ -196,3 +196,13 @@
 - Browser/WebChat real interaction: NO.
 - Cookies/profiles/credentials moved: NO.
 - MIG-1..MIG-6: NO.
+
+## 2026-09-30 — Consolidación de continuidad 2F-8R / 2F-8S / D3
+
+- [OBSERVED] `main` está en `78d5fa6d0b539991aba1ee700121404678c21e59`.
+- [TESTED] 2F-8R: `2902ac7d019aac4f9d0f35d7ee578d88b1fc334b`, CI `36611033279`, Ubuntu/Windows PASS, `857 passed`, code policy sin violations.
+- [TESTED] 2F-8S en `main`: S01-S13 y D3 S03 están presentes. CI `36631685318`: Windows `872 passed`; Ubuntu `863 passed, 9 errors` por carga QWebEngine local. Code policy PASS en ambos.
+- [HISTORICAL] `603266bad1cabcd23ab3ec49284e84917a6e1dca` es artefacto D3 lateral desde `48545826ab7ccd6278b7a6dc714a5bf40caf461a`.
+- [HISTORICAL] `b6265c7d9c15f94014bb318065d0cf59d07111d5` es validación D3 sobre `9feaf5b7d45da388d992df3565a45ee2fb9036d6`.
+- [DECIDED] `78d5...` es el punto de continuidad; los archive refs son evidencia histórica, no la línea activa.
+- [UNKNOWN] Provider real, autenticación real y evidencia externa continúan sin demostración.

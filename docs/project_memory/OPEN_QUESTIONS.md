@@ -207,3 +207,19 @@ La decisión arquitectónica no autoriza implementación ni inicia FASE 2F-9.
 - [UNKNOWN] Can a real stale JS callback race be reproduced safely without using a real account?
 - [UNKNOWN] Can RuntimeObservation obtain resource/priority/wake evidence without exposing mutable Scheduler internals?
 - [UNKNOWN] How will cross-route duplicate execution be prevented during the eventual compatibility window?
+
+## FASE 2F-8 — Remaining known unknowns (2026-09-30)
+
+- [UNKNOWN] Evidencia segura y reproducible para verificar el principal autenticado real de cada provider.
+- [UNKNOWN] Corrección/estabilidad de los 9 errores QWebEngine observados en Ubuntu en CI `36631685318`.
+- [UNKNOWN] Paridad funcional bajo provider autenticado para response, DOM, selectors y navigation.
+- [UNKNOWN] Continuidad real de sesión/cookies/storage sin copiar credenciales.
+- [UNKNOWN] Equivalencia completa de guards locales antes de retirar una guardia individual.
+- [UNKNOWN] Política final de timeout/cooldown si posteriormente se decide una convergencia adicional.
+
+### Resolved for continuity
+
+- [RESOLVED] La autoridad física es compartida por QWeb, Playwright y PhysicalLifecycleReconciliation dentro del runtime.
+- [RESOLVED] `RUNNING + BUSY` puede quedar ALIGNED.
+- [RESOLVED] `COMPLETED + BUSY` es DIVERGED hasta evidencia física de terminación/release.
+- [RESOLVED] `603266...` no pertenece a la línea actual de main; `b6265...` tampoco es ancestro de `78d5...`.

@@ -318,3 +318,37 @@ La demostración causal de una transición futura requerirá evidencia producida
 [OBSERVED] ScopeLock, Authorization and TaskEngine use different clock injection models; TaskScheduler delegates deadline ownership to TaskEngine.
 
 [UNKNOWN] RuntimeObservation does not currently expose Scheduler resource ownership, registrations, resume requests or priority streak, so those facts cannot yet be presented as Supervisor evidence.
+
+## FASE 2F-8 — Estado verificable en main
+
+### [OBSERVED] Runtime único de autoridad física
+
+`build_runtime()` crea una `PhysicalWebChatResourceAuthority` y la inyecta en `PhysicalLifecycleReconciliation`. La GUI consume `runtime.physical_web_authority`.
+
+### [OBSERVED] Wiring QWeb y Playwright
+
+QWeb recibe la autoridad del runtime junto con TaskEngine/Reconciliation en `WebChatQueueManager`. Playwright se construye mediante `PlaywrightPhysicalResourceAdapter.from_identity()` usando la misma autoridad y el `WebPhysicalIdentityRegistry`.
+
+### [OBSERVED] WaitressSessionManager
+
+La gestión de sesión sólo registra un `WebChatTaskExecutor` cuando la ruta WEBCHAT todavía no tiene executor, evitando sobrescribir la registración primaria del runtime.
+
+### [OBSERVED] Legacy QWeb lock
+
+`src/services/web_queue.py` conserva `_WEB_MESA_UNICA = threading.Lock()` y sus acquire/release locales. La Authority no demuestra por sí sola equivalencia total: el ámbito local y las propiedades de backend siguen siendo distintos.
+
+### [TESTED] Lifecycle reconciliation
+
+`TIMED_OUT` y `CANCELLING` solicitan cancelación física; `record_termination()` exige evidencia y delega la liberación física; `record_backend_failure()` alinea sólo si la disponibilidad física ya está demostrada, y en caso contrario produce quarantine.
+
+### [TESTED] S03 / R10
+
+S03 demuestra `RUNNING + BUSY`, luego `COMPLETED + BUSY`, después terminación física y finalmente `COMPLETED + AVAILABLE`. R10 demuestra que release físico con tarea RUNNING produce DIVERGED.
+
+### [HISTORICAL] D3 genealogy
+
+`603266...` nace de `485458...` y añade el test 8S. `b6265...` nace de `9fe...` y modifica ese test. `78d5...` es la línea actual; la coincidencia de contenido no equivale a ascendencia Git.
+
+### [TESTED] Authentication guard
+
+Los cuatro identities Web productivos en `config/runtime.toml` permanecen `UNKNOWN`; los adapters físicos requieren `VERIFIED` para ejecución.

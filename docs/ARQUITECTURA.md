@@ -247,3 +247,66 @@ Las esperas `WAITING_USER` y `WAITING_TIMER` no se reanudan automáticamente al 
 Durante la auditoría de CI Windows se observaron decenas de esos hilos vivos simultáneamente. El bloqueo posterior aparecía en `Thread.start()` mientras intentaba arrancar el hilo del WebRuntime. El endpoint HTTP no era la causa funcional: WebRuntime pasó de forma aislada en Windows y Ubuntu. La corrección mantiene el flujo real de `/health` y `/openapi.json` y sólo hace explícito el cleanup del recurso que ya existía.
 
 Los tests que crean adapters directamente también registran `close()` como cleanup para que cada caso libere su propio recurso.
+
+## Arquitectura física WebChat — estado actual de main@78d5
+
+La implementación actual separa lifecycle lógico y físico sin sustituir las capas existentes:
+
+```text
+RuntimeComponents
+      │
+      ├── TaskEngine ──→ TaskScheduler
+      │                     │
+      │                     ▼
+      │              WebChatTaskExecutor
+      │                     │
+      ▼                     ▼
+PhysicalLifecycleReconciliation
+      │
+      ▼
+PhysicalWebChatResourceAuthority
+      │
+   ┌──┴──┐
+   ▼     ▼
+  QWeb  Playwright
+```
+
+### Responsabilidades
+
+- `TaskEngine`: lifecycle lógico y deadlines.
+- `TaskScheduler`: scheduling/routing y arbitraje lógico.
+- `WebChatTaskExecutor`: adaptación lógica a WebChat.
+- `PhysicalLifecycleReconciliation`: binding task/claim/generation, observación lógica y reconciliación física.
+- `PhysicalWebChatResourceAuthority`: única fuente de verdad de estado y ownership físico.
+- `WebPhysicalIdentity`: identidad Web declarativa no secreta; producción permanece UNKNOWN.
+- adapters QWeb/Playwright: integración backend-específica con la Authority.
+
+### Lifecycle
+
+```text
+timeout/cancel
+   ↓
+physical cancellation request
+   ↓
+termination evidence
+   ↓
+release OR quarantine
+   ↓
+reconciliation
+```
+
+No existe equivalencia automática `TIMED_OUT → AVAILABLE`, `CANCELLED → AVAILABLE` o `COMPLETED → AVAILABLE`.
+
+### D3 / R10 / S03
+
+`RUNNING + AVAILABLE → DIVERGED`.
+
+`RUNNING + BUSY → TaskEngine.complete() → COMPLETED + BUSY → record_termination(evidence) → COMPLETED + AVAILABLE → ALIGNED`.
+
+### Legacy guard
+
+`src/services/web_queue.py` conserva `_WEB_MESA_UNICA`. Su retiro no está autorizado; la existencia de Authority no prueba equivalencia completa con el ámbito y comportamiento del lock local.
+
+### Provider gate
+
+Los identities productivos de `config/runtime.toml` permanecen con `authentication_state = "UNKNOWN"`. La ejecución física productiva requiere `VERIFIED`.

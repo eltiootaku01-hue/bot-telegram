@@ -175,3 +175,61 @@ La evidencia actual no justifica tratar GUI TaskOrchestrator como runtime WebCha
 - [OBSERVED] F-007 shows multiple clock injection/observation policies; no common clock abstraction is introduced.
 - [OBSERVED] F-008 confirms RuntimeObservation currently exposes only pending/active Scheduler snapshots.
 - [DECIDED] MIG-1 is not started and migration remains physically uninitiated.
+
+## FASE 2F-8 — Estado actual de continuidad en main (2026-09-30)
+
+### CONTINUATION POINT
+
+- Branch canónica actual: `main`.
+- HEAD actual: `78d5fa6d0b539991aba1ee700121404678c21e59`.
+- Base 2F-8R: `2902ac7d019aac4f9d0f35d7ee578d88b1fc334b`.
+- HEAD válido previo de 2F-8S: `9feaf5b7d45da388d992df3565a45ee2fb9036d6`.
+- `2902 → 9fe → 78d5` es la línea válida. La comparación `9fe → 78d5` muestra sólo cambios de tests, por lo que los componentes de producción añadidos antes de D3 permanecen en `main`.
+
+### 2F-8R / 2F-8S
+
+- [TESTED] 2F-8R en `2902`: CI `36611033279` terminó Ubuntu PASS y Windows PASS, con `857 passed` y `violations=0` en ambos.
+- [TESTED] `main@78d5` contiene `PhysicalWebChatResourceAuthority`, `PhysicalLifecycleReconciliation`, `WebPhysicalIdentity`, adapters QWeb/Playwright y wiring de runtime/GUI.
+- [TESTED] `tests/test_production_runtime_lifecycle_8s.py` contiene S01-S13.
+- [TESTED] S03 actual implementa `RUNNING + BUSY → TaskEngine.complete() → COMPLETED + BUSY → record_termination() → COMPLETED + AVAILABLE → ALIGNED`.
+- [PARTIAL] CI `36631685318` sobre `78d5`: Windows `872 passed`; Ubuntu `863 passed, 9 errors` por `QWebEngine local page did not load` en runtime controlado. Code policy fue PASS en ambos.
+- [TESTED] R10 conserva `RUNNING + AVAILABLE → DIVERGED`: release físico no completa por sí solo el lifecycle lógico.
+
+### Autoridad física y reconciliación
+
+```text
+TaskEngine → lifecycle lógico
+TaskScheduler → scheduling/routing lógico
+WebChatTaskExecutor → adaptación lógica → WebChat
+PhysicalLifecycleReconciliation → puente y metadata de reconciliación
+PhysicalWebChatResourceAuthority → única autoridad física
+```
+
+`RuntimeComponents` crea una autoridad física por instancia y la inyecta al reconciliador. GUI/QWeb/Playwright reutilizan esa autoridad. Supervisor continúa fuera de la ownership física.
+
+Estados lógicos: `PENDING`, `RUNNING`, `WAITING`, `INTERRUPTED`, `CANCELLING`, `COMPLETED`, `FAILED`, `TIMED_OUT`, `CANCELLED`, `DISCARDED`.
+
+Estados físicos: `AVAILABLE`, `CLAIMING`, `BUSY`, `CANCELLING`, `RELEASING`, `QUARANTINED`.
+
+Reglas verificadas: `RUNNING + BUSY` puede estar ALIGNED; `RUNNING + AVAILABLE` es DIVERGED; `COMPLETED + BUSY` es DIVERGED; `COMPLETED + AVAILABLE` es ALIGNED. Timeout/cancelación solicitan cancelación física, no release implícito. La terminación requiere evidencia y binding/generation actuales.
+
+### D3 / continuidad Git
+
+`603266bad1cabcd23ab3ec49284e84917a6e1dca` = D3_TEST_ARTIFACT + ORPHANED_TEST_ARTIFACT; su padre real es `48545826ab7ccd6278b7a6dc714a5bf40caf461a` y su diff directo añade `tests/test_production_runtime_lifecycle_8s.py`.
+
+`b6265c7d9c15f94014bb318065d0cf59d07111d5` = D3_TEST_VALIDATION_COMMIT sobre `9feaf5...`; modifica sólo `tests/test_production_runtime_lifecycle_8s.py`. Su contenido S03 coincide con el archivo actual de `main`, pero `b6265` no es ancestro de `78d5`.
+
+Preservar sin modificar:
+`archive/2f-8s-d3-orphaned-main → 603266bad1cabcd23ab3ec49284e84917a6e1dca`
+`archive/2f-8s-d3-validation → b6265c7d9c15f94014bb318065d0cf59d07111d5`
+
+No hacer merge/cherry-pick/rebase histórico automáticamente.
+
+### KNOWN UNKNOWN
+
+- [UNKNOWN] Autenticación real del principal/provider.
+- [UNKNOWN] Ejecución real contra Gemini/ChatGPT/Google.
+- [UNKNOWN] Paridad completa de sesión/cookies/storage bajo provider autenticado.
+- [UNKNOWN] Evidencia externa de producción.
+
+La configuración productiva mantiene `authentication_state = "UNKNOWN"`; las identidades VERIFIED de tests controlados no constituyen autenticación real.

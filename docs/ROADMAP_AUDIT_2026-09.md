@@ -199,3 +199,28 @@ Verificación pendiente al redactar esta actualización:
 - El bloque Scheduler requiere una nueva ejecución completa de CI sobre su SHA final.
 
 Fuera de esta fase: Café Table, Character Engine, emociones, relaciones, memoria nueva, automatización de Cari, moderation redesign, nuevos bots/IA, nuevo navegador y nueva WebQueue.
+
+## Checkpoint de continuidad documental — 2026-09-30
+
+### Main
+
+- [CURRENT] `main → 78d5fa6d0b539991aba1ee700121404678c21e59`.
+- [CURRENT] La línea válida continúa `2902...` → `9fe...` → `78d5...`.
+- [CURRENT] `9fe → 78d5` es una relación lineal de 5 commits y la comparación muestra cambios sólo en tests.
+
+### D3 / continuidad histórica
+
+- [HISTORICAL] `603266bad1cabcd23ab3ec49284e84917a6e1dca` desciende de `48545826ab7ccd6278b7a6dc714a5bf40caf461a` y añade `tests/test_production_runtime_lifecycle_8s.py`.
+- [HISTORICAL] `b6265c7d9c15f94014bb318065d0cf59d07111d5` desciende directamente de `9feaf5b7d45da388d992df3565a45ee2fb9036d6` y modifica sólo ese test.
+- [CURRENT] El archivo S03 de `main@78d5`, `603266` y `b6265` comparte el mismo blob SHA `54d3a94159c00b72df4bcd86924ad99cfe9365dd`; la coincidencia de contenido no implica ascendencia Git.
+- [DECIDED] Los archive refs son evidencia histórica, no ramas activas de desarrollo.
+
+### Evidence status
+
+- [TESTED] 2F-8R: CI `36611033279` verde en Ubuntu/Windows, 857 passed.
+- [PARTIAL] 2F-8S en CI `36631685318`: Windows 872 passed; Ubuntu 863 passed + 9 errores de QWebEngine local. Code policy PASS en ambos.
+- [UNKNOWN] Provider real, autenticación real y evidencia externa de producción.
+
+### CONTINUATION POINT
+
+Un agente futuro debe comenzar en `main@78d5...`, consultar los archive refs sin modificarlos y separar evidencia de test controlado, runtime y provider real.

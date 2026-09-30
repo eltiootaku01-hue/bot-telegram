@@ -315,3 +315,27 @@ WebChatQueueManager
 [TESTED] Identity/late-response/cancellation/timeout evidence uses the existing TaskEngine and TaskScheduler authorities rather than introducing a second lifecycle.
 
 [UNKNOWN] A future evidence contract for WEB_MESA_UNICA ownership and starvation/wake semantics still requires a safe observation design or runtime-safe provider harness.
+
+## FASE 2F-8 — Physical lifecycle layer in current runtime
+
+[DECIDED] La arquitectura actual separa dos fuentes de verdad:
+
+```text
+TaskEngine
+  → logical lifecycle owner
+
+PhysicalWebChatResourceAuthority
+  → physical ownership/state owner
+```
+
+[TESTED] `build_runtime()` crea la autoridad física y `PhysicalLifecycleReconciliation` sobre esa misma instancia. El reconciliador no es una segunda autoridad.
+
+[OBSERVED] GUI toma `runtime.physical_web_authority`; QWeb recibe esa autoridad y la reconciliación en `WebChatQueueManager`; Playwright se construye desde `WebPhysicalIdentityRegistry` con la misma autoridad.
+
+[DECIDED] El listener `TaskEngine.add_lifecycle_listener(physical_lifecycle_reconciliation.observe_logical_task)` conecta lifecycle lógico con reconciliación física.
+
+[DECIDED] `record_termination()` representa evidencia física y delega el release al adapter/Authority. No completa por sí mismo la tarea lógica.
+
+[DECIDED] Supervisor permanece read-only y no adquiere ownership físico.
+
+[UNKNOWN] Paridad con provider real, login real y continuidad de sesión bajo cuenta autenticada.
