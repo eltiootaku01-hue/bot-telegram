@@ -451,6 +451,84 @@ def test_concurrent_revoke_is_idempotent_and_fail_closed(
     assert captured.value.args[0] == "revoked_context_reference"
 
 
+def test_concurrent_revoke_across_independent_registries_is_shared_and_atomic(
+    tmp_path: Path,
+) -> None:
+    from threading import Barrier
+
+    router = FakeRouter((FakeRoute("-100", 42, "general"),))
+    store_dir = tmp_path / "contexts"
+    registry_a = TrustedContextRegistry(router, store_dir=store_dir)
+    registry_b = TrustedContextRegistry(router, store_dir=store_dir)
+
+    assert registry_a._store_dir == registry_b._store_dir
+    reference = registry_a.issue("-100", 42, now=AUTH_NOW).reference
+    stored = registry_b._load(reference)
+    assert stored.reference == reference
+    assert stored.revoked_at is None
+
+    from api.security import trusted_context as trusted_context_module
+
+    assert (
+        trusted_context_module._revocation_lock(reference)
+        is trusted_context_module._revocation_lock(reference)
+    )
+
+    worker_count = 16
+    start_barrier = Barrier(worker_count)
+    registries = tuple(
+        registry_a if index % 2 == 0 else registry_b
+        for index in range(worker_count)
+    )
+
+    def revoke_once(index: int):
+        start_barrier.wait()
+        return registries[index].revoke(
+            reference,
+            now=AUTH_NOW + 1,
+        )
+
+    errors = []
+    with ThreadPoolExecutor(max_workers=worker_count) as pool:
+        futures = [pool.submit(revoke_once, index) for index in range(worker_count)]
+        results = []
+        for future in futures:
+            try:
+                results.append(future.result())
+            except Exception as error:
+                errors.append(error)
+
+    assert not any(
+        isinstance(error, TrustedContextError)
+        and str(error) == "context_store_unavailable"
+        for error in errors
+    )
+    assert not any(
+        isinstance(error, PermissionError)
+        and (
+            getattr(error, "winerror", None) == 5
+            or "WinError 5" in str(error)
+        )
+        for error in errors
+    )
+    assert not errors
+    assert len(results) == worker_count
+    assert {result.revoked_at for result in results} == {AUTH_NOW + 1}
+
+    record_path = store_dir / f"{reference}.json"
+    raw = record_path.read_text(encoding="utf-8")
+    payload = json.loads(raw)
+    assert payload["reference"] == reference
+    assert payload["revoked_at"] == AUTH_NOW + 1
+    assert len(list(store_dir.glob("*.json"))) == 1
+    assert list(store_dir.glob("*.tmp")) == []
+    assert list(store_dir.glob(f".{reference}.*.tmp")) == []
+
+    with pytest.raises(TrustedContextError) as captured:
+        registry_a.resolve(reference, now=AUTH_NOW + 2)
+    assert captured.value.args[0] == "revoked_context_reference"
+
+
 def test_concurrent_revoke_and_resolve_preserve_valid_records(
     tmp_path: Path,
 ) -> None:
