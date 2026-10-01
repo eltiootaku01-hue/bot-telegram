@@ -80,7 +80,7 @@ def main() -> int:
 
     profile = QWebEngineProfile.defaultProfile()
     emit("PROFILE_OFF_THE_RECORD", profile.isOffTheRecord())
-    emit("PROFILE_NAME", profile.name())
+    emit("PROFILE_NAME", profile.storageName())
     emit("PROFILE_STORAGE_PATH", profile.persistentStoragePath())
     emit("PROFILE_CACHE_PATH", profile.cachePath())
 
