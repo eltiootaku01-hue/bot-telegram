@@ -1,6 +1,6 @@
 # WORLD-00 — Café Otaku / Social World Architecture Contract
 
-**Estado:** ARCHITECTURAL / DESIGN CONTRACT  
+**Estado:** WORLD-00-R1 — ARCHITECTURAL / DESIGN CONTRACT  
 **Fecha:** 2026-10-01  
 **Repositorio:** eltiootaku01-hue/bot-telegram  
 **Base de diseño:** main@2c35a2be8fd8d1a118bd1fa57466827b1758c72b  
@@ -1667,7 +1667,7 @@ Estas preguntas no bloquean el contrato conceptual.
 
 # Files Changed
 
-Únicamente:
+WORLD-00-R1 modifica únicamente:
 
     docs/CAFE_OTAKU_WORLD_ARCHITECTURE_2026-10-01.md
 
@@ -1687,9 +1687,9 @@ No se modifica ninguna pieza de 2F-8S.
 
 # Commit
 
-Commit único previsto:
+Commit de revisión:
 
-    docs: define Cafe Otaku social world architecture
+    docs: refine Cafe Otaku social ambient scheduling contract
 
 Se realizará únicamente sobre la rama documental derivada de main@2c35a2be8fd8d1a118bd1fa57466827b1758c72b.
 
@@ -1838,7 +1838,7 @@ No se asigna ninguna responsabilidad física nueva a 2F-8S y se prohíbe bypass 
 
 # Result Classification
 
-    READY FOR ARCHITECTURE REVIEW
+    WORLD-00-R1 — READY FOR ARCHITECTURE REVIEW
 
 El contrato deja explícitos:
 
@@ -1851,6 +1851,6 @@ El contrato deja explícitos:
 - frontera 2F-8S;
 - fases de implementación.
 
-WORLD-00 termina aquí.
+WORLD-00-R1 termina aquí.
 
-No se autoriza WORLD-01, tablas, migraciones, API, TMA Lobby, Presence runtime, endpoints ni refactors hasta aprobación explícita de este contrato.
+No se autoriza WORLD-01, CafeSession table, CafeTable table, scheduler runtime, moderation runtime, TMA Lobby, endpoints ni refactors hasta aprobación explícita de este contrato.
