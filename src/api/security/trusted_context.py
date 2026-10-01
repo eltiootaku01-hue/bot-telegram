@@ -316,7 +316,6 @@ class TrustedContextRegistry:
             ) from error
 
         return TrustedCafeContext.model_validate(
-        return TrustedCafeContext.model_validate(
             updated.model_dump()
         )
 
