@@ -11,7 +11,7 @@ import time
 from typing import Mapping
 from urllib.parse import parse_qsl
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 DEFAULT_AUTH_MAX_AGE_SECONDS = 3600
@@ -42,6 +42,13 @@ class AuthenticatedTelegramActor(BaseModel):
     chat_instance: str | None = None
     chat_type: str | None = None
     start_param: str | None = None
+
+    @model_validator(mode="after")
+    def validate_actor_key(self) -> "AuthenticatedTelegramActor":
+        expected = f"telegram:{self.telegram_user_id}"
+        if self.actor_key != expected:
+            raise ValueError("invalid_actor_key")
+        return self
 
     @property
     def id(self) -> int:
