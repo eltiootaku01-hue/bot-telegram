@@ -531,7 +531,10 @@ def test_fastapi_missing_bot_token_fails_closed(monkeypatch) -> None:
     async def actor(current=Depends(get_current_user)):
         return current.model_dump()
 
-    response = TestClient(app).get("/actor")
+    response = TestClient(app).get(
+        "/actor",
+        headers={"Authorization": "tma " + make_init_data()},
+    )
     assert response.status_code == 503
     assert response.json()["detail"] == (
         "Telegram authentication dependency is not configured"
