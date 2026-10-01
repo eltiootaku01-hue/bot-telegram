@@ -252,6 +252,45 @@ jobs:
           )
           print("\n".join(summary))
 
+      - name: Run focused state-producer candidates
+        shell: bash
+        run: |
+          set +e
+          target='tests/test_webchat_runtime_controlled_8h.py::WebChatRuntimeControlledTests::test_g01_g02_real_js_dom_observer_and_response_detection'
+
+          for kind in services-core production-class combined; do
+            for run in 1 2 3; do
+              log="artifacts/$kind-candidate-$run.log"
+              state="artifacts/$kind-candidate-$run.state.log"
+              echo "===== $kind CANDIDATE RUN $run =====" | tee "$log"
+
+              if [ "$kind" = "services-core" ]; then
+                I_TARGET_NODEID="$target" \
+                I_STATE_LOG="$state" \
+                python -m pytest -q -p diagnostics.pytest_state_probe \
+                  tests/test_services_web_queue.py \
+                  "$target" >>"$log" 2>&1
+              elif [ "$kind" = "production-class" ]; then
+                I_TARGET_NODEID="$target" \
+                I_STATE_LOG="$state" \
+                python -m pytest -q -p diagnostics.pytest_state_probe \
+                  tests/test_production_runtime_lifecycle_8s.py::ProductionRuntimeLifecycle8STests \
+                  "$target" >>"$log" 2>&1
+              else
+                I_TARGET_NODEID="$target" \
+                I_STATE_LOG="$state" \
+                python -m pytest -q -p diagnostics.pytest_state_probe \
+                  tests/test_production_runtime_lifecycle_8s.py::ProductionRuntimeLifecycle8STests \
+                  tests/test_services_web_queue.py \
+                  "$target" >>"$log" 2>&1
+              fi
+
+              code=$?
+              echo "PROCESS_EXIT_CODE=$code" >>"$log"
+              echo "$kind run=$run exit=$code"
+            done
+          done
+
       - name: Summarize results
         if: always()
         shell: python
