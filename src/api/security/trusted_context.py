@@ -111,12 +111,6 @@ class TrustedContextRegistry:
             if store_dir is not None
             else PROJECT_ROOT / "config" / "tma_trusted_contexts"
         )
-        try:
-            self._store_dir.mkdir(parents=True, exist_ok=True)
-        except OSError as error:
-            raise TrustedContextConfigurationError(
-                "context_store_unavailable"
-            ) from error
         self._max_age_seconds = _configured_max_age(max_age_seconds)
         self._token_factory = token_factory
         self._create_store_dir = bool(create_store_dir)
