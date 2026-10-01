@@ -281,7 +281,8 @@ Context7 and official documentation were checked for:
 - FastAPI `Depends`, `Header` and `HTTPException`;
 - Pydantic v2 models and `extra="forbid"`;
 - Telegram Mini Apps `initData` and direct-link `startapp`;
-- `aiogram` `Bot.get_chat_member`, concrete `ChatMember` types and async Bot lifecycle.
+- `aiogram` `Bot.get_chat_member`, concrete `ChatMember` types and async Bot lifecycle;
+- current Starlette `TestClient` optional test dependency `httpx2`.
 
 These checks verify API shape, not the presence of a matching local installed environment.
 
