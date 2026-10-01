@@ -121,10 +121,20 @@ def main() -> int:
     # The real harness imports these Qt modules before setUpClass applies the
     # QPA/Chromium environment. Keeping the top-level imports here preserves
     # that ordering for the dedicated stage-11 environment-timing test.
-    from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Slot
-    from PySide6.QtWebChannel import QWebChannel
+    from PySide6.QtCore import QTimer, QUrl
     from PySide6.QtWebEngineWidgets import QWebEngineView
     from PySide6.QtWidgets import QApplication
+
+    QWebChannel = None
+    QObject = None
+    Signal = None
+    Slot = None
+
+    if stage >= 1:
+        from PySide6.QtWebChannel import QWebChannel
+
+    if stage >= 3:
+        from PySide6.QtCore import QObject, Signal, Slot
 
     if stage >= 9:
         add_src_to_path()
