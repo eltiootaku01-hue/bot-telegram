@@ -12,6 +12,15 @@ class TelegramRoomRoutingError(RuntimeError):
     """Error al resolver una sala Telegram de forma segura."""
 
 
+@dataclass(frozen=True, slots=True)
+class TelegramRoomRoute:
+    """Identidad autoritativa de una ruta Telegram registrada."""
+
+    chat_id: str
+    message_thread_id: int
+    room_key: str
+
+
 class TelegramRoomRouter:
     """Mapa exacto (chat_id, message_thread_id) -> room_key.
 
