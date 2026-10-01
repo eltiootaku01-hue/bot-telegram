@@ -327,7 +327,7 @@ class TrustedContextRegistry:
                 )
                 temporary_path = Path(temporary_name)
                 with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-                    handle.write(updated.model_dump_json() + "\\n")
+                    handle.write(updated.model_dump_json() + "\n")
                     handle.flush()
                     os.fsync(handle.fileno())
                 temporary_path.chmod(0o600)
