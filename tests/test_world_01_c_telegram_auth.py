@@ -37,7 +37,7 @@ from api.security.trusted_context import (
 
 
 BOT_TOKEN = "123456:W01C_TEST_TOKEN"
-AUTH_NOW = 1_800_000_000
+AUTH_NOW = int(time.time())
 USER = {
     "id": 123456789,
     "first_name": "Test",
