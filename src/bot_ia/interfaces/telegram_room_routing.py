@@ -18,13 +18,35 @@ class TelegramRoomRouter:
     Un tema no registrado nunca se convierte silenciosamente en "general".
     """
 
-    def __init__(self, database_path: str | Path) -> None:
+    def __init__(
+        self,
+        database_path: str | Path,
+        *,
+        read_only: bool = False,
+    ) -> None:
         self.path = Path(database_path).expanduser().resolve()
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._initialize()
+        self._read_only = bool(read_only)
+        if self._read_only:
+            if not self.path.is_file():
+                raise TelegramRoomRoutingError(
+                    "El registro de salas no existe para lectura"
+                )
+        else:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self._initialize()
 
     def _connect(self) -> sqlite3.Connection:
         try:
+            if self._read_only:
+                connection = sqlite3.connect(
+                    f"{self.path.as_uri()}?mode=ro",
+                    uri=True,
+                    timeout=15.0,
+                    isolation_level=None,
+                )
+                connection.execute("PRAGMA busy_timeout=15000")
+                return connection
+
             connection = sqlite3.connect(
                 self.path,
                 timeout=15.0,
@@ -122,14 +144,19 @@ class TelegramRoomRouter:
             )
         connection = self._connect()
         try:
-            row = connection.execute(
-                """
-                SELECT room_key
-                FROM telegram_room_routes
-                WHERE chat_id=? AND message_thread_id=?
-                """,
-                (str(chat_id).strip(), thread_id),
-            ).fetchone()
+            try:
+                row = connection.execute(
+                    """
+                    SELECT room_key
+                    FROM telegram_room_routes
+                    WHERE chat_id=? AND message_thread_id=?
+                    """,
+                    (str(chat_id).strip(), thread_id),
+                ).fetchone()
+            except sqlite3.DatabaseError as error:
+                raise TelegramRoomRoutingError(
+                    "No se pudo consultar el mapa de salas"
+                ) from error
         finally:
             connection.close()
         return str(row[0]) if row is not None else None

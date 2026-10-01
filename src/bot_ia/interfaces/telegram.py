@@ -12,6 +12,13 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from api.security.trusted_context import (
+    TrustedContextConfigurationError,
+    TrustedContextError,
+    TrustedContextRegistry,
+    build_configured_registry,
+    issue_main_mini_app_link,
+)
 from bot_ia.core.application import ApplicationRequest, ApplicationResponse, BotApplication
 from bot_ia.paths import PROJECT_ROOT
 from bot_ia.core.waitress_session_manager import TavernError, TavernReply, WaitressSessionManager
@@ -88,6 +95,7 @@ class TelegramCallback:
     user_id: str
     conversation_id: str
     data: str
+    message_thread_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +109,7 @@ class TelegramOutbound:
     reply_to_message_id: int | None = None
     followups: tuple["TelegramOutbound", ...] = ()
     photo_file_id: str | None = None
+    url_button: tuple[str, str] | None = None
 
     def payload(self) -> dict[str, object]:
         if self.photo_file_id:
@@ -113,8 +122,24 @@ class TelegramOutbound:
             payload["message_thread_id"] = int(self.message_thread_id)
         if self.reply_to_message_id is not None:
             payload["reply_parameters"] = {"message_id": int(self.reply_to_message_id)}
-        if self.keyboard:
-            payload["reply_markup"] = {"inline_keyboard": [[{"text": label, "callback_data": data} for label, data in row] for row in self._normalized_keyboard()]}
+        if self.keyboard or self.url_button:
+            inline_keyboard = [
+                [
+                    {"text": label, "callback_data": data}
+                    for label, data in row
+                ]
+                for row in self._normalized_keyboard()
+            ]
+            if self.url_button is not None:
+                label, url = self.url_button
+                if not isinstance(label, str) or not label.strip():
+                    raise TelegramInputError("url button label must be non-empty")
+                if not isinstance(url, str) or not url.strip():
+                    raise TelegramInputError("url button URL must be non-empty")
+                inline_keyboard.append([
+                    {"text": label, "url": url},
+                ])
+            payload["reply_markup"] = {"inline_keyboard": inline_keyboard}
         return payload
 
     def _normalized_keyboard(self) -> tuple[tuple[tuple[str, str], ...], ...]:
@@ -196,6 +221,15 @@ def parse_callback_update(update: dict[str, object]) -> TelegramCallback:
         chat = message["chat"]
         data = callback["data"]
         user_id, chat_id = str(sender["id"]), str(chat["id"])
+        thread_raw = message.get("message_thread_id")
+        thread_id: int | None = None
+        if thread_raw is not None:
+            try:
+                thread_id = int(thread_raw)
+            except (TypeError, ValueError) as error:
+                raise TelegramInputError(
+                    "message_thread_id Telegram inválido"
+                ) from error
     except (KeyError, TypeError) as error:
         raise TelegramInputError("callback update is invalid") from error
     if not isinstance(data, str) or not data.strip():
@@ -203,7 +237,7 @@ def parse_callback_update(update: dict[str, object]) -> TelegramCallback:
     data = data.strip()
     if len(data) > MAX_CALLBACK_DATA_CHARS:
         raise TelegramInputError("callback data is too long")
-    return TelegramCallback(user_id, chat_id, data)
+    return TelegramCallback(user_id, chat_id, data, thread_id)
 
 
 class TelegramAdapter:
@@ -223,6 +257,8 @@ class TelegramAdapter:
         *,
         tavern_manager: WaitressSessionManager | None = None,
         room_router: TelegramRoomRouter | None = None,
+        cafe_context_registry: TrustedContextRegistry | None = None,
+        bot_username_provider: Callable[[], str] | None = None,
     ) -> None:
         self._application = application
         self._tavern_manager = tavern_manager
@@ -236,6 +272,11 @@ class TelegramAdapter:
         self._room_router = room_router or TelegramRoomRouter(
             PROJECT_ROOT / "config" / "telegram_rooms.sqlite3"
         )
+        self._cafe_context_registry = cafe_context_registry
+        self._cafe_bot_username_provider = (
+            bot_username_provider or self._fetch_cafe_bot_username
+        )
+        self._cafe_bot_username_cache: str | None = None
         self._order_store = OrderStore(PROJECT_ROOT)
         self._pending_orders: dict[str, OrderConfirmation] = {}
         self._last_orders: dict[str, OrderConfirmation] = {}
@@ -260,6 +301,79 @@ class TelegramAdapter:
             return
         self._closed = True
         self._xp_tracker.stop()
+
+    @staticmethod
+    def _fetch_cafe_bot_username() -> str:
+        client = TelegramApiClient.from_environment()
+        return client.get_me_username()
+
+    def _get_cafe_bot_username(self) -> str:
+        if self._cafe_bot_username_cache is None:
+            username = str(self._cafe_bot_username_provider()).strip()
+            if not username:
+                raise TelegramInputError("Café launcher bot username is unavailable")
+            self._cafe_bot_username_cache = username
+        return self._cafe_bot_username_cache
+
+    def _cafe_open_response(
+        self,
+        callback: TelegramCallback,
+    ) -> TelegramOutbound:
+        if callback.message_thread_id is None:
+            return TelegramOutbound(
+                callback.conversation_id,
+                "⛔ El Café solo puede abrirse desde un topic autorizado.",
+                "cafe_launch_denied",
+            )
+        try:
+            registry = self._cafe_context_registry or build_configured_registry(
+                self._room_router
+            )
+            context, link = issue_main_mini_app_link(
+                registry,
+                self._get_cafe_bot_username(),
+                callback.conversation_id,
+                callback.message_thread_id,
+            )
+        except TrustedContextConfigurationError:
+            return TelegramOutbound(
+                callback.conversation_id,
+                "⚠️ El acceso al Café no está disponible en este momento.",
+                "cafe_launch_denied",
+                message_thread_id=callback.message_thread_id,
+            )
+        except TrustedContextError as error:
+            code = error.args[0] if error.args else ""
+            if code == "unknown_room":
+                message = "⛔ Este topic no está registrado como Room autorizado del Café."
+            elif code in {
+                "room_routing_unavailable",
+                "context_store_unavailable",
+            }:
+                message = "⚠️ El acceso al Café no está disponible en este momento."
+            else:
+                message = "⛔ No se pudo autorizar este acceso al Café."
+            return TelegramOutbound(
+                callback.conversation_id,
+                message,
+                "cafe_launch_denied",
+                message_thread_id=callback.message_thread_id,
+            )
+        except (TelegramConfigurationError, TelegramApiError, TelegramTransportError):
+            return TelegramOutbound(
+                callback.conversation_id,
+                "⚠️ No se pudo preparar el enlace oficial del Café.",
+                "cafe_launch_denied",
+                message_thread_id=callback.message_thread_id,
+            )
+
+        return TelegramOutbound(
+            callback.conversation_id,
+            f"☕ Acceso al Café autorizado para {context.room_key}.",
+            "cafe_launch",
+            message_thread_id=callback.message_thread_id,
+            url_button=("☕ Abrir Café", link),
+        )
 
     def _active_maid(self, user_id: str) -> str:
         """Devuelve la mesera activa del turno local; Cami es el fallback."""
@@ -568,6 +682,23 @@ class TelegramAdapter:
             )
         command = inbound.text.casefold().split()[0]
 
+        if command == "/cafe":
+            thread_raw = inbound.metadata.get("message_thread_id")
+            if thread_raw is None:
+                return TelegramOutbound(
+                    inbound.conversation_id,
+                    "⛔ Usa /cafe dentro de un topic autorizado del grupo.",
+                    "cafe_launch_denied",
+                )
+            return TelegramOutbound(
+                inbound.conversation_id,
+                "☕ Abre el Café desde este topic autorizado.",
+                "cafe_launch",
+                (
+                    (("☕ Abrir Café", "cafe:open"),),
+                ),
+                message_thread_id=int(thread_raw),
+            )
         if command in {"/start", "/menu"}:
             return TelegramOutbound(
                 inbound.conversation_id,
@@ -871,6 +1002,8 @@ class TelegramAdapter:
             "menu:continuity": "Quiero revisar la continuidad de lo que estamos escribiendo y saber dónde quedamos.",
             "menu:ideas": "Quiero ideas para continuar la novela usando la continuidad y personajes establecidos.",
         }
+        if callback.data == "cafe:open":
+            return self._cafe_open_response(callback)
         if callback.data == "menu:help":
             return TelegramOutbound(
                 callback.conversation_id,
@@ -1255,6 +1388,14 @@ class TelegramApiClient:
         if not isinstance(updates, list) or not all(isinstance(update, dict) for update in updates):
             raise TelegramApiError("Telegram getUpdates response is invalid")
         return tuple(updates)
+
+    def get_me_username(self) -> str:
+        response = self._call("getMe", {})
+        result = response.get("result")
+        username = result.get("username") if isinstance(result, dict) else None
+        if not isinstance(username, str) or not username.strip():
+            raise TelegramApiError("Telegram bot username is unavailable")
+        return username.strip()
 
     def smoke_test(self) -> bool:
         response = self._call("getMe", {})

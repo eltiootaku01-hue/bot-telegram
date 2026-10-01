@@ -15,3 +15,4 @@ browser_data/
 work/*.lock
 work/*.sqlite3
 work/*.log
+config/tma_trusted_contexts/
