@@ -9,6 +9,8 @@ import re
 import secrets
 import time
 import tempfile
+import threading
+import weakref
 from urllib.parse import quote
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,6 +24,26 @@ REFERENCE_PATTERN = re.compile(r"^tctx_[A-Za-z0-9_-]{43}$")
 BOT_USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{5,32}$")
 DEFAULT_CONTEXT_MAX_AGE_SECONDS = 3600
 MAX_ISSUE_ATTEMPTS = 8
+
+
+# Revocation serialization is intentionally process-local. FastAPI may build
+# independent registry objects in the same process, so the lock registry is
+# shared at module scope and keyed by the opaque reference. This does not claim
+# cross-process writer locking for the same-host JSON storage contract.
+_REVOCATION_LOCKS: weakref.WeakValueDictionary[str, threading.RLock] = (
+    weakref.WeakValueDictionary()
+)
+_REVOCATION_LOCKS_GUARD = threading.RLock()
+
+
+def _revocation_lock(reference: str) -> threading.RLock:
+    """Return the shared per-reference lock for this Python process."""
+    with _REVOCATION_LOCKS_GUARD:
+        lock = _REVOCATION_LOCKS.get(reference)
+        if lock is None:
+            lock = threading.RLock()
+            _REVOCATION_LOCKS[reference] = lock
+        return lock
 
 
 class TrustedContextError(ValueError):
@@ -275,43 +297,55 @@ class TrustedContextRegistry:
         *,
         now: float | None = None,
     ) -> TrustedCafeContext:
-        record = self._load(reference)
-        if record.issuer != self._issuer:
-            raise TrustedContextError("foreign_context_issuer")
+        """Revoke one reference atomically and idempotently within this process."""
+        value = str(reference or "").strip()
+        lock = _revocation_lock(value)
+        with lock:
+            record = self._load(value)
+            if record.issuer != self._issuer:
+                raise TrustedContextError("foreign_context_issuer")
 
-        revoked_at = record.revoked_at or self._now(now)
-        updated = record.model_copy(update={"revoked_at": revoked_at})
-        path = self._path_for(reference)
-        self._ensure_store_dir()
+            # Once the first writer has published the revoked record, later
+            # concurrent/sequential calls converge on that state without a
+            # second Windows-sensitive replacement of the same target.
+            if record.revoked_at is not None:
+                return TrustedCafeContext.model_validate(
+                    record.model_dump()
+                )
 
-        temporary_path: Path | None = None
-        try:
-            descriptor, temporary_name = tempfile.mkstemp(
-                prefix=f".{record.reference}.",
-                suffix=".tmp",
-                dir=str(self._store_dir),
+            revoked_at = self._now(now)
+            updated = record.model_copy(update={"revoked_at": revoked_at})
+            path = self._path_for(value)
+            self._ensure_store_dir()
+
+            temporary_path: Path | None = None
+            try:
+                descriptor, temporary_name = tempfile.mkstemp(
+                    prefix=f".{record.reference}.",
+                    suffix=".tmp",
+                    dir=str(self._store_dir),
+                )
+                temporary_path = Path(temporary_name)
+                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                    handle.write(updated.model_dump_json() + "\\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                temporary_path.chmod(0o600)
+                os.replace(temporary_path, path)
+                temporary_path = None
+            except OSError as error:
+                if temporary_path is not None:
+                    try:
+                        temporary_path.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+                raise TrustedContextError(
+                    "context_store_unavailable"
+                ) from error
+
+            return TrustedCafeContext.model_validate(
+                updated.model_dump()
             )
-            temporary_path = Path(temporary_name)
-            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-                handle.write(updated.model_dump_json() + "\n")
-                handle.flush()
-                os.fsync(handle.fileno())
-            temporary_path.chmod(0o600)
-            os.replace(temporary_path, path)
-            temporary_path = None
-        except OSError as error:
-            if temporary_path is not None:
-                try:
-                    temporary_path.unlink(missing_ok=True)
-                except OSError:
-                    pass
-            raise TrustedContextError(
-                "context_store_unavailable"
-            ) from error
-
-        return TrustedCafeContext.model_validate(
-            updated.model_dump()
-        )
 
 
 def build_main_mini_app_link(
