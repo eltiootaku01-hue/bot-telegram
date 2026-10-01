@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from api.dependencies import authorize_cafe_access, get_current_user
+from bot_ia.interfaces.telegram_room_routing import TelegramRoomRouter
 from api.security.telegram_auth import (
     AuthenticatedTelegramActor,
     TelegramAuthError,
@@ -365,6 +366,23 @@ def test_context_launcher_uses_main_startapp() -> None:
     )
 
 
+def test_real_room_router_routes_are_authoritative(tmp_path) -> None:
+    router = TelegramRoomRouter(tmp_path / "telegram_rooms.sqlite3")
+
+    class Room:
+        name = "#general"
+        key = "general"
+        external_id = "42"
+
+    router.replace_chat_rooms("-100", (Room(),))
+    routes = router.list_routes(chat_id="-100")
+
+    assert len(routes) == 1
+    assert routes[0].chat_id == "-100"
+    assert routes[0].message_thread_id == 42
+    assert routes[0].room_key == "general"
+
+
 def test_semantic_room_reference_is_rejected() -> None:
     registry = TrustedContextRegistry(
         FakeRouter((FakeRoute("-100", 42, "general"),)),
@@ -518,6 +536,23 @@ def test_fastapi_missing_bot_token_fails_closed(monkeypatch) -> None:
     assert response.json()["detail"] == (
         "Telegram authentication dependency is not configured"
     )
+
+
+def test_fastapi_invalid_tma_configuration_fails_closed(monkeypatch) -> None:
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", BOT_TOKEN)
+    monkeypatch.setenv("TMA_AUTH_MAX_AGE_SECONDS", "0")
+    app = FastAPI()
+
+    @app.get("/actor")
+    async def actor(current=Depends(get_current_user)):
+        return current.model_dump()
+
+    response = TestClient(app).get(
+        "/actor",
+        headers={"Authorization": "tma " + make_init_data()},
+    )
+    assert response.status_code == 503
+    assert BOT_TOKEN not in response.text
 
 
 def test_fastapi_rejects_non_tma_scheme(monkeypatch) -> None:
