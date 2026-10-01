@@ -424,6 +424,33 @@ def test_concurrent_issue_handles_same_reference_collision(
     assert len(set(references)) == 2
 
 
+
+def test_concurrent_revoke_is_idempotent_and_fail_closed(
+    tmp_path: Path,
+) -> None:
+    registry = TrustedContextRegistry(
+        FakeRouter((FakeRoute("-100", 42, "general"),)),
+        store_dir=tmp_path,
+    )
+    reference = registry.issue("-100", 42, now=AUTH_NOW).reference
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = [
+            pool.submit(
+                registry.revoke,
+                reference,
+                now=AUTH_NOW + 1,
+            )
+            for _ in range(16)
+        ]
+        results = [future.result() for future in futures]
+
+    assert all(result.revoked_at == AUTH_NOW + 1 for result in results)
+    with pytest.raises(TrustedContextError) as captured:
+        registry.resolve(reference, now=AUTH_NOW + 2)
+    assert captured.value.args[0] == "revoked_context_reference"
+
+
 def test_concurrent_revoke_and_resolve_preserve_valid_records(
     tmp_path: Path,
 ) -> None:
@@ -508,6 +535,33 @@ def test_fastapi_room_registry_is_read_only_when_routing_database_is_missing(
     routing_path = tmp_path / "config" / "telegram_rooms.sqlite3"
     assert not routing_path.exists()
     assert not routing_path.parent.exists()
+
+
+
+def test_context_store_unavailable_maps_to_503() -> None:
+    class BrokenRegistry:
+        def resolve(self, reference: str):
+            raise TrustedContextError("context_store_unavailable")
+
+    class NeverCalledVerifier:
+        async def check(self, chat_id: str, user_id: int):
+            raise AssertionError("membership must not run when storage is unavailable")
+
+    actor = validate_telegram_init_data(
+        make_init_data(start_param="tctx_" + "A" * 43),
+        BOT_TOKEN,
+        now=AUTH_NOW,
+    )
+    with pytest.raises(HTTPException) as captured:
+        async_run(
+            authorize_cafe_access(
+                actor,
+                actor.start_param,
+                BrokenRegistry(),
+                NeverCalledVerifier(),
+            )
+        )
+    assert captured.value.status_code == 503
 
 
 def test_fastapi_context_store_missing_maps_to_503(
@@ -826,6 +880,42 @@ def test_full_pipeline_denies_membership(tmp_path: Path) -> None:
     assert getattr(captured.value, "status_code", None) == 403
 
 
+
+def test_reusable_context_denies_foreign_actor_via_membership(
+    tmp_path: Path,
+) -> None:
+    router = FakeRouter((FakeRoute("-100", 42, "general"),))
+    registry = TrustedContextRegistry(router, store_dir=tmp_path)
+    reference = registry.issue("-100", 42, now=AUTH_NOW).reference
+    foreign_user = {
+        "id": 987654321,
+        "first_name": "Foreign",
+    }
+    foreign_actor = validate_telegram_init_data(
+        make_init_data(user=foreign_user, start_param=reference),
+        BOT_TOKEN,
+        now=AUTH_NOW,
+    )
+
+    class AllowingOnlyOriginalVerifier:
+        async def check(self, chat_id: str, user_id: int):
+            return TelegramMembershipDecision(
+                status="member",
+                allowed=user_id == USER["id"],
+            )
+
+    with pytest.raises(HTTPException) as captured:
+        async_run(
+            authorize_cafe_access(
+                foreign_actor,
+                reference,
+                registry,
+                AllowingOnlyOriginalVerifier(),
+            )
+        )
+    assert captured.value.status_code == 403
+
+
 def test_reusable_context_allows_multiple_authorized_members(
     tmp_path: Path,
 ) -> None:
@@ -964,6 +1054,75 @@ def test_telegram_topic_unknown_route_cannot_issue_context(
     })
     assert "no está registrado" in result.text
     assert not any((tmp_path / "contexts").glob("*.json"))
+
+
+
+def test_full_fastapi_pipeline_uses_real_room_router(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    routing_path = tmp_path / "config" / "telegram_rooms.sqlite3"
+    routing_path.parent.mkdir(parents=True)
+    writable = TelegramRoomRouter(routing_path)
+
+    class Room:
+        name = "#general"
+        key = "general"
+        external_id = "42"
+
+    writable.replace_chat_rooms("-100", (Room(),))
+    router = TelegramRoomRouter(routing_path, read_only=True)
+    contexts = tmp_path / "config" / "tma_trusted_contexts"
+    registry = TrustedContextRegistry(
+        router,
+        store_dir=contexts,
+        create_store_dir=True,
+    )
+    reference = registry.issue("-100", 42, now=AUTH_NOW).reference
+
+    class AllowingVerifier:
+        async def check(self, chat_id: str, user_id: int):
+            assert chat_id == "-100"
+            assert user_id == USER["id"]
+            return TelegramMembershipDecision(
+                status="member",
+                allowed=True,
+            )
+
+    import api.dependencies as dependencies
+
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", BOT_TOKEN)
+    app = FastAPI()
+    app.dependency_overrides[dependencies.get_trusted_context_registry] = (
+        lambda: registry
+    )
+    app.dependency_overrides[
+        dependencies.get_telegram_membership_verifier
+    ] = lambda: AllowingVerifier()
+
+    @app.get("/cafe-real-router")
+    async def cafe(access=Depends(get_current_cafe_access)):
+        return {
+            "actor_key": access.actor.actor_key,
+            "room_key": access.context.room_key,
+            "chat_id": access.context.chat_id,
+            "message_thread_id": access.context.message_thread_id,
+        }
+
+    response = TestClient(app).get(
+        "/cafe-real-router",
+        headers={
+            "Authorization": "tma "
+            + make_init_data(start_param=reference),
+        },
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "actor_key": "telegram:123456789",
+        "room_key": "general",
+        "chat_id": "-100",
+        "message_thread_id": 42,
+    }
 
 
 def test_full_fastapi_pipeline_allows_authorized_member(
