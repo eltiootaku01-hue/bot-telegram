@@ -111,8 +111,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     stage = args.stage
-    if stage < 0 or stage > 11:
-        raise SystemExit("stage must be between 0 and 11")
+    if stage < 0 or stage > 15:
+        raise SystemExit("stage must be between 0 and 15")
 
     started = time.monotonic()
     emit("STAGE", stage)
@@ -135,6 +135,12 @@ def main() -> int:
 
     if stage >= 3:
         from PySide6.QtCore import QObject, Signal, Slot
+
+    QEventLoop = None
+    if stage >= 12:
+        from PySide6.QtCore import QEventLoop
+
+        emit("QEVENTLOOP_IMPORT", "True")
 
     if stage >= 9:
         add_src_to_path()
@@ -159,10 +165,58 @@ def main() -> int:
     if stage >= 3:
         bridge_type = CapturedBridge(QObject, Signal, Slot).type
 
+    if stage >= 13:
+        QApplication(sys.argv)
+        emit("PREEXISTING_QAPPLICATION", "created")
+
     app = QApplication.instance() or QApplication(sys.argv)
     emit("QAPPLICATION", "created")
     emit("QPA_BACKEND", app.platformName())
     emit("RSS_AFTER_QAPPLICATION_KIB", rss_kib())
+
+    if stage >= 14:
+        previous_view = QWebEngineView()
+        previous_loop = QEventLoop()
+        previous_timer = QTimer()
+        previous_state = {"seen": False, "ok": False}
+
+        def previous_loaded(ok: bool) -> None:
+            previous_state["seen"] = True
+            previous_state["ok"] = ok
+            previous_loop.quit()
+
+        previous_view.loadFinished.connect(previous_loaded)
+
+        if stage >= 15:
+            previous_channel = QWebChannel(previous_view.page())
+            previous_bridge = bridge_type()
+            previous_channel.registerObject(
+                "casaQueueBridge",
+                previous_bridge,
+            )
+            previous_view.page().setWebChannel(previous_channel)
+            emit("PREVIOUS_WEBCHANNEL", "configured")
+
+        previous_view.setHtml(
+            MINIMAL_HTML,
+            QUrl("http://qwebengine-prior.local/"),
+        )
+        previous_timer.setSingleShot(True)
+        previous_timer.timeout.connect(previous_loop.quit)
+        previous_timer.start(TIMEOUT_MS)
+        previous_loop.exec()
+        previous_timer.stop()
+        emit(
+            "PREVIOUS_WEBENGINE_LOAD_FINISHED",
+            previous_state["ok"],
+        )
+        if not previous_state["seen"] or not previous_state["ok"]:
+            emit("RESULT", "PRECONDITION_FAIL")
+            emit("EXIT_CODE", 3)
+            return 3
+        previous_view.close()
+        previous_view.deleteLater()
+        app.processEvents()
 
     view = QWebEngineView()
     page = view.page()
