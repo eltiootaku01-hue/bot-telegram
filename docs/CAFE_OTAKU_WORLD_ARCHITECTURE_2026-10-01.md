@@ -963,6 +963,653 @@ Relación:
 
 ---
 
+# WORLD-00-R1 — Social World Ambient + Scheduling Contract
+
+## Revision purpose
+
+WORLD-00-R1 refines WORLD-00 without changing the selected direction:
+
+    Telegram Group First + TMA Companion
+
+Telegram remains the community's primary social home. Normal chat, General, existing topics, message history and ordinary community activity remain authoritative social surfaces. The Café Otaku Interactive / Café Tables are a complementary visual and contextual social layer.
+
+The intended world behavior is:
+
+    social
+    selective
+    light
+    contextual
+    interactive
+
+and explicitly not:
+
+    noisy
+    spammy
+    permanently active
+    dependent on artificial 24/7 bot chatter
+
+This revision is architecture/design only.
+
+## General Chat and Topics remain independent
+
+GENERAL remains a normal Telegram chat surface. It may continue to contain:
+
+    human conversation
+    cards
+    drops
+    trivia
+    debates
+    polls
+    elections
+    mini-games
+    events
+    character interactions
+
+Existing topics remain independent Telegram spaces, including news, older anime, TCG, orders, support and other configured topics.
+
+The TMA does not replace Telegram chat, topics or message history.
+
+The Café is a layer over the community:
+
+    Telegram = community + conversation + history
+    TMA = visual interactive companion
+
+The Café must not silently move all community activity into the TMA.
+
+## Café Interactive surface
+
+The Café may expose:
+
+    Lobby
+    Tables
+    Participants
+    Characters
+    Activities
+    Events
+    Collection
+    Profile
+
+These are views and interaction surfaces of the Social World. They do not acquire authority over Telegram, TCG, economy, authorization or physical execution merely by being displayed in TMA.
+
+## CafeTable contract
+
+CafeTable is introduced as a logical concept, not as a required persistent table.
+
+A table represents:
+
+    small participant group
+    + context
+    + optional activity
+    + optional characters
+
+Example:
+
+    Table 1
+      Jonh
+      Pedro
+      Ana
+      Cari
+
+      Activity: Quiz
+
+WORLD-00-R1 requires a design decision before persistence: determine whether a table is a derived view of a CafeSession or requires an independent lifecycle. A persistent CafeTable is not authorized by this contract.
+
+A table requires its own persistence only if future evidence demonstrates independent lifecycle, durable identity, independent permissions, durable invitations, matchmaking or another ownership boundary that cannot be represented by CafeSession.
+
+## Telegram <-> Café relationship
+
+The Social World is not isolated from Telegram.
+
+    Telegram
+        ↕
+    Cafe World
+
+A Café activity may produce a result that is surfaced through the appropriate Telegram chat/topic. Conversely, a relevant Telegram message or event may become an input trigger for a Café interaction.
+
+The direction of causality must still respect domain ownership and authorization. A Telegram event does not bypass Room, Session or domain gates; a Café result does not acquire permission to publish merely because it originated in the TMA.
+
+# SocialScheduler Contract
+
+SocialScheduler is a conceptual domain service that decides when a social action is worth attempting.
+
+It is not a perpetual publisher and not one daemon per feature.
+
+The scheduler consumes contextual signals and evaluates:
+
+    SHOULD_ACT_NOW?
+
+The result is exactly one of:
+
+    YES
+    NO
+    DEFER
+
+NO ACTION is a valid successful outcome.
+
+The preferred scheduling model is next-action based:
+
+    current time
+        ↓
+    next_action_at
+        ↓
+       sleep
+        ↓
+       wake
+        ↓
+    evaluate
+
+The scheduler should prefer next_action_at over continuous polling. When no work is scheduled, the runtime sleeps. Future implementation should reuse the existing scheduler/runtime infrastructure rather than create one process per feature.
+
+## Social conditions
+
+Before publishing or starting an activity, the conceptual evaluation context includes:
+
+    current time
+    day
+    date
+    timezone
+    active participants
+    recent activity
+    cooldown state
+    content budget
+    target topic
+    activity type
+
+These inputs form policy context; they do not themselves grant permission to publish.
+
+## Participation Gate
+
+Interactive activities must pass a ParticipationGate.
+
+Conceptually:
+
+    required_players = 2
+    participants = 0 -> DEFER
+    participants = 1 -> DEFER
+    participants = 4 -> MAY START
+
+The exact minimum is owned by the activity contract.
+
+An activity that requires players must not repeatedly publish invitations when the participation minimum cannot be met.
+
+Presence rules remain distinct from Telegram group membership.
+
+## Presence Gate
+
+Presence affects whether an activity should start:
+
+    0 participants
+        -> no interactive event
+
+    1 participant
+        -> individual interaction may be allowed
+
+    2+ participants
+        -> social activity may be allowed
+
+    N participants
+        -> group activity may be allowed
+
+This does not authorize artificial participants. Character availability is not equivalent to human participation.
+
+## Quiet Periods
+
+The scheduler recognizes conceptual activity modes:
+
+    QUIET
+    NORMAL
+    PEAK
+    SPECIAL_EVENT
+
+Quiet periods may include quiet hours, low-activity periods and maintenance windows.
+
+During a quiet period, the scheduler suppresses unnecessary:
+
+    trivia
+    event spam
+    card posts
+    character chatter
+
+A special date does not override quiet, safety or budget rules automatically.
+
+## Calendar Gate
+
+Special dates may be represented as:
+
+    special date
+    special day
+    scheduled event
+    anniversary
+    season
+    festival
+
+A special date is an input, not an automatic publication command.
+
+The conceptual decision is:
+
+    special date
+        +
+    activity
+        +
+    budget
+        +
+    rules
+        ↓
+    SHOULD_ACT_NOW?
+
+No assumption is made that every special date deserves automated content.
+
+## ContentBudget
+
+ContentBudget is a conceptual policy boundary.
+
+Budgets may be scoped by:
+
+    topic
+    activity type
+    day
+
+The contract supports:
+
+    daily limits
+    cooldowns
+    remaining budget
+    exhausted budget
+
+Definitive numeric limits are deliberately deferred.
+
+Examples of separately budgetable categories include:
+
+    news
+    cards
+    trivia
+    character interactions
+    events
+
+When a budget is exhausted, the correct result is:
+
+    NO PUBLICATION
+
+not substitution with another automated post.
+
+## Anti-spam contract
+
+Any automatic publication candidate should be evaluated against conceptual state:
+
+    last_post_at
+    cooldown
+    daily_count
+    daily_limit
+    reason
+
+An optional content_signature may prevent materially duplicate content.
+
+A failed gate produces:
+
+    NO PUBLICAR
+
+The system must not retry immediately merely because an action was suppressed. A future next_action_at must be calculated according to policy.
+
+## Character Triggering
+
+Characters do not speak continuously.
+
+A character interaction requires a meaningful character_trigger, such as:
+
+    user enters
+    special event
+    activity starts
+    activity ends
+    contextual response
+
+Character output is also subject to character_cooldown.
+
+character availability and character speaking are separate states:
+
+    available != actively speaking
+
+A waitress/character may be visibly available in the Café without sending messages.
+
+The Social World must not simulate users or have characters converse indefinitely with one another.
+
+## AI Cost Gate
+
+AI execution is event-driven:
+
+    on demand
+    or
+    meaningful social trigger
+
+Valid triggers may include:
+
+    conversation
+    activity
+    event
+    character interaction
+
+The scheduler must never be defined as:
+
+    every minute
+        ↓
+    call AI
+
+AI failure may suppress narration while preserving social state.
+
+## Normal Telegram interactions and Action Buttons
+
+Common social actions should be discoverable visually without requiring users to learn commands.
+
+Conceptual actions include:
+
+    [☕ Entrar al Café]
+    [🪑 Ver Mesas]
+    [🎮 Jugar]
+    [🎴 Cartas]
+    [✨ Eventos]
+    [👩‍🍳 Personajes]
+
+Activity actions may include:
+
+    [Participar]
+    [Ver resultado]
+    [Salir]
+
+TCG actions may include:
+
+    [Ver carta]
+    [Mi colección]
+    [Jugar duelo]
+
+Commands remain valid as:
+
+    shortcut
+    admin tool
+    advanced-user path
+    fallback
+
+Buttons do not erase existing command support.
+
+## Contextual Action Contract
+
+Buttons are contextual and should expose only currently useful actions.
+
+Examples:
+
+    no session
+        -> Entrar
+
+    active session
+        -> Ver Mesa / Salir
+
+    active activity
+        -> Participar / Estado
+
+    completed activity
+        -> Resultado
+
+The UI should not present actions that are impossible in the current state.
+
+The same authorization gates apply whether an action arrives through a button or a command.
+
+## ContentSafetyGate
+
+ContentSafetyGate is a conceptual boundary for incoming messages/media and future social publishing flows.
+
+Pipeline:
+
+    incoming message/media
+        ↓
+    classification
+        ↓
+    topic policy
+        ↓
+    ALLOW / REVIEW / QUARANTINE / REJECT
+
+The gate does not replace Telegram's platform rules or existing authorization.
+
+## Adult / NSFW topic boundary
+
+An adult topic requires explicit:
+
+    policy
+    rules
+    moderation level
+    report path
+
+The architecture must never infer:
+
+    NSFW topic == everything allowed
+
+Decisions must respect:
+
+    platform rules
+    server/community policy
+    topic rules
+
+Relevant decisions should preserve enough evidence for audit without retaining content unnecessarily.
+
+## Quarantine
+
+Potentially problematic content may enter:
+
+    QUARANTINED
+
+instead of being published immediately when policy requires review.
+
+Conceptual decision evidence:
+
+    message/media reference
+    classification
+    reason
+    timestamp
+    actor
+    topic
+    decision
+
+Data minimization applies. The contract does not authorize indefinite retention of message/media content.
+
+## Report and moderation actions
+
+Where the actor has permission, visual actions may include:
+
+    [🚩 Reportar]
+    [🔇 Silenciar]
+    [🚫 Bloquear]
+
+Normal users must not receive administrative controls.
+
+The system is designed to reduce risk, detect content, apply rules and retain relevant decision evidence. It does not guarantee that an external platform will never take moderation or account action.
+
+# Social World + Normal Chat
+
+The intended boundary is:
+
+    TELEGRAM
+        |
+        +-- GENERAL
+        |     +-- conversation
+        |     +-- trivia
+        |     +-- cards
+        |     +-- debates
+        |
+        +-- TOPICS
+        |     +-- news
+        |     +-- anime
+        |     +-- TCG
+        |     +-- orders
+        |     +-- support
+        |     +-- other configured topics
+        |
+        +-- CAFÉ
+              +-- lobby
+              +-- tables
+              +-- characters
+              +-- activities
+
+        |
+     BACKEND
+        |
+    Social World
+
+The Café does not replace the other Telegram spaces.
+
+## Ambient-presence principle
+
+The world should feel alive without behaving like an always-on fake conversation.
+
+Explicitly prohibited by this contract:
+
+    bot permanently conversing
+    bot simulating users
+    characters speaking to each other indefinitely
+    AI executing continuously
+    scheduler firing without participants
+    per-feature autonomous daemons
+
+The desired property is:
+
+    alive when relevant
+    quiet when irrelevant
+
+## Runtime reuse
+
+Future scheduling, social activity and moderation work should reuse:
+
+    existing Telegram poller/webhook runtime
+    existing TaskScheduler
+    existing persistence
+    existing event infrastructure
+
+No independent process is introduced for:
+
+    news
+    cards
+    trivia
+    characters
+    events
+    Café
+    moderation
+
+unless future evidence demonstrates a necessary ownership/runtime boundary.
+
+# WORLD-00-R1 Observability Additions
+
+The conceptual Social World event vocabulary is extended with:
+
+    scheduler_evaluated
+    scheduler_deferred
+    scheduler_skipped
+    content_budget_exhausted
+    activity_deferred
+    presence_gate_failed
+    character_triggered
+    character_suppressed
+    content_quarantined
+    content_rejected
+    moderation_reported
+
+Recommended correlation fields remain:
+
+    event_id
+    timestamp
+    actor_key
+    cafe_id
+    room_ref
+    session_id
+    activity_id
+    character_id
+    outcome
+    reason
+    correlation_id
+    idempotency_key
+
+# WORLD-00-R1 Testing Contract
+
+Future implementation must be able to demonstrate:
+
+    no spam
+    quiet hours
+    daily budget
+    cooldown
+    participation gate
+    presence gate
+    date/time gate
+    special date handling
+    button actions
+    contextual actions
+    duplicate action protection
+    moderation decision
+    quarantine
+    cross-room isolation
+
+Critical cases:
+
+    0 participants
+    1 participant
+    2 participants
+    high activity
+    low activity
+    special date
+    quiet hour
+    daily limit reached
+    duplicate trigger
+
+Testing is a future implementation gate. WORLD-00-R1 does not authorize test-code changes in this phase.
+
+# WORLD-00-R1 Performance Contract
+
+The first Social World remains designed for:
+
+    few processes
+    SQLite
+    event-driven work
+    sleep when idle
+    no continuous AI generation
+    no per-feature daemon
+
+The architecture does not introduce:
+
+    Redis
+    Kafka
+    microservices
+    heavy scheduler cluster
+
+without future evidence establishing a concrete need.
+
+# WORLD-00-R1 Self-review
+
+The refinement was checked conceptually against:
+
+    chat replacement
+    TMA replacement
+    scheduler over-polling
+    continuous AI
+    artificial character chatter
+    duplicate feature daemons
+    moderation bypass
+    authority confusion
+    cross-room leakage
+    2F-8S bypass
+
+Required outcomes:
+
+- Telegram remains the primary community/social home.
+- TMA remains a companion visual interface.
+- CafeTable remains non-persistent until independent lifecycle is proven.
+- SocialScheduler is event/next-action driven and may return NO ACTION.
+- Participation and presence gates prevent activity without sufficient human context.
+- Quiet periods, budgets and cooldowns suppress unnecessary content.
+- Character availability is distinct from character speech.
+- AI is trigger-driven rather than time-driven.
+- Buttons complement rather than replace commands.
+- ContentSafetyGate precedes applicable publication/review decisions.
+- Adult-topic policy does not bypass platform/community rules.
+- No new runtime process or persistence database is authorized.
+- No 2F-8S ownership is changed.
+
+
+---
+
 # Implementation Phasing
 
 ## WORLD-01 — Café / Lobby
