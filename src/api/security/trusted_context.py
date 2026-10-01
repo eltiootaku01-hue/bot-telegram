@@ -237,7 +237,6 @@ class TrustedContextRegistry:
                 ) from error
 
             return TrustedCafeContext.model_validate(
-            return TrustedCafeContext.model_validate(
                 record.model_dump()
             )
 
