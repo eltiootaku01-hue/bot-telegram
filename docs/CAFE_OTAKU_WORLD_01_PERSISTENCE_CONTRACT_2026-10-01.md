@@ -1349,7 +1349,9 @@ No runtime code, migration, database file, test or API is created.
 
 ## 29. Implementation handoff
 
-WORLD-01-D may implement the persistence layer only after this contract is accepted.
+WORLD-01-C is the next explicitly authorized phase: Telegram Auth + Trusted Launch Context.
+
+WORLD-01-D may implement the persistence layer only after WORLD-01-C is completed and the next phase is explicitly authorized.
 
 The implementation must preserve:
 
@@ -1406,8 +1408,8 @@ MIGRATION
 | Runtime implementation | NOT IMPLEMENTED |
 | Tests | NOT RUN |
 | CI | NOT RUN |
-| GitHub commit | PENDING VERIFICATION |
-| PR | PENDING CREATION |
+| GitHub commit | VERIFIED |
+| PR | VERIFIED |
 
 ---
 
@@ -1439,8 +1441,8 @@ MIGRATION
 
 The critical condition is ownership separation: Social World must add only its own tables and must not take over the Telegram database-wide identity/version metadata.
 
-The contract is ready for the later runtime implementation phase.
+The persistence contract has been reviewed and is ready for the next explicitly authorized phase.
 
-**READY FOR WORLD-01-C / PERSISTENCE CONTRACT HANDOFF**
+**READY FOR WORLD-01-C**
 
 **STOP — no runtime implementation authorized by this document.**
