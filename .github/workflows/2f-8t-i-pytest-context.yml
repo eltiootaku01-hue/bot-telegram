@@ -1,0 +1,284 @@
+# -*- coding: utf-8 -*-
+name: 2F-8T-I pytest context audit
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  pytest-context:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout diagnostic branch
+        uses: actions/checkout@v6
+        with:
+          ref: diagnostic/2f-8t-qwebengine-clean
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14.7"
+
+      - name: Install historical Linux Qt runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libegl1 \
+            libgl1 \
+            libglvnd0 \
+            libx11-xcb1 \
+            libxcb1 \
+            libxcb-cursor0 \
+            libxkbcommon0 \
+            libxkbcommon-x11-0
+
+      - name: Install historical runtime dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            "PySide6==6.11.2" \
+            tzdata \
+            playwright \
+            python-dotenv \
+            SQLAlchemy \
+            pytest
+
+      - name: Install Playwright Chromium
+        run: python -m playwright install --with-deps chromium
+
+      - name: Capture runtime and pytest configuration
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          {
+            echo "=== RUNNER ==="
+            uname -a
+            cat /etc/os-release
+            echo "=== PYTHON ==="
+            python --version
+            python -c "import PySide6; from PySide6.QtCore import qVersion; from PySide6.QtWebEngineCore import qWebEngineChromiumVersion; print('PySide6='+PySide6.__version__); print('Qt='+qVersion()); print('QtWebEngine/Chromium='+qWebEngineChromiumVersion())"
+            echo "=== PYTEST ==="
+            python -m pytest --version
+            echo "=== TRACE CONFIG ==="
+            python -m pytest --trace-config --collect-only -q
+            echo "=== RELEVANT ENVIRONMENT ==="
+            env | grep -E '^(QT_QPA_PLATFORM|QTWEBENGINE_CHROMIUM_FLAGS|DISPLAY|WAYLAND_DISPLAY|XDG_SESSION_TYPE|TMPDIR|TEMP|TMP)=' || true
+            echo "=== COLLECTION ==="
+            python -m pytest --collect-only -q
+          } > artifacts/pytest-context.txt 2>&1
+
+          python -m pytest --collect-only -q \
+            > artifacts/collect.txt 2>&1
+
+          python -m pytest --setup-plan \
+            tests/test_webchat_runtime_controlled_8h.py \
+            > artifacts/target-setup-plan.txt 2>&1
+
+      - name: Run target class and module in fresh processes
+        shell: bash
+        run: |
+          set +e
+          target='tests/test_webchat_runtime_controlled_8h.py::WebChatRuntimeControlledTests'
+          module='tests/test_webchat_runtime_controlled_8h.py'
+
+          for kind in target module; do
+            for run in 1 2 3; do
+              log="artifacts/\${kind}-solo-\${run}.log"
+              state="artifacts/\${kind}-solo-\${run}.state.log"
+              echo "===== \${kind} SOLO RUN \${run} =====" | tee "\${log}"
+              I_TARGET_NODEID="\${target}" \
+              I_STATE_LOG="\${state}" \
+              python -m pytest -q -p diagnostics.pytest_state_probe \
+                "\${target}" >>"\${log}" 2>&1
+              code=$?
+              if [ "\${kind}" = "module" ]; then
+                I_TARGET_NODEID="\${target}" \
+                I_STATE_LOG="\${state}" \
+                python -m pytest -q -p diagnostics.pytest_state_probe \
+                  "\${module}" >>"\${log}" 2>&1
+                code=$?
+              fi
+              echo "PROCESS_EXIT_CODE=\${code}" >>"\${log}"
+              echo "\${kind} run=\${run} exit=\${code}"
+            done
+          done
+
+      - name: Run controlled real-order prefixes in fresh processes
+        shell: python
+        run: |
+          from pathlib import Path
+          import os
+          import subprocess
+          import sys
+
+          collect = Path("artifacts/collect.txt").read_text(
+              errors="replace"
+          ).splitlines()
+          nodeids = [
+              line.strip()
+              for line in collect
+              if line.startswith("tests/") and "::" in line
+          ]
+
+          target_class = (
+              "tests/test_webchat_runtime_controlled_8h.py"
+              "::WebChatRuntimeControlledTests"
+          )
+          target_index = next(
+              (
+                  i
+                  for i, nodeid in enumerate(nodeids)
+                  if nodeid.startswith(target_class + "::")
+              ),
+              None,
+          )
+          if target_index is None:
+              raise SystemExit("TARGET_NOT_FOUND_IN_COLLECTION")
+
+          target_nodeid = nodeids[target_index]
+          prefixes = [
+              ("prefix1", 1),
+              ("prefix2", 2),
+              ("prefix4", 4),
+              ("prefix8", 8),
+              ("prefix16", 16),
+          ]
+
+          Path("artifacts/order.txt").write_text(
+              "\n".join(
+                  [
+                      f"TARGET_INDEX={target_index}",
+                      f"TARGET_NODEID={target_nodeid}",
+                      "IMMEDIATE_PREDECESSOR=" + (
+                          nodeids[target_index - 1]
+                          if target_index > 0
+                          else "NONE"
+                      ),
+                  ]
+                  + [
+                      (
+                          f"{label}="
+                          + " | ".join(
+                              nodeids[
+                                  max(0, target_index - count):target_index
+                              ]
+                          )
+                      )
+                      for label, count in prefixes
+                  ]
+              ) + "\n",
+              encoding="utf-8",
+          )
+
+          summary = []
+
+          for label, count in prefixes:
+              prefix = nodeids[
+                  max(0, target_index - count):target_index
+              ]
+              if not prefix:
+                  continue
+
+              condition_results = []
+
+              for run in range(1, 4):
+                  log = Path(
+                      f"artifacts/{label}-run-{run}.log"
+                  )
+                  state = Path(
+                      f"artifacts/{label}-run-{run}.state.log"
+                  )
+
+                  command = [
+                      sys.executable,
+                      "-m",
+                      "pytest",
+                      "-q",
+                      "-p",
+                      "diagnostics.pytest_state_probe",
+                      *prefix,
+                      target_nodeid,
+                  ]
+
+                  env = dict(os.environ)
+                  env["I_TARGET_NODEID"] = target_class
+                  env["I_STATE_LOG"] = str(state)
+
+                  with log.open("w", encoding="utf-8") as handle:
+                      handle.write(
+                          "COMMAND="
+                          + " ".join(command)
+                          + "\n"
+                          + "PREFIX_COUNT="
+                          + str(len(prefix))
+                          + "\n"
+                          + "PREFIX_NODEIDS="
+                          + repr(prefix)
+                          + "\n"
+                      )
+                      result = subprocess.run(
+                          command,
+                          stdout=handle,
+                          stderr=subprocess.STDOUT,
+                          env=env,
+                          check=False,
+                          text=True,
+                      )
+                      handle.write(
+                          f"PROCESS_EXIT_CODE={result.returncode}\n"
+                      )
+                  condition_results.append(result.returncode)
+
+              summary.append(
+                  f"{label}: "
+                  + " ".join(map(str, condition_results))
+              )
+
+              if any(code != 0 for code in condition_results):
+                  summary.append(
+                      f"{label}: FIRST_FAILING_PREFIX_CANDIDATE"
+                  )
+                  break
+
+          Path("artifacts/prefix-summary.txt").write_text(
+              "\n".join(summary) + "\n",
+              encoding="utf-8",
+          )
+          print("\n".join(summary))
+
+      - name: Summarize results
+        if: always()
+        shell: python
+        run: |
+          from pathlib import Path
+
+          lines = []
+          for path in sorted(Path("artifacts").glob("*.log")):
+              text = path.read_text(errors="replace")
+              codes = [
+                  line.split("=", 1)[1]
+                  for line in text.splitlines()
+                  if line.startswith("PROCESS_EXIT_CODE=")
+              ]
+              if codes:
+                  lines.append(
+                      f"{path.name}: exit={codes[-1]}"
+                  )
+
+          Path("artifacts/result-summary.txt").write_text(
+              "\n".join(lines) + "\n",
+              encoding="utf-8",
+          )
+          print("\n".join(lines))
+
+      - name: Upload pytest context evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 2f-8t-i-pytest-context
+          path: artifacts/
+          if-no-files-found: error
