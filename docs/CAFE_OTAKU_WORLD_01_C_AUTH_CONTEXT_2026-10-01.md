@@ -141,7 +141,33 @@ TMA_CONTEXT_MAX_AGE_SECONDS=3600
 
 A reference may also be explicitly revoked.
 
+The trusted context registry is a **same-host server-side state registry**. The current implementation uses one JSON file per reference under `config/tma_trusted_contexts/`. It is suitable only when the trusted Telegram runtime and the TMA authorization process share the same host and filesystem. Multiple independent application hosts, shared network filesystems, or independently deployed FastAPI instances are **not supported** by this registry contract without a later architectural review.
+
+Issuance uses exclusive file creation with randomized opaque references; a collision retries without overwriting an existing record. Revocation writes a uniquely named temporary file and uses same-directory `os.replace()` for an atomic replacement. Concurrent resolves therefore observe either the prior valid record or the fully written revoked record, never a partial JSON record. The registry does not implicitly create a missing record during resolution.
+
+The registry directory is created only by trusted issuance mode. TMA authorization construction uses a read-only registry mode and does not create the context directory or routing database. Missing/corrupt/unavailable storage fails closed.
+
 No context table and no new SQLite database are introduced.
+
+## Telegram entry integration
+
+The minimal Telegram runtime entry is:
+
+```
+authorized Telegram topic
+        ->
+/cafe
+        ->
+[☕ Abrir Café]
+        ->
+server-side context issuance from (chat_id, message_thread_id)
+        ->
+https://t.me/<bot_username>?startapp=<opaque_reference>
+```
+
+The callback is processed by the existing Telegram runtime (`TelegramAdapter`) and receives the authoritative `chat_id` and `message_thread_id` from the Telegram callback message. It does not accept a client-provided `room_key`.
+
+The bot username for the launcher is obtained from Telegram `getMe` at runtime; the deployment is not considered production-configured until the external Telegram Main Mini App/BotFather configuration is verified. Unit tests use a mock/provider for this Telegram API dependency and therefore do not constitute live Telegram verification.
 
 ## Forum Topic boundary
 

@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import secrets
 import time
+import tempfile
 from urllib.parse import quote
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -98,6 +99,7 @@ class TrustedContextRegistry:
         store_dir: str | Path | None = None,
         max_age_seconds: int | None = None,
         token_factory=secrets.token_urlsafe,
+        create_store_dir: bool = True,
     ) -> None:
         clean_issuer = str(issuer).strip()
         if not clean_issuer:
@@ -117,6 +119,22 @@ class TrustedContextRegistry:
             ) from error
         self._max_age_seconds = _configured_max_age(max_age_seconds)
         self._token_factory = token_factory
+        self._create_store_dir = bool(create_store_dir)
+        if self._create_store_dir:
+            self._ensure_store_dir()
+        elif not self._store_dir.is_dir():
+            raise TrustedContextConfigurationError(
+                "context_store_unavailable"
+            )
+
+    def _ensure_store_dir(self) -> None:
+        try:
+            self._store_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+            self._store_dir.chmod(0o700)
+        except OSError as error:
+            raise TrustedContextConfigurationError(
+                "context_store_unavailable"
+            ) from error
 
     def _path_for(self, reference: str) -> Path:
         value = str(reference or "").strip()
@@ -132,6 +150,8 @@ class TrustedContextRegistry:
         return int(current)
 
     def _load(self, reference: str) -> _StoredTrustedContext:
+        if not self._store_dir.is_dir():
+            raise TrustedContextError("context_store_unavailable")
         path = self._path_for(reference)
         try:
             raw = path.read_text(encoding="utf-8")
@@ -169,6 +189,8 @@ class TrustedContextRegistry:
         issued_at = self._now(now)
         expires_at = issued_at + self._max_age_seconds
 
+        self._ensure_store_dir()
+
         for _ in range(MAX_ISSUE_ATTEMPTS):
             reference = REFERENCE_PREFIX + str(
                 self._token_factory(32)
@@ -188,8 +210,11 @@ class TrustedContextRegistry:
             )
             path = self._path_for(reference)
             try:
-                with path.open("x", encoding="utf-8") as handle:
-                    handle.write(record.model_dump_json() + "\n")
+                descriptor = os.open(
+                    str(path),
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o600,
+                )
             except FileExistsError:
                 continue
             except OSError as error:
@@ -197,6 +222,21 @@ class TrustedContextRegistry:
                     "context_store_unavailable"
                 ) from error
 
+            try:
+                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                    handle.write(record.model_dump_json() + "\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            except OSError as error:
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise TrustedContextError(
+                    "context_store_unavailable"
+                ) from error
+
+            return TrustedCafeContext.model_validate(
             return TrustedCafeContext.model_validate(
                 record.model_dump()
             )
@@ -249,23 +289,34 @@ class TrustedContextRegistry:
         revoked_at = record.revoked_at or self._now(now)
         updated = record.model_copy(update={"revoked_at": revoked_at})
         path = self._path_for(reference)
-        temporary = path.with_suffix(".json.tmp")
+        self._ensure_store_dir()
 
+        temporary_path: Path | None = None
         try:
-            temporary.write_text(
-                updated.model_dump_json() + "\n",
-                encoding="utf-8",
+            descriptor, temporary_name = tempfile.mkstemp(
+                prefix=f".{record.reference}.",
+                suffix=".tmp",
+                dir=str(self._store_dir),
             )
-            os.replace(temporary, path)
+            temporary_path = Path(temporary_name)
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                handle.write(updated.model_dump_json() + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            temporary_path.chmod(0o600)
+            os.replace(temporary_path, path)
+            temporary_path = None
         except OSError as error:
-            try:
-                temporary.unlink(missing_ok=True)
-            except OSError:
-                pass
+            if temporary_path is not None:
+                try:
+                    temporary_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
             raise TrustedContextError(
                 "context_store_unavailable"
             ) from error
 
+        return TrustedCafeContext.model_validate(
         return TrustedCafeContext.model_validate(
             updated.model_dump()
         )

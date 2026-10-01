@@ -12,7 +12,10 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from bot_ia.interfaces.telegram_room_routing import TelegramRoomRouter
+from bot_ia.interfaces.telegram_room_routing import (
+    TelegramRoomRouter,
+    TelegramRoomRoutingError,
+)
 from bot_ia.paths import PROJECT_ROOT
 
 from .security.telegram_auth import (
@@ -103,9 +106,16 @@ async def get_current_user(
 
 def get_trusted_context_registry() -> TrustedContextRegistry:
     """Use the existing TelegramRoomRouter as the Room authority."""
-    router = TelegramRoomRouter(
-        PROJECT_ROOT / "config" / "telegram_rooms.sqlite3"
-    )
+    try:
+        router = TelegramRoomRouter(
+            PROJECT_ROOT / "config" / "telegram_rooms.sqlite3",
+            read_only=True,
+        )
+    except TelegramRoomRoutingError as error:
+        raise HTTPException(
+            status_code=503,
+            detail="Room routing dependency is unavailable",
+        ) from error
     try:
         return TrustedContextRegistry(
             router,
@@ -113,6 +123,7 @@ def get_trusted_context_registry() -> TrustedContextRegistry:
                 "TMA_CONTEXT_ISSUER",
                 "cafe-otaku",
             ).strip(),
+            create_store_dir=False,
         )
     except TrustedContextConfigurationError as error:
         raise HTTPException(
