@@ -9,7 +9,7 @@ on:
       - "diagnostics/results/**"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   qwebengine-probe:
@@ -51,32 +51,20 @@ jobs:
             python -m pip show PySide6 PySide6_Addons PySide6_Essentials shiboken6
           } | tee artifacts/context.txt
 
-      - name: Run minimal probe five times
+      - name: Run exact historical harness configuration
         shell: bash
         run: |
           set +e
           for n in 1 2 3 4 5; do
             echo "===== RUN $n =====" | tee "artifacts/run-$n.log"
-            python diagnostics/qwebengine_probe_minimal.py >>"artifacts/run-$n.log" 2>&1
-            code=$?
-            echo "PROCESS_EXIT_CODE=$code" >>"artifacts/run-$n.log"
-            echo "run=$n exit=$code"
-          done
-
-      - name: Run probe under historical 2F-8T harness environment
-        shell: bash
-        run: |
-          set +e
-          for n in 1 2 3 4 5; do
-            echo "===== HISTORICAL RUN $n =====" | tee "artifacts/historical-run-$n.log"
             env -u QT_QPA_PLATFORM -u QTWEBENGINE_CHROMIUM_FLAGS -u QTWEBENGINEPROCESS_PATH \
               -u QT_LOGGING_RULES -u QT_DEBUG_PLUGINS -u DISPLAY -u WAYLAND_DISPLAY -u XDG_SESSION_TYPE \
               QT_QPA_PLATFORM="offscreen" \
               QTWEBENGINE_CHROMIUM_FLAGS="--headless --disable-gpu --disable-software-rasterizer" \
-              python diagnostics/qwebengine_probe_minimal.py >>"artifacts/historical-run-$n.log" 2>&1
+              python diagnostics/qwebengine_probe_minimal.py >>"artifacts/run-$n.log" 2>&1
             code=$?
-            echo "PROCESS_EXIT_CODE=$code" >>"artifacts/historical-run-$n.log"
-            echo "historical_run=$n exit=$code"
+            echo "PROCESS_EXIT_CODE=$code" >>"artifacts/run-$n.log"
+            echo "run=$n exit=$code"
           done
 
       - name: Build result summary
@@ -98,16 +86,6 @@ jobs:
                   f"ELAPSED_MS={elapsed[-1] if elapsed else 'MISSING'} "
                   f"PROCESS_EXIT_CODE={code[-1] if code else 'MISSING'}"
               )
-              htext = Path(f"artifacts/historical-run-{n}.log").read_text(errors="replace")
-              hload = re.findall(r"^LOAD_FINISHED=(.+)$", htext, re.M)
-              helapsed = re.findall(r"^ELAPSED_MS=(.+)$", htext, re.M)
-              hcode = re.findall(r"^PROCESS_EXIT_CODE=(.+)$", htext, re.M)
-              lines.append(
-                  f"HISTORICAL_RUN_{n}: "
-                  f"LOAD_FINISHED={hload[-1] if hload else 'MISSING'} "
-                  f"ELAPSED_MS={helapsed[-1] if helapsed else 'MISSING'} "
-                  f"PROCESS_EXIT_CODE={hcode[-1] if hcode else 'MISSING'}"
-              )
           Path("artifacts/summary.txt").write_text("\n".join(lines) + "\n")
           print("\n".join(lines))
 
@@ -116,5 +94,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: 2f-8t-e-qwebengine-probe
+          path: artifacts/
+          if-no-files-found: error
+
+      - name: Upload probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 2f-8t-g-historical-qwebengine-probe
           path: artifacts/
           if-no-files-found: error
