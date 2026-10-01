@@ -10,7 +10,7 @@ Implemented surfaces:
 - server-derived `AuthenticatedTelegramActor`.
 - Main Mini App direct-link trusted context via `startapp/start_param`.
 - existing `TelegramRoomRouter`-backed Room resolution.
-- Telegram membership verification through `python-telegram-bot`.
+- Telegram membership verification through the repository's `aiogram` Bot API.
 - FastAPI identity and Café authorization dependencies.
 - targeted security tests.
 
@@ -106,7 +106,7 @@ https://t.me/<bot_username>?startapp=<opaque_context_reference>
 
 For this Main Mini App direct-link flow, Telegram transports the `startapp` value into Mini App `start_param`.
 
-The reference is **server-generated, random, opaque, persisted and server-resolvable**.
+The reference is **server-generated, random, opaque, persisted and server-resolvable**. The stored `issuer` identifies the configured W01-C deployment/issuer for the context registry.
 
 Each reference is registered as one server-side JSON record:
 
@@ -174,7 +174,7 @@ The implementation uses:
 await Bot.get_chat_member(chat_id, user_id)
 ```
 
-through `python-telegram-bot`.
+through the repository's `aiogram` dependency.
 
 Policy:
 
@@ -264,6 +264,8 @@ config/tma_trusted_contexts/
 
 ## Dependency and API verification
 
+Repository evidence shows that the effective Telegram framework is `aiogram` (the tracked package metadata requires `aiogram>=3.28,<4`); `python-telegram-bot` is not a project dependency. W01-C therefore uses aiogram's Bot API.
+
 The authorized branch declares:
 
 ```
@@ -271,7 +273,7 @@ Python >= 3.14
 fastapi>=0.116,<1
 uvicorn>=0.35,<1
 pydantic>=2.10,<3
-python-telegram-bot>=22.5,<23
+aiogram>=3.28,<4
 ```
 
 Context7 and official documentation were checked for:
@@ -279,7 +281,7 @@ Context7 and official documentation were checked for:
 - FastAPI `Depends`, `Header` and `HTTPException`;
 - Pydantic v2 models and `extra="forbid"`;
 - Telegram Mini Apps `initData` and direct-link `startapp`;
-- `python-telegram-bot` `Bot.get_chat_member` and async Bot lifecycle.
+- `aiogram` `Bot.get_chat_member`, concrete `ChatMember` types and async Bot lifecycle.
 
 These checks verify API shape, not the presence of a matching local installed environment.
 

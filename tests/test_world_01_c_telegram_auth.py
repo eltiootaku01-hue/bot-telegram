@@ -465,7 +465,7 @@ def test_membership_rejects_returned_identity_mismatch() -> None:
 
 def test_membership_api_failure_fails_closed() -> None:
     class FakeTelegramError(Exception):
-        __module__ = "telegram.error"
+        __module__ = "aiogram.exceptions"
 
     verifier = TelegramMembershipVerifier(
         BOT_TOKEN,

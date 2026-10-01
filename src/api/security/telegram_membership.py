@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Telegram membership authorization through python-telegram-bot."""
+"""Telegram membership authorization through the repository's aiogram Bot API."""
 
 from __future__ import annotations
 
@@ -26,13 +26,14 @@ BotFactory = Callable[[str], Any]
 
 
 def _default_bot_factory(token: str) -> Any:
-    from telegram import Bot
+    """Create the project's actual Telegram Bot client (aiogram)."""
+    from aiogram import Bot
 
-    return Bot(token)
+    return Bot(token=token)
 
 
 class TelegramMembershipVerifier:
-    """Calls Bot.get_chat_member and fails closed on dependency errors."""
+    """Calls aiogram Bot.get_chat_member and fails closed on dependency errors."""
 
     ALLOWED_STATUSES = frozenset({"creator", "administrator", "member"})
 
@@ -85,10 +86,13 @@ class TelegramMembershipVerifier:
                 "telegram_transport_unavailable"
             ) from error
         except Exception as error:
-            error_type = (
-                type(error).__module__ + "." + type(error).__name__
-            )
-            if error_type.startswith("telegram."):
+            error_type = type(error)
+            error_module = error_type.__module__.casefold()
+            error_name = error_type.__name__.casefold()
+            if error_module.startswith("aiogram.") or (
+                "timeout" in error_name
+                and error_module.startswith(("httpx", "httpcore", "aiohttp"))
+            ):
                 raise TelegramMembershipUnavailable(
                     "telegram_api_unavailable"
                 ) from error
