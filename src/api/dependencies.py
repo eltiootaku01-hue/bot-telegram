@@ -51,7 +51,7 @@ async def get_current_user(
             raise TelegramAuthError("missing_bot_token")
         return validate_telegram_init_data(init_data, bot_token)
     except TelegramAuthError as error:
-        if error.code == "missing_bot_token":
+        if error.code in {"missing_bot_token", "invalid_configuration"}:
             raise HTTPException(
                 status_code=503,
                 detail="Telegram authentication dependency is not configured",
