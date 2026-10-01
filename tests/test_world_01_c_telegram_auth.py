@@ -662,3 +662,12 @@ def test_actor_model_rejects_unexpected_fields() -> None:
             auth_date=AUTH_NOW,
             unexpected="client-authority",
         )
+
+
+def test_actor_model_rejects_mismatched_actor_key() -> None:
+    with pytest.raises(ValidationError):
+        AuthenticatedTelegramActor(
+            telegram_user_id=1,
+            actor_key="discord:1",
+            auth_date=AUTH_NOW,
+        )
