@@ -405,15 +405,74 @@ El cliente no podrá enviar simplemente:
 
 y convertirlo en autoridad.
 
-### 11.1 Diseño preferido
+### 11.1 Modelo obligatorio de Trusted Launch Context
 
-El launcher futuro debe asociar el contexto al chat/topic desde Telegram y transportar un identificador verificable o una referencia de contexto que el servidor pueda resolver.
+El contexto de Room debe existir primero del lado servidor, asociado al launcher Telegram que conoce el Room autorizado:
 
-La información de cliente que no esté criptográficamente ligada a Telegram o a una referencia emitida por el servidor se considera una solicitud, no una autoridad.
+```
+Telegram / bot launcher
+        ↓
+servidor conoce:
+(chat_id, message_thread_id, room_key)
+        ↓
+servidor genera / asigna
+trusted context reference
+        ↓
+TMA recibe referencia
+        ↓
+TMA envía referencia + initData
+        ↓
+backend valida initData
+        ↓
+backend resuelve referencia
+        ↓
+(chat_id, message_thread_id, room_key)
+        ↓
+CafeRoom projection
+```
+
+La referencia es **OPACA**. El cliente sólo la transporta; el backend decide qué Room representa.
+
+Reglas:
+
+```
+startapp / context reference != room authorization
+client-supplied room_key != trusted Room
+```
+
+El servidor sólo autoriza un Room cuando puede demostrar:
+
+```
+valid Telegram identity
++
+valid trusted context
++
+known Room
++
+Telegram membership
++
+Cafe policy
+```
 
 ### 11.2 Direct links / start parameters
 
-Telegram documenta Mini App direct links con parámetros `startapp`. Estos parámetros pueden servir como referencia opaca de contexto, pero el servidor debe resolverlos contra una asignación autorizada. El contenido del parámetro no debe ser tratado como `room_key` confiable por sí mismo.
+Los parámetros `startapp` pueden transportar la referencia opaca del contexto, pero no son por sí mismos una autorización ni deben interpretarse arbitrariamente como `room_key`.
+
+La semántica correcta es:
+
+```
+startapp / reference
+=
+identificador de contexto
+```
+
+que el servidor debe resolver contra una asignación conocida y autorizada.
+
+### 11.3 Context boundary
+
+No se asume que `initData` contenga directamente `message_thread_id` para un Forum Topic. Cuando el launcher deba abrir el Café para un topic concreto, la asociación `(chat_id, message_thread_id, room_key)` debe estar disponible para el servidor mediante el mecanismo de lanzamiento/contexto aprobado.
+
+No se permite convertir datos arbitrarios enviados por el TMA en autoridad de Room.
 
 ## 12. Actor Handling
 
@@ -440,9 +499,33 @@ El backend no acepta `actor_key` como identidad primaria enviada por el cliente.
 
 ## 13. CafeRoom
 
-`CafeRoom` es la representación social autorizada de un Room Telegram.
+`CafeRoom` es una **proyección / representación de dominio del Room Telegram autorizado**. No es, por defecto, una entidad persistente independiente.
 
-Campos conceptuales:
+Cadena primaria:
+
+```
+(chat_id, message_thread_id)
+        ↓
+TelegramRoomRouter
+        ↓
+room_key
+        ↓
+CafeRoom projection
+```
+
+La autorización completa añade:
+
+```
+TelegramRoomRouter
++
+Telegram security
++
+Telegram membership verification
++
+Cafe policy
+```
+
+Campos conceptuales de la proyección:
 
 - `room_key`;
 - `chat_id`;
@@ -451,9 +534,16 @@ Campos conceptuales:
 - `authorization_source`;
 - `active`.
 
-La resolución debe apoyarse en:
+**WORLD-01 no crea una tabla `cafe_rooms`.**
 
-`TelegramRoomRouter + Telegram security + membership verification`.
+Una persistencia propia sólo podría aprobarse en una fase futura si aparece evidencia concreta de:
+
+- lifecycle independiente;
+- metadata propia persistente;
+- ownership propio;
+- estado de autorización propio que no pueda derivarse de las fuentes existentes.
+
+Mientras esa evidencia no exista, `CafeRoom` permanece como proyección derivada.
 
 ### 13.1 GENERAL
 
@@ -913,15 +1003,61 @@ ALLOW / DENY
 
 Requires all four layers.
 
-### 23.2 Participant visibility
+### 23.2 Telegram membership verification contract
+
+WORLD-01-C deberá realizar la verificación técnica mediante la operación correspondiente del Telegram Bot API, conceptualmente:
+
+```
+Telegram Bot API
+        ↓
+getChatMember(chat_id, user_id)
+```
+
+W01-C debe cerrar explícitamente:
+
+- `chat_id`: el resuelto desde el Trusted Launch Context / `CafeRoom`;
+- `user_id`: el `telegram_user_id` derivado de `initData` validada;
+- permisos/configuración necesarios del bot;
+- estados aceptados;
+- estados rechazados;
+- errores de Telegram;
+- timeout/failure behavior.
+
+Estados conceptuales mínimos:
+
+```
+MEMBER
+ADMINISTRATOR
+OWNER / CREATOR
+RESTRICTED
+LEFT
+KICKED
+UNKNOWN / ERROR
+```
+
+La política final de qué estados permiten acceso queda para W01-C.
+
+**Membership verification unavailable = NO AUTHORIZATION.**
+
+Nunca:
+
+```
+Telegram API failure
+        ↓
+assume member
+```
+
+La verificación es estrictamente **fail closed**.
+
+### 23.3 Participant visibility
 
 Actor may only read participants belonging to the resolved Room/session.
 
-### 23.3 Leave
+### 23.4 Leave
 
 Only the actor owning the membership may leave it, except future moderator/admin policy.
 
-### 23.4 No cross-room access
+### 23.5 No cross-room access
 
 A client cannot select another `room_key` and obtain its participants.
 
@@ -929,9 +1065,37 @@ A client cannot select another `room_key` and obtain its participants.
 
 ### 24.1 No new SQLite
 
-WORLD-01 uses the existing persistence host.
+WORLD-01 does not create a new SQLite file.
 
-### 24.2 Ownership
+The architectural direction inherited from WORLD-00-R1 is:
+
+```
+config/bot_ia_events.sqlite3
+```
+
+as the **intended Social World persistence host**, subject only to technical verification in W01-B.
+
+This is not an open decision to choose an arbitrary SQLite file.
+
+### 24.2 Host versus ownership
+
+`config/bot_ia_events.sqlite3` is a **persistence host**. Sharing the SQLite file does not mean sharing table ownership.
+
+Conceptually:
+
+```
+bot_ia_events.sqlite3
+ ├── Telegram event / ledger infrastructure
+ ├── Telegram outbox/event infrastructure
+ └── Social World tables
+       ├── CafeSession
+       ├── CafeParticipant
+       └── future social envelopes if approved
+```
+
+Social World must not modify tables owned by Telegram infrastructure.
+
+### 24.3 Ownership
 
 A future Social World persistence module should own:
 
@@ -948,7 +1112,7 @@ It must not own:
 - Café wallet;
 - Tavern sessions.
 
-### 24.3 Existing SQLite surfaces
+### 24.4 Existing SQLite surfaces
 
 Current repository already contains several SQLite stores, including:
 
@@ -960,11 +1124,20 @@ Current repository already contains several SQLite stores, including:
 
 WORLD-01 must not create a new database file.
 
-### 24.4 Migration
+### 24.5 Migration
 
 No migration is created in WORLD-01-A.
 
-The next implementation phase must first choose the existing persistence host and define a migration owned by the Social World persistence module.
+W01-B must verify:
+
+- schema compatibility;
+- connection/lifecycle compatibility;
+- ownership boundaries;
+- migration strategy;
+- concurrency implications;
+- backup/recovery implications.
+
+Only concrete technical evidence that invalidates the inherited decision may reopen the persistence-host choice in a subsequent architecture review.
 
 ## 25. Failure Model
 
@@ -1253,7 +1426,24 @@ After this design is approved:
 
 ### Phase W01-B — persistence contract
 
-Define exact Social World persistence owner and migration.
+Verify the inherited persistence-host decision:
+
+```
+config/bot_ia_events.sqlite3
+```
+
+and define Social World table ownership/versioning and migration.
+
+W01-B must verify:
+
+- schema compatibility;
+- connection/lifecycle compatibility;
+- ownership boundaries;
+- migration strategy;
+- concurrency implications;
+- backup/recovery implications.
+
+W01-B must not create a second SQLite merely because it is simpler.
 
 No runtime yet until schema review.
 
@@ -1263,9 +1453,12 @@ Implement:
 
 - Telegram `initData` validation;
 - Actor derivation;
-- trusted launch context;
-- Room resolution;
-- membership authorization.
+- opaque trusted launch context reference;
+- server-side Room resolution;
+- concrete Telegram membership verification via the Bot API;
+- membership state policy;
+- fail-closed behavior for Telegram API errors;
+- authorization.
 
 ### Phase W01-D — CafeSession/Participant service
 
@@ -1299,24 +1492,106 @@ No phase may silently expand into Social Scheduler, WORLD-02 presence, moderatio
 
 ## 36. Open Questions
 
-These remain intentionally unresolved:
+The following are deliberately classified so that closed architectural decisions are not reopened without evidence.
 
-1. Which existing SQLite host should own the new Social World tables?
-2. Exact `CafeRoom` persistent/derived representation beyond TelegramRoomRouter.
-3. Exact Telegram membership verification API path for the Mini App backend.
-4. Exact Mini App launcher configuration in BotFather.
-5. Exact trusted context token format.
-6. Exact session TTL.
-7. Exact participant stale/expiry policy.
-8. Exact character availability adapter for the current character sources.
-9. Exact activity adapter interface for `GroupDrop` and `ActiveMatch`.
-10. Exact API response schemas and error codes.
-11. Exact TMA public hosting URL.
-12. Whether the existing FastAPI process or another existing HTTP host becomes the single API host.
+### 36.1 Decided — persistence host
+
+```
+Social World host previsto:
+config/bot_ia_events.sqlite3
+```
+
+Inherited from WORLD-00.
+
+```
+A VERIFICAR EN W01-B:
+compatibilidad técnica real
+```
+
+Only concrete evidence of incompatibility may reopen this decision.
+
+### 36.2 Decided — CafeRoom persistence
+
+```
+CafeRoom no requiere persistencia propia en WORLD-01.
+```
+
+It remains a projection of the authorized Telegram Room.
+
+```
+A REVISAR SOLO SI APARECE EVIDENCIA:
+lifecycle independiente
+metadata/ownership/authorization state propio
+```
+
+### 36.3 Decided — Trusted Launch Context
+
+```
+Trusted Launch Context = referencia opaca
+resuelta server-side
+```
+
+```
+A DEFINIR EN W01-C:
+formato exacto
+launcher/configuración exacta
+```
+
+`startapp` is a transport/reference mechanism, not Room authority.
+
+### 36.4 Decided — Telegram membership verification
+
+```
+membership se verifica server-side
+mediante Telegram Bot API
+```
+
+Conceptualmente:
+
+```
+getChatMember(chat_id, user_id)
+```
+
+```
+A DEFINIR EN W01-C:
+operación exacta
+estados aceptados/rechazados
+permisos/configuración del bot
+errors/timeout/failure behavior
+```
+
+Failure is fail-closed.
+
+### 36.5 Remaining implementation questions
+
+1. Exact session TTL.
+2. Exact participant stale/expiry policy.
+3. Exact character availability adapter.
+4. Exact activity adapter for `GroupDrop` and `ActiveMatch`.
+5. Exact API response schemas and error codes.
+6. Exact TMA public hosting URL.
+7. Exact FastAPI/API host selection within the existing runtime.
+8. Exact Mini App launcher configuration details.
 
 These are design questions, not permissions to implement speculative infrastructure.
 
 ## 37. Self-review
+
+### CafeRoom authority and persistence
+
+`CafeRoom` is a projection of the Telegram Room. No `cafe_rooms` table is introduced by default.
+
+### Trusted launch authority
+
+`startapp` / context reference is opaque. Client-supplied `room_key` is never authoritative. Room resolution occurs server-side.
+
+### Telegram membership verification
+
+Membership is checked through the Telegram Bot API contract in W01-C and fails closed on lookup errors.
+
+### persistence host
+
+The intended host is `config/bot_ia_events.sqlite3`, inherited from WORLD-00 and subject only to W01-B technical verification. Table ownership remains separate.
 
 ### duplicated entity
 
@@ -1356,7 +1631,7 @@ No browser, physical resource, second WebChat, or physical lock is introduced.
 
 ### unnecessary dependency
 
-WORLD-01 depends on existing Telegram routing/security and SQLite/runtime surfaces only.
+WORLD-01 depends on existing Telegram routing/security and the inherited persistence host only.
 
 ### persistence failure
 
