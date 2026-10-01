@@ -89,23 +89,23 @@ jobs:
 
           for kind in target module; do
             for run in 1 2 3; do
-              log="artifacts/\${kind}-solo-\${run}.log"
-              state="artifacts/\${kind}-solo-\${run}.state.log"
-              echo "===== \${kind} SOLO RUN \${run} =====" | tee "\${log}"
-              I_TARGET_NODEID="\${target}" \
-              I_STATE_LOG="\${state}" \
+              log="artifacts/$kind-solo-$run.log"
+              state="artifacts/$kind-solo-$run.state.log"
+              echo "===== $kind SOLO RUN $run =====" | tee "$log"
+              I_TARGET_NODEID="$target" \
+              I_STATE_LOG="$state" \
               python -m pytest -q -p diagnostics.pytest_state_probe \
-                "\${target}" >>"\${log}" 2>&1
+                "$target" >>"$log" 2>&1
               code=$?
-              if [ "\${kind}" = "module" ]; then
-                I_TARGET_NODEID="\${target}" \
-                I_STATE_LOG="\${state}" \
+              if [ "$kind" = "module" ]; then
+                I_TARGET_NODEID="$target" \
+                I_STATE_LOG="$state" \
                 python -m pytest -q -p diagnostics.pytest_state_probe \
-                  "\${module}" >>"\${log}" 2>&1
+                  "$module" >>"$log" 2>&1
                 code=$?
               fi
-              echo "PROCESS_EXIT_CODE=\${code}" >>"\${log}"
-              echo "\${kind} run=\${run} exit=\${code}"
+              echo "PROCESS_EXIT_CODE=\${code}" >>"$log"
+              echo "$kind run=$run exit=\${code}"
             done
           done
 
