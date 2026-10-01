@@ -3,22 +3,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import sqlite3
 from pathlib import Path
 
 
 class TelegramRoomRoutingError(RuntimeError):
     """Error al resolver una sala Telegram de forma segura."""
-
-
-@dataclass(frozen=True, slots=True)
-class TelegramRoomRoute:
-    """Identidad autoritativa de una ruta Telegram registrada."""
-
-    chat_id: str
-    message_thread_id: int
-    room_key: str
 
 
 class TelegramRoomRouter:
@@ -143,39 +133,6 @@ class TelegramRoomRouter:
         finally:
             connection.close()
         return str(row[0]) if row is not None else None
-
-    def list_routes(
-        self,
-        *,
-        chat_id: str | None = None,
-    ) -> tuple[TelegramRoomRoute, ...]:
-        """Devuelve las rutas registradas sin crear otra fuente de verdad."""
-        connection = self._connect()
-        try:
-            if chat_id is None:
-                rows = connection.execute(
-                    """
-                    SELECT chat_id, message_thread_id, room_key
-                    FROM telegram_room_routes
-                    ORDER BY chat_id, message_thread_id
-                    """
-                ).fetchall()
-            else:
-                rows = connection.execute(
-                    """
-                    SELECT chat_id, message_thread_id, room_key
-                    FROM telegram_room_routes
-                    WHERE chat_id=?
-                    ORDER BY message_thread_id
-                    """,
-                    (str(chat_id).strip(),),
-                ).fetchall()
-        finally:
-            connection.close()
-        return tuple(
-            TelegramRoomRoute(str(row[0]), int(row[1]), str(row[2]))
-            for row in rows
-        )
 
     def close(self) -> None:
         """No mantiene conexiones persistentes; se conserva para lifecycle uniforme."""

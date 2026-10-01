@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
-"""FastAPI authentication and Café authorization dependencies."""
+"""FastAPI authentication, database and Café authorization dependencies."""
 
 from __future__ import annotations
 
+from collections.abc import Generator
+from functools import lru_cache
 import os
 
 from fastapi import Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from bot_ia.interfaces.telegram_room_routing import TelegramRoomRouter
 from bot_ia.paths import PROJECT_ROOT
@@ -40,8 +44,43 @@ class CafeAuthorization(BaseModel):
     membership: TelegramMembershipDecision
 
 
+@lru_cache(maxsize=1)
+def _session_factory() -> sessionmaker:
+    db_url = os.getenv(
+        "DATABASE_URL",
+        "sqlite:///bot_database.db",
+    ).strip() or "sqlite:///bot_database.db"
+    connect_args = (
+        {"check_same_thread": False}
+        if db_url.startswith("sqlite:")
+        else {}
+    )
+    engine = create_engine(
+        db_url,
+        echo=False,
+        connect_args=connect_args,
+    )
+    return sessionmaker(
+        bind=engine,
+        autoflush=False,
+        autocommit=False,
+    )
+
+
+def get_db() -> Generator[Session, None, None]:
+    """Yield a short-lived SQLAlchemy session for the existing TCG DB."""
+    db = _session_factory()()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 async def get_current_user(
-    authorization: str | None = Header(default=None, alias="Authorization"),
+    authorization: str | None = Header(
+        default=None,
+        alias="Authorization",
+    ),
 ) -> AuthenticatedTelegramActor:
     """Validate Telegram identity; never accept client actor data."""
     try:
@@ -63,14 +102,18 @@ async def get_current_user(
 
 
 def get_trusted_context_registry() -> TrustedContextRegistry:
-    """Use the existing TelegramRoomRouter registry only."""
+    """Use the existing TelegramRoomRouter as the Room authority."""
     router = TelegramRoomRouter(
         PROJECT_ROOT / "config" / "telegram_rooms.sqlite3"
     )
     try:
-        secret = os.getenv("TMA_CONTEXT_SECRET", "").strip()
-        issuer = os.getenv("TMA_CONTEXT_ISSUER", "cafe-otaku").strip()
-        return TrustedContextRegistry(router, secret, issuer=issuer)
+        return TrustedContextRegistry(
+            router,
+            issuer=os.getenv(
+                "TMA_CONTEXT_ISSUER",
+                "cafe-otaku",
+            ).strip(),
+        )
     except TrustedContextConfigurationError as error:
         raise HTTPException(
             status_code=503,
@@ -100,7 +143,7 @@ async def authorize_cafe_access(
     registry: TrustedContextRegistry,
     membership_verifier: TelegramMembershipVerifier,
 ) -> CafeAuthorization:
-    """Execute auth -> context -> Room routing -> membership."""
+    """Execute auth -> trusted context -> Room routing -> membership."""
     if not context_reference:
         raise HTTPException(
             status_code=404,
@@ -110,7 +153,11 @@ async def authorize_cafe_access(
     try:
         context = registry.resolve(context_reference)
     except TrustedContextError as error:
-        if error.args and error.args[0] == "room_routing_unavailable":
+        code = error.args[0] if error.args else ""
+        if code in {
+            "room_routing_unavailable",
+            "context_store_unavailable",
+        }:
             raise HTTPException(
                 status_code=503,
                 detail="Room authorization dependency is unavailable",
@@ -146,12 +193,14 @@ async def authorize_cafe_access(
 
 async def get_current_cafe_access(
     current_user: AuthenticatedTelegramActor = Depends(get_current_user),
-    registry: TrustedContextRegistry = Depends(get_trusted_context_registry),
+    registry: TrustedContextRegistry = Depends(
+        get_trusted_context_registry
+    ),
     membership_verifier: TelegramMembershipVerifier = Depends(
         get_telegram_membership_verifier
     ),
 ) -> CafeAuthorization:
-    """Full W01-C gate using the authenticated start_param context."""
+    """Full W01-C gate using authenticated start_param context."""
     return await authorize_cafe_access(
         current_user,
         current_user.start_param,
@@ -166,6 +215,7 @@ __all__ = [
     "authorize_cafe_access",
     "get_current_cafe_access",
     "get_current_user",
+    "get_db",
     "get_telegram_membership_verifier",
     "get_trusted_context_registry",
 ]

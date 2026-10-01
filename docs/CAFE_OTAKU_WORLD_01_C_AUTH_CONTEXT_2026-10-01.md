@@ -6,151 +6,175 @@ WORLD-01-C implements only the authorization boundary before Social World runtim
 
 Implemented surfaces:
 
-- Telegram Mini App initData validation.
-- server-derived AuthenticatedTelegramActor.
-- Main Mini App direct-link trusted context using startapp/start_param.
-- existing TelegramRoomRouter-backed Room resolution.
-- Telegram membership verification through python-telegram-bot.
+- Telegram Mini App `initData` validation.
+- server-derived `AuthenticatedTelegramActor`.
+- Main Mini App direct-link trusted context via `startapp/start_param`.
+- existing `TelegramRoomRouter`-backed Room resolution.
+- Telegram membership verification through `python-telegram-bot`.
 - FastAPI identity and Café authorization dependencies.
 - targeted security tests.
 
 Explicitly not implemented:
 
-- CafeSession or CafeParticipant runtime.
-- Lobby/TMA UI.
-- Presence.
-- Scheduler.
-- AI.
-- persistence migrations.
-- new SQLite/database service.
+- `CafeSession` or `CafeParticipant` runtime;
+- Lobby/TMA UI;
+- Presence;
+- Scheduler;
+- AI;
+- persistence migrations;
+- new SQLite/database service;
 - browser, WebQueue, Supervisor or 2F-8S changes.
 
 ## Telegram initData
 
-Only the raw Telegram.WebApp.initData value is authoritative.
+Only raw `Telegram.WebApp.initData` is authoritative.
 
 The backend accepts exactly:
 
-    Authorization: tma <raw initData>
+```
+Authorization: tma <raw initData>
+```
 
-initDataUnsafe is not used as an authority source.
+`initDataUnsafe` is presentation-only data and never an identity authority.
 
-The validation algorithm is:
+Validation follows the Telegram Mini Apps WebAppData algorithm:
 
-    query-string parse
-    -> reject malformed or duplicate keys
-    -> extract hash
-    -> sort decoded key/value pairs except hash
-    -> build data-check-string with newline separators
-    -> derive secret with HMAC-SHA256:
-       key = WebAppData
-       message = TELEGRAM_BOT_TOKEN
-    -> calculate HMAC-SHA256 over the data-check-string
-    -> hmac.compare_digest
-    -> auth_date freshness
-    -> user JSON validation
-    -> server actor derivation
+```
+query-string parse
+    ->
+reject malformed or duplicate keys
+    ->
+extract hash
+    ->
+sort decoded key=value pairs except hash
+    ->
+build data-check-string
+    ->
+secret = HMAC-SHA256(key="WebAppData", message=TELEGRAM_BOT_TOKEN)
+    ->
+calculated hash = HMAC-SHA256(secret, data-check-string)
+    ->
+hmac.compare_digest
+    ->
+auth_date freshness
+    ->
+user JSON validation
+    ->
+server actor derivation
+```
 
-This is the Telegram Mini Apps WebAppData algorithm. It is not the older Telegram Login Widget SHA256(bot-token) derivation.
+The older Telegram Login Widget `SHA256(bot_token)` derivation is not used.
 
 ## Freshness
 
-The configurable defaults are:
+Configuration:
 
-    TMA_AUTH_MAX_AGE_SECONDS=3600
-    TMA_AUTH_FUTURE_TOLERANCE_SECONDS=30
+```
+TMA_AUTH_MAX_AGE_SECONDS=3600
+TMA_AUTH_FUTURE_TOLERANCE_SECONDS=30
+```
 
-Expired auth_date is rejected.
-
-Future auth_date values beyond the configured tolerance are rejected.
+`auth_date` must be no older than the configured maximum age and may not be in the future beyond the configured tolerance.
 
 ## Actor
 
-The internal actor contains:
+The validated actor contains:
 
-    telegram_user_id
-    actor_key = telegram:<telegram_user_id>
-    username
-    first_name
-    last_name
-    auth_date
-    chat_instance
-    chat_type
-    start_param
+```
+telegram_user_id
+actor_key = telegram:<telegram_user_id>
+username
+first_name
+last_name
+auth_date
+chat_instance
+chat_type
+start_param
+```
 
-actor_key is constructed only after HMAC verification. No client-supplied actor_key is accepted.
+`actor_key` is constructed only after HMAC verification.
 
-chat_instance is retained as Telegram context information only. It is never interpreted as chat_id and no conversion is assumed.
+`chat_instance` is retained as Telegram-provided context information. It is never treated as `chat_id`.
 
 ## Trusted launch context
 
 W01-C selects one launcher:
 
-    Main Mini App direct link
+```
+https://t.me/<bot_username>?startapp=<opaque_context_reference>
+```
 
-    https://t.me/<bot_username>?startapp=<trusted_context_reference>
+For this Main Mini App direct-link flow, Telegram transports the `startapp` value into Mini App `start_param`.
 
-Telegram carries the startapp value into Mini App initData as start_param for this flow.
+The reference is **server-generated, random, opaque, persisted and server-resolvable**.
 
-The reference is opaque and HMAC-derived from:
+Each reference is registered as one server-side JSON record:
 
-    TMA_CONTEXT_ISSUER
-    chat_id
-    message_thread_id
-    room_key
+```
+config/tma_trusted_contexts/<reference>.json
+```
 
-using:
+The record binds:
 
-    TMA_CONTEXT_SECRET
+```
+issuer
+chat_id
+message_thread_id
+room_key
+issued_at
+expires_at
+revoked_at
+reusable
+```
 
-The secret must contain at least 32 characters.
+The reference contains no Room data and is not derived from a client-selected `room_key`.
 
-The reference has no semantic room data and is reusable by multiple members of the same Room.
+It is 256 bits of random token material encoded with URL-safe base64 and prefixed with `tctx_`, for a 48-character value.
 
-No context table is introduced.
+References are reusable by multiple authorized members of the same Room. They are not actor-bound.
 
-The existing TelegramRoomRouter remains the Room authority:
+Context freshness is explicit:
 
-    (chat_id, message_thread_id) -> room_key
+```
+TMA_CONTEXT_MAX_AGE_SECONDS=3600
+```
 
-The resolver only accepts references that correspond to currently registered authoritative routes.
+A reference may also be explicitly revoked.
 
-Consequences:
+No context table and no new SQLite database are introduced.
 
-- arbitrary room_key values are not accepted;
-- a semantic string such as general is not a valid context reference;
-- removing a registered route invalidates its derived context;
-- rotating TMA_CONTEXT_SECRET invalidates previously derived references;
-- the reference is not actor-bound, so multiple authorized Room members may reuse the same launch reference;
-- chat_instance is not converted into chat_id.
+## Forum Topic boundary
 
-A context reference does not grant membership by itself. Membership is checked after context resolution.
+A Forum Topic is not a Room merely because the client supplies a thread number.
 
-## Forum topic boundary
+A trusted context can only be issued after the existing routing authority resolves:
 
-A Forum Topic is not a Room just because the client supplies a thread number.
-
-A trusted context can only be issued for a route already present in TelegramRoomRouter:
-
-    chat_id + message_thread_id
+```
+(chat_id, message_thread_id)
         ->
-    TelegramRoomRouter
+TelegramRoomRouter
         ->
-    room_key
+room_key
+```
 
-Unknown topic:
+The resolver checks the authoritative route again when the reference is consumed.
 
-    DENY
+Therefore:
 
-There is no unknown-topic fallback to general.
+- unknown topic -> DENY;
+- removed route -> DENY;
+- remapped route -> DENY;
+- no fallback from unknown topic to `general`.
 
 ## Telegram membership
 
-The implementation calls:
+The implementation uses:
 
-    await Bot.get_chat_member(chat_id, user_id)
+```
+await Bot.get_chat_member(chat_id, user_id)
+```
 
-through python-telegram-bot.
+through `python-telegram-bot`.
 
 Policy:
 
@@ -166,129 +190,234 @@ Policy:
 | unknown | DENY |
 | Telegram API/transport/timeout failure | 503 |
 
-The Bot API requires the bot to be an administrator for guaranteed membership lookup of other users. W01-C does not modify Telegram permissions and does not claim BotFather configuration as completed.
+The Bot API requires the bot to be an administrator for guaranteed membership lookup of other users.
+
+W01-C does not modify Telegram permissions and does not claim BotFather configuration as completed.
 
 ## FastAPI boundary
 
-get_current_user:
+`get_current_user`:
 
-    Authorization
-        ->
-    initData validation
-        ->
-    AuthenticatedTelegramActor
+```
+Authorization
+    ->
+tma header parsing
+    ->
+initData validation
+    ->
+AuthenticatedTelegramActor
+```
 
-get_current_cafe_access:
+`get_current_cafe_access`:
 
-    authenticated actor
-        ->
-    start_param trusted context
-        ->
-    TelegramRoomRouter
-        ->
-    Telegram membership
-        ->
-    CafeAuthorization
+```
+authenticated actor
+    ->
+start_param trusted reference
+    ->
+TrustedContextRegistry
+    ->
+TelegramRoomRouter
+    ->
+Telegram membership
+    ->
+CafeAuthorization
+```
 
 HTTP mapping:
 
-    401 invalid authentication
-    403 membership denied
-    404 missing or unknown trusted context
-    503 authorization dependency/configuration unavailable
+```
+401 invalid Telegram authentication
+403 authenticated but unauthorized membership
+404 missing / unknown / expired / revoked context
+503 authorization dependency unavailable
+```
 
-Error responses do not include bot token, raw initData, context secret, internal SQLite details or stack traces.
+Errors do not expose bot token, raw initData, context secrets, internal SQLite details or stack traces.
+
+The existing API inventory dependency also now exposes the repository's existing SQLAlchemy `DATABASE_URL` through a short-lived `get_db`; no new database or model is created.
 
 ## Configuration
 
 Existing canonical secret:
 
-    TELEGRAM_BOT_TOKEN
+```
+TELEGRAM_BOT_TOKEN
+```
 
-New WORLD-01-C configuration:
+WORLD-01-C configuration:
 
-    TMA_AUTH_MAX_AGE_SECONDS
-    TMA_AUTH_FUTURE_TOLERANCE_SECONDS
-    TMA_CONTEXT_ISSUER
-    TMA_CONTEXT_SECRET
+```
+TMA_AUTH_MAX_AGE_SECONDS
+TMA_AUTH_FUTURE_TOLERANCE_SECONDS
+TMA_CONTEXT_MAX_AGE_SECONDS
+TMA_CONTEXT_ISSUER
+```
 
-No production value is committed.
+No context secret is stored or committed.
 
-## Dependency and API gate
+Runtime context records are ignored by Git:
 
-Repository inspection showed Python >= 3.14 and existing FastAPI and python-telegram-bot usage in code, while the main project dependency list did not declare the packages needed by those existing API surfaces.
+```
+config/tma_trusted_contexts/
+```
 
-WORLD-01-C aligns project metadata and CI installation with the implemented boundary:
+## Dependency and API verification
 
-    fastapi >=0.116,<1
-    uvicorn >=0.35,<1
-    pydantic >=2.10,<3
-    python-telegram-bot >=22.5,<23
+The authorized branch declares:
 
-The dependency ranges are implementation requirements, not claims about a pre-existing installed environment.
+```
+Python >= 3.14
+fastapi>=0.116,<1
+uvicorn>=0.35,<1
+pydantic>=2.10,<3
+python-telegram-bot>=22.5,<23
+```
 
-Context7 and official documentation were checked for FastAPI Header/Depends, Pydantic v2 models, Telegram Mini App initData, Telegram direct-link startapp behavior, and python-telegram-bot get_chat_member/lifecycle APIs.
+Context7 and official documentation were checked for:
 
-## Launcher operational prerequisite
+- FastAPI `Depends`, `Header` and `HTTPException`;
+- Pydantic v2 models and `extra="forbid"`;
+- Telegram Mini Apps `initData` and direct-link `startapp`;
+- `python-telegram-bot` `Bot.get_chat_member` and async Bot lifecycle.
 
-The selected production launcher requires the Main Mini App to be configured in Telegram/BotFather.
+These checks verify API shape, not the presence of a matching local installed environment.
 
-Repository evidence does not prove that BotFather has been configured. That remains an operational UNKNOWN.
+## Launcher prerequisite
+
+The selected launcher is the Main Mini App direct link.
+
+Repository evidence does not prove that the Main Mini App is configured in BotFather. This remains **UNKNOWN**.
 
 No BotFather mutation is performed by W01-C.
 
-## Testing boundary
+## Targeted testing
 
-Targeted tests cover:
+The W01-C test suite covers:
 
 - valid initData;
-- URL-decoded data;
+- URL-decoding;
 - missing/invalid hash;
 - duplicate keys;
 - malformed query;
 - missing/invalid user;
-- expired/future auth_date;
+- expired/future `auth_date`;
 - wrong bot token;
-- unexpected signed fields;
-- initDataUnsafe non-authority;
-- exact tma header;
-- secret material not exposed by validation/API errors;
-- opaque reusable trusted context;
-- context secret minimum;
-- unknown context;
-- route-removal invalidation;
-- foreign-room context identity;
-- semantic Room reference rejection;
-- Main Mini App startapp transport;
+- signed unexpected fields;
+- exact `tma` header;
+- no secret/raw initData leakage;
+- random opaque reusable context;
+- expiry;
+- revocation;
+- route removal/remap invalidation;
+- semantic/unknown reference rejection;
+- Main Mini App `startapp` transport;
+- existing `TelegramRoomRouter`;
 - creator/administrator/member;
-- restricted membership policy;
+- restricted policy;
 - left/kicked/banned/unknown;
-- returned-user identity mismatch;
-- Telegram API and timeout failures;
+- returned-user mismatch;
+- Telegram API/timeout failure;
 - FastAPI 401/503 behavior;
-- full auth -> context -> membership allow/deny path;
-- unexpected actor fields.
+- full auth -> context -> membership allow/deny path.
 
-Live Telegram membership is intentionally mocked in unit tests and requires a real administrator bot plus Telegram connectivity in deployment.
+Live Telegram membership remains mocked in unit tests and requires a real administrator bot plus Telegram connectivity in deployment.
 
 ## Security invariants
 
-    Telegram identity proof
+```
+Telegram identity proof
         +
-    trusted Room selection proof
+trusted Room selection proof
         +
-    Telegram membership proof
+Telegram membership proof
         +
-    Café policy
+Cafe policy
         =
-    ALLOW / DENY
+ALLOW / DENY
+```
 
 Never:
 
-    TMA client room_key
-        ->
-    ALLOW
+```
+TMA client room_key
+    ->
+ALLOW
+```
 
-W01-C stops at the authorization boundary.
+Never:
 
-WORLD-01-D is the next explicitly authorized phase for CafeSession/CafeParticipant persistence runtime.
+```
+TMA client actor_key
+    ->
+identity authority
+```
+
+A context reference alone never grants access; membership is evaluated for the authenticated Telegram actor.
+
+## W01-B / W01-D boundary
+
+W01-C does not implement:
+
+- `CafeSession`;
+- `CafeParticipant`;
+- JOIN / LEAVE;
+- persistence expiry runtime;
+- Social World Alembic migrations;
+- Lobby UI;
+- Presence;
+- Scheduler;
+- AI.
+
+WORLD-01-D is the next phase for the persistence runtime after explicit acceptance of W01-C.
+
+## Out-of-scope issue
+
+The existing `public/inventory.html` / inventory semantic mismatch remains outside W01-C.
+
+No inventory semantics or Lobby UI are changed here.
+
+## 2F-8S boundary
+
+No changes were made to:
+
+- QWeb;
+- Playwright;
+- WebQueue;
+- PhysicalWebChatResourceAuthority;
+- PhysicalLifecycleReconciliation;
+- TaskEngine;
+- TaskScheduler;
+- Supervisor;
+- browser data;
+- physical browser locks.
+
+W01-C has no physical browser dependency.
+
+## Result
+
+The implemented authorization boundary is:
+
+```
+Telegram initData
+    ->
+AuthenticatedTelegramActor
+    ->
+trusted context
+    ->
+TelegramRoomRouter
+    ->
+CafeRoom projection
+    ->
+Telegram membership
+    ->
+Cafe policy
+    ->
+ALLOW / DENY
+```
+
+The implementation is ready for W01-D review; W01-D must remain separately authorized.
+
+**READY FOR WORLD-01-D**
+
+**STOP — no CafeSession/CafeParticipant runtime, migration, Lobby, presence, scheduler or AI is implemented by W01-C.**

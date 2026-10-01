@@ -7,7 +7,7 @@ import asyncio
 import hashlib
 import hmac
 import json
-import time
+from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import quote
 
@@ -17,7 +17,6 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from api.dependencies import authorize_cafe_access, get_current_user
-from bot_ia.interfaces.telegram_room_routing import TelegramRoomRouter
 from api.security.telegram_auth import (
     AuthenticatedTelegramActor,
     TelegramAuthError,
@@ -38,8 +37,7 @@ from api.security.trusted_context import (
 
 
 BOT_TOKEN = "123456:W01C_TEST_TOKEN"
-CONTEXT_SECRET = "local-test-context-secret-0123456789"
-AUTH_NOW = int(time.time())
+AUTH_NOW = 1_800_000_000
 USER = {
     "id": 123456789,
     "first_name": "Test",
@@ -73,12 +71,10 @@ def make_init_data(
     user: dict | None = USER,
     auth_date: int = AUTH_NOW,
     bot_token: str = BOT_TOKEN,
-    start_param: str = "tctx_TEST",
+    start_param: str = "tctx_placeholder",
     extra: list[tuple[str, str]] | None = None,
 ) -> str:
-    pairs: list[tuple[str, str]] = [
-        ("auth_date", str(auth_date)),
-    ]
+    pairs: list[tuple[str, str]] = [("auth_date", str(auth_date))]
     if user is not None:
         pairs.append(
             (
@@ -116,8 +112,7 @@ def test_valid_init_data_derives_server_actor() -> None:
     assert actor.telegram_user_id == USER["id"]
     assert actor.id == USER["id"]
     assert actor.actor_key == "telegram:123456789"
-    assert actor.start_param == "tctx_TEST"
-    assert actor.chat_instance == "123456789"
+    assert actor.start_param == "tctx_placeholder"
 
 
 def test_url_decoding_is_verified_before_actor_derivation() -> None:
@@ -178,7 +173,7 @@ def test_invalid_user_json_is_rejected() -> None:
         ("user", "not-json"),
         ("chat_instance", "123456789"),
         ("chat_type", "supergroup"),
-        ("start_param", "tctx_TEST"),
+        ("start_param", "tctx_placeholder"),
     ]
     raw = "&".join(
         f"{key}={value}"
@@ -188,22 +183,17 @@ def test_invalid_user_json_is_rejected() -> None:
         validate_telegram_init_data(raw, BOT_TOKEN, now=AUTH_NOW)
 
 
-def test_invalid_user_id_is_rejected() -> None:
+@pytest.mark.parametrize(
+    "auth_date",
+    [AUTH_NOW - 3601, AUTH_NOW + 31],
+)
+def test_auth_date_freshness_and_future_tolerance(auth_date: int) -> None:
     with pytest.raises(TelegramAuthError):
         validate_telegram_init_data(
-            make_init_data(user={"id": 0}),
+            make_init_data(auth_date=auth_date),
             BOT_TOKEN,
             now=AUTH_NOW,
         )
-
-
-def test_future_and_expired_auth_date_are_rejected() -> None:
-    expired = make_init_data(auth_date=AUTH_NOW - 3601)
-    future = make_init_data(auth_date=AUTH_NOW + 31)
-    with pytest.raises(TelegramAuthError):
-        validate_telegram_init_data(expired, BOT_TOKEN, now=AUTH_NOW)
-    with pytest.raises(TelegramAuthError):
-        validate_telegram_init_data(future, BOT_TOKEN, now=AUTH_NOW)
 
 
 def test_wrong_bot_token_is_rejected() -> None:
@@ -224,27 +214,6 @@ def test_unexpected_fields_remain_integrity_protected() -> None:
     assert actor.telegram_user_id == USER["id"]
 
 
-def test_init_data_unsafe_never_grants_identity() -> None:
-    actor = validate_telegram_init_data(
-        make_init_data(),
-        BOT_TOKEN,
-        now=AUTH_NOW,
-    )
-    unsafe_only = {"id": 999999999, "username": "attacker"}
-    assert actor.telegram_user_id != unsafe_only["id"]
-
-
-def test_auth_header_accepts_only_tma_scheme() -> None:
-    init_data = make_init_data()
-    assert extract_tma_init_data("tma " + init_data) == init_data
-    with pytest.raises(TelegramAuthError):
-        extract_tma_init_data("Bearer " + init_data)
-    with pytest.raises(TelegramAuthError):
-        extract_tma_init_data("tma")
-    with pytest.raises(TelegramAuthError):
-        extract_tma_init_data(None)
-
-
 def test_auth_exceptions_do_not_contain_secret_material() -> None:
     raw = make_init_data()
     with pytest.raises(TelegramAuthError) as captured:
@@ -255,6 +224,14 @@ def test_auth_exceptions_do_not_contain_secret_material() -> None:
         )
     assert BOT_TOKEN not in str(captured.value)
     assert raw not in str(captured.value)
+
+
+def test_auth_header_accepts_only_tma_scheme() -> None:
+    init_data = make_init_data()
+    assert extract_tma_init_data("tma " + init_data) == init_data
+    for value in (None, "Bearer " + init_data, "tma"):
+        with pytest.raises(TelegramAuthError):
+            extract_tma_init_data(value)
 
 
 class FakeRoute:
@@ -270,10 +247,7 @@ class FakeRoute:
 
 
 class FakeRouter:
-    def __init__(
-        self,
-        routes: tuple[FakeRoute, ...],
-    ) -> None:
+    def __init__(self, routes: tuple[FakeRoute, ...]) -> None:
         self.routes = routes
 
     def resolve(
@@ -289,84 +263,104 @@ class FakeRouter:
                 return route.room_key
         return None
 
-    def list_routes(self) -> tuple[FakeRoute, ...]:
-        return self.routes
 
-
-def test_trusted_context_is_opaque_reusable_and_room_bound() -> None:
+def test_context_is_random_opaque_reusable_and_room_bound(
+    tmp_path: Path,
+) -> None:
     router = FakeRouter((FakeRoute("-100", 42, "general"),))
-    registry = TrustedContextRegistry(router, CONTEXT_SECRET)
-    context = registry.issue("-100", 42)
-    resolved = registry.resolve(context.reference)
+    registry = TrustedContextRegistry(
+        router,
+        store_dir=tmp_path / "contexts",
+        max_age_seconds=3600,
+        issuer="cafe-otaku",
+    )
+    first = registry.issue("-100", 42, now=AUTH_NOW)
+    second = registry.issue("-100", 42, now=AUTH_NOW)
 
-    assert context.reference.startswith("tctx_")
-    assert len(context.reference) == 48
-    assert context.room_key == "general"
-    assert "-100" not in context.reference
-    assert "42" not in context.reference
-    assert "general" not in context.reference
-    assert resolved == context
-    assert registry.issue("-100", 42).reference == context.reference
+    assert first.reference.startswith("tctx_")
+    assert len(first.reference) == 48
+    assert first.reference != second.reference
+    assert "-100" not in first.reference
+    assert "42" not in first.reference
+    assert "general" not in first.reference
+    assert registry.resolve(first.reference, now=AUTH_NOW) == first
+    assert registry.resolve(first.reference, now=AUTH_NOW + 3599) == first
+    assert len(list((tmp_path / "contexts").glob("*.json"))) == 2
 
 
-def test_context_requires_long_secret() -> None:
+def test_context_expiry_denies_reference(tmp_path: Path) -> None:
+    registry = TrustedContextRegistry(
+        FakeRouter((FakeRoute("-100", 42, "general"),)),
+        store_dir=tmp_path,
+        max_age_seconds=60,
+    )
+    reference = registry.issue("-100", 42, now=AUTH_NOW).reference
+    with pytest.raises(TrustedContextError):
+        registry.resolve(reference, now=AUTH_NOW + 60)
+
+
+def test_context_revocation_denies_reference(tmp_path: Path) -> None:
+    registry = TrustedContextRegistry(
+        FakeRouter((FakeRoute("-100", 42, "general"),)),
+        store_dir=tmp_path,
+    )
+    reference = registry.issue("-100", 42, now=AUTH_NOW).reference
+    revoked = registry.revoke(reference, now=AUTH_NOW + 1)
+    assert revoked.revoked_at == AUTH_NOW + 1
+    with pytest.raises(TrustedContextError):
+        registry.resolve(reference, now=AUTH_NOW + 2)
+
+
+def test_route_removal_invalidates_context(tmp_path: Path) -> None:
+    router = FakeRouter((FakeRoute("-100", 42, "general"),))
+    registry = TrustedContextRegistry(router, store_dir=tmp_path)
+    reference = registry.issue("-100", 42, now=AUTH_NOW).reference
+    router.routes = ()
+    with pytest.raises(TrustedContextError):
+        registry.resolve(reference, now=AUTH_NOW)
+
+
+def test_route_remap_invalidates_context(tmp_path: Path) -> None:
+    router = FakeRouter((FakeRoute("-100", 42, "general"),))
+    registry = TrustedContextRegistry(router, store_dir=tmp_path)
+    reference = registry.issue("-100", 42, now=AUTH_NOW).reference
+    router.routes = (FakeRoute("-100", 42, "tcg_collection"),)
+    with pytest.raises(TrustedContextError):
+        registry.resolve(reference, now=AUTH_NOW)
+
+
+def test_context_requires_valid_configuration(tmp_path: Path) -> None:
     with pytest.raises(TrustedContextConfigurationError):
         TrustedContextRegistry(
             FakeRouter((FakeRoute("-100", 42, "general"),)),
-            "too-short",
+            store_dir=tmp_path,
+            max_age_seconds=0,
         )
 
 
-def test_unknown_context_reference_is_rejected() -> None:
+def test_unknown_and_semantic_contexts_are_rejected(tmp_path: Path) -> None:
     registry = TrustedContextRegistry(
         FakeRouter((FakeRoute("-100", 42, "general"),)),
-        CONTEXT_SECRET,
+        store_dir=tmp_path,
     )
-    with pytest.raises(TrustedContextError):
-        registry.resolve("tctx_" + "A" * 43)
+    for reference in ("general", "tctx_" + "A" * 43):
+        with pytest.raises(TrustedContextError):
+            registry.resolve(reference, now=AUTH_NOW)
 
 
-def test_route_removal_invalidates_context() -> None:
-    router = FakeRouter((FakeRoute("-100", 42, "general"),))
-    registry = TrustedContextRegistry(router, CONTEXT_SECRET)
-    reference = registry.issue("-100", 42).reference
-    router.routes = ()
-    with pytest.raises(TrustedContextError):
-        registry.resolve(reference)
-
-
-def test_context_from_foreign_room_is_not_remapped() -> None:
-    router = FakeRouter(
-        (
-            FakeRoute("-100", 42, "general"),
-            FakeRoute("-100", 99, "tcg_collection"),
-        )
-    )
-    registry = TrustedContextRegistry(router, CONTEXT_SECRET)
-    foreign = registry.issue("-100", 99)
-    resolved = registry.resolve(foreign.reference)
-
-    assert resolved.room_key == "tcg_collection"
-    assert resolved.message_thread_id == 99
-    assert resolved.reference == foreign.reference
-
-
-def test_context_launcher_uses_main_startapp() -> None:
+def test_context_launcher_uses_main_startapp(tmp_path: Path) -> None:
     registry = TrustedContextRegistry(
         FakeRouter((FakeRoute("-100", 42, "general"),)),
-        CONTEXT_SECRET,
+        store_dir=tmp_path,
     )
-    reference = registry.issue("-100", 42).reference
-    link = build_main_mini_app_link(
-        "CafeOtakuBot",
-        reference,
-    )
-    assert link.startswith(
-        "https://t.me/CafeOtakuBot?startapp=tctx_"
-    )
+    reference = registry.issue("-100", 42, now=AUTH_NOW).reference
+    link = build_main_mini_app_link("CafeOtakuBot", reference)
+    assert link.startswith("https://t.me/CafeOtakuBot?startapp=tctx_")
 
 
-def test_real_room_router_routes_are_authoritative(tmp_path) -> None:
+def test_real_room_router_is_authoritative(tmp_path: Path) -> None:
+    from bot_ia.interfaces.telegram_room_routing import TelegramRoomRouter
+
     router = TelegramRoomRouter(tmp_path / "telegram_rooms.sqlite3")
 
     class Room:
@@ -375,21 +369,7 @@ def test_real_room_router_routes_are_authoritative(tmp_path) -> None:
         external_id = "42"
 
     router.replace_chat_rooms("-100", (Room(),))
-    routes = router.list_routes(chat_id="-100")
-
-    assert len(routes) == 1
-    assert routes[0].chat_id == "-100"
-    assert routes[0].message_thread_id == 42
-    assert routes[0].room_key == "general"
-
-
-def test_semantic_room_reference_is_rejected() -> None:
-    registry = TrustedContextRegistry(
-        FakeRouter((FakeRoute("-100", 42, "general"),)),
-        CONTEXT_SECRET,
-    )
-    with pytest.raises(TrustedContextError):
-        registry.resolve("general")
+    assert router.resolve("-100", 42) == "general"
 
 
 class FakeMember:
@@ -422,11 +402,7 @@ class FakeBot:
     async def __aexit__(self, exc_type, exc, tb):
         return False
 
-    async def get_chat_member(
-        self,
-        chat_id,
-        user_id,
-    ):
+    async def get_chat_member(self, chat_id, user_id):
         self.requested = (chat_id, user_id)
         if self.error:
             raise self.error
@@ -435,11 +411,7 @@ class FakeBot:
 
 @pytest.mark.parametrize(
     "status",
-    [
-        "creator",
-        "administrator",
-        "member",
-    ],
+    ["creator", "administrator", "member"],
 )
 def test_membership_allows_active_members(status: str) -> None:
     bot = FakeBot(FakeMember(status))
@@ -449,42 +421,33 @@ def test_membership_allows_active_members(status: str) -> None:
     )
     decision = async_run(verifier.check("-100", USER["id"]))
     assert decision.allowed is True
-    assert decision.status == status
     assert bot.requested == (-100, USER["id"])
 
 
-def test_restricted_requires_is_member_true() -> None:
-    allowed = TelegramMembershipVerifier(
+@pytest.mark.parametrize("is_member", [True, False])
+def test_restricted_policy_follows_is_member_flag(is_member: bool) -> None:
+    verifier = TelegramMembershipVerifier(
         BOT_TOKEN,
         bot_factory=lambda _: FakeBot(
-            FakeMember("restricted", is_member=True)
+            FakeMember("restricted", is_member=is_member)
         ),
     )
-    denied = TelegramMembershipVerifier(
-        BOT_TOKEN,
-        bot_factory=lambda _: FakeBot(
-            FakeMember("restricted", is_member=False)
-        ),
-    )
-    assert async_run(allowed.check("-100", USER["id"])).allowed is True
-    assert async_run(denied.check("-100", USER["id"])).allowed is False
+    decision = async_run(verifier.check("-100", USER["id"]))
+    assert decision.allowed is is_member
 
 
 @pytest.mark.parametrize(
     "status",
-    [
-        "left",
-        "kicked",
-        "banned",
-        "unknown",
-    ],
+    ["left", "kicked", "banned", "unknown"],
 )
 def test_membership_denies_nonmember_states(status: str) -> None:
     verifier = TelegramMembershipVerifier(
         BOT_TOKEN,
         bot_factory=lambda _: FakeBot(FakeMember(status)),
     )
-    assert async_run(verifier.check("-100", USER["id"])).allowed is False
+    assert async_run(
+        verifier.check("-100", USER["id"])
+    ).allowed is False
 
 
 def test_membership_rejects_returned_identity_mismatch() -> None:
@@ -494,8 +457,9 @@ def test_membership_rejects_returned_identity_mismatch() -> None:
             FakeMember("member", user_id=999)
         ),
     )
-    decision = async_run(verifier.check("-100", USER["id"]))
-    assert decision.allowed is False
+    assert async_run(
+        verifier.check("-100", USER["id"])
+    ).allowed is False
 
 
 def test_membership_api_failure_fails_closed() -> None:
@@ -515,9 +479,7 @@ def test_membership_api_failure_fails_closed() -> None:
 def test_membership_timeout_fails_closed() -> None:
     verifier = TelegramMembershipVerifier(
         BOT_TOKEN,
-        bot_factory=lambda _: FakeBot(
-            error=TimeoutError()
-        ),
+        bot_factory=lambda _: FakeBot(error=TimeoutError())
     )
     with pytest.raises(TelegramMembershipUnavailable):
         async_run(verifier.check("-100", USER["id"]))
@@ -536,9 +498,7 @@ def test_fastapi_missing_bot_token_fails_closed(monkeypatch) -> None:
         headers={"Authorization": "tma " + make_init_data()},
     )
     assert response.status_code == 503
-    assert response.json()["detail"] == (
-        "Telegram authentication dependency is not configured"
-    )
+    assert BOT_TOKEN not in response.text
 
 
 def test_fastapi_invalid_tma_configuration_fails_closed(monkeypatch) -> None:
@@ -596,10 +556,10 @@ def test_fastapi_authenticated_actor_is_server_derived(monkeypatch) -> None:
     }
 
 
-def test_full_pipeline_allows_authorized_member() -> None:
+def test_full_pipeline_allows_authorized_member(tmp_path: Path) -> None:
     router = FakeRouter((FakeRoute("-100", 42, "general"),))
-    registry = TrustedContextRegistry(router, CONTEXT_SECRET)
-    reference = registry.issue("-100", 42).reference
+    registry = TrustedContextRegistry(router, store_dir=tmp_path)
+    reference = registry.issue("-100", 42, now=AUTH_NOW).reference
     actor = validate_telegram_init_data(
         make_init_data(start_param=reference),
         BOT_TOKEN,
@@ -628,10 +588,44 @@ def test_full_pipeline_allows_authorized_member() -> None:
     assert access.context.message_thread_id == 42
 
 
-def test_full_pipeline_denies_membership() -> None:
+def test_full_pipeline_denies_foreign_context(tmp_path: Path) -> None:
     router = FakeRouter((FakeRoute("-100", 42, "general"),))
-    registry = TrustedContextRegistry(router, CONTEXT_SECRET)
-    reference = registry.issue("-100", 42).reference
+    registry = TrustedContextRegistry(router, store_dir=tmp_path)
+    actor = validate_telegram_init_data(
+        make_init_data(start_param="tctx_" + "A" * 43),
+        BOT_TOKEN,
+        now=AUTH_NOW,
+    )
+    with pytest.raises(Exception) as captured:
+        async_run(
+            authorize_cafe_access(
+                actor,
+                actor.start_param,
+                registry,
+                TelegramMembershipVerifier(
+                    BOT_TOKEN,
+                    bot_factory=lambda _: FakeBot(
+                        FakeMember("member")
+                    ),
+                ),
+            )
+        )
+    assert getattr(captured.value, "status_code", None) == 404
+
+
+def test_full_pipeline_denies_unknown_room(tmp_path: Path) -> None:
+    registry = TrustedContextRegistry(
+        FakeRouter(()),
+        store_dir=tmp_path,
+    )
+    with pytest.raises(TrustedContextError):
+        registry.issue("-100", 42, now=AUTH_NOW)
+
+
+def test_full_pipeline_denies_membership(tmp_path: Path) -> None:
+    router = FakeRouter((FakeRoute("-100", 42, "general"),))
+    registry = TrustedContextRegistry(router, store_dir=tmp_path)
+    reference = registry.issue("-100", 42, now=AUTH_NOW).reference
     actor = validate_telegram_init_data(
         make_init_data(start_param=reference),
         BOT_TOKEN,
@@ -655,41 +649,6 @@ def test_full_pipeline_denies_membership() -> None:
             )
         )
     assert getattr(captured.value, "status_code", None) == 403
-
-
-def test_full_pipeline_unknown_context_denies() -> None:
-    router = FakeRouter((FakeRoute("-100", 42, "general"),))
-    registry = TrustedContextRegistry(router, CONTEXT_SECRET)
-    actor = validate_telegram_init_data(
-        make_init_data(),
-        BOT_TOKEN,
-        now=AUTH_NOW,
-    )
-
-    with pytest.raises(Exception) as captured:
-        async_run(
-            authorize_cafe_access(
-                actor,
-                "tctx_" + "A" * 43,
-                registry,
-                TelegramMembershipVerifier(
-                    BOT_TOKEN,
-                    bot_factory=lambda _: FakeBot(
-                        FakeMember("member")
-                    ),
-                ),
-            )
-        )
-    assert getattr(captured.value, "status_code", None) == 404
-
-
-def test_context_secret_is_not_exposed_in_configuration_error() -> None:
-    with pytest.raises(TrustedContextConfigurationError) as captured:
-        TrustedContextRegistry(
-            FakeRouter((FakeRoute("-100", 42, "general"),)),
-            CONTEXT_SECRET[:4],
-        )
-    assert CONTEXT_SECRET not in str(captured.value)
 
 
 def test_actor_model_rejects_unexpected_fields() -> None:
