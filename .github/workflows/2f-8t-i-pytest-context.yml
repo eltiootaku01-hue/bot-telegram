@@ -12,6 +12,8 @@ permissions:
 jobs:
   pytest-context:
     runs-on: ubuntu-24.04
+    env:
+      PYTHONPATH: src
     steps:
       - name: Checkout diagnostic branch
         uses: actions/checkout@v6
