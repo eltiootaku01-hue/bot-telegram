@@ -124,48 +124,72 @@ class TelegramEventLedger:
         update_id: int | None = None,
         metadata: str = "",
     ) -> bool:
-        """Reclama un evento nuevo.
+        """Reclama una sola clave manteniendo el contrato histórico."""
+        return self.claim_events(
+            ((event_type, event_id),),
+            update_id=update_id,
+            metadata=metadata,
+        )
 
-        True sólo para el primer reclamante. Cualquier ID ya existente no
-        vuelve a ejecutar efectos automáticamente.
-        """
-        event_type = str(event_type).strip()
-        event_id = str(event_id).strip()
-        if not event_type or not event_id:
+    def claim_events(
+        self,
+        event_ids: tuple[tuple[str, str | int], ...],
+        *,
+        update_id: int | None = None,
+        metadata: str = "",
+    ) -> bool:
+        """Reclama un conjunto de claves como una única unidad SQLite."""
+        normalized = tuple(
+            dict.fromkeys(
+                (
+                    str(event_type).strip(),
+                    str(event_id).strip(),
+                )
+                for event_type, event_id in event_ids
+            )
+        )
+        if not normalized or any(
+            not event_type or not event_id
+            for event_type, event_id in normalized
+        ):
             raise ValueError("event_type y event_id son obligatorios")
 
         now = self._now()
         with closing(self._connection()) as connection:
             try:
                 connection.execute("BEGIN IMMEDIATE")
-                existing = connection.execute(
-                    """
-                    SELECT status
-                    FROM telegram_events
-                    WHERE event_type=? AND event_id=?
-                    """,
-                    (event_type, event_id),
-                ).fetchone()
-                if existing is not None:
+
+                existing = set()
+                for event_type, event_id in normalized:
+                    row = connection.execute(
+                        """
+                        SELECT status
+                        FROM telegram_events
+                        WHERE event_type=? AND event_id=?
+                        """,
+                        (event_type, event_id),
+                    ).fetchone()
+                    if row is not None:
+                        existing.add((event_type, event_id))
+
+                if existing:
+                    if len(existing) != len(normalized):
+                        raise TelegramEventLedgerError(
+                            "partial multi-key Telegram event claim detected"
+                        )
                     connection.execute("COMMIT")
                     return False
 
-                connection.execute(
-                    """
-                    INSERT INTO telegram_events(
-                        event_type, event_id, update_id, status,
-                        metadata, created_at, updated_at
-                    ) VALUES (?, ?, ?, 'CLAIMED', ?, ?, ?)
-                    """,
-                    (
+                for event_type, event_id in normalized:
+                    self._insert_claim(
+                        connection,
                         event_type,
                         event_id,
-                        update_id,
-                        metadata,
-                        now,
-                        now,
-                    ),
-                )
+                        update_id=update_id,
+                        metadata=metadata,
+                        now=now,
+                    )
+
                 connection.execute("COMMIT")
                 return True
             except Exception:
@@ -174,6 +198,33 @@ class TelegramEventLedger:
                 except sqlite3.DatabaseError:
                     pass
                 raise
+
+    @staticmethod
+    def _insert_claim(
+        connection: sqlite3.Connection,
+        event_type: str,
+        event_id: str,
+        *,
+        update_id: int | None,
+        metadata: str,
+        now: str,
+    ) -> None:
+        connection.execute(
+            """
+            INSERT INTO telegram_events(
+                event_type, event_id, update_id, status,
+                metadata, created_at, updated_at
+            ) VALUES (?, ?, ?, 'CLAIMED', ?, ?, ?)
+            """,
+            (
+                event_type,
+                event_id,
+                update_id,
+                metadata,
+                now,
+                now,
+            ),
+        )
 
     def mark_completed(
         self,
