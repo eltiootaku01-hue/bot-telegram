@@ -99,8 +99,11 @@ def pytest_runtest_logstart(
     _observe("logstart", nodeid)
 
 
-def pytest_runtest_teardown(nodeid: str, nextitem: object | None) -> None:
-    _observe("teardown", nodeid)
+def pytest_runtest_teardown(
+    item: object,
+    nextitem: object | None,
+) -> None:
+    _observe("teardown", getattr(item, "nodeid", repr(item)))
 
 
 def pytest_sessionfinish(session: object, exitstatus: int) -> None:
