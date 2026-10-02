@@ -31,7 +31,7 @@ _CANON_8 = CanonProvenance(
 _CANON_9_PERSONALITY = CanonProvenance(
     source_id=_SOURCE_9,
     source_version=_VERSION,
-    source_section="22. Personalidad inicial de Sunna",
+    source_section="22-27. Personalidad inicial / virtudes / defectos / mayor miedo",
     canonical_status=CanonicalStatus.CANON,
 )
 _CANON_9_RELATIONSHIPS = CanonProvenance(
