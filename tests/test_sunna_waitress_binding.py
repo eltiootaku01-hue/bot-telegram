@@ -93,7 +93,7 @@ class SunnaOperationalBindingTests(unittest.TestCase):
             self.assertEqual("sunna", task.context["waitress_id"])
             self.assertEqual("Sunna", task.context["bot_name"])
             self.assertTrue(queue.enqueued)
-            self.assertEqual("sunna", queue.enqueued[0]["bot_name"])
+            self.assertEqual("Sunna", queue.enqueued[0]["bot_name"])
             self.assertIn("Identidad canónica: Sunna.", queue.enqueued[0]["message"])
             self.assertIn("extremadamente silenciosa", queue.enqueued[0]["message"])
             self.assertIs(SUNNA, resolve_character_for_waitress("sunna"))
@@ -121,7 +121,7 @@ class SunnaOperationalBindingTests(unittest.TestCase):
             self.assertEqual("cari", task.context["waitress_id"])
             self.assertEqual("Cari", task.context["bot_name"])
             self.assertTrue(queue.enqueued)
-            self.assertEqual("cari", queue.enqueued[0]["bot_name"])
+            self.assertEqual("Cari", queue.enqueued[0]["bot_name"])
             self.assertIn(
                 "Profesional, atenta, servicial, amigable y algo novata.",
                 queue.enqueued[0]["message"],
