@@ -17,7 +17,11 @@ from bot_ia.interfaces.order_support import (
     OrderConfirmation,
     OrderStore,
 )
-from bot_ia.interfaces.telegram import TelegramOutbound, TelegramPoller
+from bot_ia.interfaces.telegram import (
+    TelegramInputError,
+    TelegramOutbound,
+    TelegramPoller,
+)
 from bot_ia.interfaces.telegram_event_ledger import (
     TelegramEventLedger,
     TelegramEventLedgerError,
@@ -322,12 +326,9 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
 
             self.assertEqual(1, sum(charged for _, charged in results))
             self.assertEqual(65, CafeWalletStore(root).balance(order.user_id))
-            self.assertEqual(
-                "CONFIRMED",
-                OrderStore(root).get(order.order_id) is not None
-                and "CONFIRMED"
-                or "MISSING",
-            )
+            reopened = OrderStore(root)
+            self.assertEqual(order.order_id, reopened.get(order.order_id).order_id)
+
 
     def test_cancel_is_durable_and_cannot_be_reconfirmed(self):
         with TemporaryDirectory() as temporary:
@@ -556,6 +557,53 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
             self.assertEqual(3, statuses.count("ALREADY_RESOLVED"))
             self.assertEqual(100, CafeWalletStore(root).balance(order.user_id))
 
+    def test_telegram_order_callback_uses_order_id_and_enforces_ownership(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wallet = CafeWalletStore(root)
+            wallet.credit("user-1", 50)
+            order_store = OrderStore(root)
+            order = _build_order()
+            order_store.create_pending(order)
+
+            adapter = TelegramPoller.__new__(TelegramPoller)
+            _ = adapter
+
+            from bot_ia.interfaces.telegram import TelegramAdapter
+
+            telegram_adapter = TelegramAdapter.__new__(TelegramAdapter)
+            telegram_adapter._order_store = order_store
+            telegram_adapter._wallet_store = wallet
+            telegram_adapter._pending_orders = {}
+            telegram_adapter._last_orders = {}
+
+            update = {
+                "callback_query": {
+                    "from": {"id": "user-1"},
+                    "message": {
+                        "chat": {"id": "chat-1"},
+                    },
+                    "data": f"order:confirm:{order.order_id}",
+                }
+            }
+            outbound = telegram_adapter.handle_callback(update)
+            self.assertIn(order.order_id, outbound.text)
+            self.assertEqual(65, wallet.balance(order.user_id))
+            self.assertEqual(order, order_store.get(order.order_id))
+
+            unauthorized = {
+                "callback_query": {
+                    "from": {"id": "other-user"},
+                    "message": {
+                        "chat": {"id": "chat-1"},
+                    },
+                    "data": f"order:confirm:{order.order_id}",
+                }
+            }
+            with self.assertRaises(TelegramInputError):
+                telegram_adapter.handle_callback(unauthorized)
+            self.assertEqual(65, wallet.balance(order.user_id))
+
     def test_event_replay_after_economic_commit_does_not_double_charge(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -610,13 +658,9 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
             self.assertEqual(78, poller.offset)
             self.assertEqual(65, wallet.balance("user-1"))
             self.assertEqual(2, len(client.sent))
-            self.assertEqual(
-                "CONFIRMED",
-                OrderStore(root).get(order.order_id) is not None
-                and OrderStore(root).get(order.order_id).order_id == order.order_id
-                and "CONFIRMED"
-                or "MISSING",
-            )
+            reopened = OrderStore(root)
+            self.assertEqual(order.order_id, reopened.get(order.order_id).order_id)
+
 
 
 class _NullRegistry:
