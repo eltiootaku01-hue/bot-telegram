@@ -32,6 +32,14 @@ def test_sunna_is_canonical_and_contains_no_developmental_details() -> None:
     assert "cabello blanco" not in all_text
 
 
+def test_sunna_personality_provenance_covers_all_populated_sections() -> None:
+    assert SUNNA.personality.provenance.source_id == "Se ha pegado el markdown(9).md"
+    assert SUNNA.personality.provenance.source_section == (
+        "22-27. Personalidad inicial / virtudes / defectos / mayor miedo"
+    )
+    assert SUNNA.personality.provenance.canonical_status is CanonicalStatus.CANON
+
+
 def test_non_canon_character_data_is_rejected_before_runtime() -> None:
     developmental = CanonProvenance(
         source_id="test",
