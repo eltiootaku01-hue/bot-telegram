@@ -30,6 +30,7 @@ from bot_ia.interfaces.telegram_event_ledger import (
 from bot_ia.persistence.economy import (
     APPLICATION_ID,
     EconomyDatabase,
+    EconomyPersistenceError,
 )
 
 
@@ -38,6 +39,7 @@ def _build_order(
     order_id: str = "ORD-ABCDEF1234",
     user_id: str = "user-1",
     cost: int = 35,
+    summary: str = "pedido de prueba",
 ) -> OrderConfirmation:
     return OrderConfirmation(
         order_id=order_id,
@@ -46,7 +48,7 @@ def _build_order(
         destination="🎴 Carta TCG para el Pool",
         rarity="R",
         cost=cost,
-        summary="pedido de prueba",
+        summary=summary,
         resolution="L",
         render_style="Classic Anime",
         prompt_en="test prompt",
@@ -199,7 +201,6 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
             outbound = adapter.handle_callback(update)
             pending = OrderStore(root).get_pending("user-1")
             self.assertIsNotNone(pending)
-            self.assertIn(pending.order_id, outbound.text)
 
             payload = outbound.payload()
             buttons = payload["reply_markup"]["inline_keyboard"][0]
@@ -221,7 +222,19 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
             restarted._last_orders = {}
             recovered = restarted.handle_callback(update)
 
-            self.assertIn(pending.order_id, recovered.text)
+            recovered_payload = recovered.payload()
+            recovered_buttons = recovered_payload["reply_markup"]["inline_keyboard"][0]
+            recovered_callback_data = [
+                button["callback_data"] for button in recovered_buttons
+            ]
+            self.assertIn(
+                f"order:confirm:{pending.order_id}",
+                recovered_callback_data,
+            )
+            self.assertIn(
+                f"order:cancel:{pending.order_id}",
+                recovered_callback_data,
+            )
             self.assertEqual(
                 pending.order_id,
                 restarted._pending_orders["user-1"].order_id,
@@ -366,13 +379,9 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
 
             self.assertEqual(1, sum(result.charged for result in results))
             self.assertEqual(65, wallet.balance(order.user_id))
-            self.assertEqual(
-                "CONFIRMED",
-                OrderStore(root).confirm_order(
-                    order.order_id,
-                    order.user_id,
-                    wallet_store=wallet,
-                ).outcome,
+            self.assertCountEqual(
+                ["CONFIRMED", "ALREADY_CONFIRMED"],
+                [result.outcome for result in results],
             )
 
     def test_two_processes_confirm_same_order_with_one_debit(self):
