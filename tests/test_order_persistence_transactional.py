@@ -566,9 +566,6 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
             order = _build_order()
             order_store.create_pending(order)
 
-            adapter = TelegramPoller.__new__(TelegramPoller)
-            _ = adapter
-
             from bot_ia.interfaces.telegram import TelegramAdapter
 
             telegram_adapter = TelegramAdapter.__new__(TelegramAdapter)
