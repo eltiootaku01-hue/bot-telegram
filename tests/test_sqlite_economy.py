@@ -240,7 +240,7 @@ class SQLiteEconomyTests(unittest.TestCase):
             wallet = CafeWalletStore(root)
             order_store = OrderStore(root)
             order = OrderConfirmation(
-                "ORD-REFUND1234",
+                "ORD-ABCD123456",
                 "refund-user",
                 "Carta TCG",
                 "🎴 Carta TCG para el Pool",
