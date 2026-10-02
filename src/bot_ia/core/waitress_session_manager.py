@@ -17,6 +17,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from bot_ia.core.mama_mia_supervisor import MamaMiaSupervisor
 from bot_ia.core.task_engine import ResponseDisposition, TaskEngine, TaskState
 from bot_ia.core.task_scheduler import TaskRoute, TaskScheduler, WebChatTaskExecutor
+from bot_ia.characters.projection import (
+    project_character_to_waitress_profile,
+    resolve_character_for_waitress,
+)
 from bot_ia.providers.prompt_builder import (
     SupervisorDirective,
     TavernSessionType,
@@ -792,12 +796,21 @@ class WaitressSessionManager:
         finally:
             connection.close()
 
-        profile = WaitressPromptProfile(
-            waitress_id=session.waitress_id,
-            display_name=str(waitress["display_name"]),
-            role=str(waitress["role"]),
-            personality_prompt=str(waitress["personality_prompt"]),
-        )
+        character = resolve_character_for_waitress(session.waitress_id)
+        if character is not None:
+            profile = project_character_to_waitress_profile(
+                character,
+                waitress_id=session.waitress_id,
+                display_name=str(waitress["display_name"]),
+                role=str(waitress["role"]),
+            )
+        else:
+            profile = WaitressPromptProfile(
+                waitress_id=session.waitress_id,
+                display_name=str(waitress["display_name"]),
+                role=str(waitress["role"]),
+                personality_prompt=str(waitress["personality_prompt"]),
+            )
         messages = build_chat_messages(
             profile,
             session_type=session.session_type,
