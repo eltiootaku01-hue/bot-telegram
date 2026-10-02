@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from dataclasses import asdict
 import json
 from pathlib import Path
 import sqlite3
@@ -399,9 +400,7 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
             legacy = root / "config" / "orders.json"
             legacy.parent.mkdir(parents=True)
             legacy.write_text(
-                json.dumps([{
-                    **order.__dict__,
-                }], ensure_ascii=False),
+                json.dumps([asdict(order)], ensure_ascii=False),
                 encoding="utf-8",
             )
 
@@ -478,10 +477,7 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
                 store.migrate_legacy_json()
 
             self.assertIsNone(store.get(first.order_id))
-            self.assertEqual(
-                "CANCELLED",
-                store.db.transaction().__enter__() if False else "CANCELLED",
-            )
+            self.assertEqual(existing, store.get(existing.order_id))
 
     def test_complaint_after_restart_uses_confirmed_order_cost(self):
         with TemporaryDirectory() as temporary:
@@ -614,10 +610,10 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
             self.assertEqual(78, poller.offset)
             self.assertEqual(65, wallet.balance("user-1"))
             self.assertEqual(2, len(client.sent))
-            self.assertGreaterEqual(first.errors if hasattr(first, "errors") else 0, 0)
             self.assertEqual(
                 "CONFIRMED",
                 OrderStore(root).get(order.order_id) is not None
+                and OrderStore(root).get(order.order_id).order_id == order.order_id
                 and "CONFIRMED"
                 or "MISSING",
             )
