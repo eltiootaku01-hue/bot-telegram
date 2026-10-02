@@ -53,6 +53,12 @@ class ComplaintRecord:
 class PendingOrderExistsError(ValueError):
     """El usuario ya tiene un pedido PENDING y no se debe reemplazar."""
 
+    def __init__(self, order: OrderConfirmation) -> None:
+        self.order = order
+        super().__init__(
+            f"El usuario ya tiene un pedido pendiente: {order.order_id}"
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class OrderConfirmResult:
@@ -185,10 +191,7 @@ class OrderStore:
             ).fetchone()
             if pending is not None:
                 existing_order = self._from_row(pending)[0]
-                raise PendingOrderExistsError(
-                    f"El usuario ya tiene un pedido pendiente: "
-                    f"{existing_order.order_id}"
-                )
+                raise PendingOrderExistsError(existing_order)
 
             try:
                 connection.execute(
