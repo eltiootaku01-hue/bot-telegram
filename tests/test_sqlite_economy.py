@@ -71,8 +71,10 @@ class SQLiteEconomyTests(unittest.TestCase):
 
             self.assertEqual("wal", str(mode).lower())
             self.assertNotEqual(0, application_id)
-            self.assertEqual(1, version)
-            self.assertTrue({"wallet", "vip", "complaints", "schema_meta"} <= tables)
+            self.assertEqual(2, version)
+            self.assertTrue(
+                {"wallet", "vip", "complaints", "orders", "schema_meta"} <= tables
+            )
 
     def test_corrupt_database_fails_closed(self):
         with TemporaryDirectory() as temporary:
