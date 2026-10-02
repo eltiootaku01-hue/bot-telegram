@@ -13,6 +13,12 @@ class CanonicalStatus(str, Enum):
     DISCARDED_REPLACED = "DISCARDED_REPLACED"
     UNKNOWN = "UNKNOWN"
 
+
+class RelationshipType(str, Enum):
+    ACCEPTANCE = "ACCEPTANCE"
+    UNDERSTANDING = "UNDERSTANDING"
+    SHARED_FEAR = "SHARED_FEAR"
+
     @property
     def runtime_eligible(self) -> bool:
         return self is CanonicalStatus.CANON
@@ -83,12 +89,13 @@ class Personality:
 @dataclass(frozen=True, slots=True)
 class CharacterRelationship:
     target_character_id: str
-    documented_relation: str
+    relationship_type: RelationshipType
     provenance: CanonProvenance
 
     def __post_init__(self) -> None:
         _require_text(self.target_character_id, "relationship target_character_id")
-        _require_text(self.documented_relation, "documented_relation")
+        if not isinstance(self.relationship_type, RelationshipType):
+            raise ValueError("relationship_type must be a controlled canonical value")
         self.provenance.require_runtime()
 
 
