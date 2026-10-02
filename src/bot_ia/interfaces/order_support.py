@@ -200,6 +200,7 @@ class OrderStore:
                 existing_order = self._from_row(pending)[0]
                 raise PendingOrderExistsError(existing_order)
 
+            created_at = datetime.now(timezone.utc).isoformat()
             try:
                 connection.execute(
                     """
@@ -220,7 +221,7 @@ class OrderStore:
                         order.resolution,
                         order.render_style,
                         order.prompt_en,
-                        (created_at := datetime.now(timezone.utc).isoformat()),
+                        created_at,
                         created_at,
                     ),
                 )
