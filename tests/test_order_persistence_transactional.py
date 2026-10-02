@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from bot_ia.interfaces.cafe_economy import CafeWalletStore
+from bot_ia.interfaces.cafe_orders import BebidaOrderFlow
 from bot_ia.interfaces.order_support import (
     ComplaintStore,
     OrderConfirmation,
@@ -168,6 +169,64 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
             self.assertIn("orders", tables)
             self.assertIn("ux_orders_one_pending_user", indexes)
 
+    def test_telegram_final_selection_persists_pending_before_confirmation(self):
+        from bot_ia.interfaces.telegram import TelegramAdapter
+
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            flow = BebidaOrderFlow()
+            flow.start("user-1")
+            flow.choose("user-1", "exposure", "SFW")
+            flow.choose("user-1", "boldness", "Suave")
+            flow.choose("user-1", "product_type", "Carta TCG")
+            flow.choose("user-1", "resolution", "L")
+            flow.choose("user-1", "render_style", "Classic Anime")
+
+            adapter = TelegramAdapter.__new__(TelegramAdapter)
+            adapter._bebida_flow = flow
+            adapter._wallet_store = CafeWalletStore(root)
+            adapter._order_store = OrderStore(root)
+            adapter._pending_orders = {}
+            adapter._last_orders = {}
+
+            update = {
+                "callback_query": {
+                    "from": {"id": "user-1"},
+                    "message": {"chat": {"id": "chat-1"}},
+                    "data": "bebida:render_style:Classic Anime",
+                }
+            }
+            outbound = adapter.handle_callback(update)
+            pending = OrderStore(root).get_pending("user-1")
+            self.assertIsNotNone(pending)
+            self.assertIn(pending.order_id, outbound.text)
+
+            payload = outbound.payload()
+            buttons = payload["reply_markup"]["inline_keyboard"][0]
+            callback_data = [button["callback_data"] for button in buttons]
+            self.assertIn(
+                f"order:confirm:{pending.order_id}",
+                callback_data,
+            )
+            self.assertIn(
+                f"order:cancel:{pending.order_id}",
+                callback_data,
+            )
+
+            restarted = TelegramAdapter.__new__(TelegramAdapter)
+            restarted._bebida_flow = BebidaOrderFlow()
+            restarted._wallet_store = CafeWalletStore(root)
+            restarted._order_store = OrderStore(root)
+            restarted._pending_orders = {}
+            restarted._last_orders = {}
+            recovered = restarted.handle_callback(update)
+
+            self.assertIn(pending.order_id, recovered.text)
+            self.assertEqual(
+                pending.order_id,
+                restarted._pending_orders["user-1"].order_id,
+            )
+
     def test_pending_survives_restart_and_attachment_metadata_is_recoverable(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -248,6 +307,17 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
             self.assertEqual(100, wallet.balance(order.user_id))
             self.assertEqual(order, orders.get_pending(order.user_id))
             self.assertIsNone(orders.get_latest_confirmed(order.user_id))
+
+    def test_direct_save_cannot_create_unfunded_confirmed_order(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            store = OrderStore(root)
+            order = _build_order()
+
+            with self.assertRaises(EconomyPersistenceError):
+                store.save(order)
+
+            self.assertIsNone(store.get(order.order_id))
 
     def test_confirmed_replay_does_not_debit_again(self):
         with TemporaryDirectory() as temporary:
