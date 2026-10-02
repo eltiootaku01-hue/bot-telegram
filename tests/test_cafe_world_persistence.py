@@ -347,7 +347,7 @@ def test_foreign_key_is_enabled_for_every_store_connection(
     try:
         assert connection.execute(
             "PRAGMA foreign_keys"
-        ).fetchone() == (1,)
+        ).fetchone()[0] == 1
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
                 """
