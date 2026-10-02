@@ -16,8 +16,10 @@ jobs:
       fail-fast: false
       matrix:
         candidate:
-          - tests/test_cross_route_physical_resource_exclusivity.py
-          - tests/test_physical_lifecycle_reconciliation.py
+          - id: cross-route
+            path: tests/test_cross_route_physical_resource_exclusivity.py
+          - id: lifecycle
+            path: tests/test_physical_lifecycle_reconciliation.py
     env:
       PYTHONPATH: src
       QT_QPA_PLATFORM: offscreen
@@ -71,7 +73,7 @@ jobs:
             log="artifacts/candidate-$run.log"
             echo "===== CANDIDATE $run =====" | tee "$log"
             python -m pytest -q -vv \
-              "${{ matrix.candidate }}" \
+              "${{ matrix.candidate.path }}" \
               "$target" >>"$log" 2>&1
             code=$?
             echo "PROCESS_EXIT_CODE=$code" | tee -a "$log"
@@ -81,6 +83,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: 2f-8t-k-${{ matrix.candidate }}
+          name: 2f-8t-k-${{ matrix.candidate.id }}
           path: artifacts/
           if-no-files-found: error
