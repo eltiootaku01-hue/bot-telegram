@@ -202,9 +202,8 @@ class OrderPersistenceTransactionalTests(unittest.TestCase):
             pending = OrderStore(root).get_pending("user-1")
             self.assertIsNotNone(pending)
 
-            payload = outbound.payload()
-            buttons = payload["reply_markup"]["inline_keyboard"][0]
-            callback_data = [button["callback_data"] for button in buttons]
+            buttons = outbound.keyboard[0][0]
+            callback_data = [button[1] for button in buttons]
             self.assertIn(
                 f"order:confirm:{pending.order_id}",
                 callback_data,
