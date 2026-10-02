@@ -13,15 +13,15 @@ class CanonicalStatus(str, Enum):
     DISCARDED_REPLACED = "DISCARDED_REPLACED"
     UNKNOWN = "UNKNOWN"
 
+    @property
+    def runtime_eligible(self) -> bool:
+        return self is CanonicalStatus.CANON
+
 
 class RelationshipType(str, Enum):
     ACCEPTANCE = "ACCEPTANCE"
     UNDERSTANDING = "UNDERSTANDING"
     SHARED_FEAR = "SHARED_FEAR"
-
-    @property
-    def runtime_eligible(self) -> bool:
-        return self is CanonicalStatus.CANON
 
 
 @dataclass(frozen=True, slots=True)
