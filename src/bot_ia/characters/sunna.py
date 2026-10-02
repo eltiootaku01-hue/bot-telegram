@@ -8,6 +8,7 @@ Only facts explicitly classified as CANON by the audited source are included.
 from .models import (
     CanonicalStatus,
     CanonProvenance,
+    RelationshipType,
     Character,
     CharacterRelationship,
     Evolution,
@@ -75,7 +76,6 @@ SUNNA = Character(
         values=(
             "lealtad",
             "pertenencia",
-            "protección",
         ),
         fears=(
             "perder a Cari y sus amigas",
@@ -109,17 +109,17 @@ SUNNA = Character(
     relationships=(
         CharacterRelationship(
             target_character_id="cari",
-            documented_relation="Cari la trata como persona y representa para Sunna una fuente de aceptación y pertenencia.",
+            relationship_type=RelationshipType.ACCEPTANCE,
             provenance=_CANON_9_RELATIONSHIPS,
         ),
         CharacterRelationship(
             target_character_id="cami",
-            documented_relation="Cami intenta comprenderla; su vínculo gira alrededor de aprender que comprender no implica controlar y que Sunna necesita seguridad.",
+            relationship_type=RelationshipType.UNDERSTANDING,
             provenance=_CANON_9_RELATIONSHIPS,
         ),
         CharacterRelationship(
             target_character_id="chie",
-            documented_relation="Comparten el miedo de formas distintas y su vínculo refleja maneras diferentes de superar heridas.",
+            relationship_type=RelationshipType.SHARED_FEAR,
             provenance=_CANON_9_RELATIONSHIPS,
         ),
     ),
