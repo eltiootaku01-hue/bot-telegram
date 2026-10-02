@@ -20,6 +20,8 @@ jobs:
             path: tests/test_cross_route_physical_resource_exclusivity.py
           - id: lifecycle
             path: tests/test_physical_lifecycle_reconciliation.py
+          - id: services-core
+            path: tests/test_services_web_queue.py
     env:
       PYTHONPATH: src
       QT_QPA_PLATFORM: offscreen
