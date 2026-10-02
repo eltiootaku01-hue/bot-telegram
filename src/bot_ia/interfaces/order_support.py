@@ -8,12 +8,13 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import secrets
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from bot_ia.paths import ECONOMY_DB_PATH, PROJECT_ROOT
 from bot_ia.persistence.economy import EconomyDatabase, EconomyPersistenceError
 from .cafe_economy import CafeWalletStore
-from gui.waifu_registry import WaifuRegistry
+if TYPE_CHECKING:
+    from gui.waifu_registry import WaifuRegistry
 
 ComplaintAction = Literal["refund", "convert_image", "reject"]
 
