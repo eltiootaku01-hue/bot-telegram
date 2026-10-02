@@ -43,7 +43,7 @@ from .order_support import (
 from .inline_router import InlineRedirectHandler
 from .auto_moderation import moderate
 from .cafe_immersion import analyze_telegram_comment
-from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, purchase_bebida_order, quote_bebida_order
+from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, quote_bebida_order
 from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue, supervise_admin_publication
 from .superadmin import is_superadmin
 from .cafe_vip import VipStore, donation_keyboard, vip_policy_text, vip_status_text, validate_donation_event
@@ -1084,7 +1084,7 @@ class TelegramAdapter:
                     callback.conversation_id,
                     "❌ Saldo insuficiente al confirmar. No se descontaron puntos.",
                     "bebida",
-                    (((("✅ Confirmar", f"order:confirm:{result.order.order_id}"),),),),
+                    ((("✅ Confirmar", f"order:confirm:{result.order.order_id}"),),),
                 )
 
             if result.outcome == "CANCELLED":
@@ -1739,14 +1739,14 @@ class TelegramPoller:
                                 update,
                             )
                         except TelegramEventLedgerError:
-                        if callback_key:
-                            self._callback_mutex.release(callback_key)
-                        errors += 1
-                        self._logger(
-                            "telegram event ledger unavailable; offset preserved"
-                        )
-                        self._sleeper(self._config.retry_delay_seconds)
-                        break
+                            if callback_key:
+                                self._callback_mutex.release(callback_key)
+                            errors += 1
+                            self._logger(
+                                "telegram event ledger unavailable; offset preserved"
+                            )
+                            self._sleeper(self._config.retry_delay_seconds)
+                            break
 
                     if already_seen:
                         # Non-order events keep the existing claim-before-effect
