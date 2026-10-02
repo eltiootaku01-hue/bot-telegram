@@ -10,6 +10,7 @@ from bot_ia.characters import (
     CanonProvenance,
     Character,
     CharacterRelationship,
+    RelationshipType,
     Identity,
     Personality,
     SUNNA,
@@ -72,6 +73,11 @@ def test_character_is_immutable() -> None:
 def test_relationships_are_character_to_character() -> None:
     targets = {item.target_character_id for item in SUNNA.relationships}
     assert targets == {"cari", "cami", "chie"}
+    assert {item.relationship_type for item in SUNNA.relationships} == {
+        RelationshipType.ACCEPTANCE,
+        RelationshipType.UNDERSTANDING,
+        RelationshipType.SHARED_FEAR,
+    }
     assert all(item.provenance.canonical_status is CanonicalStatus.CANON for item in SUNNA.relationships)
 
 
