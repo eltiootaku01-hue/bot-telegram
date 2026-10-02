@@ -1497,21 +1497,11 @@ class TelegramPoller:
 
     def _claim_event(self, update_id: int, update: dict[str, object]) -> tuple[bool, bool]:
         event_ids = self._event_ids(update_id, update)
-        for event_type, event_id in event_ids:
-            try:
-                if self._event_ledger.seen(event_type, event_id):
-                    return False, True
-            except TelegramEventLedgerError:
-                raise
-
-        for event_type, event_id in event_ids:
-            if not self._event_ledger.claim(
-                event_type,
-                event_id,
-                update_id=update_id,
-            ):
-                return False, True
-        return True, False
+        claimed = self._event_ledger.claim_events(
+            event_ids,
+            update_id=update_id,
+        )
+        return claimed, not claimed
 
     def _mark_events_completed(
         self,
