@@ -14,7 +14,7 @@ from bot_ia.interfaces.cafe_economy import (
     draw_gacha,
 )
 from bot_ia.interfaces.cafe_vip import VipStore
-from bot_ia.interfaces.order_support import ComplaintStore
+from bot_ia.interfaces.order_support import ComplaintStore, OrderConfirmation, OrderStore
 from bot_ia.persistence.economy import EconomyPersistenceError
 
 
@@ -238,12 +238,34 @@ class SQLiteEconomyTests(unittest.TestCase):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
             wallet = CafeWalletStore(root)
+            order_store = OrderStore(root)
+            order = OrderConfirmation(
+                "ORD-REFUND1234",
+                "refund-user",
+                "Carta TCG",
+                "🎴 Carta TCG para el Pool",
+                "R",
+                35,
+                "pedido de reembolso",
+                "L",
+                "Classic Anime",
+                "prompt",
+            )
+            order_store.create_pending(order)
+            order_store.confirm_order(
+                order.order_id,
+                order.user_id,
+                wallet_store=wallet,
+            )
+
             complaint_store = ComplaintStore(root)
             complaint = complaint_store.create(
                 "refund-user",
                 "chat",
                 "reembolso",
-                points_paid=35,
+                order_id=order.order_id,
+                product_type=order.product_type,
+                points_paid=order.cost,
             )
             registry = _NullRegistry()
 
@@ -264,7 +286,7 @@ class SQLiteEconomyTests(unittest.TestCase):
 
             self.assertEqual(1, statuses.count("REFUNDED"))
             self.assertEqual(3, statuses.count("ALREADY_RESOLVED"))
-            self.assertEqual(85, wallet.balance("refund-user"))
+            self.assertEqual(50, wallet.balance("refund-user"))
 
 
 if __name__ == "__main__":
