@@ -1,0 +1,145 @@
+# -*- coding: utf-8 -*-
+name: 2F-8T-H QWebEngine shadow delta
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  shadow-harness:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout diagnostic branch
+        uses: actions/checkout@v6
+        with:
+          ref: diagnostic/2f-8t-qwebengine-clean
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14.7"
+
+      - name: Install historical Linux Qt runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y             libegl1             libgl1             libglvnd0             libx11-xcb1             libxcb1             libxcb-cursor0             libxkbcommon0             libxkbcommon-x11-0
+
+      - name: Install exact QWebEngine dependency
+        run: |
+          python -m pip install --disable-pip-version-check "PySide6==6.11.2"
+
+      - name: Capture context
+        run: |
+          mkdir -p artifacts
+          {
+            echo "=== RUNNER ==="
+            uname -a
+            cat /etc/os-release
+            echo "=== PYTHON ==="
+            python --version
+            python -c "import PySide6; from PySide6.QtCore import qVersion; from PySide6.QtWebEngineCore import qWebEngineChromiumVersion; print('PySide6='+PySide6.__version__); print('Qt='+qVersion()); print('QtWebEngine/Chromium='+qWebEngineChromiumVersion())"
+            echo "=== RELEVANT ENVIRONMENT ==="
+            env | grep -E '^(QT_QPA_PLATFORM|QTWEBENGINE_CHROMIUM_FLAGS|QTWEBENGINEPROCESS_PATH|QT_LOGGING_RULES|QT_DEBUG_PLUGINS|DISPLAY|WAYLAND_DISPLAY|XDG_SESSION_TYPE)=' || true
+          } | tee artifacts/context.txt
+
+      - name: Run incremental stages five times
+        shell: bash
+        run: |
+          set +e
+          for stage in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+            for run in 1 2 3 4 5; do
+              mkdir -p "artifacts/stage-${stage}"
+              log="artifacts/stage-${stage}/run-${run}.log"
+              echo "===== STAGE ${stage} RUN ${run} =====" | tee "${log}"
+              if [ "${stage}" -eq 11 ]; then
+                env -u QT_QPA_PLATFORM                   -u QTWEBENGINE_CHROMIUM_FLAGS                   -u QTWEBENGINEPROCESS_PATH                   -u QT_LOGGING_RULES                   -u QT_DEBUG_PLUGINS                   -u DISPLAY                   -u WAYLAND_DISPLAY                   -u XDG_SESSION_TYPE                   python diagnostics/qwebengine_shadow_harness.py --stage "${stage}"                   >>"${log}" 2>&1
+              else
+                env -u QT_QPA_PLATFORM                   -u QTWEBENGINE_CHROMIUM_FLAGS                   -u QTWEBENGINEPROCESS_PATH                   -u QT_LOGGING_RULES                   -u QT_DEBUG_PLUGINS                   -u DISPLAY                   -u WAYLAND_DISPLAY                   -u XDG_SESSION_TYPE                   QT_QPA_PLATFORM="offscreen"                   QTWEBENGINE_CHROMIUM_FLAGS="--headless --disable-gpu --disable-software-rasterizer"                   python diagnostics/qwebengine_shadow_harness.py --stage "${stage}"                   >>"${log}" 2>&1
+              fi
+              code=$?
+              echo "PROCESS_EXIT_CODE=${code}" >>"${log}"
+              echo "stage=${stage} run=${run} exit=${code}"
+            done
+          done
+
+      - name: Build delta summary
+        if: always()
+        shell: python
+        run: |
+          from pathlib import Path
+
+          stage_names = {
+              0: "minimal probe control",
+              1: "+ QWebChannel import",
+              2: "+ QWebChannel(view.page())",
+              3: "+ CapturedBridge QObject",
+              4: "+ registerObject",
+              5: "+ setWebChannel",
+              6: "+ bridge signal connection",
+              7: "+ harness HTML",
+              8: "+ harness URL",
+              9: "+ production services.web_queue import",
+              10: "+ exact harness wait_until",
+              11: "+ exact harness env timing",
+              12: "+ QEventLoop import",
+              13: "+ preexisting QApplication",
+              14: "+ prior QWebEngineView lifecycle",
+              15: "+ prior QWebChannel lifecycle",
+          }
+
+          summary_lines = []
+          first_divergence = None
+
+          for stage in range(16):
+              results = []
+              for run in range(1, 6):
+                  path = Path(f"artifacts/stage-{stage}/run-{run}.log")
+                  text = path.read_text(errors="replace")
+                  result_lines = [
+                      line.split("=", 1)[1]
+                      for line in text.splitlines()
+                      if line.startswith("RESULT=")
+                  ]
+                  code_lines = [
+                      line.split("=", 1)[1]
+                      for line in text.splitlines()
+                      if line.startswith("PROCESS_EXIT_CODE=")
+                  ]
+                  results.append(
+                      f"{result_lines[-1] if result_lines else 'MISSING'}/"
+                      f"{code_lines[-1] if code_lines else 'MISSING'}"
+                  )
+
+              pass_count = sum(1 for item in results if item.startswith("PASS/0"))
+              fail_count = sum(1 for item in results if item.startswith("FAIL/1"))
+              timeout_count = sum(1 for item in results if item.startswith("TIMEOUT/"))
+              summary_lines.append(
+                  f"STAGE_{stage}: {stage_names[stage]} | "
+                  f"PASS={pass_count}/5 FAIL={fail_count}/5 "
+                  f"TIMEOUT={timeout_count}/5 | RESULTS={results}"
+              )
+
+              if first_divergence is None and pass_count < 5:
+                  first_divergence = stage
+
+          summary_lines.append(
+              f"FIRST_DIVERGENCE={first_divergence if first_divergence is not None else 'NONE'}"
+          )
+          Path("artifacts/summary.txt").write_text(
+              "\n".join(summary_lines) + "\n",
+              encoding="utf-8",
+          )
+          print("\n".join(summary_lines))
+
+      - name: Upload shadow evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 2f-8t-h-shadow-harness
+          path: artifacts/
+          if-no-files-found: error
