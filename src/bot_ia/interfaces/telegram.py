@@ -1766,7 +1766,7 @@ class TelegramPoller:
                         skipped += 1
                         continue
 
-                    if not claimed:
+                    if not claimed and not defer_event_claim:
                         if callback_key:
                             self._callback_mutex.release(callback_key)
                         errors += 1
