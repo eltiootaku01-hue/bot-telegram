@@ -1891,13 +1891,35 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             registry.save([])
             store = ComplaintStore(root)
 
+            order = OrderConfirmation(
+                order_id="ORD-1234AB5678",
+                user_id="u-refund",
+                product_type="Carta TCG",
+                destination="🎴 Carta TCG para el Pool",
+                rarity="R",
+                cost=35,
+                summary="La carta confirmada para reembolso.",
+                resolution="L",
+                render_style="Classic Anime",
+                prompt_en="test prompt",
+            )
+            store = OrderStore(root)
+            wallet.credit("u-refund", order.cost)
+            store.create_pending(order)
+            confirmed = store.confirm_order(
+                order.order_id,
+                order.user_id,
+                wallet_store=wallet,
+            )
+            self.assertEqual("CONFIRMED", confirmed.outcome)
+
             complaint = store.create(
                 "u-refund",
                 "chat-1",
                 "La carta no era la que confirmé.",
-                order_id="ORD-TEST",
-                product_type="Carta TCG",
-                points_paid=35,
+                order_id=order.order_id,
+                product_type=order.product_type,
+                points_paid=order.cost,
             )
             self.assertEqual("OPEN", complaint.status)
             self.assertEqual("ORD-TEST", store.get(complaint.complaint_id).order_id)
@@ -2011,8 +2033,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
         for token in (
             'command == "/queja"',
             "OrderConfirmation",
-            'callback.data == "order:confirm"',
-            'callback.data == "order:cancel"',
+            "order:confirm:",
+            "order:cancel:",
             "complaint:refund:",
             "complaint:convert_image:",
             "complaint:reject:",
@@ -2043,6 +2065,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             build_bebida_prompt,
             build_bebida_summary,
         )
+        from bot_ia.interfaces.cafe_economy import CafeWalletStore
         from bot_ia.interfaces.order_support import OrderConfirmation, OrderStore
 
         self.assertEqual("1104x1824", RESOLUTIONS["XL"])
@@ -2085,8 +2108,28 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
 
         with TemporaryDirectory() as tmp:
             order_store = OrderStore(Path(tmp))
-            order_store.save(confirmation)
-            restored = order_store.get("ORD-IMAGE-1")
+            wallet = CafeWalletStore(Path(tmp))
+            wallet.credit(confirmation.user_id, confirmation.cost)
+            confirmation = OrderConfirmation(
+                order_id="ORD-1A2B3C4D5E",
+                user_id=confirmation.user_id,
+                product_type=confirmation.product_type,
+                destination=confirmation.destination,
+                rarity=confirmation.rarity,
+                cost=confirmation.cost,
+                summary=confirmation.summary,
+                resolution=confirmation.resolution,
+                render_style=confirmation.render_style,
+                prompt_en=confirmation.prompt_en,
+            )
+            order_store.create_pending(confirmation)
+            confirmed = order_store.confirm_order(
+                confirmation.order_id,
+                confirmation.user_id,
+                wallet_store=wallet,
+            )
+            self.assertEqual("CONFIRMED", confirmed.outcome)
+            restored = order_store.get(confirmation.order_id)
             self.assertIsNotNone(restored)
             self.assertEqual("XL", restored.resolution)
             self.assertEqual("Hyper Pop", restored.render_style)
