@@ -10,7 +10,7 @@ from typing import Iterator
 
 
 APPLICATION_ID = 0x424F5449  # "BOTI"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 BUSY_TIMEOUT_MS = 15_000
 
 
@@ -78,7 +78,7 @@ class EconomyDatabase:
                     raise EconomyPersistenceError(
                         "La base SQLite pertenece a otra aplicación."
                     )
-                if version not in {0, SCHEMA_VERSION}:
+                if version not in {0, 1, SCHEMA_VERSION}:
                     raise EconomyPersistenceError(
                         f"Versión SQLite no soportada: {version}"
                     )
@@ -136,6 +136,48 @@ class EconomyDatabase:
                 )
                 for statement in statements:
                     connection.execute(statement)
+
+                # Schema v2: orders becomes durable SQLite state shared with wallet.
+                # For an existing v1 database the CREATE statements below are
+                # the migration body; user_version advances only after all
+                # schema changes succeed inside this transaction.
+                connection.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS orders (
+                        order_id TEXT PRIMARY KEY,
+                        user_id TEXT NOT NULL,
+                        product_type TEXT NOT NULL,
+                        destination TEXT NOT NULL,
+                        rarity TEXT NOT NULL,
+                        cost INTEGER NOT NULL CHECK(cost > 0),
+                        summary TEXT NOT NULL,
+                        resolution TEXT NOT NULL,
+                        render_style TEXT NOT NULL,
+                        prompt_en TEXT NOT NULL,
+                        status TEXT NOT NULL
+                            CHECK(status IN ('PENDING', 'CONFIRMED', 'CANCELLED')),
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_orders_user_status_created
+                        ON orders(user_id, status, created_at)
+                    """
+                )
+                connection.execute(
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS ux_orders_one_pending_user
+                        ON orders(user_id)
+                        WHERE status = 'PENDING'
+                    """
+                )
+                if version < SCHEMA_VERSION:
+                    connection.execute(
+                        f"PRAGMA user_version={SCHEMA_VERSION}"
+                    )
         except EconomyPersistenceError:
             raise
         except (OSError, sqlite3.DatabaseError) as error:
