@@ -9,7 +9,7 @@ import unittest
 
 from bot_ia.core.task_engine import TaskState
 from bot_ia.core.waitress_session_manager import WaitressSessionManager
-from bot_ia.characters import SUNNA
+from bot_ia.characters import SUNNA, resolve_character_for_waitress
 
 
 class FakeSignal:
@@ -96,7 +96,7 @@ class SunnaOperationalBindingTests(unittest.TestCase):
             self.assertEqual("sunna", queue.enqueued[0]["bot_name"])
             self.assertIn("Identidad canónica: Sunna.", queue.enqueued[0]["message"])
             self.assertIn("extremadamente silenciosa", queue.enqueued[0]["message"])
-            self.assertIs(SUNNA, __import__("bot_ia.characters", fromlist=["SUNNA"]).SUNNA)
+            self.assertIs(SUNNA, resolve_character_for_waitress("sunna"))
             self.assertNotIn(
                 "Anfitriona competitiva, directa y atenta durante el turno.",
                 queue.enqueued[0]["message"],
