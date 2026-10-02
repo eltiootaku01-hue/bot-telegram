@@ -1889,7 +1889,7 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             wallet = CafeWalletStore(root)
             registry = WaifuRegistry(root)
             registry.save([])
-            store = ComplaintStore(root)
+            complaint_store = ComplaintStore(root)
 
             order = OrderConfirmation(
                 order_id="ORD-1234AB5678",
@@ -1903,17 +1903,17 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
                 render_style="Classic Anime",
                 prompt_en="test prompt",
             )
-            store = OrderStore(root)
+            order_store = OrderStore(root)
             wallet.credit("u-refund", order.cost)
-            store.create_pending(order)
-            confirmed = store.confirm_order(
+            order_store.create_pending(order)
+            confirmed = order_store.confirm_order(
                 order.order_id,
                 order.user_id,
                 wallet_store=wallet,
             )
             self.assertEqual("CONFIRMED", confirmed.outcome)
 
-            complaint = store.create(
+            complaint = complaint_store.create(
                 "u-refund",
                 "chat-1",
                 "La carta no era la que confirmé.",
@@ -1922,10 +1922,13 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
                 points_paid=order.cost,
             )
             self.assertEqual("OPEN", complaint.status)
-            self.assertEqual("ORD-TEST", store.get(complaint.complaint_id).order_id)
+            self.assertEqual(
+                order.order_id,
+                complaint_store.get(complaint.complaint_id).order_id,
+            )
 
             before = wallet.balance("u-refund")
-            resolved = store.resolve(
+            resolved = complaint_store.resolve(
                 complaint.complaint_id,
                 "refund",
                 wallet_store=wallet,
@@ -1940,15 +1943,15 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertIn('"balance": 85', raw_registry)
 
             with self.assertRaises(ValueError):
-                store.resolve(
+                complaint_store.resolve(
                     complaint.complaint_id,
                     "refund",
                     wallet_store=wallet,
                     registry=registry,
                 )
 
-            converted = store.create("u-refund", "chat-1", "Convertir por favor", points_paid=10)
-            converted_result = store.resolve(
+            converted = complaint_store.create("u-refund", "chat-1", "Convertir por favor", points_paid=10)
+            converted_result = complaint_store.resolve(
                 converted.complaint_id,
                 "convert_image",
                 wallet_store=wallet,
@@ -1957,8 +1960,8 @@ class CafeOtakuGuiContractTests(unittest.TestCase):
             self.assertEqual("CONVERTED_TO_IMAGE", converted_result.status)
             self.assertEqual(85, wallet.balance("u-refund"))
 
-            rejected = store.create("u-refund", "chat-1", "No corresponde", points_paid=10)
-            rejected_result = store.resolve(
+            rejected = complaint_store.create("u-refund", "chat-1", "No corresponde", points_paid=10)
+            rejected_result = complaint_store.resolve(
                 rejected.complaint_id,
                 "reject",
                 wallet_store=wallet,
