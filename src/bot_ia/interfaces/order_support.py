@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import secrets
+import re
 import sqlite3
 from typing import TYPE_CHECKING, Literal
 
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from gui.waifu_registry import WaifuRegistry
 
 ComplaintAction = Literal["refund", "convert_image", "reject"]
+ORDER_ID_PATTERN = re.compile(r"^ORD-[0-9A-F]{10}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +82,7 @@ class OrderStore:
             else self.root / "config" / "bot_ia_economy.sqlite3"
         )
         self.legacy_path = self.root / "config" / self.LEGACY_FILENAME
+        self.path = self.legacy_path
         self.db = EconomyDatabase(self.db_path)
 
     @staticmethod
@@ -166,6 +169,10 @@ class OrderStore:
             return self._from_row(row)[0] if row is not None else None
 
     def create_pending(self, order: OrderConfirmation) -> OrderConfirmation:
+        if not ORDER_ID_PATTERN.fullmatch(order.order_id):
+            raise ValueError("Formato de order_id inválido")
+        if order.cost <= 0:
+            raise ValueError("El coste del pedido debe ser positivo")
         with self.db.transaction(immediate=True) as connection:
             existing = self._get_from_connection(
                 connection,
@@ -213,8 +220,8 @@ class OrderStore:
                         order.resolution,
                         order.render_style,
                         order.prompt_en,
-                        datetime.now(timezone.utc).isoformat(),
-                        datetime.now(timezone.utc).isoformat(),
+                        (created_at := datetime.now(timezone.utc).isoformat()),
+                        created_at,
                     ),
                 )
             except sqlite3.IntegrityError as error:
@@ -414,9 +421,12 @@ class OrderStore:
                         "Registro heredado de pedido inválido"
                     ) from error
 
-                if order.cost <= 0:
+                if (
+                    not ORDER_ID_PATTERN.fullmatch(order.order_id)
+                    or order.cost <= 0
+                ):
                     raise EconomyPersistenceError(
-                        f"Coste heredado inválido para {order.order_id}"
+                        f"Identidad o coste heredado inválido para {order.order_id}"
                     )
 
                 existing = self._get_from_connection(
@@ -473,7 +483,6 @@ class ComplaintStore:
         self.legacy_path = self.root / "config" / self.LEGACY_FILENAME
         self.db = EconomyDatabase(self.path)
         self._wallet_store = CafeWalletStore(self.root)
-        self._order_store = OrderStore(self.root)
         self._migrate_legacy()
 
     def _migrate_legacy(self) -> None:
