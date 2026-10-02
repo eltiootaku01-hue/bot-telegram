@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path
 import secrets
+import re
+import sqlite3
 from typing import TYPE_CHECKING, Literal
 
 from bot_ia.paths import ECONOMY_DB_PATH, PROJECT_ROOT
@@ -17,6 +19,7 @@ if TYPE_CHECKING:
     from gui.waifu_registry import WaifuRegistry
 
 ComplaintAction = Literal["refund", "convert_image", "reject"]
+ORDER_ID_PATTERN = re.compile(r"^ORD-[0-9A-F]{10}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,60 +52,424 @@ class ComplaintRecord:
     created_at: str = ""
 
 
-class OrderStore:
-    """Registro persistente de pedidos confirmados; fuera del alcance SQLite de Fase 3."""
+class PendingOrderExistsError(ValueError):
+    """El usuario ya tiene un pedido PENDING y no se debe reemplazar."""
 
-    def __init__(self, root: Path) -> None:
-        self.path = Path(root) / "config" / "orders.json"
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        import threading
-        self._lock = threading.RLock()
-
-    def _load(self) -> list[dict[str, object]]:
-        try:
-            value = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return []
-        return value if isinstance(value, list) else []
-
-    def _save(self, items: list[dict[str, object]]) -> None:
-        temporary = self.path.with_suffix(".json.tmp")
-        temporary.write_text(
-            json.dumps(items, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
+    def __init__(self, order: OrderConfirmation) -> None:
+        self.order = order
+        super().__init__(
+            f"El usuario ya tiene un pedido pendiente: {order.order_id}"
         )
-        temporary.replace(self.path)
 
-    def save(self, order: OrderConfirmation) -> None:
-        with self._lock:
-            items = self._load()
-            items = [
-                item
-                for item in items
-                if str(item.get("order_id")) != order.order_id
-            ]
-            items.append(asdict(order))
-            self._save(items)
+
+@dataclass(frozen=True, slots=True)
+class OrderConfirmResult:
+    order: OrderConfirmation
+    outcome: Literal["CONFIRMED", "ALREADY_CONFIRMED", "INSUFFICIENT", "CANCELLED"]
+    charged: bool = False
+
+
+class OrderStore:
+    """Repositorio SQLite autoritativo para pedidos."""
+
+    LEGACY_FILENAME = "orders.json"
+
+    def __init__(self, root: Path | str) -> None:
+        self.root = Path(root).expanduser().resolve()
+        self.db_path = (
+            ECONOMY_DB_PATH
+            if self.root == PROJECT_ROOT
+            else self.root / "config" / "bot_ia_economy.sqlite3"
+        )
+        self.legacy_path = self.root / "config" / self.LEGACY_FILENAME
+        self.path = self.legacy_path
+        self.db = EconomyDatabase(self.db_path)
+
+    @staticmethod
+    def _from_row(
+        row: sqlite3.Row | tuple[object, ...],
+    ) -> tuple[OrderConfirmation, str, str, str]:
+        return (
+            OrderConfirmation(
+                order_id=str(row[0]),
+                user_id=str(row[1]),
+                product_type=str(row[2]),
+                destination=str(row[3]),
+                rarity=str(row[4]),
+                cost=int(row[5]),
+                summary=str(row[6]),
+                resolution=str(row[7]),
+                render_style=str(row[8]),
+                prompt_en=str(row[9]),
+            ),
+            str(row[10]),
+            str(row[11]),
+            str(row[12]),
+        )
+
+    @staticmethod
+    def _select_sql() -> str:
+        return """
+            SELECT order_id, user_id, product_type, destination, rarity,
+                   cost, summary, resolution, render_style, prompt_en,
+                   status, created_at, updated_at
+            FROM orders
+        """
+
+    @classmethod
+    def _get_from_connection(
+        cls,
+        connection: sqlite3.Connection,
+        order_id: str,
+    ) -> tuple[OrderConfirmation, str, str, str] | None:
+        row = connection.execute(
+            cls._select_sql() + " WHERE order_id = ?",
+            (str(order_id),),
+        ).fetchone()
+        return cls._from_row(row) if row is not None else None
+
+    @staticmethod
+    def _same_snapshot(
+        left: OrderConfirmation,
+        right: OrderConfirmation,
+    ) -> bool:
+        return left == right
 
     def get(self, order_id: str) -> OrderConfirmation | None:
-        with self._lock:
-            for item in self._load():
-                if str(item.get("order_id")) == str(order_id):
-                    return OrderConfirmation(
-                        order_id=str(item.get("order_id", "")),
-                        user_id=str(item.get("user_id", "")),
-                        product_type=str(item.get("product_type", "")),
-                        destination=str(item.get("destination", "")),
-                        rarity=str(item.get("rarity", "")),
-                        cost=max(0, int(item.get("cost", 0))),
-                        summary=str(item.get("summary", "")),
+        with self.db.transaction() as connection:
+            result = self._get_from_connection(connection, order_id)
+            return result[0] if result is not None else None
+
+    def get_pending(self, user_id: str) -> OrderConfirmation | None:
+        with self.db.transaction() as connection:
+            row = connection.execute(
+                self._select_sql()
+                + """
+                  WHERE user_id = ?
+                    AND status = 'PENDING'
+                  ORDER BY created_at DESC, rowid DESC
+                  LIMIT 1
+                  """,
+                (str(user_id),),
+            ).fetchone()
+            return self._from_row(row)[0] if row is not None else None
+
+    def get_latest_confirmed(self, user_id: str) -> OrderConfirmation | None:
+        with self.db.transaction() as connection:
+            row = connection.execute(
+                self._select_sql()
+                + """
+                  WHERE user_id = ?
+                    AND status = 'CONFIRMED'
+                  ORDER BY created_at DESC, rowid DESC
+                  LIMIT 1
+                  """,
+                (str(user_id),),
+            ).fetchone()
+            return self._from_row(row)[0] if row is not None else None
+
+    def create_pending(self, order: OrderConfirmation) -> OrderConfirmation:
+        if not ORDER_ID_PATTERN.fullmatch(order.order_id):
+            raise ValueError("Formato de order_id inválido")
+        if order.cost <= 0:
+            raise ValueError("El coste del pedido debe ser positivo")
+        with self.db.transaction(immediate=True) as connection:
+            existing = self._get_from_connection(
+                connection,
+                order.order_id,
+            )
+            if existing is not None:
+                existing_order, existing_status, _, _ = existing
+                if not self._same_snapshot(existing_order, order):
+                    raise EconomyPersistenceError(
+                        f"Conflicto de identidad para pedido {order.order_id}"
+                    )
+                return existing_order
+
+            pending = connection.execute(
+                self._select_sql()
+                + """
+                  WHERE user_id = ?
+                    AND status = 'PENDING'
+                  ORDER BY created_at DESC, rowid DESC
+                  LIMIT 1
+                  """,
+                (str(order.user_id),),
+            ).fetchone()
+            if pending is not None:
+                existing_order = self._from_row(pending)[0]
+                raise PendingOrderExistsError(existing_order)
+
+            created_at = datetime.now(timezone.utc).isoformat()
+            try:
+                connection.execute(
+                    """
+                    INSERT INTO orders(
+                        order_id, user_id, product_type, destination,
+                        rarity, cost, summary, resolution, render_style,
+                        prompt_en, status, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?)
+                    """,
+                    (
+                        order.order_id,
+                        order.user_id,
+                        order.product_type,
+                        order.destination,
+                        order.rarity,
+                        int(order.cost),
+                        order.summary,
+                        order.resolution,
+                        order.render_style,
+                        order.prompt_en,
+                        created_at,
+                        created_at,
+                    ),
+                )
+            except sqlite3.IntegrityError as error:
+                raise EconomyPersistenceError(
+                    f"No se pudo persistir el pedido PENDING {order.order_id}"
+                ) from error
+            return order
+
+    def confirm_order(
+        self,
+        order_id: str,
+        user_id: str,
+        *,
+        wallet_store: CafeWalletStore,
+    ) -> OrderConfirmResult:
+        if wallet_store.path != self.db_path:
+            raise EconomyPersistenceError(
+                "Wallet y OrderStore no apuntan a la misma base SQLite"
+            )
+
+        with self.db.transaction(immediate=True) as connection:
+            result = self._get_from_connection(connection, order_id)
+            if result is None:
+                raise ValueError(f"Pedido inexistente: {order_id}")
+
+            order, status, _, _ = result
+            if order.user_id != str(user_id):
+                raise PermissionError("El pedido no pertenece al usuario que confirma")
+
+            if status == "CONFIRMED":
+                return OrderConfirmResult(
+                    order,
+                    "ALREADY_CONFIRMED",
+                    False,
+                )
+            if status == "CANCELLED":
+                return OrderConfirmResult(
+                    order,
+                    "CANCELLED",
+                    False,
+                )
+            if status != "PENDING":
+                raise EconomyPersistenceError(
+                    f"Estado de pedido no soportado: {status}"
+                )
+
+            try:
+                wallet_store.debit_in_transaction(
+                    connection,
+                    order.user_id,
+                    order.cost,
+                )
+            except ValueError:
+                return OrderConfirmResult(
+                    order,
+                    "INSUFFICIENT",
+                    False,
+                )
+
+            cursor = connection.execute(
+                """
+                UPDATE orders
+                SET status = 'CONFIRMED',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ?
+                  AND status = 'PENDING'
+                """,
+                (order.order_id,),
+            )
+            if cursor.rowcount != 1:
+                raise EconomyPersistenceError(
+                    f"No se pudo confirmar el pedido {order.order_id}"
+                )
+
+            confirmed = self._get_from_connection(
+                connection,
+                order.order_id,
+            )
+            if confirmed is None or confirmed[1] != "CONFIRMED":
+                raise EconomyPersistenceError(
+                    f"No se pudo verificar la confirmación de {order.order_id}"
+                )
+            return OrderConfirmResult(
+                confirmed[0],
+                "CONFIRMED",
+                True,
+            )
+
+    def cancel_order(
+        self,
+        order_id: str,
+        user_id: str,
+    ) -> OrderConfirmResult:
+        with self.db.transaction(immediate=True) as connection:
+            result = self._get_from_connection(connection, order_id)
+            if result is None:
+                raise ValueError(f"Pedido inexistente: {order_id}")
+
+            order, status, _, _ = result
+            if order.user_id != str(user_id):
+                raise PermissionError("El pedido no pertenece al usuario que cancela")
+
+            if status == "CANCELLED":
+                return OrderConfirmResult(order, "CANCELLED", False)
+            if status == "CONFIRMED":
+                raise ValueError("Un pedido confirmado no puede cancelarse")
+            if status != "PENDING":
+                raise EconomyPersistenceError(
+                    f"Estado de pedido no soportado: {status}"
+                )
+
+            cursor = connection.execute(
+                """
+                UPDATE orders
+                SET status = 'CANCELLED',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ?
+                  AND status = 'PENDING'
+                """,
+                (order.order_id,),
+            )
+            if cursor.rowcount != 1:
+                raise EconomyPersistenceError(
+                    f"No se pudo cancelar el pedido {order.order_id}"
+                )
+            cancelled = self._get_from_connection(
+                connection,
+                order.order_id,
+            )
+            if cancelled is None:
+                raise EconomyPersistenceError(
+                    f"No se pudo verificar la cancelación de {order.order_id}"
+                )
+            return OrderConfirmResult(
+                cancelled[0],
+                "CANCELLED",
+                False,
+            )
+
+    def save(self, order: OrderConfirmation) -> None:
+        """Compatibilidad estricta: nunca crea un pedido confirmado sin cargo."""
+        current = self.get(order.order_id)
+        if current is None:
+            raise EconomyPersistenceError(
+                "OrderStore.save() ya no puede crear pedidos directamente; "
+                "usar create_pending() y confirm_order()"
+            )
+        if current != order:
+            raise EconomyPersistenceError(
+                f"El pedido {order.order_id} difiere del estado durable"
+            )
+
+    def migrate_legacy_json(self) -> int:
+        """Importa orders.json explícitamente; no se ejecuta como write path normal."""
+        if not self.legacy_path.is_file():
+            return 0
+
+        try:
+            payload = json.loads(
+                self.legacy_path.read_text(encoding="utf-8")
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise EconomyPersistenceError(
+                f"orders.json corrupto o ilegible: {self.legacy_path}"
+            ) from error
+
+        if not isinstance(payload, list):
+            raise EconomyPersistenceError(
+                "Formato heredado de orders.json inválido"
+            )
+
+        imported = 0
+        migration_time = datetime.now(timezone.utc).isoformat()
+        with self.db.transaction(immediate=True) as connection:
+            for item in payload:
+                if not isinstance(item, dict):
+                    raise EconomyPersistenceError(
+                        "Registro heredado de pedido inválido"
+                    )
+                try:
+                    order = OrderConfirmation(
+                        order_id=str(item["order_id"]),
+                        user_id=str(item["user_id"]),
+                        product_type=str(item["product_type"]),
+                        destination=str(item["destination"]),
+                        rarity=str(item["rarity"]),
+                        cost=int(item["cost"]),
+                        summary=str(item["summary"]),
                         resolution=str(item.get("resolution", "L")),
                         render_style=str(
                             item.get("render_style", "Classic Anime")
                         ),
                         prompt_en=str(item.get("prompt_en", "")),
                     )
-        return None
+                except (KeyError, TypeError, ValueError) as error:
+                    raise EconomyPersistenceError(
+                        "Registro heredado de pedido inválido"
+                    ) from error
+
+                if (
+                    not ORDER_ID_PATTERN.fullmatch(order.order_id)
+                    or order.cost <= 0
+                ):
+                    raise EconomyPersistenceError(
+                        f"Identidad o coste heredado inválido para {order.order_id}"
+                    )
+
+                existing = self._get_from_connection(
+                    connection,
+                    order.order_id,
+                )
+                if existing is not None:
+                    existing_order, status, _, _ = existing
+                    if (
+                        status == "CONFIRMED"
+                        and self._same_snapshot(existing_order, order)
+                    ):
+                        continue
+                    raise EconomyPersistenceError(
+                        f"Conflicto de migración para pedido {order.order_id}"
+                    )
+
+                connection.execute(
+                    """
+                    INSERT INTO orders(
+                        order_id, user_id, product_type, destination,
+                        rarity, cost, summary, resolution, render_style,
+                        prompt_en, status, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', ?, ?)
+                    """,
+                    (
+                        order.order_id,
+                        order.user_id,
+                        order.product_type,
+                        order.destination,
+                        order.rarity,
+                        order.cost,
+                        order.summary,
+                        order.resolution,
+                        order.render_style,
+                        order.prompt_en,
+                        migration_time,
+                        migration_time,
+                    ),
+                )
+                imported += 1
+        return imported
 
 
 class ComplaintStore:
@@ -322,9 +689,43 @@ class ComplaintStore:
 
             user_id = str(row[1])
             points_paid = max(0, int(row[6]))
-            adjustment = points_paid if action == "refund" else 0
+            adjustment = 0
 
-            if adjustment:
+            if action == "refund":
+                order_id = str(row[4]).strip()
+                if not order_id:
+                    raise ValueError(
+                        f"El reclamo {complaint_id} no referencia un pedido confirmado"
+                    )
+
+                order_row = connection.execute(
+                    """
+                    SELECT status, cost, user_id
+                    FROM orders
+                    WHERE order_id = ?
+                    """,
+                    (order_id,),
+                ).fetchone()
+                if order_row is None:
+                    raise ValueError(
+                        f"El pedido reclamado no existe: {order_id}"
+                    )
+                if str(order_row[2]) != user_id:
+                    raise EconomyPersistenceError(
+                        f"El pedido {order_id} no pertenece al usuario del reclamo"
+                    )
+                if str(order_row[0]) != "CONFIRMED":
+                    raise ValueError(
+                        f"El pedido {order_id} no está confirmado"
+                    )
+                order_cost = max(0, int(order_row[1]))
+                if points_paid != order_cost:
+                    raise EconomyPersistenceError(
+                        f"Inconsistencia económica en pedido {order_id}: "
+                        f"complaint={points_paid}, order={order_cost}"
+                    )
+                adjustment = order_cost
+
                 if wallet_store.path != self.path:
                     raise EconomyPersistenceError(
                         "Wallet y ComplaintStore no apuntan a la misma base SQLite"

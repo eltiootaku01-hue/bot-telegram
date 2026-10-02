@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 import os
+import re
 import time
 from typing import Callable
 from pathlib import Path
@@ -31,11 +32,18 @@ from .telegram_security import (
 from .cafe_orders import BebidaOrderFlow, build_bebida_summary, build_bebida_prompt, RESOLUTIONS, RENDER_STYLES
 from .hardening import MutexGuard
 from .xp_audit import PassiveXPTracker, AuditBus
-from .order_support import ComplaintStore, OrderConfirmation, OrderStore, new_order_id, order_destination
+from .order_support import (
+    ComplaintStore,
+    OrderConfirmation,
+    OrderStore,
+    PendingOrderExistsError,
+    new_order_id,
+    order_destination,
+)
 from .inline_router import InlineRedirectHandler
 from .auto_moderation import moderate
 from .cafe_immersion import analyze_telegram_comment
-from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, purchase_bebida_order, quote_bebida_order
+from .cafe_economy import CafeWalletStore, draw_gacha, economy_price_text, pity_text, quote_bebida_order
 from .cafe_immersion import waitress_dialogue, waitress_exclusive_dialogue, supervise_admin_publication
 from .superadmin import is_superadmin
 from .cafe_vip import VipStore, donation_keyboard, vip_policy_text, vip_status_text, validate_donation_event
@@ -51,6 +59,10 @@ class TelegramInputError(ValueError):
 MAX_INBOUND_TEXT_CHARS = 24_000
 MAX_CALLBACK_DATA_CHARS = 256
 MAX_TELEGRAM_HTTP_RESPONSE_BYTES = 1 * 1024 * 1024
+ORDER_ID_PATTERN = re.compile(r"^ORD-[0-9A-F]{10}$")
+ORDER_CALLBACK_PATTERN = re.compile(
+    r"^order:(confirm|cancel):(ORD-[0-9A-F]{10})$"
+)
 
 
 class TelegramConfigurationError(RuntimeError):
@@ -715,7 +727,7 @@ class TelegramAdapter:
                     "📣 Uso: /queja <texto>. Puedes indicar una sugerencia, problema o solicitud de reembolso.",
                     "complaint",
                 )
-            last = self._last_orders.get(inbound.user_id)
+            last = self._order_store.get_latest_confirmed(inbound.user_id)
             complaint = self._complaint_store.create(
                 inbound.user_id,
                 inbound.conversation_id,
@@ -1016,7 +1028,14 @@ class TelegramAdapter:
                 render_style=order.render_style,
                 prompt_en=build_bebida_prompt(order),
             )
+            try:
+                stored_pending = self._order_store.create_pending(pending)
+            except PendingOrderExistsError as existing_pending:
+                stored_pending = existing_pending.order
+            pending = stored_pending
             self._pending_orders[callback.user_id] = pending
+            confirm_data = f"order:confirm:{pending.order_id}"
+            cancel_data = f"order:cancel:{pending.order_id}"
             return TelegramOutbound(
                 callback.conversation_id,
                 "⚠️ CONFIRMACIÓN PREVIA\n\n"
@@ -1026,32 +1045,78 @@ class TelegramAdapter:
                 + "\nCosto: " + str(pending.cost) + " puntos\n\n"
                 + "No se cobrará nada hasta pulsar [✅ Confirmar].",
                 "bebida_confirmation",
-                (((("✅ Confirmar", "order:confirm"), ("❌ Cancelar", "order:cancel")),),),
+                (((("✅ Confirmar", confirm_data), ("❌ Cancelar", cancel_data)),),),
             )
-        if callback.data == "order:cancel":
+        if callback.data.startswith("order:confirm:") or callback.data.startswith("order:cancel:"):
+            match = ORDER_CALLBACK_PATTERN.fullmatch(callback.data)
+            if match is None:
+                raise TelegramInputError("invalid order callback")
+            action, order_id = match.groups()
+            if not ORDER_ID_PATTERN.fullmatch(order_id):
+                raise TelegramInputError("invalid order id")
+            try:
+                if action == "confirm":
+                    result = self._order_store.confirm_order(
+                        order_id,
+                        callback.user_id,
+                        wallet_store=self._wallet_store,
+                    )
+                else:
+                    result = self._order_store.cancel_order(
+                        order_id,
+                        callback.user_id,
+                    )
+            except PermissionError as error:
+                raise TelegramInputError(str(error)) from error
+            except ValueError as error:
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    f"🧾 Pedido: {error}",
+                    "bebida",
+                )
+
             self._pending_orders.pop(callback.user_id, None)
-            return TelegramOutbound(callback.conversation_id, "❌ Pedido cancelado. No se descontaron puntos.", "bebida")
-        if callback.data == "order:confirm":
-            pending = self._pending_orders.get(callback.user_id)
-            if pending is None:
-                return TelegramOutbound(callback.conversation_id, "⚠️ No hay un pedido pendiente de confirmación.", "bebida")
-            quote = purchase_bebida_order(
-                self._wallet_store,
-                callback.user_id,
-                existing=pending.rarity != "SPECIAL",
-                target_rarity=pending.rarity,
+            if result.order.user_id != callback.user_id:
+                raise TelegramInputError("order ownership mismatch")
+            if result.outcome == "INSUFFICIENT":
+                self._pending_orders[callback.user_id] = result.order
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    "❌ Saldo insuficiente al confirmar. No se descontaron puntos.",
+                    "bebida",
+                    ((("✅ Confirmar", f"order:confirm:{result.order.order_id}"),),),
+                )
+
+            if result.outcome == "CANCELLED":
+                return TelegramOutbound(
+                    callback.conversation_id,
+                    "❌ Pedido " + result.order.order_id + " cancelado. No se descontaron puntos.",
+                    "bebida",
+                )
+
+            self._last_orders[callback.user_id] = result.order
+            admin_followup = (
+                self._admin_order_followup(result.order)
+                if result.charged
+                else None
             )
-            if not quote.can_afford:
-                return TelegramOutbound(callback.conversation_id, "❌ Saldo insuficiente al confirmar. No se descontaron puntos.", "bebida")
-            self._pending_orders.pop(callback.user_id, None)
-            self._last_orders[callback.user_id] = pending
-            self._order_store.save(pending)
-            admin_followup = self._admin_order_followup(pending)
+            if result.outcome == "ALREADY_CONFIRMED":
+                message = (
+                    "✅ Pedido " + result.order.order_id
+                    + " ya estaba confirmado.\n"
+                    + result.order.destination
+                )
+            else:
+                message = (
+                    "✅ Pedido " + result.order.order_id + " confirmado.\n"
+                    + result.order.destination + "\n"
+                    + result.order.rarity + " · "
+                    + str(result.order.cost)
+                    + " puntos descontados."
+                )
             return TelegramOutbound(
                 callback.conversation_id,
-                "✅ Pedido " + pending.order_id + " confirmado.\n"
-                + pending.destination + "\n"
-                + pending.rarity + " · " + str(pending.cost) + " puntos descontados.",
+                message,
                 "bebida",
                 (((("📣 Queja / Reembolso", "complaint:help"),)),),
                 followups=(admin_followup,) if admin_followup is not None else (),
@@ -1467,6 +1532,18 @@ class TelegramPoller:
         )
 
     @staticmethod
+    def _defer_event_claim_for_order_update(update: dict[str, object]) -> bool:
+        callback = update.get("callback_query")
+        if not isinstance(callback, dict):
+            return False
+        data = callback.get("data")
+        if not isinstance(data, str):
+            return False
+        if data.startswith("bebida:"):
+            return True
+        return ORDER_CALLBACK_PATTERN.fullmatch(data) is not None
+
+    @staticmethod
     def _callback_key(update: dict[str, object]) -> str:
         callback = update.get("callback_query")
         if not isinstance(callback, dict):
@@ -1652,25 +1729,29 @@ class TelegramPoller:
                         )
                         break
 
-                    try:
-                        claimed, already_seen = self._claim_event(
-                            update_id,
-                            update,
-                        )
-                    except TelegramEventLedgerError:
-                        if callback_key:
-                            self._callback_mutex.release(callback_key)
-                        errors += 1
-                        self._logger(
-                            "telegram event ledger unavailable; offset preserved"
-                        )
-                        self._sleeper(self._config.retry_delay_seconds)
-                        break
+                    defer_event_claim = self._defer_event_claim_for_order_update(update)
+                    claimed = False
+                    already_seen = False
+                    if not defer_event_claim:
+                        try:
+                            claimed, already_seen = self._claim_event(
+                                update_id,
+                                update,
+                            )
+                        except TelegramEventLedgerError:
+                            if callback_key:
+                                self._callback_mutex.release(callback_key)
+                            errors += 1
+                            self._logger(
+                                "telegram event ledger unavailable; offset preserved"
+                            )
+                            self._sleeper(self._config.retry_delay_seconds)
+                            break
 
                     if already_seen:
-                        # The effect has already been claimed/completed. Never
-                        # re-enter application/economy logic. Only durable
-                        # deliveries may still need recovery.
+                        # Non-order events keep the existing claim-before-effect
+                        # contract. Order mutations are handled below with an
+                        # idempotent SQLite primitive and never reach this branch.
                         if callback_key:
                             self._callback_mutex.release(callback_key)
                         if self._outbox is not None:
@@ -1685,7 +1766,7 @@ class TelegramPoller:
                         skipped += 1
                         continue
 
-                    if not claimed:
+                    if not claimed and not defer_event_claim:
                         if callback_key:
                             self._callback_mutex.release(callback_key)
                         errors += 1
@@ -1763,11 +1844,22 @@ class TelegramPoller:
                     except TelegramInputError:
                         if callback_key:
                             self._callback_mutex.release(callback_key)
-                        self._event_ledger.mark_completed(
-                            "update_id",
-                            str(update_id),
-                            metadata="input_rejected",
-                        )
+                        try:
+                            if defer_event_claim:
+                                self._claim_event(update_id, update)
+                            self._event_ledger.mark_completed(
+                                "update_id",
+                                str(update_id),
+                                metadata="input_rejected",
+                            )
+                        except TelegramEventLedgerError:
+                            errors += 1
+                            self._logger(
+                                "telegram event ledger unavailable after "
+                                "input rejection; offset preserved"
+                            )
+                            self._sleeper(self._config.retry_delay_seconds)
+                            break
                         self._offset = update_id + 1
                         skipped += 1
                         continue
@@ -1788,9 +1880,21 @@ class TelegramPoller:
                         break
 
                     if outbound is None:
+                        try:
+                            if defer_event_claim:
+                                self._claim_event(update_id, update)
+                            self._mark_events_completed(update_id, update)
+                        except TelegramEventLedgerError:
+                            if callback_key:
+                                self._callback_mutex.release(callback_key)
+                            errors += 1
+                            self._logger(
+                                "telegram event ledger unavailable; offset preserved"
+                            )
+                            self._sleeper(self._config.retry_delay_seconds)
+                            break
                         if callback_key:
                             self._callback_mutex.release(callback_key)
-                        self._mark_events_completed(update_id, update)
                         self._offset = update_id + 1
                         processed += 1
                         continue
@@ -1805,9 +1909,15 @@ class TelegramPoller:
                                 update_id,
                                 outbound.followups,
                             )
-                            # Once the durable output exists, the event itself
-                            # is safe to consider claimed/completed. A crash
-                            # before sending is recovered from the outbox.
+                            # For order mutations, business state is already
+                            # durable and idempotent. Only now is the Telegram
+                            # event claimed/completed. Other routes preserve
+                            # their established ordering.
+                            if defer_event_claim:
+                                self._claim_event(
+                                    update_id,
+                                    update,
+                                )
                             self._mark_events_completed(
                                 update_id,
                                 update,
@@ -1826,6 +1936,11 @@ class TelegramPoller:
                                 outbound,
                                 message_ids,
                             )
+                            if defer_event_claim:
+                                self._claim_event(
+                                    update_id,
+                                    update,
+                                )
                             self._mark_events_completed(
                                 update_id,
                                 update,
@@ -1836,6 +1951,16 @@ class TelegramPoller:
                         errors += 1
                         self._logger(
                             f"telegram outbox persistence failure: {type(error).__name__}"
+                        )
+                        self._sleeper(self._config.retry_delay_seconds)
+                        break
+                    except TelegramEventLedgerError as error:
+                        if callback_key:
+                            self._callback_mutex.release(callback_key)
+                        errors += 1
+                        self._logger(
+                            f"telegram event ledger failure after business "
+                            f"commit: {type(error).__name__}"
                         )
                         self._sleeper(self._config.retry_delay_seconds)
                         break
