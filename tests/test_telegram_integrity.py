@@ -6,7 +6,10 @@ import tempfile
 import unittest
 
 from bot_ia.interfaces.telegram import TelegramApiClient, TelegramOutbound, TelegramPoller
-from bot_ia.interfaces.telegram_event_ledger import TelegramEventLedger
+from bot_ia.interfaces.telegram_event_ledger import (
+    TelegramEventLedger,
+    TelegramEventLedgerError,
+)
 from bot_ia.interfaces.telegram_instance_lock import (
     TelegramInstanceAlreadyRunning,
     TelegramInstanceLock,
@@ -42,6 +45,148 @@ class TelegramIntegrityTests(unittest.TestCase):
                     "charge-123",
                     update_id=10,
                 )
+            )
+
+    def test_multi_key_claim_is_atomic_and_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = TelegramEventLedger(Path(directory) / "events.sqlite3")
+            poller = TelegramPoller.__new__(TelegramPoller)
+            poller._event_ledger = ledger
+
+            update = {
+                "message": {
+                    "successful_payment": {
+                        "telegram_payment_charge_id": "charge-77",
+                    },
+                },
+            }
+
+            self.assertEqual(
+                (True, False),
+                poller._claim_event(77, update),
+            )
+            self.assertEqual(
+                "CLAIMED",
+                ledger.status("update_id", "77"),
+            )
+            self.assertEqual(
+                "CLAIMED",
+                ledger.status(
+                    "telegram_payment_charge_id",
+                    "charge-77",
+                ),
+            )
+            self.assertEqual(
+                (False, True),
+                poller._claim_event(77, update),
+            )
+
+    def test_multi_key_claim_rolls_back_when_interrupted_between_keys(self) -> None:
+        class FaultInjectLedger(TelegramEventLedger):
+            def __init__(self, database_path: Path) -> None:
+                self.insert_calls = 0
+                super().__init__(database_path)
+
+            def _insert_claim(
+                self,
+                connection,
+                event_type,
+                event_id,
+                *,
+                update_id,
+                metadata,
+                now,
+            ) -> None:
+                self.insert_calls += 1
+                super()._insert_claim(
+                    connection,
+                    event_type,
+                    event_id,
+                    update_id=update_id,
+                    metadata=metadata,
+                    now=now,
+                )
+                if self.insert_calls == 1:
+                    raise RuntimeError("injected interruption between event keys")
+
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "events.sqlite3"
+            ledger = FaultInjectLedger(database)
+            poller = TelegramPoller.__new__(TelegramPoller)
+            poller._event_ledger = ledger
+            update = {
+                "message": {
+                    "successful_payment": {
+                        "telegram_payment_charge_id": "charge-restart",
+                    },
+                },
+            }
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "injected interruption between event keys",
+            ):
+                poller._claim_event(91, update)
+
+            self.assertIsNone(
+                ledger.status("update_id", "91"),
+            )
+            self.assertIsNone(
+                ledger.status(
+                    "telegram_payment_charge_id",
+                    "charge-restart",
+                ),
+            )
+
+            restarted = TelegramEventLedger(database)
+            poller._event_ledger = restarted
+
+            self.assertEqual(
+                (True, False),
+                poller._claim_event(91, update),
+            )
+            self.assertEqual(
+                "CLAIMED",
+                restarted.status("update_id", "91"),
+            )
+            self.assertEqual(
+                "CLAIMED",
+                restarted.status(
+                    "telegram_payment_charge_id",
+                    "charge-restart",
+                ),
+            )
+
+    def test_partial_legacy_multi_key_claim_does_not_become_already_seen(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "events.sqlite3"
+            ledger = TelegramEventLedger(database)
+            ledger.claim("update_id", "92", update_id=92)
+
+            poller = TelegramPoller.__new__(TelegramPoller)
+            poller._event_ledger = ledger
+            update = {
+                "message": {
+                    "successful_payment": {
+                        "telegram_payment_charge_id": "charge-partial",
+                    },
+                },
+            }
+
+            with self.assertRaises(TelegramEventLedgerError):
+                poller._claim_event(92, update)
+
+            self.assertEqual(
+                "CLAIMED",
+                ledger.status("update_id", "92"),
+            )
+            self.assertIsNone(
+                ledger.status(
+                    "telegram_payment_charge_id",
+                    "charge-partial",
+                ),
             )
 
     def test_outbox_persists_followups_as_independent_units(self) -> None:
