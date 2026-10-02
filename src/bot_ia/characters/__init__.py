@@ -4,6 +4,7 @@
 from .models import (
     CanonicalStatus,
     CanonProvenance,
+    RelationshipType,
     Character,
     CharacterLimit,
     CharacterRelationship,
@@ -24,6 +25,7 @@ from .sunna import SUNNA
 __all__ = [
     "CanonicalStatus",
     "CanonProvenance",
+    "RelationshipType",
     "Character",
     "CharacterLimit",
     "CharacterRelationship",
