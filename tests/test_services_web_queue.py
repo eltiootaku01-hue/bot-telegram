@@ -2,11 +2,12 @@
 import queue
 import unittest
 
-from PySide6.QtCore import QCoreApplication, QObject, Qt, Signal, Slot
+from PySide6.QtCore import QObject, Qt, Signal, Slot
 
 from bot_ia.core.task_engine import TaskEngine, TaskState
 from bot_ia.core.task_scheduler import ResponseDisposition, TaskScheduler
 from services.web_queue import BotTicket, _QueueWorker, _WEB_MESA_UNICA
+from PySide6.QtWidgets import QApplication
 
 
 class _OrderingSignalSource(QObject):
@@ -32,7 +33,7 @@ class _QueuedTerminationReceiver(QObject):
 
 class WebQueueCancellationTests(unittest.TestCase):
     def test_ticket_processed_completes_logically_before_queued_termination(self) -> None:
-        app = QCoreApplication.instance() or QCoreApplication([])
+        app = QApplication.instance() or QApplication([])
         engine = TaskEngine()
         scheduler = TaskScheduler(engine)
         task = engine.create_task(
