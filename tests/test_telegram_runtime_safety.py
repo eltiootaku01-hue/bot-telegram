@@ -2,6 +2,7 @@
 import unittest
 import sqlite3
 import tempfile
+from contextlib import closing
 import threading
 from pathlib import Path
 
@@ -50,7 +51,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
             self.assertEqual(3, sum(result.granted for result in accepted))
             tracker.stop()
 
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db:
                 persisted = db.execute(
                     "SELECT COUNT(*), COALESCE(SUM(xp), 0), COALESCE(SUM(messages), 0) "
                     "FROM xp_users"
@@ -106,7 +107,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
                 release_get.set()
                 self.assertTrue(stop_finished.wait(5.0))
 
-                with sqlite3.connect(database) as db:
+                with closing(sqlite3.connect(database)) as db:
                     persisted = db.execute(
                         "SELECT COUNT(*), COALESCE(SUM(xp), 0), COALESCE(SUM(messages), 0) "
                         "FROM xp_users"
@@ -189,7 +190,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
                 self.assertEqual(0, tracker._queue.unfinished_tasks)
                 self.assertEqual(0, tracker._queue.qsize())
 
-                with sqlite3.connect(database) as db:
+                with closing(sqlite3.connect(database)) as db:
                     persisted = db.execute(
                         "SELECT COUNT(*), COALESCE(SUM(xp), 0), COALESCE(SUM(messages), 0) "
                         "FROM xp_users"
@@ -231,7 +232,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
 
                 tracker.stop()
 
-                with sqlite3.connect(database) as db:
+                with closing(sqlite3.connect(database)) as db:
                     persisted = db.execute(
                         "SELECT xp, messages FROM xp_users "
                         "WHERE user_id=? AND platform=?",
@@ -377,7 +378,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
             self.assertEqual(0, tracker._queue.qsize())
             self.assertFalse(tracker._thread.is_alive())
 
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db:
                 persisted = db.execute(
                     "SELECT COUNT(*), COALESCE(SUM(xp), 0), "
                     "COALESCE(SUM(messages), 0) FROM xp_users"
@@ -403,7 +404,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
 
             tracker.stop()
 
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db:
                 persisted = db.execute(
                     "SELECT xp, messages FROM xp_users "
                     "WHERE user_id=? AND platform=?",
