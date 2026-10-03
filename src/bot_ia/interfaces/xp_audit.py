@@ -121,7 +121,7 @@ class PassiveXPTracker:
             self._stop.set()
             thread = self._thread
         if thread is not None and thread is not threading.current_thread():
-            thread.join(timeout=1.0)
+            thread.join()
 
 
 class AuditBus:
