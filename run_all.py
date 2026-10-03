@@ -3,7 +3,6 @@ import importlib
 import multiprocessing
 import os
 import sys
-import uvicorn
 
 # Permitir importaciones relativas desde la raíz
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -66,6 +65,8 @@ def preflight_startup() -> None:
 
 def run_fastapi():
     """Inicia el servidor de API en el puerto 8000."""
+    import uvicorn
+
     uvicorn.run("src.api.main:app", host="0.0.0.0", port=8000, reload=False)
 
 
