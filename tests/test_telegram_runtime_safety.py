@@ -3,7 +3,6 @@ import unittest
 import sqlite3
 import tempfile
 import threading
-import time
 from pathlib import Path
 
 from bot_ia.interfaces.telegram_event_ledger import TelegramEventLedger
@@ -89,34 +88,41 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
                 self.assertTrue(result.granted)
 
             stop_finished = threading.Event()
+            stopper = None
 
-            def stop_tracker():
-                tracker.stop()
-                stop_finished.set()
+            try:
+                def stop_tracker():
+                    tracker.stop()
+                    stop_finished.set()
 
-            stopper = threading.Thread(target=stop_tracker, name="xp-pending-stop")
-            stopper.start()
+                stopper = threading.Thread(target=stop_tracker, name="xp-pending-stop")
+                stopper.start()
 
-            self.assertTrue(tracker._stop.set_called.wait(2.0))
-            self.assertTrue(stopper.is_alive())
-            self.assertEqual(4, tracker._queue.unfinished_tasks)
-            self.assertFalse(stop_finished.is_set())
+                self.assertTrue(tracker._stop.set_called.wait(2.0))
+                self.assertTrue(stopper.is_alive())
+                self.assertEqual(4, tracker._queue.unfinished_tasks)
+                self.assertFalse(stop_finished.is_set())
 
-            release_get.set()
-            self.assertTrue(stop_finished.wait(5.0))
-            stopper.join(timeout=1.0)
+                release_get.set()
+                self.assertTrue(stop_finished.wait(5.0))
 
-            with sqlite3.connect(database) as db:
-                persisted = db.execute(
-                    "SELECT COUNT(*), COALESCE(SUM(xp), 0), COALESCE(SUM(messages), 0) "
-                    "FROM xp_users"
-                ).fetchone()
+                with sqlite3.connect(database) as db:
+                    persisted = db.execute(
+                        "SELECT COUNT(*), COALESCE(SUM(xp), 0), COALESCE(SUM(messages), 0) "
+                        "FROM xp_users"
+                    ).fetchone()
 
-            self.assertEqual((4, 40, 4), persisted)
-            self.assertEqual(0, tracker._queue.unfinished_tasks)
-            self.assertEqual(0, tracker._queue.qsize())
-            self.assertFalse(stopper.is_alive())
-            self.assertFalse(tracker._thread.is_alive())
+                self.assertEqual((4, 40, 4), persisted)
+                self.assertEqual(0, tracker._queue.unfinished_tasks)
+                self.assertEqual(0, tracker._queue.qsize())
+                self.assertFalse(stopper.is_alive())
+                self.assertFalse(tracker._thread.is_alive())
+            finally:
+                release_get.set()
+                if stopper is not None:
+                    stopper.join(timeout=5.0)
+                if tracker._thread is not None and tracker._thread.is_alive():
+                    tracker.stop()
 
     def test_xp_tracker_stop_waits_for_in_flight_sqlite_item_and_remaining_items(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -150,44 +156,52 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
                 return db
 
             tracker._connect = blocked_connect
+            stopper = None
 
-            first = tracker.record_message("in-flight-user", "telegram")
-            self.assertTrue(first.granted)
-            self.assertTrue(insert_started.wait(2.0))
+            try:
+                first = tracker.record_message("in-flight-user", "telegram")
+                self.assertTrue(first.granted)
+                self.assertTrue(insert_started.wait(2.0))
 
-            for index in range(3):
-                result = tracker.record_message(
-                    f"in-flight-pending-{index}",
-                    "telegram",
+                for index in range(3):
+                    result = tracker.record_message(
+                        f"in-flight-pending-{index}",
+                        "telegram",
+                    )
+                    self.assertTrue(result.granted)
+
+                stopper = threading.Thread(
+                    target=tracker.stop,
+                    name="xp-in-flight-stop",
                 )
-                self.assertTrue(result.granted)
+                stopper.start()
 
-            stopper = threading.Thread(
-                target=tracker.stop,
-                name="xp-in-flight-stop",
-            )
-            stopper.start()
+                self.assertTrue(tracker._stop.set_called.wait(2.0))
+                self.assertTrue(stopper.is_alive())
+                self.assertTrue(tracker._thread.is_alive())
+                self.assertFalse(release_insert.is_set())
 
-            self.assertTrue(tracker._stop.set_called.wait(2.0))
-            self.assertTrue(stopper.is_alive())
-            self.assertTrue(tracker._thread.is_alive())
-            self.assertFalse(release_insert.is_set())
+                release_insert.set()
+                stopper.join(timeout=5.0)
 
-            release_insert.set()
-            stopper.join(timeout=5.0)
+                self.assertFalse(stopper.is_alive())
+                self.assertFalse(tracker._thread.is_alive())
+                self.assertEqual(0, tracker._queue.unfinished_tasks)
+                self.assertEqual(0, tracker._queue.qsize())
 
-            self.assertFalse(stopper.is_alive())
-            self.assertFalse(tracker._thread.is_alive())
-            self.assertEqual(0, tracker._queue.unfinished_tasks)
-            self.assertEqual(0, tracker._queue.qsize())
+                with sqlite3.connect(database) as db:
+                    persisted = db.execute(
+                        "SELECT COUNT(*), COALESCE(SUM(xp), 0), COALESCE(SUM(messages), 0) "
+                        "FROM xp_users"
+                    ).fetchone()
 
-            with sqlite3.connect(database) as db:
-                persisted = db.execute(
-                    "SELECT COUNT(*), COALESCE(SUM(xp), 0), COALESCE(SUM(messages), 0) "
-                    "FROM xp_users"
-                ).fetchone()
-
-            self.assertEqual((4, 40, 4), persisted)
+                self.assertEqual((4, 40, 4), persisted)
+            finally:
+                release_insert.set()
+                if stopper is not None:
+                    stopper.join(timeout=5.0)
+                if tracker._thread is not None and tracker._thread.is_alive():
+                    tracker.stop()
 
     def test_xp_tracker_producer_race_producer_wins_before_stop(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -203,26 +217,34 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
                 )
 
             producer = threading.Thread(target=produce, name="xp-producer-wins")
-            producer.start()
-            self.assertTrue(producer.is_alive())
 
-            tracker._lock.release()
-            producer.join(timeout=5.0)
+            try:
+                producer.start()
+                self.assertTrue(producer.is_alive())
 
-            self.assertFalse(producer.is_alive())
-            self.assertTrue(produced["result"].granted)
-            self.assertEqual(1, tracker._queue.unfinished_tasks)
+                tracker._lock.release()
+                producer.join(timeout=5.0)
 
-            tracker.stop()
+                self.assertFalse(producer.is_alive())
+                self.assertTrue(produced["result"].granted)
+                self.assertEqual(1, tracker._queue.unfinished_tasks)
 
-            with sqlite3.connect(database) as db:
-                persisted = db.execute(
-                    "SELECT xp, messages FROM xp_users "
-                    "WHERE user_id=? AND platform=?",
-                    ("producer-wins", "telegram"),
-                ).fetchone()
+                tracker.stop()
 
-            self.assertEqual((10, 1), persisted)
+                with sqlite3.connect(database) as db:
+                    persisted = db.execute(
+                        "SELECT xp, messages FROM xp_users "
+                        "WHERE user_id=? AND platform=?",
+                        ("producer-wins", "telegram"),
+                    ).fetchone()
+
+                self.assertEqual((10, 1), persisted)
+            finally:
+                if tracker._lock.locked():
+                    tracker._lock.release()
+                producer.join(timeout=5.0)
+                if tracker._thread is not None and tracker._thread.is_alive():
+                    tracker.stop()
 
     def test_xp_tracker_producer_race_stop_wins_before_producer(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -238,35 +260,42 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
                 stop_finished.set()
 
             stopper = threading.Thread(target=stop_tracker, name="xp-stop-wins")
-            stopper.start()
-            self.assertTrue(stopper.is_alive())
 
-            tracker._lock.release()
-            self.assertTrue(tracker._stop.set_called.wait(2.0))
-            self.assertTrue(stop_finished.wait(2.0))
+            try:
+                stopper.start()
+                self.assertTrue(stopper.is_alive())
 
-            queue_before = tracker._queue.qsize()
-            with self.assertRaisesRegex(
-                RuntimeError,
-                r"^PassiveXPTracker is stopped$",
-            ):
-                tracker.record_message("producer-loses", "telegram")
+                tracker._lock.release()
+                self.assertTrue(tracker._stop.set_called.wait(2.0))
+                self.assertTrue(stop_finished.wait(2.0))
 
-            self.assertEqual(queue_before, tracker._queue.qsize())
-            self.assertEqual(0, tracker._queue.unfinished_tasks)
+                queue_before = tracker._queue.qsize()
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    r"^PassiveXPTracker is stopped$",
+                ):
+                    tracker.record_message("producer-loses", "telegram")
 
-            stopper.join(timeout=1.0)
-            self.assertFalse(stopper.is_alive())
+                self.assertEqual(queue_before, tracker._queue.qsize())
+                self.assertEqual(0, tracker._queue.unfinished_tasks)
+            finally:
+                if tracker._lock.locked():
+                    tracker._lock.release()
+                stopper.join(timeout=5.0)
 
     def test_xp_tracker_post_stop_rejects_without_queue_mutation(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             database = Path(tmpdir) / "xp.sqlite3"
             tracker = PassiveXPTracker(database, cooldown_seconds=0.0)
 
+            key = ("post-stop-user", "telegram")
+            accepted = tracker.record_message(*key)
+            self.assertTrue(accepted.granted)
+            self.assertIn(key, tracker._last)
+
             tracker.stop()
             queue_before = tracker._queue.qsize()
             unfinished_before = tracker._queue.unfinished_tasks
-            key = ("post-stop-user", "telegram")
 
             with self.assertRaisesRegex(
                 RuntimeError,
@@ -276,7 +305,7 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
 
             self.assertEqual(queue_before, tracker._queue.qsize())
             self.assertEqual(unfinished_before, tracker._queue.unfinished_tasks)
-            self.assertNotIn(key, tracker._last)
+            self.assertIn(key, tracker._last)
 
             tracker.stop()
 

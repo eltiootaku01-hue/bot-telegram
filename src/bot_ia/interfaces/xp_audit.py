@@ -85,12 +85,12 @@ class PassiveXPTracker:
         now = time.monotonic()
         key = (str(user_id), str(platform).casefold())
         with self._lock:
+            if self._stop.is_set():
+                raise RuntimeError("PassiveXPTracker is stopped")
             previous = self._last.get(key, float("-inf"))
             if now - previous < self.cooldown_seconds:
                 level = self.level_for(self.current_xp(*key))
                 return XPResult(key[0], key[1], 0, level, False, self.role_for(level))
-            if self._stop.is_set():
-                raise RuntimeError("PassiveXPTracker is stopped")
             self._ensure_writer_started_locked()
             self._queue.put((key[0], key[1], now))
             self._last[key] = now
