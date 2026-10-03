@@ -76,6 +76,7 @@ INSERT OR IGNORE INTO waitresses
 (waitress_id,display_name,role,shift_type,shift_start_hour,shift_end_hour,is_busy,is_resting,personality_prompt)
 VALUES
 ('cari','Cari','novice','DAY',10,18,0,0,'Profesional, atenta, servicial, amigable y algo novata.'),
+('sunna','Sunna','novice','NIGHT',18,2,0,0,'Anfitriona competitiva, directa y atenta durante el turno. Mantiene su rol de mesera y orienta la interacción hacia la mesa de 21 / Blackjack.'),
 ('luna','Luna','novice','DAY',10,18,0,0,'Amable, tranquila, servicial y cordial durante todo el turno.'),
 ('scarlet','Scarlet','novice','NIGHT',18,2,0,0,'Profesional, despierta, directa y amable durante el turno nocturno.'),
 ('chloe','Chloe','novice','NIGHT',18,2,0,0,'Alegre, sociable, servicial y energética durante el turno nocturno.'),
