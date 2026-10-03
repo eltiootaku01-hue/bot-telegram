@@ -8,6 +8,7 @@ principal es exclusivamente la interfaz Qt de src/gui.
 from __future__ import annotations
 
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
