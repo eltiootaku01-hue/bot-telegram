@@ -104,7 +104,7 @@ jobs:
             }
 
             if ($process.CreationDate) {
-              $actualCreationTimeUtc = [System.Management.ManagementDateTimeConverter]::ToDateTime($process.CreationDate).ToUniversalTime()
+              $actualCreationTimeUtc = $process.CreationDate.ToUniversalTime()
               if ([math]::Abs(($actualCreationTimeUtc - $ExpectedCreationTimeUtc).TotalSeconds) -gt 2) {
                 return
               }
@@ -154,8 +154,9 @@ jobs:
                 continue
               }
 
-              $processEvent = $eventRecord.SourceEventArgs.NewEvent
-              $processName = [string]$processEvent.ProcessName
+              try {
+                $processEvent = $eventRecord.SourceEventArgs.NewEvent
+                $processName = [string]$processEvent.ProcessName
               $processId = [int]$processEvent.ProcessID
               $parentProcessId = [int]$processEvent.ParentProcessID
               $processTime = [DateTime]::FromFileTimeUtc([int64]$processEvent.TIME_CREATED)
@@ -167,12 +168,16 @@ jobs:
                 Write-Host "P1 parent PID = $parentProcessId"
               }
 
-              if ($null -ne $p1Pid -and $processName -eq "BOT-IA-Core.exe" -and $parentProcessId -eq $p1Pid -and $processTime -ge $p1Time) {
-                $p2Pid = $processId
-                $p2Time = $processTime
-                $handoffObserved = $true
-                Write-Host "P2 detected PID = $p2Pid"
-                Write-Host "P2 parent PID = $parentProcessId"
+                if ($null -ne $p1Pid -and $processName -eq "BOT-IA-Core.exe" -and $parentProcessId -eq $p1Pid -and $processTime -ge $p1Time) {
+                  $p2Pid = $processId
+                  $p2Time = $processTime
+                  $handoffObserved = $true
+                  Write-Host "P2 detected PID = $p2Pid"
+                  Write-Host "P2 parent PID = $parentProcessId"
+                }
+              }
+              finally {
+                Remove-Event -EventIdentifier $eventRecord.EventIdentifier -ErrorAction SilentlyContinue
               }
             }
 
