@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import unittest
+import sqlite3
 import tempfile
+import threading
+import time
 from pathlib import Path
 
 from bot_ia.interfaces.telegram_event_ledger import TelegramEventLedger
@@ -22,6 +25,82 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
             thread.is_alive(),
             "TelegramAdapter.close() debe detener el escritor XP",
         )
+
+    def test_xp_tracker_stop_waits_for_blocked_sqlite_writer(self):
+        class ObservableEvent:
+            def __init__(self, event):
+                self._event = event
+                self.set_called = threading.Event()
+
+            def set(self):
+                self._event.set()
+                self.set_called.set()
+
+            def wait(self, timeout=None):
+                return self._event.wait(timeout)
+
+            def is_set(self):
+                return self._event.is_set()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            database = Path(tmpdir) / "xp.sqlite3"
+            tracker = PassiveXPTracker(database, cooldown_seconds=0.0)
+            block_started = threading.Event()
+            release_write = threading.Event()
+            original_stop = tracker._stop
+            tracker._stop = ObservableEvent(original_stop)
+
+            original_connect = tracker._connect
+
+            def blocked_connect():
+                db = original_connect()
+
+                def authorizer(action, table, _column, _database, _source):
+                    if action == sqlite3.SQLITE_INSERT and table == "xp_users":
+                        block_started.set()
+                        if not release_write.wait(5.0):
+                            raise AssertionError("test did not release the SQLite operation")
+                    return sqlite3.SQLITE_OK
+
+                db.set_authorizer(authorizer)
+                return db
+
+            tracker._connect = blocked_connect
+            tracker._queue.put(("shutdown-test", "telegram", time.monotonic()))
+            tracker._ensure_writer_started()
+            thread = tracker._thread
+            self.assertIsNotNone(thread)
+            self.assertTrue(block_started.wait(2.0))
+            self.assertTrue(thread.is_alive())
+
+            stop_finished = threading.Event()
+
+            def stop_tracker():
+                tracker.stop()
+                stop_finished.set()
+
+            stopper = threading.Thread(target=stop_tracker, name="xp-stop-test")
+            stopper.start()
+
+            self.assertTrue(tracker._stop.set_called.wait(2.0))
+            self.assertTrue(stopper.is_alive())
+            self.assertTrue(thread.is_alive())
+            self.assertFalse(stop_finished.is_set())
+
+            stopper.join(timeout=1.2)
+            self.assertTrue(stopper.is_alive())
+            self.assertTrue(thread.is_alive())
+            self.assertFalse(stop_finished.is_set())
+
+            release_write.set()
+            stopper.join(timeout=5.0)
+
+            self.assertFalse(stopper.is_alive())
+            self.assertTrue(stop_finished.is_set())
+            self.assertFalse(thread.is_alive())
+            self.assertTrue(thread.daemon)
+
+            tracker.stop()
 
     def test_poller_stop_closes_adapter(self):
         class Adapter:
