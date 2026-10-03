@@ -148,10 +148,18 @@ jobs:
                 break
               }
 
-              $waitSeconds = [Math]::Max(1, [Math]::Ceiling($remainingSeconds))
+              $waitSeconds = [Math]::Max(1, [Math]::Floor($remainingSeconds))
               $eventRecord = Wait-Event -SourceIdentifier $sourceIdentifier -Timeout $waitSeconds
+              $eventReceivedAtUtc = [DateTime]::UtcNow
               if ($null -eq $eventRecord) {
+                if ($eventReceivedAtUtc -ge $deadlineAt) {
+                  break
+                }
                 continue
+              }
+
+              if ($eventReceivedAtUtc -ge $deadlineAt) {
+                break
               }
 
               try {
@@ -168,12 +176,15 @@ jobs:
                 Write-Host "P1 parent PID = $parentProcessId"
               }
 
-                if ($null -ne $p1Pid -and $processName -eq "BOT-IA-Core.exe" -and $parentProcessId -eq $p1Pid -and $processTime -ge $p1Time) {
-                  $p2Pid = $processId
-                  $p2Time = $processTime
-                  $handoffObserved = $true
-                  Write-Host "P2 detected PID = $p2Pid"
-                  Write-Host "P2 parent PID = $parentProcessId"
+                if ($null -ne $p1Pid -and $processName -eq "BOT-IA-Core.exe" -and $parentProcessId -eq $p1Pid -and $processTime -ge $p1Time -and $processTime -le $deadlineAt) {
+                  $p2DeadlineCheckUtc = [DateTime]::UtcNow
+                  if ($p2DeadlineCheckUtc -lt $deadlineAt) {
+                    $p2Pid = $processId
+                    $p2Time = $processTime
+                    $handoffObserved = $true
+                    Write-Host "P2 detected PID = $p2Pid"
+                    Write-Host "P2 parent PID = $parentProcessId"
+                  }
                 }
               }
               finally {
@@ -184,6 +195,10 @@ jobs:
             if (-not $handoffObserved) {
               $elapsed = ([DateTime]::UtcNow - $p0LaunchReference).TotalSeconds
               throw "BOT-IA.exe launcher handoff was not correlated within $($deadlineSeconds)s: no valid P0 -> P1 -> P2 process chain observed (elapsed $([math]::Round($elapsed, 3)) s)."
+            }
+
+            if ([DateTime]::UtcNow -ge $deadlineAt) {
+              throw "BOT-IA.exe launcher handoff correlation exceeded the strict $($deadlineSeconds)s deadline before PASS."
             }
 
             if ($p1Time -lt $p0Time -or $p2Time -lt $p1Time) {
