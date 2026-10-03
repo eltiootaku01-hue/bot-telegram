@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-import importlib
 from types import SimpleNamespace
-
-import pytest
 
 import run_all
 
@@ -12,13 +9,15 @@ def test_invalid_preflight_prevents_all_child_process_creation(monkeypatch, caps
 
     def failing_import(module_name):
         raise ModuleNotFoundError(
-            f"No module named 'api'",
+            "No module named 'api'",
             name="api",
         )
 
     def forbidden_process(*args, **kwargs):
         process_calls.append((args, kwargs))
-        raise AssertionError("multiprocessing.Process must not be called after preflight failure")
+        raise AssertionError(
+            "multiprocessing.Process must not be called after preflight failure"
+        )
 
     monkeypatch.setattr(run_all.importlib, "import_module", failing_import)
     monkeypatch.setattr(run_all.multiprocessing, "Process", forbidden_process)
@@ -35,9 +34,15 @@ def test_invalid_preflight_prevents_all_child_process_creation(monkeypatch, caps
 
 def test_valid_preflight_completes_without_starting_runtime_services(monkeypatch):
     modules = {
-        "src.api.main": SimpleNamespace(app=object()),
-        "src.bot.main": SimpleNamespace(create_bot_app=lambda: None),
-        "src.discord.bot": SimpleNamespace(run_discord_bot=lambda: None),
+        "src.api.main": SimpleNamespace(
+            app=lambda *args, **kwargs: None,
+        ),
+        "src.bot.main": SimpleNamespace(
+            create_bot_app=lambda: None,
+        ),
+        "src.discord.bot": SimpleNamespace(
+            run_discord_bot=lambda: None,
+        ),
     }
 
     def fake_import(module_name):
