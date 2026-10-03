@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 from bot_ia.interfaces.telegram_event_ledger import TelegramEventLedger
+from bot_ia.interfaces.xp_audit import PassiveXPTracker
 from bot_ia.interfaces.telegram import TelegramAdapter, TelegramApiClient, TelegramOutbound, TelegramPoller, PollingConfig
 
 
