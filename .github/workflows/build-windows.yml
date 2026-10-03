@@ -65,20 +65,186 @@ jobs:
           OPENROUTER_API_KEY=
           TELEGRAM_BOT_TOKEN=
           "@ | Set-Content -Path "$PWD\release\.env" -Encoding utf8
-          $launcher = Start-Process -FilePath "$PWD\release\BOT-IA.exe" -WorkingDirectory "$PWD\release" -PassThru
-          Start-Sleep -Seconds 3
-          $launcher.Refresh()
-          if (-not $launcher.HasExited) {
-            Stop-Process -Id $launcher.Id -Force -ErrorAction SilentlyContinue
-            throw "BOT-IA.exe did not hand off control to the Core/Setup flow within 3 seconds."
+
+          $sourceIdentifier = "BOTIA-LauncherStart-$([guid]::NewGuid().ToString('N'))"
+          $subscription = $null
+          $launcher = $null
+          $p1Pid = $null
+          $p1Time = $null
+          $p2Pid = $null
+          $p2Time = $null
+          $handoffObserved = $false
+          $deadlineSeconds = 10
+          $launcherPath = [System.IO.Path]::GetFullPath("$PWD\release\BOT-IA.exe")
+          $corePath = [System.IO.Path]::GetFullPath("$PWD\release\BOT-IA-Core.exe")
+
+          function Stop-CorrelatedProcess {
+            param(
+              [int]$ProcessId,
+              [string]$ExpectedName,
+              [string]$ExpectedPath,
+              [DateTime]$ExpectedCreationTimeUtc
+            )
+
+            if ($ProcessId -le 0) {
+              return
+            }
+
+            $process = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction SilentlyContinue
+            if ($null -eq $process) {
+              return
+            }
+
+            if ($process.Name -ne $ExpectedName) {
+              return
+            }
+
+            if ($process.ExecutablePath -and (-not [string]::Equals([System.IO.Path]::GetFullPath($process.ExecutablePath), $ExpectedPath, [System.StringComparison]::OrdinalIgnoreCase))) {
+              return
+            }
+
+            if ($process.CreationDate) {
+              $actualCreationTimeUtc = $process.CreationDate.ToUniversalTime()
+              if ([math]::Abs(($actualCreationTimeUtc - $ExpectedCreationTimeUtc).TotalSeconds) -gt 2) {
+                return
+              }
+            }
+
+            Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
           }
-          $coreProcesses = Get-Process -Name "BOT-IA-Core" -ErrorAction SilentlyContinue
-          if (-not $coreProcesses) {
-            throw "BOT-IA.exe exited but did not start BOT-IA-Core.exe during the launcher smoke test."
+
+          try {
+            try {
+              $subscription = Register-CimIndicationEvent -ClassName "Win32_ProcessStartTrace" -Namespace "root/cimv2" -SourceIdentifier $sourceIdentifier -ErrorAction Stop
+            }
+            catch {
+              throw "Unable to subscribe to Win32_ProcessStartTrace: $($_.Exception.Message)"
+            }
+
+            $activeSubscription = Get-EventSubscriber -SourceIdentifier $sourceIdentifier -ErrorAction SilentlyContinue
+            if ($null -eq $activeSubscription) {
+              throw "Win32_ProcessStartTrace subscription was not active after registration."
+            }
+
+            $p0LaunchReference = [DateTime]::UtcNow
+            $launcher = Start-Process -FilePath "$PWD\release\BOT-IA.exe" -WorkingDirectory "$PWD\release" -PassThru
+
+            $p0Pid = [int]$launcher.Id
+            $p0Time = $p0LaunchReference
+            try {
+              $p0Time = $launcher.StartTime.ToUniversalTime()
+            }
+            catch {
+              Write-Host "Launcher P0 start time query unavailable; using launch reference."
+            }
+
+            Write-Host "Launcher P0 PID = $p0Pid"
+
+            $deadlineAt = $p0LaunchReference.AddSeconds($deadlineSeconds)
+
+            while (-not $handoffObserved) {
+              $remainingSeconds = ($deadlineAt - [DateTime]::UtcNow).TotalSeconds
+              if ($remainingSeconds -le 0) {
+                break
+              }
+
+              $waitSeconds = [Math]::Max(1, [Math]::Floor($remainingSeconds))
+              $eventRecord = Wait-Event -SourceIdentifier $sourceIdentifier -Timeout $waitSeconds
+              $eventReceivedAtUtc = [DateTime]::UtcNow
+              if ($null -eq $eventRecord) {
+                if ($eventReceivedAtUtc -ge $deadlineAt) {
+                  break
+                }
+                continue
+              }
+
+              if ($eventReceivedAtUtc -ge $deadlineAt) {
+                break
+              }
+
+              try {
+                $processEvent = $eventRecord.SourceEventArgs.NewEvent
+                $processName = [string]$processEvent.ProcessName
+              $processId = [int]$processEvent.ProcessID
+              $parentProcessId = [int]$processEvent.ParentProcessID
+              $processTime = [DateTime]::FromFileTimeUtc([int64]$processEvent.TIME_CREATED)
+
+              if ($null -eq $p1Pid -and $processName -eq "BOT-IA.exe" -and $processId -ne $p0Pid -and $parentProcessId -eq $p0Pid -and $processTime -ge $p0Time) {
+                $p1Pid = $processId
+                $p1Time = $processTime
+                Write-Host "P1 detected PID = $p1Pid"
+                Write-Host "P1 parent PID = $parentProcessId"
+              }
+
+                if ($null -ne $p1Pid -and $processName -eq "BOT-IA-Core.exe" -and $parentProcessId -eq $p1Pid -and $processTime -ge $p1Time -and $processTime -le $deadlineAt) {
+                  $p2DeadlineCheckUtc = [DateTime]::UtcNow
+                  if ($p2DeadlineCheckUtc -lt $deadlineAt) {
+                    $p2Pid = $processId
+                    $p2Time = $processTime
+                    $handoffObserved = $true
+                    Write-Host "P2 detected PID = $p2Pid"
+                    Write-Host "P2 parent PID = $parentProcessId"
+                  }
+                }
+              }
+              finally {
+                Remove-Event -EventIdentifier $eventRecord.EventIdentifier -ErrorAction SilentlyContinue
+              }
+            }
+
+            if (-not $handoffObserved) {
+              $elapsed = ([DateTime]::UtcNow - $p0LaunchReference).TotalSeconds
+              throw "BOT-IA.exe launcher handoff was not correlated within $($deadlineSeconds)s: no valid P0 -> P1 -> P2 process chain observed (elapsed $([math]::Round($elapsed, 3)) s)."
+            }
+
+            if ([DateTime]::UtcNow -ge $deadlineAt) {
+              throw "BOT-IA.exe launcher handoff correlation exceeded the strict $($deadlineSeconds)s deadline before PASS."
+            }
+
+            if ($p1Time -lt $p0Time -or $p2Time -lt $p1Time) {
+              throw "Invalid process creation ordering for P0 -> P1 -> P2."
+            }
+
+            $elapsed = ($p2Time - $p0LaunchReference).TotalSeconds
+            Write-Host "OK: BOT-IA launcher handoff observed."
+            Write-Host "P0 PID = $p0Pid"
+            Write-Host "P1 PID = $p1Pid"
+            Write-Host "P2 PID = $p2Pid"
+            Write-Host ("OK: launcher handoff observed in {0:N3} s." -f $elapsed)
           }
-          Write-Host "OK: BOT-IA.exe started BOT-IA-Core.exe."
-          $coreProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
-          Remove-Item "$PWD\release\.env" -Force -ErrorAction SilentlyContinue
+          catch {
+            throw
+          }
+          finally {
+            if ($p2Pid) {
+              Stop-CorrelatedProcess -ProcessId $p2Pid -ExpectedName "BOT-IA-Core.exe" -ExpectedPath $corePath -ExpectedCreationTimeUtc $p2Time
+            }
+
+            if ($p1Pid) {
+              Stop-CorrelatedProcess -ProcessId $p1Pid -ExpectedName "BOT-IA.exe" -ExpectedPath $launcherPath -ExpectedCreationTimeUtc $p1Time
+            }
+
+            if ($launcher) {
+              try {
+                $launcher.Refresh()
+                if (-not $launcher.HasExited) {
+                  Stop-Process -Id $p0Pid -Force -ErrorAction SilentlyContinue
+                  $launcher.WaitForExit()
+                }
+              }
+              catch {
+                Write-Host "Launcher cleanup could not confirm P0 termination: $($_.Exception.Message)"
+              }
+            }
+
+            if ($sourceIdentifier) {
+              Get-Event -SourceIdentifier $sourceIdentifier -ErrorAction SilentlyContinue | Remove-Event -ErrorAction SilentlyContinue
+              Unregister-Event -SourceIdentifier $sourceIdentifier -ErrorAction SilentlyContinue
+              Get-Job -Name $sourceIdentifier -ErrorAction SilentlyContinue | Remove-Job -Force -ErrorAction SilentlyContinue
+            }
+
+            Remove-Item "$PWD\release\.env" -Force -ErrorAction SilentlyContinue
+          }
 
       - name: Clean generated runtime state
         shell: pwsh
