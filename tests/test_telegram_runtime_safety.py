@@ -254,12 +254,20 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
             tracker._lock.acquire()
 
             stop_finished = threading.Event()
+            produced_error = {}
 
             def stop_tracker():
                 tracker.stop()
                 stop_finished.set()
 
+            def produce():
+                try:
+                    tracker.record_message("producer-loses", "telegram")
+                except RuntimeError as error:
+                    produced_error["error"] = error
+
             stopper = threading.Thread(target=stop_tracker, name="xp-stop-wins")
+            producer = threading.Thread(target=produce, name="xp-producer-loses")
 
             try:
                 stopper.start()
@@ -270,17 +278,21 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
                 self.assertTrue(stop_finished.wait(2.0))
 
                 queue_before = tracker._queue.qsize()
-                with self.assertRaisesRegex(
-                    RuntimeError,
-                    r"^PassiveXPTracker is stopped$",
-                ):
-                    tracker.record_message("producer-loses", "telegram")
+                producer.start()
+                producer.join(timeout=5.0)
 
+                self.assertFalse(producer.is_alive())
+                self.assertIsInstance(produced_error.get("error"), RuntimeError)
+                self.assertEqual(
+                    "PassiveXPTracker is stopped",
+                    str(produced_error["error"]),
+                )
                 self.assertEqual(queue_before, tracker._queue.qsize())
                 self.assertEqual(0, tracker._queue.unfinished_tasks)
             finally:
                 if tracker._lock.locked():
                     tracker._lock.release()
+                producer.join(timeout=5.0)
                 stopper.join(timeout=5.0)
 
     def test_xp_tracker_post_stop_rejects_without_queue_mutation(self):
