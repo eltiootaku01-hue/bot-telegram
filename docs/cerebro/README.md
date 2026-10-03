@@ -119,3 +119,24 @@ Si existe conflicto entre hacer trabajo nuevo y conservar estabilidad/evidencia,
 La regla maestra es:
 
 > **NO CREAR TRABAJO NUEVO HASTA SABER EXACTAMENTE QUÉ ESTÁ CERRADO, QUÉ ESTÁ BLOQUEADO Y QUÉ ES LO SIGUIENTE QUE REALMENTE CORRESPONDE.**
+
+
+## SALUD ARQUITECTÓNICA — PROBLEMAS DE HUESOS
+
+Antes de autorizar activación/integración integral, leer también:
+
+`docs/problemas_de_huesos/README.md`
+`docs/problemas_de_huesos/01_HALLAZGOS_ARQUITECTURA.md`
+`docs/problemas_de_huesos/02_GATE_CUERPO_SANO.md`
+
+Esta carpeta registra riesgos, hipótesis y gates de salud arquitectónica.
+
+El Cerebro debe distinguir:
+- problema demostrado;
+- riesgo;
+- hipótesis;
+- blocker;
+- reparación validada.
+
+No tratar una hipótesis como defecto confirmado.
+No autorizar la activación integral mientras exista un blocker de salud arquitectónica sin gate explícito.
