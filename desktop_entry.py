@@ -36,6 +36,33 @@ def _telegram_log(message: str) -> None:
         handle.write(message.rstrip() + "\n")
 
 
+def _install_telegram_signal_handlers(poller: object):
+    previous_handlers: dict[signal.Signals, object] = {}
+    supported_signals = [signal.SIGINT, signal.SIGTERM]
+    if hasattr(signal, "SIGBREAK"):
+        supported_signals.append(signal.SIGBREAK)
+
+    def request_stop(_signum: int, _frame: object) -> None:
+        stop = getattr(poller, "stop", None)
+        if callable(stop):
+            stop()
+
+    try:
+        for signum in supported_signals:
+            previous_handlers[signum] = signal.getsignal(signum)
+            signal.signal(signum, request_stop)
+    except Exception:
+        for signum, previous_handler in previous_handlers.items():
+            signal.signal(signum, previous_handler)
+        raise
+
+    def restore() -> None:
+        for signum, previous_handler in previous_handlers.items():
+            signal.signal(signum, previous_handler)
+
+    return restore
+
+
 def _run_telegram_worker() -> int:
     from bot_ia.interfaces.telegram import TelegramApiClient, TelegramPoller
     from bot_ia.interfaces.telegram_outbox import TelegramOutboxStore
@@ -44,6 +71,8 @@ def _run_telegram_worker() -> int:
 
     load_dotenv(ROOT / ".env")
     runtime = None
+    poller = None
+    restore_signal_handlers = None
     try:
         runtime = build_runtime(ROOT)
         universe_id = os.getenv("BOT_IA_UNIVERSE", "one_neko_punch")
@@ -57,15 +86,17 @@ def _run_telegram_worker() -> int:
             raise RuntimeError("Telegram getMe check failed")
 
         outbox_store = TelegramOutboxStore(runtime.memory_store.path)
-        _telegram_log(
-            "Telegram: conexión OK; polling iniciado con outbox durable."
-        )
-        result = TelegramPoller(
+        poller = TelegramPoller(
             client,
             TelegramProjectsAdapter(application, runtime),
             logger=_telegram_log,
             outbox_store=outbox_store,
-        ).run()
+        )
+        restore_signal_handlers = _install_telegram_signal_handlers(poller)
+        _telegram_log(
+            "Telegram: conexión OK; polling iniciado con outbox durable."
+        )
+        result = poller.run()
         _telegram_log(
             "Telegram: detenido "
             f"polls={result.polls} "
@@ -82,6 +113,10 @@ def _run_telegram_worker() -> int:
         _telegram_log(traceback.format_exc())
         return 1
     finally:
+        if poller is not None:
+            poller.stop()
+        if restore_signal_handlers is not None:
+            restore_signal_handlers()
         if runtime is not None:
             runtime.memory_store.close()
 
