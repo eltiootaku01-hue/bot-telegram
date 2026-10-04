@@ -304,30 +304,46 @@ def _destroy_then_qapplication_child() -> str:
 
 def _services_target_child() -> str:
     return f"""
-        import importlib
         import pytest
 
-        target_module = importlib.import_module(
-            "tests.test_webchat_runtime_controlled_8h"
-        )
-        harness_cls = target_module.ControlledWebChatHarness
-        original_init = harness_cls.__init__
+        class _TargetLifecycleProbe:
+            def pytest_collection_modifyitems(self, session, config, items):
+                patched = False
+                for item in items:
+                    item_path = str(getattr(item, "path", ""))
+                    if not item_path.endswith("test_webchat_runtime_controlled_8h.py"):
+                        continue
+                    harness_cls = getattr(
+                        item.module,
+                        "ControlledWebChatHarness",
+                        None,
+                    )
+                    if harness_cls is None or patched:
+                        continue
+                    original_init = harness_cls.__init__
 
-        def _wrapped_init(self, *args, **kwargs):
-            print("=== SERVICES_CONTEXT BEFORE ControlledWebChatHarness ===", flush=True)
-            {_snapshot_child("SERVICES_CONTEXT_PRE_HARNESS")}
-            return original_init(self, *args, **kwargs)
+                    def _wrapped_init(self, *args, **kwargs):
+                        print(
+                            "=== SERVICES_CONTEXT BEFORE ControlledWebChatHarness ===",
+                            flush=True,
+                        )
+                        {_snapshot_child("SERVICES_CONTEXT_PRE_HARNESS")}
+                        return original_init(self, *args, **kwargs)
 
-        harness_cls.__init__ = _wrapped_init
+                    harness_cls.__init__ = _wrapped_init
+                    patched = True
 
+        {_environment_child()}
         print("=== SERVICES_CONTEXT PYTEST START ===", flush=True)
         raise SystemExit(
             pytest.main(
                 [
                     "-q",
+                    "-s",
                     {str(SERVICES)!r},
                     {str(TARGET)!r},
-                ]
+                ],
+                plugins=[_TargetLifecycleProbe()],
             )
         )
     """
@@ -348,30 +364,32 @@ class CauseDiscrimination12Tests(unittest.TestCase):
             if not lines:
                 self.fail(f"{case_label} run {run}/3 produced no output")
 
-    def test_2f8t_cause_discrimination_matrix(self) -> None:
-        cases = {
-            "A_NONE": _webengine_child("NONE"),
-            "B_QCORE": _webengine_child("QCoreApplication"),
-            "C_QGUI": _webengine_child("QGuiApplication"),
-            "D_QAPPLICATION": _webengine_child("QApplication"),
-            "E_QCORE_DESTROY_THEN_QAPPLICATION": _destroy_then_qapplication_child(),
-        }
-        for label, code in cases.items():
-            self._repeat_case(label, code)
+    def test_2f8t_cause_discrimination_matrix(self, capsys) -> None:
+        with capsys.disabled():
+            cases = {
+                "A_NONE": _webengine_child("NONE"),
+                "B_QCORE": _webengine_child("QCoreApplication"),
+                "C_QGUI": _webengine_child("QGuiApplication"),
+                "D_QAPPLICATION": _webengine_child("QApplication"),
+                "E_QCORE_DESTROY_THEN_QAPPLICATION": _destroy_then_qapplication_child(),
+            }
+            for label, code in cases.items():
+                self._repeat_case(label, code)
 
-    def test_2f8t_services_context_comparison(self) -> None:
-        for run in range(1, 4):
-            exit_code, lines = _run_child(
-                f"SERVICES_CORE_PLUS_TARGET RUN {run}/3",
-                _services_target_child(),
-                timeout=240,
-            )
-            print(
-                f"[SERVICES-MATRIX] run={run}/3 exit_code={exit_code}",
-                flush=True,
-            )
-            if not lines:
-                self.fail(f"services context run {run}/3 produced no output")
+    def test_2f8t_services_context_comparison(self, capsys) -> None:
+        with capsys.disabled():
+            for run in range(1, 4):
+                exit_code, lines = _run_child(
+                    f"SERVICES_CORE_PLUS_TARGET RUN {run}/3",
+                    _services_target_child(),
+                    timeout=240,
+                )
+                print(
+                    f"[SERVICES-MATRIX] run={run}/3 exit_code={exit_code}",
+                    flush=True,
+                )
+                if not lines:
+                    self.fail(f"services context run {run}/3 produced no output")
 
 
 if __name__ == "__main__":
