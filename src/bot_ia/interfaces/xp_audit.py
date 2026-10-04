@@ -8,7 +8,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from queue import Queue
+from queue import Empty, Queue
 from typing import Any
 
 
@@ -30,6 +30,18 @@ RANKS = (
 )
 
 
+class PassiveXPTrackerDrainError(RuntimeError):
+    """Indica que uno o más items aceptados no pudieron persistirse durante el drain."""
+
+    def __init__(self, failure_count: int, first_error: Exception) -> None:
+        self.failure_count = int(failure_count)
+        self.first_error = first_error
+        super().__init__(
+            "PassiveXPTracker drain failed after "
+            f"{self.failure_count} persistence failure(s)"
+        )
+
+
 class PassiveXPTracker:
     """SQLite WAL + cola; el mensaje nunca espera una escritura SQLite."""
 
@@ -43,6 +55,8 @@ class PassiveXPTracker:
         self._stop = threading.Event()
         self._init_db()
         self._thread: threading.Thread | None = None
+        self._drain_failure_count = 0
+        self._first_drain_error: Exception | None = None
 
     def _connect(self) -> sqlite3.Connection:
         db = sqlite3.connect(self.path, timeout=2.0)
@@ -71,30 +85,35 @@ class PassiveXPTracker:
         now = time.monotonic()
         key = (str(user_id), str(platform).casefold())
         with self._lock:
+            if self._stop.is_set():
+                raise RuntimeError("PassiveXPTracker is stopped")
             previous = self._last.get(key, float("-inf"))
             if now - previous < self.cooldown_seconds:
                 level = self.level_for(self.current_xp(*key))
                 return XPResult(key[0], key[1], 0, level, False, self.role_for(level))
+            self._ensure_writer_started_locked()
+            self._queue.put((key[0], key[1], now))
             self._last[key] = now
-        self._ensure_writer_started()
-        self._queue.put((key[0], key[1], now))
         level = self.level_for(self.current_xp(*key) + 10)
         return XPResult(key[0], key[1], 10, level, True, self.role_for(level))
 
     def _ensure_writer_started(self) -> None:
         with self._lock:
-            thread = self._thread
-            if thread is not None and thread.is_alive():
-                return
-            if self._stop.is_set():
-                raise RuntimeError("PassiveXPTracker is stopped")
-            thread = threading.Thread(
-                target=self._writer,
-                name="nakama-xp-writer",
-                daemon=True,
-            )
-            self._thread = thread
-            thread.start()
+            self._ensure_writer_started_locked()
+
+    def _ensure_writer_started_locked(self) -> None:
+        thread = self._thread
+        if thread is not None and thread.is_alive():
+            return
+        if self._stop.is_set():
+            raise RuntimeError("PassiveXPTracker is stopped")
+        thread = threading.Thread(
+            target=self._writer,
+            name="nakama-xp-writer",
+            daemon=True,
+        )
+        self._thread = thread
+        thread.start()
 
     def current_xp(self, user_id: str, platform: str) -> int:
         with closing(self._connect()) as db:
@@ -102,14 +121,31 @@ class PassiveXPTracker:
         return int(row[0]) if row else 0
 
     def _writer(self) -> None:
-        while not self._stop.wait(0.05):
+        while True:
+            if self._stop.is_set() and self._queue.empty():
+                return
             try:
-                user_id, platform, now = self._queue.get_nowait()
-            except Exception:
+                user_id, platform, now = self._queue.get(timeout=0.05)
+            except Empty:
                 continue
-            with closing(self._connect()) as db:
-                db.execute("INSERT INTO xp_users(user_id,platform,xp,messages,updated_at) VALUES(?,?,10,1,?) ON CONFLICT(user_id,platform) DO UPDATE SET xp=xp+10,messages=messages+1,updated_at=excluded.updated_at", (user_id, platform, now))
-                db.commit()
+
+            try:
+                with closing(self._connect()) as db:
+                    db.execute(
+                        "INSERT INTO xp_users(user_id,platform,xp,messages,updated_at) "
+                        "VALUES(?,?,10,1,?) "
+                        "ON CONFLICT(user_id,platform) DO UPDATE SET "
+                        "xp=xp+10,messages=messages+1,updated_at=excluded.updated_at",
+                        (user_id, platform, now),
+                    )
+                    db.commit()
+            except Exception as error:
+                with self._lock:
+                    self._drain_failure_count += 1
+                    if self._first_drain_error is None:
+                        self._first_drain_error = error
+            finally:
+                self._queue.task_done()
 
     def audit(self, platform: str, user_id: str, event: str, details: str) -> None:
         with closing(self._connect()) as db:
@@ -120,8 +156,24 @@ class PassiveXPTracker:
         with self._lock:
             self._stop.set()
             thread = self._thread
+
         if thread is not None and thread is not threading.current_thread():
-            thread.join(timeout=1.0)
+            self._queue.join()
+            thread.join()
+
+        with self._lock:
+            failure_count = self._drain_failure_count
+            first_error = self._first_drain_error
+
+        if failure_count:
+            if first_error is None:
+                raise RuntimeError(
+                    "PassiveXPTracker recorded a drain failure without an error"
+                )
+            raise PassiveXPTrackerDrainError(
+                failure_count,
+                first_error,
+            ) from first_error
 
 
 class AuditBus:
