@@ -401,7 +401,7 @@ def _services_target_child() -> str:
     """
 
 
-class CauseDiscrimination12Tests:
+class TestCauseDiscrimination12:
     @staticmethod
     def _process_summary(
         case_label: str,
