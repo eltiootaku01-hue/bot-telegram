@@ -190,8 +190,12 @@ def _webengine_child(app_type: str) -> str:
                 + type(QCoreApplication.instance()).__name__,
                 flush=True,
             )
-        else:
-            {app_setup}
+        elif {app_type!r} == "QCoreApplication":
+            app = QCoreApplication(sys.argv)
+        elif {app_type!r} == "QGuiApplication":
+            app = QGuiApplication(sys.argv)
+        elif {app_type!r} == "QApplication":
+            app = QApplication(sys.argv)
 
         _after_app = QCoreApplication.instance()
         print(
