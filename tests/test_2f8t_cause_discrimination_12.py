@@ -365,8 +365,8 @@ class CauseDiscrimination12Tests:
                     f"{case_label} run {run}/3 produced no output"
                 )
 
-    def test_2f8t_cause_discrimination_matrix(self, capsys) -> None:
-        with capsys.disabled():
+    def test_2f8t_cause_discrimination_matrix(self, capfd) -> None:
+        with capfd.disabled():
             cases = {
                 "A_NONE": _webengine_child("NONE"),
                 "B_QCORE": _webengine_child("QCoreApplication"),
