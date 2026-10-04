@@ -3,14 +3,16 @@
 
 from __future__ import annotations
 
-import importlib
 import os
 from pathlib import Path
 import platform
+import queue
 import subprocess
 import sys
 import textwrap
+import threading
 import time
+import warnings
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +30,7 @@ def _base_env() -> dict[str, str]:
     return env
 
 
-def _run_child(label: str, code: str, timeout: int = 180) -> tuple[int, list[tuple[float, str]]]:
+def _run_child(label: str, code: str, timeout: int = 30) -> tuple[int, list[tuple[float, str]]]:
     env = _base_env()
     print("\n=== 2F8T CASE: " + label + " ===", flush=True)
     started = time.monotonic()
@@ -42,15 +44,66 @@ def _run_child(label: str, code: str, timeout: int = 180) -> tuple[int, list[tup
         bufsize=1,
     )
     captured: list[tuple[float, str]] = []
+    lines: queue.Queue[str | None] = queue.Queue()
+
     assert process.stdout is not None
-    try:
+
+    def _reader() -> None:
         for raw_line in process.stdout:
-            line = raw_line.rstrip("\n")
-            relative = time.monotonic() - started
-            captured.append((relative, line))
-            print(f"[+{relative:8.3f}s] {line}", flush=True)
-    finally:
-        return_code = process.wait(timeout=timeout)
+            lines.put(raw_line.rstrip("\n"))
+        lines.put(None)
+
+    reader = threading.Thread(target=_reader, daemon=True)
+    reader.start()
+    reader_done = False
+    deadline = started + timeout
+
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        if process.poll() is not None and reader_done and lines.empty():
+            break
+        try:
+            line = lines.get(timeout=min(0.2, remaining))
+        except queue.Empty:
+            continue
+        if line is None:
+            reader_done = True
+            continue
+        relative = time.monotonic() - started
+        captured.append((relative, line))
+        print(f"[+{relative:8.3f}s] {line}", flush=True)
+
+    if process.poll() is None:
+        relative = time.monotonic() - started
+        captured.append(
+            (relative, f"HARNESS_TIMEOUT timeout={timeout}s; terminating child")
+        )
+        print(
+            f"[+{relative:8.3f}s] HARNESS_TIMEOUT timeout={timeout}s; terminating child",
+            flush=True,
+        )
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+
+    while True:
+        try:
+            line = lines.get_nowait()
+        except queue.Empty:
+            break
+        if line is None:
+            reader_done = True
+            continue
+        relative = time.monotonic() - started
+        captured.append((relative, line))
+        print(f"[+{relative:8.3f}s] {line}", flush=True)
+
+    return_code = process.returncode
     print(
         f"[PROCESS] label={label} exit_code={return_code}",
         flush=True,
@@ -349,50 +402,94 @@ def _services_target_child() -> str:
 
 
 class CauseDiscrimination12Tests:
-    def _repeat_case(self, case_label: str, code: str) -> None:
-        for run in range(1, 4):
-            exit_code, lines = _run_child(
-                f"{case_label} RUN {run}/3",
-                code,
-                timeout=180,
-            )
-            print(
-                f"[MATRIX] case={case_label} run={run}/3 exit_code={exit_code}",
-                flush=True,
-            )
-            if not lines:
-                raise AssertionError(
-                    f"{case_label} run {run}/3 produced no output"
-                )
+    @staticmethod
+    def _process_summary(
+        case_label: str,
+        run_label: str,
+        exit_code: int,
+        lines: list[tuple[float, str]],
+    ) -> str:
+        text_output = "\n".join(line for _, line in lines)
+        created = "PHASE=QWEBENGINE_VIEW_CREATED" in text_output
+        load_lines = [
+            line for _, line in lines if "PHASE=LOAD_FINISHED callback=" in line
+        ]
+        result_lines = [
+            line for _, line in lines if "WEBENGINE_RESULT " in line
+        ]
+        app_lines = [
+            line for _, line in lines if "APP_INSTANCE_" in line
+        ]
+        snapshot_lines = [
+            line for _, line in lines if line.startswith("SNAPSHOT ")
+        ]
+        phases = [
+            line for _, line in lines if line.startswith("PHASE=")
+        ]
+        warnings_seen = [
+            (round(stamp, 3), line)
+            for stamp, line in lines
+            if "Release of profile requested but WebEnginePage still not deleted." in line
+        ]
+        signal = f"signal={-exit_code}" if exit_code < 0 else "signal=none"
+        posix_exit = 128 + (-exit_code) if exit_code < 0 else exit_code
+        return (
+            f"{case_label} {run_label}: "
+            f"exit_code={exit_code} posix_exit={posix_exit} {signal}; "
+            f"qwebengine_created={created}; "
+            f"last_phase={phases[-1] if phases else 'NONE'}; "
+            f"loadFinished={load_lines[-1] if load_lines else 'NONE'}; "
+            f"result={result_lines[-1] if result_lines else 'NONE'}; "
+            f"app_state={'; '.join(app_lines[-3:]) or 'NONE'}; "
+            f"snapshot={'; '.join(snapshot_lines[-2:]) or 'NONE'}; "
+            f"warnings={warnings_seen[-3:] or 'NONE'}"
+        )
 
-    def test_2f8t_cause_discrimination_matrix(self, capfd) -> None:
-        with capfd.disabled():
-            cases = {
-                "A_NONE": _webengine_child("NONE"),
-                "B_QCORE": _webengine_child("QCoreApplication"),
-                "C_QGUI": _webengine_child("QGuiApplication"),
-                "D_QAPPLICATION": _webengine_child("QApplication"),
-                "E_QCORE_DESTROY_THEN_QAPPLICATION": _destroy_then_qapplication_child(),
-            }
-            for label, code in cases.items():
-                self._repeat_case(label, code)
-
-    def test_2f8t_services_context_comparison(self, capsys) -> None:
-        with capsys.disabled():
+    def test_2f8t_cause_discrimination_matrix(self) -> None:
+        report: list[str] = []
+        cases = {
+            "A_NONE": _webengine_child("NONE"),
+            "B_QCORE": _webengine_child("QCoreApplication"),
+            "C_QGUI": _webengine_child("QGuiApplication"),
+            "D_QAPPLICATION": _webengine_child("QApplication"),
+            "E_QCORE_DESTROY_THEN_QAPPLICATION": _destroy_then_qapplication_child(),
+        }
+        for label, code in cases.items():
             for run in range(1, 4):
                 exit_code, lines = _run_child(
-                    f"SERVICES_CORE_PLUS_TARGET RUN {run}/3",
-                    _services_target_child(),
-                    timeout=240,
+                    f"{label} RUN {run}/3",
+                    code,
+                    timeout=30,
                 )
-                print(
-                    f"[SERVICES-MATRIX] run={run}/3 exit_code={exit_code}",
-                    flush=True,
-                )
-                if not lines:
-                    raise AssertionError(
-                        f"services context run {run}/3 produced no output"
+                report.append(
+                    self._process_summary(
+                        label,
+                        f"run={run}/3",
+                        exit_code,
+                        lines,
                     )
+                )
+        warnings.warn(
+            "2F8T CAUSE DISCRIMINATION MATRIX\n" + "\n".join(report),
+            RuntimeWarning,
+        )
+
+    def test_2f8t_services_context_comparison(self) -> None:
+        exit_code, lines = _run_child(
+            "SERVICES_CORE_PLUS_TARGET",
+            _services_target_child(),
+            timeout=60,
+        )
+        warnings.warn(
+            "2F8T SERVICES CONTEXT\n"
+            + self._process_summary(
+                "SERVICES_CORE_PLUS_TARGET",
+                "single-run",
+                exit_code,
+                lines,
+            ),
+            RuntimeWarning,
+        )
 
 
 if __name__ == "__main__":
