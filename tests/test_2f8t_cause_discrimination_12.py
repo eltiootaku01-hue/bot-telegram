@@ -11,7 +11,6 @@ import subprocess
 import sys
 import textwrap
 import time
-import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -349,7 +348,7 @@ def _services_target_child() -> str:
     """
 
 
-class CauseDiscrimination12Tests(unittest.TestCase):
+class CauseDiscrimination12Tests:
     def _repeat_case(self, case_label: str, code: str) -> None:
         for run in range(1, 4):
             exit_code, lines = _run_child(
@@ -362,7 +361,9 @@ class CauseDiscrimination12Tests(unittest.TestCase):
                 flush=True,
             )
             if not lines:
-                self.fail(f"{case_label} run {run}/3 produced no output")
+                raise AssertionError(
+                    f"{case_label} run {run}/3 produced no output"
+                )
 
     def test_2f8t_cause_discrimination_matrix(self, capsys) -> None:
         with capsys.disabled():
@@ -389,8 +390,11 @@ class CauseDiscrimination12Tests(unittest.TestCase):
                     flush=True,
                 )
                 if not lines:
-                    self.fail(f"services context run {run}/3 produced no output")
+                    raise AssertionError(
+                        f"services context run {run}/3 produced no output"
+                    )
 
 
 if __name__ == "__main__":
-    unittest.main()
+    import pytest
+    raise SystemExit(pytest.main(["-q", "-s", __file__]))
