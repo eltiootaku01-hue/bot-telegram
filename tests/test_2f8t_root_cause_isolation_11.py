@@ -123,7 +123,6 @@ def _application_probe(app_type: str) -> str:
         if app is not None:
             app.processEvents()
         """
-    }
 
 
 class RootCauseIsolationTests(unittest.TestCase):
