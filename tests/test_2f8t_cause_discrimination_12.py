@@ -279,10 +279,10 @@ def _destroy_then_qapplication_child() -> str:
     return f"""
         import gc
         import sys
-        from PySide6.QtCore import QCoreApplication
+        from PySide6.QtCore import QCoreApplication, QEventLoop, QUrl, QTimer
         from PySide6.QtWidgets import QApplication
         from PySide6.QtWebEngineWidgets import QWebEngineView
-        from PySide6.QtCore import QEventLoop, QUrl, QTimer
+        import shiboken6
 
         {_environment_child()}
         print("APP_TYPE_BEFORE=QCoreApplication_CREATE_THEN_DESTROY", flush=True)
@@ -293,6 +293,8 @@ def _destroy_then_qapplication_child() -> str:
             + type(QCoreApplication.instance()).__name__,
             flush=True,
         )
+
+        shiboken6.delete(app)
         app = None
         gc.collect()
         residual = QCoreApplication.instance()
@@ -343,7 +345,8 @@ def _destroy_then_qapplication_child() -> str:
         app.processEvents()
         app.processEvents()
         print("TEARDOWN_AFTER close_deleteLater_processEvents", flush=True)
-        del app
+        shiboken6.delete(app)
+        app = None
         gc.collect()
         print(
             "APP_INSTANCE_FINAL="
@@ -363,31 +366,40 @@ def _services_target_child() -> str:
         import pytest
 
         class _TargetLifecycleProbe:
-            def pytest_collection_modifyitems(self, session, config, items):
-                patched = False
-                for item in items:
-                    item_path = str(getattr(item, "path", ""))
-                    if not item_path.endswith("test_webchat_runtime_controlled_8h.py"):
-                        continue
-                    harness_cls = getattr(
-                        item.module,
-                        "ControlledWebChatHarness",
-                        None,
+            _patched = False
+
+            def pytest_runtest_setup(self, item):
+                if self._patched:
+                    return
+                nodeid = str(getattr(item, "nodeid", ""))
+                if "test_webchat_runtime_controlled_8h.py::" not in nodeid:
+                    return
+                module = getattr(item, "module", None)
+                harness_cls = getattr(
+                    module,
+                    "ControlledWebChatHarness",
+                    None,
+                )
+                print(
+                    "TARGET_PROBE nodeid=" + nodeid
+                    + " module=" + str(module),
+                    flush=True,
+                )
+                if harness_cls is None:
+                    return
+                original_init = harness_cls.__init__
+
+                def _wrapped_init(self, *args, **kwargs):
+                    print(
+                        "=== SERVICES_CONTEXT BEFORE ControlledWebChatHarness ===",
+                        flush=True,
                     )
-                    if harness_cls is None or patched:
-                        continue
-                    original_init = harness_cls.__init__
+                    {_snapshot_child("SERVICES_CONTEXT_PRE_HARNESS")}
+                    return original_init(self, *args, **kwargs)
 
-                    def _wrapped_init(self, *args, **kwargs):
-                        print(
-                            "=== SERVICES_CONTEXT BEFORE ControlledWebChatHarness ===",
-                            flush=True,
-                        )
-                        {_snapshot_child("SERVICES_CONTEXT_PRE_HARNESS")}
-                        return original_init(self, *args, **kwargs)
-
-                    harness_cls.__init__ = _wrapped_init
-                    patched = True
+                harness_cls.__init__ = _wrapped_init
+                self._patched = True
+                print("TARGET_PROBE patched=True", flush=True)
 
         {_environment_child()}
         print("=== SERVICES_CONTEXT PYTEST START ===", flush=True)
@@ -437,6 +449,7 @@ class TestCauseDiscrimination12:
         ]
         signal = f"signal={-exit_code}" if exit_code < 0 else "signal=none"
         posix_exit = 128 + (-exit_code) if exit_code < 0 else exit_code
+        tail = [line for _, line in lines[-6:]]
         return (
             f"{case_label} {run_label}: "
             f"exit_code={exit_code} posix_exit={posix_exit} {signal}; "
@@ -446,8 +459,10 @@ class TestCauseDiscrimination12:
             f"result={result_lines[-1] if result_lines else 'NONE'}; "
             f"app_state={'; '.join(app_lines[-3:]) or 'NONE'}; "
             f"snapshot={'; '.join(snapshot_lines[-2:]) or 'NONE'}; "
-            f"warnings={warnings_seen[-3:] or 'NONE'}"
+            f"warnings={warnings_seen[-3:] or 'NONE'}; "
+            f"tail={tail!r}"
         )
+
 
     def test_2f8t_cause_discrimination_matrix(self) -> None:
         report: list[str] = []
