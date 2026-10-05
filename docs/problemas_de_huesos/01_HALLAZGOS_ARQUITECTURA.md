@@ -1447,6 +1447,118 @@ Commit message:
 No se modificó código ni tests durante esta tarea.
 No se creó ni modificó PR #93.
 
+---
+
+## HUESO-09 — CONTRACT HARDENING IMPLEMENTATION
+
+STATUS:
+**IMPLEMENTED / VALIDATION PENDING**
+
+Se implementó exclusivamente el endurecimiento contractual del release gate definido por el diseño HUESO-09.
+
+### Alcance implementado
+
+Production:
+
+- `src/bot_ia/core/physical_resource_authority.py`
+- `src/bot_ia/core/physical_lifecycle_reconciliation.py`
+- `src/services/qweb_physical_resource_adapter.py`
+- `src/services/playwright_physical_resource_adapter.py`
+- `src/services/web_queue.py`
+
+Tests:
+
+- `tests/test_physical_resource_authority.py`
+- `tests/test_physical_lifecycle_reconciliation.py`
+- `tests/test_qweb_physical_resource_adapter.py`
+- `tests/test_playwright_physical_resource_adapter.py`
+- `tests/test_cross_route_physical_resource_exclusivity.py`
+- `tests/test_webchat_runtime_controlled_8h.py`
+
+Documentation:
+
+- este archivo.
+
+### Contrato implementado
+
+`PhysicalReleaseEvidence` es evidencia tipada con:
+
+- `TERMINATION`
+- `SANITIZATION`
+
+La construcción directa del objeto está bloqueada por una capability de emisión interna. El caller no puede convertir un `str` arbitrario en evidencia confiable mediante un simple campo `trusted`.
+
+La Authority conserva la identidad actual:
+
+`physical_resource_id + claim_id + execution_generation`
+
+y usa `operation_id` como fence cuando forma parte del binding actual.
+
+### Release admission
+
+Para un recurso en `CLAIMING`, el release de una claim que todavía no inició ejecución física permanece permitido sin termination evidence.
+
+Para `BUSY`, `CANCELLING` y `RELEASING`, el release requiere evidencia tipada `TERMINATION` correlacionada con provider/resource/claim/generation y operation cuando corresponde.
+
+### Quarantine
+
+`reconcile()` ya no admite una cadena arbitraria para salir de `QUARANTINED`.
+
+La salida requiere evidencia tipada `SANITIZATION` correlacionada con el contexto físico actual.
+
+### `#terminado`
+
+`#terminado` continúa siendo cierre lógico.
+
+El worker QWeb ya no convierte:
+
+`QWeb #terminado observed`
+
+en termination evidence.
+
+Sin evidencia física confiable, el recurso no pasa a `AVAILABLE`; se conserva un path fail-closed hacia quarantine.
+
+### Playwright
+
+El patrón string -> physical release fue eliminado conceptualmente del adapter.
+
+Una operación backend exitosa no se declara automáticamente provider termination proof.
+
+`shutdown()` no libera una ejecución sin evidencia tipada.
+
+### Findings
+
+- BUG-001: **CONTRACT HARDENING IMPLEMENTED; VALIDATION PENDING**
+- BUG-003: **CONTRACT HARDENING IMPLEMENTED; VALIDATION PENDING**
+- BUG-005: **CONTRACT HARDENING IMPLEMENTED; VALIDATION PENDING**
+- BUG-002: **P2 FOLLOW-UP / NO 2PC**
+- BUG-004: **NOT DEMONSTRATED**
+- Root cause: **NOT DECLARED**
+
+### Provider runtime
+
+El endurecimiento contractual no demuestra:
+
+- Gemini Web termination;
+- provider terminal state;
+- provider generation correlation;
+- provider ACK/equivalent;
+- real Gemini release.
+
+2F-8T permanece:
+
+**VERIFIED BLOCKER / ROOT CAUSE UNKNOWN**
+
+**NO REOPENED**
+
+**HUESO-09 PROVIDER RUNTIME: BLOCKED**
+
+### Validación pendiente
+
+La clasificación de esta implementación permanece `IMPLEMENTED / VALIDATION PENDING` hasta completar la validación estática, unit/integration y CI aplicable.
+
+No se presenta esta implementación como provider-runtime validation.
+
 ## HUESO 10 — SQLITE DATABASE LOCK
 
 Estado:
@@ -1582,3 +1694,37 @@ Un hallazgo solo pasa a CLOSED con evidencia de:
 - reparación;
 - validación;
 - ausencia de regresión relevante.
+
+
+## HUESO-09 — CONTRACT HARDENING REBUILD IMPLEMENTATION
+
+**STATUS: IMPLEMENTED / VALIDATION PENDING**
+
+This rebuild is based on the clean pre-implementation audit parent
+`44cf9690dd1b34f1fd368199c2ef168c7de43300`. The contaminated candidate
+`cd425959813e7aba915876e691e8d4aa291ed2c5` remains forensic evidence only;
+it was not used as the rebuild parent or as a production source.
+
+The production Playwright adapter was restored from and compared with the
+clean parent before hardening. The release gate uses typed
+`PhysicalReleaseEvidence`, separates `TERMINATION` and `SANITIZATION`,
+and validates provider, physical resource, claim, execution generation, and
+operation fencing where present. CLAIMING claim release remains allowed
+without termination evidence; active physical execution release requires
+termination evidence; quarantine exit requires sanitization evidence.
+
+`#terminado` remains logical protocol closure only. `web_queue.py` does not
+convert it into physical termination proof. Without independent evidence, the
+physical resource remains unavailable via quarantine. Successful Playwright
+backend completion likewise is not provider termination proof and remains
+quarantined.
+
+No provider runtime termination is claimed. No 2PC is introduced. BUG-002
+remains **P2 / NO 2PC** and BUG-004 remains **NOT DEMONSTRATED**.
+
+`2F-8T = VERIFIED BLOCKER / ROOT CAUSE UNKNOWN` remains **NOT REOPENED**.
+Provider runtime validation remains **BLOCKED**. Contract hardening is
+separate from provider termination validation.
+
+Validation status is pending until targeted local tests and CI validation are
+actually executed and recorded.

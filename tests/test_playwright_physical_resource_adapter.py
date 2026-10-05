@@ -214,6 +214,38 @@ class PlaywrightPhysicalResourceAdapterTests(
             await adapter.send(execution, "blocked")
         self.assertEqual(0, backend.locator.clicked)
 
+    async def test_p02c_successful_backend_operation_is_quarantined_without_termination_proof(self):
+        adapter, authority, _ = self._adapter()
+        result = await adapter.execute_task(
+            "cari",
+            {"prompt": "controlled"},
+            ticket_id="p02c",
+            operation_id="playwright-p02c-1",
+        )
+        self.assertEqual("controlled response", result)
+        self.assertEqual(
+            PhysicalResourceState.QUARANTINED,
+            authority.snapshot(
+                adapter.descriptor.physical_resource_id
+            ).state,
+        )
+
+    async def test_p02d_arbitrary_and_empty_termination_evidence_is_rejected(self):
+        adapter, authority, _ = self._adapter()
+        execution = adapter.begin_execution(
+            adapter.claim_resource(),
+            ticket_id="p02d",
+            operation_id="playwright-p02d-1",
+            waitress_id="cari",
+        )
+        for evidence in ("arbitrary", ""):
+            with self.assertRaises(PlaywrightPhysicalResourceError):
+                adapter.confirm_termination(execution, evidence=evidence)
+        self.assertEqual(
+            PhysicalResourceState.BUSY,
+            authority.snapshot(execution.physical_resource_id).state,
+        )
+
     async def test_p03_stale_generation_is_rejected(self):
         adapter, authority, _ = self._adapter()
         old_claim = adapter.claim_resource()
@@ -230,7 +262,10 @@ class PlaywrightPhysicalResourceAdapterTests(
         )
         authority.reconcile(
             old.physical_resource_id,
-            evidence="controlled reconciliation",
+            evidence=_sanitization_evidence(
+                adapter,
+                observation="controlled reconciliation",
+            ),
         )
         new_claim = adapter.claim_resource()
         new = adapter.begin_execution(
@@ -258,7 +293,11 @@ class PlaywrightPhysicalResourceAdapterTests(
         await adapter.send(first, "first")
         adapter.confirm_termination(
             first,
-            evidence="controlled completion generation one",
+            evidence=_termination_evidence(
+                adapter,
+                first,
+                observation="controlled completion generation one",
+            ),
         )
         second = adapter.begin_execution(
             adapter.claim_resource(),
@@ -485,7 +524,11 @@ class PlaywrightPhysicalResourceAdapterTests(
             )
             adapter.confirm_termination(
                 first,
-                evidence="local controlled Playwright completion",
+                evidence=_termination_evidence(
+                    adapter,
+                    first,
+                    observation="local controlled Playwright completion",
+                ),
             )
 
             second = adapter.begin_execution(
@@ -505,7 +548,11 @@ class PlaywrightPhysicalResourceAdapterTests(
             )
             adapter.confirm_termination(
                 second,
-                evidence="local controlled Playwright completion",
+                evidence=_termination_evidence(
+                    adapter,
+                    second,
+                    observation="local controlled Playwright completion",
+                ),
             )
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,

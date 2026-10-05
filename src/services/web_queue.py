@@ -1109,16 +1109,11 @@ class _QueueWorker(QObject):
                         reconciliation.get_reconciliation(ticket.ticket_id)
                     except KeyError:
                         reconciliation = None
-                if reconciliation is not None:
-                    reconciliation.record_termination(
-                        ticket.ticket_id,
-                        evidence="QWeb #terminado observed",
-                    )
-                else:
-                    adapter.confirm_termination(
-                        execution,
-                        evidence="QWeb #terminado observed",
-                    )
+                self._quarantine_physical(
+                    execution,
+                    reason="LOGICAL_TERMINATION_WITHOUT_PHYSICAL_EVIDENCE",
+                    evidence="QWeb #terminado is logical protocol closure only",
+                )
             except Exception as error:
                 self._quarantine_physical(
                     execution,

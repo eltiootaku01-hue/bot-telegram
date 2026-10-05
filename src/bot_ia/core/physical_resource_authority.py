@@ -17,6 +17,144 @@ import unicodedata
 from typing import Optional
 
 
+class PhysicalReleaseEvidenceType(str, Enum):
+    """Purpose of evidence admitted by the physical release gate."""
+
+    TERMINATION = "TERMINATION"
+    SANITIZATION = "SANITIZATION"
+
+
+class PhysicalReleaseEvidenceLevel(str, Enum):
+    """Trusted evidence level accepted by the release gate."""
+
+    VERIFIED = "VERIFIED"
+
+
+_EVIDENCE_ISSUER_TOKEN = object()
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class PhysicalReleaseEvidence:
+    """Typed release evidence emitted only through the controlled issuer."""
+
+    provider: str
+    evidence_type: PhysicalReleaseEvidenceType
+    evidence_level: PhysicalReleaseEvidenceLevel
+    physical_resource_id: str
+    claim_id: Optional[str]
+    execution_generation: Optional[int]
+    operation_id: Optional[str]
+    ticket_id: Optional[str]
+    observation: Optional[str]
+
+    def __init__(
+        self,
+        *,
+        provider: str,
+        evidence_type: PhysicalReleaseEvidenceType | str,
+        evidence_level: PhysicalReleaseEvidenceLevel | str,
+        physical_resource_id: str,
+        claim_id: Optional[str] = None,
+        execution_generation: Optional[int] = None,
+        operation_id: Optional[str] = None,
+        ticket_id: Optional[str] = None,
+        observation: Optional[str] = None,
+        _issuer: object | None = None,
+    ) -> None:
+        if _issuer is not _EVIDENCE_ISSUER_TOKEN:
+            raise TypeError(
+                "PHYSICAL_RELEASE_EVIDENCE_MUST_USE_CONTROLLED_ISSUER"
+            )
+        try:
+            evidence_type = (
+                evidence_type
+                if isinstance(evidence_type, PhysicalReleaseEvidenceType)
+                else PhysicalReleaseEvidenceType(str(evidence_type))
+            )
+            evidence_level = (
+                evidence_level
+                if isinstance(evidence_level, PhysicalReleaseEvidenceLevel)
+                else PhysicalReleaseEvidenceLevel(str(evidence_level))
+            )
+        except ValueError as error:
+            raise ValueError("INVALID_PHYSICAL_RELEASE_EVIDENCE_TYPE") from error
+        if not isinstance(provider, str) or not provider.strip():
+            raise ValueError("EVIDENCE_PROVIDER_REQUIRED")
+        if (
+            not isinstance(physical_resource_id, str)
+            or not physical_resource_id.strip()
+        ):
+            raise ValueError("EVIDENCE_RESOURCE_REQUIRED")
+        if claim_id is not None and (
+            not isinstance(claim_id, str) or not claim_id.strip()
+        ):
+            raise ValueError("EVIDENCE_CLAIM_INVALID")
+        if execution_generation is not None and execution_generation < 1:
+            raise ValueError("EVIDENCE_GENERATION_INVALID")
+        if operation_id is not None and (
+            not isinstance(operation_id, str) or not operation_id.strip()
+        ):
+            raise ValueError("EVIDENCE_OPERATION_INVALID")
+        if ticket_id is not None and (
+            not isinstance(ticket_id, str) or not ticket_id.strip()
+        ):
+            raise ValueError("EVIDENCE_TICKET_INVALID")
+        if observation is not None and not isinstance(observation, str):
+            raise ValueError("EVIDENCE_OBSERVATION_INVALID")
+        object.__setattr__(self, "provider", provider.strip())
+        object.__setattr__(self, "evidence_type", evidence_type)
+        object.__setattr__(self, "evidence_level", evidence_level)
+        object.__setattr__(
+            self,
+            "physical_resource_id",
+            physical_resource_id.strip(),
+        )
+        object.__setattr__(
+            self,
+            "claim_id",
+            claim_id.strip() if claim_id else None,
+        )
+        object.__setattr__(self, "execution_generation", execution_generation)
+        object.__setattr__(
+            self,
+            "operation_id",
+            operation_id.strip() if operation_id else None,
+        )
+        object.__setattr__(
+            self,
+            "ticket_id",
+            ticket_id.strip() if ticket_id else None,
+        )
+        object.__setattr__(self, "observation", observation)
+
+
+def _issue_physical_release_evidence(
+    *,
+    provider: str,
+    evidence_type: PhysicalReleaseEvidenceType,
+    evidence_level: PhysicalReleaseEvidenceLevel = PhysicalReleaseEvidenceLevel.VERIFIED,
+    physical_resource_id: str,
+    claim_id: Optional[str] = None,
+    execution_generation: Optional[int] = None,
+    operation_id: Optional[str] = None,
+    ticket_id: Optional[str] = None,
+    observation: Optional[str] = None,
+) -> PhysicalReleaseEvidence:
+    """Internal capability used by provider verifiers and controlled tests."""
+    return PhysicalReleaseEvidence(
+        provider=provider,
+        evidence_type=evidence_type,
+        evidence_level=evidence_level,
+        physical_resource_id=physical_resource_id,
+        claim_id=claim_id,
+        execution_generation=execution_generation,
+        operation_id=operation_id,
+        ticket_id=ticket_id,
+        observation=observation,
+        _issuer=_EVIDENCE_ISSUER_TOKEN,
+    )
+
+
 class PhysicalResourceState(str, Enum):
     AVAILABLE = "AVAILABLE"
     CLAIMING = "CLAIMING"
@@ -287,7 +425,12 @@ class PhysicalWebChatResourceAuthority:
             self._assert_invariants_locked(record)
             return self._snapshot_locked(record)
 
-    def release(self, claim: PhysicalResourceClaim) -> PhysicalResourceSnapshot:
+    def release(
+        self,
+        claim: PhysicalResourceClaim,
+        *,
+        evidence: Optional[PhysicalReleaseEvidence] = None,
+    ) -> PhysicalResourceSnapshot:
         with self._lock:
             record = self._resources.get(claim.physical_resource_id)
             if record is None:
@@ -299,12 +442,22 @@ class PhysicalWebChatResourceAuthority:
             ):
                 return self._snapshot_locked(record)
             record = self._require_owned_record(claim)
-            if record.state not in {
-                PhysicalResourceState.CLAIMING,
+            if record.state is PhysicalResourceState.CLAIMING:
+                if evidence is not None:
+                    raise PhysicalResourceStateError(
+                        "CLAIM_RELEASE_MUST_NOT_USE_TERMINATION_EVIDENCE"
+                    )
+            elif record.state in {
                 PhysicalResourceState.BUSY,
                 PhysicalResourceState.CANCELLING,
                 PhysicalResourceState.RELEASING,
             }:
+                self._validate_release_evidence_locked(
+                    record,
+                    evidence,
+                    expected_type=PhysicalReleaseEvidenceType.TERMINATION,
+                )
+            else:
                 raise PhysicalResourceStateError(
                     f"RELEASE_INVALID_STATE:{record.state.value}"
                 )
@@ -323,6 +476,45 @@ class PhysicalWebChatResourceAuthority:
             released = self._snapshot_locked(record)
             self._last_released_claims[claim.physical_resource_id] = claim
             return released
+
+    def _validate_release_evidence_locked(
+        self,
+        record: _ResourceRecord,
+        evidence: Optional[PhysicalReleaseEvidence],
+        *,
+        expected_type: PhysicalReleaseEvidenceType,
+    ) -> None:
+        if not isinstance(evidence, PhysicalReleaseEvidence):
+            raise PhysicalResourceStateError(
+                "TYPED_RELEASE_EVIDENCE_REQUIRED"
+            )
+        if evidence.evidence_type is not expected_type:
+            raise PhysicalResourceStateError(
+                f"INVALID_RELEASE_EVIDENCE_TYPE:{evidence.evidence_type.value}"
+            )
+        if evidence.evidence_level is not PhysicalReleaseEvidenceLevel.VERIFIED:
+            raise PhysicalResourceStateError(
+                "INSUFFICIENT_RELEASE_EVIDENCE_LEVEL"
+            )
+        if evidence.provider.casefold() != record.descriptor.provider.casefold():
+            raise PhysicalResourceStateError(
+                "RELEASE_EVIDENCE_PROVIDER_MISMATCH"
+            )
+        if evidence.physical_resource_id != record.descriptor.physical_resource_id:
+            raise PhysicalResourceStateError(
+                "RELEASE_EVIDENCE_RESOURCE_MISMATCH"
+            )
+        if evidence.claim_id != record.claim_id:
+            raise PhysicalResourceStateError("RELEASE_EVIDENCE_CLAIM_MISMATCH")
+        if evidence.execution_generation != record.execution_generation:
+            raise PhysicalResourceStateError(
+                "RELEASE_EVIDENCE_GENERATION_MISMATCH"
+            )
+        if record.operation_id is not None:
+            if evidence.operation_id != record.operation_id:
+                raise PhysicalResourceStateError(
+                    "RELEASE_EVIDENCE_OPERATION_MISMATCH"
+                )
 
     def quarantine(
         self,
@@ -348,17 +540,19 @@ class PhysicalWebChatResourceAuthority:
         self,
         physical_resource_id: str,
         *,
-        evidence: str,
+        evidence: PhysicalReleaseEvidence,
     ) -> PhysicalResourceSnapshot:
-        if not evidence:
-            raise ValueError("RECONCILIATION_EVIDENCE_REQUIRED")
-
         with self._lock:
             record = self._require_resource(physical_resource_id)
             if record.state is not PhysicalResourceState.QUARANTINED:
                 raise PhysicalResourceStateError(
                     f"RECONCILE_INVALID_STATE:{record.state.value}"
                 )
+            self._validate_release_evidence_locked(
+                record,
+                evidence,
+                expected_type=PhysicalReleaseEvidenceType.SANITIZATION,
+            )
             record.state = PhysicalResourceState.AVAILABLE
             record.owner = None
             record.claim_id = None
@@ -368,7 +562,7 @@ class PhysicalWebChatResourceAuthority:
             record.claimed_at = None
             record.started_at = None
             record.quarantine_reason = None
-            record.last_error = evidence
+            record.last_error = evidence.observation
             self._assert_invariants_locked(record)
             return self._snapshot_locked(record)
 

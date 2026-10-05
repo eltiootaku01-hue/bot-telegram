@@ -16,13 +16,34 @@ from bot_ia.core.web_physical_identity import (
     WebPhysicalIdentity,
 )
 from bot_ia.core.physical_resource_authority import (
+    PhysicalReleaseEvidenceType,
     PhysicalResourceState,
     PhysicalWebChatResourceAuthority,
+    _issue_physical_release_evidence,
 )
 from services.qweb_physical_resource_adapter import (
     QWebPhysicalResourceAdapter,
 )
-from services.web_queue import WEB_MONITOR_JS
+from services.web_queue import (
+    WEB_MONITOR_JS,
+    BotTicket,
+    _QueueWorker,
+)
+
+
+
+
+def _sanitization_evidence(adapter, *, observation="controlled sanitization"):
+    snapshot = adapter.snapshot()
+    return _issue_physical_release_evidence(
+        provider=snapshot.provider,
+        evidence_type=PhysicalReleaseEvidenceType.SANITIZATION,
+        physical_resource_id=snapshot.physical_resource_id,
+        claim_id=snapshot.claim_id,
+        execution_generation=snapshot.execution_generation,
+        operation_id=snapshot.operation_id,
+        observation=observation,
+    )
 
 
 class CapturedBridge(QObject):
@@ -293,7 +314,7 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
 
 
 
-    def test_m01_qweb_adapter_authorizes_real_local_qweb_execution(self) -> None:
+    def test_m01_qweb_adapter_rejects_untyped_termination_from_local_qweb(self) -> None:
         authority = PhysicalWebChatResourceAuthority()
         descriptor = authority.resolve_resource(
             "controlled-provider",
@@ -342,13 +363,61 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
                 ticket_id=payload["ticket_id"],
             )
         )
-        adapter.confirm_termination(
-            execution,
-            evidence="controlled QWeb response followed by simulated #terminado",
-        )
+        with self.assertRaises(Exception):
+            adapter.confirm_termination(
+                execution,
+                evidence="controlled QWeb response followed by simulated #terminado",
+            )
         self.assertEqual(
-            PhysicalResourceState.AVAILABLE,
+            PhysicalResourceState.BUSY,
             adapter.snapshot().state,
+        )
+        authority.quarantine(
+            adapter._claim_for_execution(execution),
+            "LOGICAL_TERMINATION_WITHOUT_PHYSICAL_EVIDENCE",
+            evidence="controlled #terminado remained logical",
+        )
+
+    def test_m01b_terminado_is_logical_only_and_quarantines_physical_resource(self) -> None:
+        authority = PhysicalWebChatResourceAuthority()
+        descriptor = authority.resolve_resource(
+            "controlled-provider",
+            "account-A",
+            "qweb-session-A",
+            "controlled://webchat",
+        )
+        adapter = QWebPhysicalResourceAdapter(
+            authority,
+            descriptor,
+            authentication_state=AuthenticationState.VERIFIED,
+        )
+        execution = adapter.begin_execution(
+            adapter.claim_resource(),
+            ticket_id="ticket-m01b",
+            operation_id="qweb-ticket-m01b-1",
+        )
+        worker = _QueueWorker(
+            timeout_ms=45000,
+            circuit_threshold=3,
+            circuit_cooldown_ms=10000,
+            physical_resource_adapter=adapter,
+        )
+        ticket = BotTicket(
+            "ticket-m01b",
+            "Cari",
+            "chat",
+            "@u",
+            "/cafe",
+            "hola",
+        )
+        worker.current_ticket = ticket
+        worker.physical_execution = execution
+        worker.awaiting_terminated = True
+        worker._finish_current()
+        self.assertEqual("RESOLVED", ticket.status)
+        self.assertEqual(
+            PhysicalResourceState.QUARANTINED,
+            authority.snapshot(execution.physical_resource_id).state,
         )
 
     def test_m02_invalid_authority_execution_blocks_controlled_send(self) -> None:
@@ -415,7 +484,10 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
         )
         authority.reconcile(
             old.physical_resource_id,
-            evidence="controlled reconciliation",
+            evidence=_sanitization_evidence(
+                adapter,
+                observation="controlled reconciliation",
+            ),
         )
         new = adapter.begin_execution(
             adapter.claim_resource(),
@@ -483,7 +555,13 @@ if __name__ == "__main__":
             operation_id="qweb-identity-local-1",
         )
         self.assertTrue(adapter.validate_execution(execution))
-        adapter.confirm_termination(
-            execution,
-            evidence="controlled local QWeb surface",
+        with self.assertRaises(Exception):
+            adapter.confirm_termination(
+                execution,
+                evidence="controlled local QWeb surface",
+            )
+        authority.quarantine(
+            adapter._claim_for_execution(execution),
+            "LOCAL_CONTROLLED_TERMINATION_NOT_PROVEN",
+            evidence="synthetic QWeb surface has no provider termination proof",
         )

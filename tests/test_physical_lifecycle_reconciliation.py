@@ -16,10 +16,12 @@ from bot_ia.core.physical_lifecycle_reconciliation import (
     TerminationState,
 )
 from bot_ia.core.physical_resource_authority import (
+    PhysicalReleaseEvidenceType,
     PhysicalResourceClaim,
     PhysicalResourceClaimError,
     PhysicalResourceState,
     PhysicalWebChatResourceAuthority,
+    _issue_physical_release_evidence,
 )
 from bot_ia.core.task_engine import (
     ResponseDisposition,
@@ -90,11 +92,14 @@ class FakePhysicalAdapter:
         self,
         execution: FakeExecution,
         *,
-        evidence: str,
+        evidence,
     ):
         if self.fail_termination:
             raise RuntimeError("termination evidence rejected")
-        return self.authority.release(self._claim(execution))
+        return self.authority.release(
+            self._claim(execution),
+            evidence=evidence,
+        )
 
     def quarantine_resource(
         self,
@@ -184,6 +189,41 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
         )
         return task, execution
 
+    def _termination_evidence(
+        self,
+        task_id: str,
+        *,
+        observation: str = "controlled termination",
+    ):
+        record = self.reconciliation.get_reconciliation(task_id)
+        return _issue_physical_release_evidence(
+            provider=self.descriptor.provider,
+            evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+            physical_resource_id=record.physical_resource_id,
+            claim_id=record.claim_id,
+            execution_generation=record.execution_generation,
+            operation_id=record.operation_id,
+            observation=observation,
+        )
+
+    def _sanitization_evidence(
+        self,
+        *,
+        observation: str = "controlled sanitization",
+    ):
+        snapshot = self.authority.snapshot(
+            self.descriptor.physical_resource_id
+        )
+        return _issue_physical_release_evidence(
+            provider=self.descriptor.provider,
+            evidence_type=PhysicalReleaseEvidenceType.SANITIZATION,
+            physical_resource_id=snapshot.physical_resource_id,
+            claim_id=snapshot.claim_id,
+            execution_generation=snapshot.execution_generation,
+            operation_id=snapshot.operation_id,
+            observation=observation,
+        )
+
     def test_r01_logical_timeout_requests_physical_cancellation(self) -> None:
         task, _ = self._task(
             deadline=self.clock.now() + timedelta(seconds=5)
@@ -221,7 +261,10 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
         task, _ = self._task()
         record = self.reconciliation.record_termination(
             task.task_id,
-            evidence="controlled termination evidence",
+            evidence=self._termination_evidence(
+                task.task_id,
+                observation="controlled termination evidence",
+            ),
         )
         self.assertEqual(
             PhysicalResourceState.AVAILABLE,
@@ -241,7 +284,10 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
         task, _ = self._task()
         record = self.reconciliation.record_termination(
             task.task_id,
-            evidence="controlled failed termination",
+            evidence=self._termination_evidence(
+                task.task_id,
+                observation="controlled failed termination",
+            ),
         )
         self.assertEqual(
             PhysicalResourceState.QUARANTINED,
@@ -307,7 +353,7 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
         )
         self.authority.reconcile(
             self.descriptor.physical_resource_id,
-            evidence="controlled reconciliation",
+            evidence=self._sanitization_evidence(),
         )
         new_claim = self.authority.claim(
             self.descriptor.physical_resource_id,
@@ -322,7 +368,10 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
         with self.assertRaises(StaleReconciliationError):
             self.reconciliation.record_termination(
                 old_task.task_id,
-                evidence="late old generation evidence",
+                evidence=self._termination_evidence(
+                    old_task.task_id,
+                    observation="late old generation evidence",
+                ),
             )
         self.assertEqual(
             new_claim.claim_id,
@@ -356,7 +405,10 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
         task, _ = self._task()
         record = self.reconciliation.record_release(
             task.task_id,
-            evidence="controlled release evidence",
+            evidence=self._termination_evidence(
+                task.task_id,
+                observation="controlled release evidence",
+            ),
         )
         self.assertEqual(
             TaskState.RUNNING,
@@ -420,7 +472,10 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
 
         available = self.reconciliation.record_termination(
             task.task_id,
-            evidence="controlled semantic termination",
+            evidence=self._termination_evidence(
+                task.task_id,
+                observation="controlled semantic termination",
+            ),
         )
         self.assertEqual(
             PhysicalResourceState.AVAILABLE,
@@ -558,9 +613,12 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
                 ).state,
             )
             record = self.reconciliation.record_termination(
+            task.task_id,
+            evidence=self._termination_evidence(
                 task.task_id,
-                evidence="#terminado from controlled QWeb",
-            )
+                observation="#terminado from controlled QWeb",
+            ),
+        )
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,
                 record.physical_state,
@@ -606,9 +664,12 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
                 )
             )
             record = self.reconciliation.record_termination(
+            task.task_id,
+            evidence=self._termination_evidence(
                 task.task_id,
-                evidence="controlled Playwright termination",
-            )
+                observation="controlled Playwright termination",
+            ),
+        )
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,
                 record.physical_state,
@@ -683,9 +744,12 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
                 completed_a_record.reconciliation_status,
             )
             terminated_a = self.reconciliation.record_termination(
+            task_a.task_id,
+            evidence=self._termination_evidence(
                 task_a.task_id,
-                evidence="r20 QWeb #terminado",
-            )
+                observation="r20 QWeb #terminado",
+            ),
+        )
             self.assertEqual(
                 ReconciliationStatus.ALIGNED,
                 terminated_a.reconciliation_status,
@@ -730,9 +794,12 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
                 completed_b_record.reconciliation_status,
             )
             record_b = self.reconciliation.record_termination(
+            task_b.task_id,
+            evidence=self._termination_evidence(
                 task_b.task_id,
-                evidence="r20 Playwright termination",
-            )
+                observation="r20 Playwright termination",
+            ),
+        )
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,
                 record_b.physical_state,

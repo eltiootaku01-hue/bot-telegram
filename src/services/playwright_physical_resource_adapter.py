@@ -7,6 +7,7 @@ import asyncio
 from dataclasses import dataclass
 
 from bot_ia.core.physical_resource_authority import (
+    PhysicalReleaseEvidence,
     PhysicalResourceClaim,
     PhysicalResourceDescriptor,
     PhysicalResourceSnapshot,
@@ -191,7 +192,7 @@ class PlaywrightPhysicalResourceAdapter:
         evidence: str,
     ) -> PhysicalResourceSnapshot:
         """Release a claim that never reached physical execution."""
-        if not evidence.strip():
+        if not isinstance(evidence, str) or not evidence.strip():
             raise PlaywrightPhysicalResourceError(
                 "CLAIM_RELEASE_EVIDENCE_REQUIRED"
             )
@@ -270,9 +271,10 @@ class PlaywrightPhysicalResourceAdapter:
                     ) from cleanup_error
             raise
 
-        self.confirm_termination(
+        self.quarantine_resource(
             execution,
-            evidence="PLAYWRIGHT_TASK_COMPLETED",
+            reason="PLAYWRIGHT_TERMINATION_NOT_PROVEN",
+            evidence="successful backend operation is not provider termination proof",
         )
         return str(response)
 
@@ -500,20 +502,24 @@ class PlaywrightPhysicalResourceAdapter:
         self,
         execution: PlaywrightPhysicalExecution,
         *,
-        evidence: str,
+        evidence: PhysicalReleaseEvidence,
     ) -> PhysicalResourceSnapshot:
-        if not evidence.strip():
+        if not isinstance(evidence, PhysicalReleaseEvidence):
             raise PlaywrightPhysicalResourceError(
-                "TERMINATION_EVIDENCE_REQUIRED"
+                "TYPED_TERMINATION_EVIDENCE_REQUIRED"
+            )
+        if evidence.ticket_id is not None and evidence.ticket_id != execution.ticket_id:
+            raise PlaywrightPhysicalResourceError(
+                "TERMINATION_EVIDENCE_TICKET_MISMATCH"
             )
         claim = self._claim_for_execution(execution)
-        return self._authority.release(claim)
+        return self._authority.release(claim, evidence=evidence)
 
     def release_resource(
         self,
         execution: PlaywrightPhysicalExecution,
         *,
-        evidence: str,
+        evidence: PhysicalReleaseEvidence,
     ) -> PhysicalResourceSnapshot:
         return self.confirm_termination(
             execution,
@@ -538,7 +544,7 @@ class PlaywrightPhysicalResourceAdapter:
         self,
         execution: PlaywrightPhysicalExecution | None = None,
         *,
-        termination_evidence: str | None = None,
+        termination_evidence: PhysicalReleaseEvidence | None = None,
     ) -> PhysicalResourceSnapshot | None:
         """Close Playwright and release only with explicit evidence."""
         close_error: Exception | None = None
