@@ -158,7 +158,7 @@ class WebChatTerminationContractTests(unittest.TestCase):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         cls.app = QApplication.instance() or QApplication(sys.argv)
 
-        def test_m01b_terminado_is_logical_only_and_quarantines_physical_resource(self) -> None:
+    def test_m01b_terminado_is_logical_only_and_quarantines_physical_resource(self) -> None:
         authority = PhysicalWebChatResourceAuthority()
         descriptor = authority.resolve_resource(
             "controlled-provider",
