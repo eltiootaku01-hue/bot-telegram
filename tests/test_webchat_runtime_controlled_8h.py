@@ -158,48 +158,47 @@ class WebChatTerminationContractTests(unittest.TestCase):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         cls.app = QApplication.instance() or QApplication(sys.argv)
 
-def test_m01b_terminado_is_logical_only_and_quarantines_physical_resource(self) -> None:
-    authority = PhysicalWebChatResourceAuthority()
-    descriptor = authority.resolve_resource(
-        "controlled-provider",
-        "account-A",
-        "qweb-session-A",
-        "controlled://webchat",
-    )
-    adapter = QWebPhysicalResourceAdapter(
-        authority,
-        descriptor,
-        authentication_state=AuthenticationState.VERIFIED,
-    )
-    execution = adapter.begin_execution(
-        adapter.claim_resource(),
-        ticket_id="ticket-m01b",
-        operation_id="qweb-ticket-m01b-1",
-    )
-    worker = _QueueWorker(
-        timeout_ms=45000,
-        circuit_threshold=3,
-        circuit_cooldown_ms=10000,
-        physical_resource_adapter=adapter,
-    )
-    ticket = BotTicket(
-        "ticket-m01b",
-        "Cari",
-        "chat",
-        "@u",
-        "/cafe",
-        "hola",
-    )
-    worker.current_ticket = ticket
-    worker.physical_execution = execution
-    worker.awaiting_terminated = True
-    worker._finish_current()
-    self.assertEqual("RESOLVED", ticket.status)
-    self.assertEqual(
-        PhysicalResourceState.QUARANTINED,
-        authority.snapshot(execution.physical_resource_id).state,
-    )
-
+        def test_m01b_terminado_is_logical_only_and_quarantines_physical_resource(self) -> None:
+        authority = PhysicalWebChatResourceAuthority()
+        descriptor = authority.resolve_resource(
+            "controlled-provider",
+            "account-A",
+            "qweb-session-A",
+            "controlled://webchat",
+        )
+        adapter = QWebPhysicalResourceAdapter(
+            authority,
+            descriptor,
+            authentication_state=AuthenticationState.VERIFIED,
+        )
+        execution = adapter.begin_execution(
+            adapter.claim_resource(),
+            ticket_id="ticket-m01b",
+            operation_id="qweb-ticket-m01b-1",
+        )
+        worker = _QueueWorker(
+            timeout_ms=45000,
+            circuit_threshold=3,
+            circuit_cooldown_ms=10000,
+            physical_resource_adapter=adapter,
+        )
+        ticket = BotTicket(
+            "ticket-m01b",
+            "Cari",
+            "chat",
+            "@u",
+            "/cafe",
+            "hola",
+        )
+        worker.current_ticket = ticket
+        worker.physical_execution = execution
+        worker.awaiting_terminated = True
+        worker._finish_current()
+        self.assertEqual("RESOLVED", ticket.status)
+        self.assertEqual(
+            PhysicalResourceState.QUARANTINED,
+            authority.snapshot(execution.physical_resource_id).state,
+        )
 
 
 class WebChatRuntimeControlledTests(unittest.TestCase):
