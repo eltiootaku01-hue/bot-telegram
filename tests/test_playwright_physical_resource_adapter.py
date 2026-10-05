@@ -11,8 +11,10 @@ import threading
 import unittest
 
 from bot_ia.core.physical_resource_authority import (
+    PhysicalReleaseEvidenceType,
     PhysicalResourceState,
     PhysicalWebChatResourceAuthority,
+    _issue_physical_release_evidence,
 )
 from bot_ia.core.web_physical_identity import (
     AuthenticationState,
@@ -21,6 +23,7 @@ from bot_ia.core.web_physical_identity import (
 from bot_ia.core.web_queue import WebQueueManager
 from services.playwright_physical_resource_adapter import (
     PlaywrightPhysicalResourceAdapter,
+    PlaywrightPhysicalResourceError,
     PlaywrightPhysicalResourceExecutionError,
     PlaywrightPhysicalResourceIdentityError,
 )
@@ -60,6 +63,42 @@ CONTROLLED_HTML = """<!doctype html>
 </body>
 </html>
 """
+
+
+def _termination_evidence(
+    adapter,
+    execution,
+    *,
+    observation="controlled termination",
+):
+    snapshot = adapter.snapshot()
+    return _issue_physical_release_evidence(
+        provider=snapshot.provider,
+        evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+        physical_resource_id=execution.physical_resource_id,
+        claim_id=execution.claim_id,
+        execution_generation=execution.execution_generation,
+        operation_id=execution.operation_id,
+        ticket_id=execution.ticket_id,
+        observation=observation,
+    )
+
+
+def _sanitization_evidence(
+    adapter,
+    *,
+    observation="controlled sanitization",
+):
+    snapshot = adapter.snapshot()
+    return _issue_physical_release_evidence(
+        provider=snapshot.provider,
+        evidence_type=PhysicalReleaseEvidenceType.SANITIZATION,
+        physical_resource_id=snapshot.physical_resource_id,
+        claim_id=snapshot.claim_id,
+        execution_generation=snapshot.execution_generation,
+        operation_id=snapshot.operation_id,
+        observation=observation,
+    )
 
 
 def _registry_identity(

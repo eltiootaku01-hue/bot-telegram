@@ -196,13 +196,14 @@ class PhysicalLifecycleReconciliationTests(unittest.TestCase):
         observation: str = "controlled termination",
     ):
         record = self.reconciliation.get_reconciliation(task_id)
+        snapshot = self.authority.snapshot(record.physical_resource_id)
         return _issue_physical_release_evidence(
-            provider=self.descriptor.provider,
+            provider=snapshot.provider,
             evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
-            physical_resource_id=record.physical_resource_id,
-            claim_id=record.claim_id,
-            execution_generation=record.execution_generation,
-            operation_id=record.operation_id,
+            physical_resource_id=snapshot.physical_resource_id,
+            claim_id=snapshot.claim_id,
+            execution_generation=snapshot.execution_generation,
+            operation_id=snapshot.operation_id,
             observation=observation,
         )
 
