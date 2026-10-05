@@ -728,6 +728,725 @@ La propuesta queda deliberadamente backend-neutral y no afirma que el provider r
 
 **No implementación. No root cause. No reapertura de 2F-8T.**
 
+---
+
+## HUESO-09 — PRE-IMPLEMENTATION AUDIT
+
+STATUS:
+**AUDITED / IMPLEMENTATION NOT EXECUTED**
+
+Objetivo: determinar el cambio mínimo necesario para implementar el diseño HUESO-09 sin ejecutar ninguna reparación.
+
+### Estado de partida verificado
+
+- `main`: `7839a8530432399bc3a83323ebc1c4e76013a82c`
+- adjudicación: `a9affb108eb27e4d93d5c352f016c9a9368851b3`
+- diseño: `30d7dba0e843061af52518cec5dba8685df67b60`
+- rama de diseño: `design/hueso-09-minimal-release-gate-2026-10-04`
+- rama de auditoría: `audit/hueso-09-pre-implementation-2026-10-05`
+- PR #93: **OPEN / DRAFT / UNMERGED**
+
+La rama de auditoría parte exactamente de `30d7dba0e843061af52518cec5dba8685df67b60`.
+
+### Resultado ejecutivo
+
+**No existe una implementación segura del diseño modificando solamente Authority + Reconciliation + ambos adapters.**
+
+El mínimo real requiere cinco archivos de producción:
+
+1. `src/bot_ia/core/physical_resource_authority.py`
+2. `src/bot_ia/core/physical_lifecycle_reconciliation.py`
+3. `src/services/qweb_physical_resource_adapter.py`
+4. `src/services/playwright_physical_resource_adapter.py`
+5. `src/services/web_queue.py`
+
+La razón del quinto archivo es directa y verificable: `web_queue.py` es el caller que convierte el resultado de `_extract_terminated()` en una llamada de release mediante `record_termination()` o `adapter.confirm_termination()`. Sin modificar ese punto, `#terminado` seguiría siendo capaz de llegar a release.
+
+No se encontró ningún caller relevante en:
+
+- `src/bot_ia/core/web_queue.py`
+- `src/bot_ia/runtime.py`
+- `src/bot_ia/core/task_engine.py`
+- `src/bot_ia/core/task_scheduler.py`
+- `src/gui/task_orchestrator.py`
+
+para las APIs auditadas.
+
+El repositorio no contiene una clase separada llamada `PhysicalResourceAuthority`; la autoridad concreta es `PhysicalWebChatResourceAuthority`.
+
+**Límite de exhaustividad:** el code-search del conector devuelve cero resultados aun para símbolos que existen en archivos conocidos. Por eso, los conteos se presentan como callers verificados en los archivos fuente relevantes inspeccionados, no como una afirmación de indexación global perfecta.
+
+## API IMPACT
+
+### `PhysicalWebChatResourceAuthority.release`
+
+Firma actual:
+
+`release(claim: PhysicalResourceClaim) -> PhysicalResourceSnapshot`
+
+Callers directos de producción observados:
+
+- QWeb `release_claim()`
+- QWeb `confirm_termination()`
+- Playwright `release_claim()`
+- Playwright `confirm_termination()`
+
+Conflicto actual: el mismo método sirve para dos semánticas distintas:
+
+- liberar una claim que nunca llegó a ejecución;
+- liberar físicamente una ejecución activa.
+
+Cambio mínimo recomendado:
+
+- mantener la ruta de claim pre-ejecución como semántica separada de la evidencia de termination;
+- exigir `PhysicalReleaseEvidence` tipada cuando el estado represente una ejecución física;
+- validar identidad/fencing contra el registro actual;
+- permitir la liberación de claim pre-ejecución sin convertir su texto diagnóstico en evidencia de termination.
+
+Esto puede hacerse con una puerta state-aware para minimizar ruptura de callers, pero el contrato debe distinguir explícitamente **claim release** de **physical release**. Una simple firma nueva que acepte un dataclass libre no resuelve el trust boundary.
+
+### `PhysicalWebChatResourceAuthority.reconcile`
+
+Firma actual:
+
+`reconcile(physical_resource_id, *, evidence: str)`
+
+Cambio mínimo:
+
+- dejar de aceptar cadena arbitraria como autorización de salida de quarantine;
+- aceptar únicamente evidencia tipada de tipo `SANITIZATION`;
+- correlacionar resource/claim/generation y, cuando corresponda, operation/ticket con el contexto de quarantine;
+- no usar `TERMINATION` como sustituto de sanitation.
+
+La firma es breaking para callers de prueba existentes, pero no se encontró caller de producción en los archivos de producción auditados.
+
+### `PhysicalLifecycleReconciliation.record_termination`
+
+Firma actual:
+
+`record_termination(task_id, *, evidence: str)`
+
+Caller de producción verificado:
+
+- `src/services/web_queue.py::_finish_current()`
+
+La futura firma debe recibir `PhysicalReleaseEvidence` de tipo `TERMINATION`.
+
+### `PhysicalLifecycleReconciliation.record_release`
+
+Firma actual:
+
+`record_release(task_id, *, evidence: str)`
+
+Es alias de `record_termination()`.
+
+Debe adoptar exactamente la misma barrera y no mantener un escape alternativo de string arbitraria.
+
+### `PhysicalLifecycleReconciliation.record_quarantine`
+
+No necesita convertir su `evidence` textual en evidencia de release.
+
+Su texto debe permanecer como observación/diagnóstico no confiable.
+
+### `PhysicalLifecycleAdapter.confirm_termination`
+
+Contrato actual:
+
+`confirm_termination(execution, *, evidence: str)`
+
+Implementaciones:
+
+- QWeb
+- Playwright
+
+Callers de producción directos observados:
+
+- Reconciliation
+- `web_queue.py`
+- Playwright `execute_task()`
+- Playwright `shutdown()`
+- wrappers `release_resource()` en ambos adapters
+
+Debe cambiar a evidencia tipada y correlacionada.
+
+### `release_resource`
+
+Solo actúa como wrapper interno en ambos adapters.
+
+No requiere una nueva semántica independiente, pero debe heredar exactamente la misma admisión tipada que `confirm_termination()`.
+
+### `request_cancel`
+
+El método de Authority y los adapters ya están separados conceptualmente de termination.
+
+No requiere un endurecimiento equivalente a release admission; debe conservar su rol de solicitud de cancelación, no de prueba.
+
+### `terminated_received`
+
+Es un evento lógico del worker.
+
+No debe cambiar de significado ni convertirse en evidencia.
+
+### `_extract_terminated`
+
+No debe modificarse en esta auditoría ni en el mínimo conceptual.
+
+Su resultado continúa siendo exclusivamente:
+
+`logical protocol closure`
+
+### Breaking-change summary
+
+| API | Cambio futuro | Breaking | Motivo |
+| --- | --- | --- | --- |
+| Authority.release | evidencia typed solo para ejecución física | Sí o state-aware compatible | separar claim release de physical release |
+| Authority.reconcile | `SANITIZATION` typed | Sí | eliminar arbitrary string -> AVAILABLE |
+| record_termination | `TERMINATION` typed | Sí | BUG-001 |
+| record_release | misma barrera | Sí | evitar escape paralelo |
+| adapter.confirm_termination | evidencia typed | Sí | trust boundary |
+| adapter.release_resource | hereda gate | Sí | coherencia |
+| request_cancel | sin cambio semántico | No | ya separado |
+| terminated_received | sin cambio | No | sigue siendo lógico |
+| _extract_terminated | sin cambio | No | BUG-005 se corrige en el boundary posterior |
+
+## IDENTITY
+
+Disponibilidad actual:
+
+| Identity | Estado actual | Fuente |
+| --- | --- | --- |
+| `physical_resource_id` | **AVAILABLE NOW** | descriptor / execution |
+| `claim_id` | **AVAILABLE NOW** | `PhysicalResourceClaim` / execution |
+| `execution_generation` | **AVAILABLE NOW** | claim / execution |
+| `operation_id` | **AVAILABLE NOW** | QWeb y Playwright execution |
+| `ticket_id` | **AVAILABLE NOW** | QWeb y Playwright execution |
+| `provider` | **AVAILABLE INDIRECTLY / DERIVED** | descriptor / adapter backend |
+| `evidence_type` | **MUST BE DERIVED** | provider verifier, no caller genérico |
+| `evidence_level` | **MUST BE DERIVED** | verifier / trusted boundary |
+| `observation` | **AVAILABLE NOW / UNTRUSTED** | response, callback, error text, runtime observation |
+
+El fencing necesario ya existe para:
+
+`physical_resource_id + claim_id + execution_generation`
+
+y `operation_id` ya participa en `validate_execution()` cuando se proporciona.
+
+Conclusión:
+
+**la identidad física necesaria no requiere nuevos campos de runtime para existir.**
+
+Lo que falta no es identidad básica; falta impedir que la evidencia semántica pueda ser falsificada por el caller.
+
+### Trust-construction requirement
+
+Una instancia de `PhysicalReleaseEvidence` construible libremente por cualquier caller no sería suficiente.
+
+El cambio mínimo debe incluir un único camino controlado, del lado provider-specific, que:
+
+1. reciba la observación;
+2. verifique la condición provider-specific;
+3. construya evidencia tipada;
+4. derive identidad desde la ejecución actual;
+5. entregue la evidencia a la capa de admisión.
+
+Por tanto, **typed dataclass sola = insuficiente**.
+
+No se requiere introducir una autoridad nueva.
+
+## TRUST BOUNDARY
+
+Situación actual:
+
+| Componente | Observa | Verifica semántica de termination | Construye evidence confiable | Autoriza release |
+| --- | --- | --- | --- | --- |
+| QWeb adapter | sí | **NO DEMOSTRADO** | **NO** | delega |
+| Playwright adapter | sí | **NO DEMOSTRADO** | **NO** | delega |
+| Reconciliation | recibe estados/evidence | no provider-specific | no | delega |
+| Authority | estado/fencing | no provider-specific | no | **SÍ, pero sin evidencia tipada hoy** |
+| web_queue | response/parser | **NO** | **NO** | indirectamente dispara release |
+
+La frontera futura debe quedar:
+
+`UNTRUSTED OBSERVATION`
+-> provider-specific verifier/adapter
+-> `PhysicalReleaseEvidence`
+-> current identity validation
+-> release admission
+-> `AVAILABLE`
+
+La Authority sigue sin conocer Gemini, DOM, QWebEngine, Playwright o selectors.
+
+## PATH AUDIT
+
+### NORMAL COMPLETION — QWeb
+
+Ruta actual verificada:
+
+`RESPONSE_COMPLETE`
+-> `_consume_response()`
+-> `_extract_terminated()`
+-> `terminated_received`
+-> `_finish_current()`
+-> `record_termination()`
+-> adapter `confirm_termination()`
+-> Authority `release()`
+
+Problema: `#terminado` todavía llega al release mediante una cadena literal.
+
+Cambio mínimo:
+
+- no modificar parser;
+- mantener `terminated_received`;
+- cambiar `_finish_current()` para que no fabrique `"QWeb #terminado observed"` como termination evidence;
+- obtener evidencia typed únicamente desde el futuro verifier/provider boundary;
+- si no existe evidencia confiable, no liberar y dejar/quarantinar el recurso según el path de seguridad definido.
+
+### NORMAL COMPLETION — Playwright
+
+Ruta actual:
+
+`execute_task()`
+-> backend `process_task()`
+-> `confirm_termination("PLAYWRIGHT_TASK_COMPLETED")`
+-> Authority `release()`
+
+Problema: éxito de la operación del backend no demuestra por sí solo estado terminal físico del provider.
+
+Cambio mínimo:
+
+- eliminar el valor string como prueba semántica;
+- conservar correlación execution;
+- requerir evidencia typed `TERMINATION`;
+- hasta disponer de evidencia provider real, el release físico debe permanecer bloqueado/fail-closed.
+
+### CANCEL
+
+QWeb y Playwright ya solicitan cancelación y llevan el recurso a quarantine cuando termination no queda demostrada.
+
+La evidencia actual de:
+
+- `cancelOperation()`;
+- exception text;
+- local timeout;
+- callback invalidation
+
+es **UNTRUSTED OBSERVATION**.
+
+Cambio necesario:
+
+- ninguno adicional en el mecanismo de cancelación salvo impedir que esas observaciones sean reutilizadas como evidence de release.
+
+### BACKEND FAILURE
+
+El comportamiento actual ya es fail-closed en los adapters auditados cuando no se obtiene termination: se solicita cancelación o se entra en quarantine.
+
+Cambio mínimo:
+
+- conservar;
+- asegurar que error text permanezca observación;
+- prohibir que reconcile lo trate como sanitation/termination.
+
+### QUARANTINE
+
+Estado actual:
+
+`QUARANTINED` conserva metadata suficiente para correlacionar la generación vigente.
+
+Pero `authority.reconcile()` permite actualmente una cadena no vacía y termina en `AVAILABLE`.
+
+Cambio mínimo:
+
+- convertir reconcile en una admisión de `SANITIZATION` typed;
+- comparar con el contexto de quarantine;
+- rechazar weak/arbitrary evidence;
+- mantener quarantine cuando no haya evidencia suficiente.
+
+### RECONCILIATION
+
+`reconcile_task()` actualmente actualiza metadata y no libera.
+
+No necesita convertirse en release API.
+
+`record_termination()` sí es una ruta de release y necesita evidence typed.
+
+### SHUTDOWN — QWeb
+
+QWeb `stop()` lleva ejecuciones activas a quarantine si no existe termination evidence y libera únicamente la guarda local `_WEB_MESA_UNICA`.
+
+No necesita cambio semántico de release admission más allá del contrato común.
+
+### SHUTDOWN — Playwright
+
+`shutdown()` actualmente acepta `termination_evidence: str | None` y con una cadena presente puede llamar a `confirm_termination()`.
+
+Este es un caller real adicional de BUG-001.
+
+Cambio mínimo:
+
+- aceptar únicamente evidencia typed validada o `None`;
+- una ausencia de evidencia no permite AVAILABLE;
+- cierre del browser por sí solo no se etiqueta como provider termination proof.
+
+### Playwright
+
+Lo común:
+
+- physical resource identity;
+- claim/generation fencing;
+- evidence admission;
+- quarantine semantics.
+
+Lo provider-specific:
+
+- observación física;
+- verificación de estado terminal;
+- construcción de `PhysicalReleaseEvidence`.
+
+No se requiere migración de Playwright.
+
+## BUG IMPACT
+
+### BUG-001 — P0
+
+Requiere:
+
+- evidence typed;
+- admission en Authority;
+- adapter signatures tipadas;
+- migración del caller QWeb en `web_queue.py`;
+- migración de callers Playwright/Reconciliation.
+
+No se corrige solo modificando Authority porque `web_queue.py` podría continuar enviando una cadena.
+
+### BUG-003 — P1
+
+Requiere:
+
+- reconcile tipado para `SANITIZATION`;
+- correlación con quarantine context;
+- rechazo de arbitrary string.
+
+No exige universalmente ACK Gemini.
+
+### BUG-005 — P1
+
+No requiere modificar parser.
+
+Requiere cortar el puente semántico:
+
+`parser result != physical release authorization`
+
+### BUG-002 — P2
+
+El endurecimiento de release no requiere 2PC.
+
+La consistencia de metadata sigue siendo una cuestión separada.
+
+No se demuestra necesidad de atomicidad adicional.
+
+### BUG-004 — NOT DEMONSTRATED
+
+`operation_id` ya existe y puede usarse como fence condicional.
+
+No debe hacerse obligatorio globalmente solo para cerrar este finding.
+
+## TEST IMPACT
+
+### Tests existentes que asumen evidence como string
+
+La auditoría encontró los siguientes impactos:
+
+| Test file | Uso relevante actual | Conteo de ocurrencias relevantes | Acción futura |
+| --- | --- | ---: | --- |
+| `tests/test_physical_resource_authority.py` | `authority.release`, `authority.reconcile` | 8 / 3 | actualizar para separar claim release y sanitation |
+| `tests/test_physical_lifecycle_reconciliation.py` | `record_termination`, `record_release`, fake adapter | 8 / 1 / 1 | migrar a typed evidence |
+| `tests/test_qweb_physical_resource_adapter.py` | `confirm_termination`, reconcile | 2 / 2 | sustituir strings por evidence válida y añadir rejects |
+| `tests/test_playwright_physical_resource_adapter.py` | `confirm_termination`, reconcile | 3 / 1 | igual que QWeb |
+| `tests/test_cross_route_physical_resource_exclusivity.py` | confirmaciones y release directo | 13 / 2 / 1 | migrar handoff/cleanup a evidencia tipada |
+| `tests/test_webchat_runtime_controlled_8h.py` | confirmación QWeb y reconcile | 2 / 1 | separar parser de release |
+| `tests/test_services_web_queue.py` | orden lógico TaskEngine/termination event | 0 | no cambio mínimo esperado |
+
+### Regresiones mínimas nuevas
+
+**UNIT TEST**
+
+- arbitrary string -> REJECT;
+- empty evidence -> REJECT;
+- stale generation -> REJECT;
+- wrong claim -> REJECT;
+- wrong resource -> REJECT;
+- wrong operation -> REJECT cuando forme parte del fence;
+- typed TERMINATION + matching identity -> ACCEPT;
+- typed SANITIZATION + matching quarantine context -> ACCEPT;
+- weak SANITIZATION -> REJECT;
+- claim-only release no confunde observation con termination.
+
+**INTEGRATION TEST**
+
+- `#terminado` -> logical only;
+- parser match no produce AVAILABLE por sí mismo;
+- QUARANTINED + weak evidence -> remains QUARANTINED;
+- normal completion -> release solo mediante trusted evidence;
+- cancel/timeout -> quarantine until valid evidence.
+
+**RUNTIME PROVIDER TEST**
+
+- provider terminal proof correlates current execution;
+- provider termination absence -> no AVAILABLE;
+- provider sanitation proof -> quarantine exit solo con contexto válido.
+
+Estos últimos permanecen bloqueados por 2F-8T para Gemini.
+
+## FILE IMPACT
+
+| Archivo | Tipo | Cambio previsto | Estado | Motivo |
+| --- | --- | --- | --- | --- |
+| `src/bot_ia/core/physical_resource_authority.py` | Producción | typed evidence + admission | **REQUIRED** | gate físico central |
+| `src/bot_ia/core/physical_lifecycle_reconciliation.py` | Producción | typed termination/sanitization records | **REQUIRED** | bridge de lifecycle |
+| `src/services/qweb_physical_resource_adapter.py` | Producción | typed confirmation + verifier seam | **REQUIRED** | provider boundary QWeb |
+| `src/services/playwright_physical_resource_adapter.py` | Producción | typed confirmation/shutdown + verifier seam | **REQUIRED** | mismo contrato físico |
+| `src/services/web_queue.py` | Producción | cortar parser -> release string | **REQUIRED** | caller real BUG-005/001 |
+| `src/bot_ia/core/web_queue.py` | Producción | ninguno demostrado | **NOT NEEDED** | no callers auditados |
+| `src/bot_ia/core/task_engine.py` | Producción | ninguno | **NOT NEEDED** | mantiene autoridad lógica |
+| `src/bot_ia/core/task_scheduler.py` | Producción | ninguno | **NOT NEEDED** | no release authority |
+| `src/gui/task_orchestrator.py` | Producción | ninguno | **NOT NEEDED** | no caller real |
+| `tests/test_physical_resource_authority.py` | Tests | migrate release/reconcile | **REQUIRED** | API contract |
+| `tests/test_physical_lifecycle_reconciliation.py` | Tests | typed evidence | **REQUIRED** | lifecycle gate |
+| `tests/test_qweb_physical_resource_adapter.py` | Tests | typed evidence + reject cases | **REQUIRED** | QWeb contract |
+| `tests/test_playwright_physical_resource_adapter.py` | Tests | typed evidence + reject cases | **REQUIRED** | Playwright contract |
+| `tests/test_cross_route_physical_resource_exclusivity.py` | Tests | typed handoff/cleanup | **REQUIRED** | shared authority |
+| `tests/test_webchat_runtime_controlled_8h.py` | Tests | parser/release separation | **REQUIRED** | controlled QWeb path |
+| `tests/test_services_web_queue.py` | Tests | none anticipated | **NOT NEEDED** | solo orden lógico |
+
+No se justifica modificar workflows para implementar el contrato. CI solo debe validarlo después de los tests.
+
+## MÍNIMO CAMBIO POSIBLE
+
+El conjunto de cuatro archivos sugerido originalmente **no es suficiente**.
+
+El quinto archivo inevitable es:
+
+`src/services/web_queue.py`
+
+porque contiene el puente físico final de BUG-005.
+
+No se demuestra necesidad de modificar:
+
+- TaskEngine;
+- TaskScheduler;
+- GUI;
+- legacy `src/bot_ia/core/web_queue.py`.
+
+No se necesita crear un nuevo subsistema documental.
+
+### Cambio conceptual mínimo por archivo
+
+**Authority**
+
+- introducir representación typed;
+- exigirla para physical release;
+- distinguir claim release;
+- gatear sanitation en reconcile.
+
+**Reconciliation**
+
+- cambiar termination evidence a typed;
+- agregar entrada separada para sanitation o equivalente semánticamente separado;
+- nunca usar reconciliation genérico como atajo de release.
+
+**QWeb adapter**
+
+- consumir/generar evidence typed solo desde verifier provider-specific;
+- no convertir `#terminado` directamente en evidence.
+
+**Playwright adapter**
+
+- mismo contrato;
+- eliminar string fija `PLAYWRIGHT_TASK_COMPLETED` como proof;
+- cerrar shutdown fail-closed sin evidence.
+
+**web_queue**
+
+- mantener parser;
+- no fabricar evidence typed desde texto;
+- solicitar/recibir evidence confiable desde provider boundary;
+- sin evidence, no AVAILABLE.
+
+## IMPLEMENTATION ORDER
+
+### Paso 1 — Contract definition
+
+Precondition:
+- diseño HUESO-09 verificado.
+
+Change:
+- definir `PhysicalReleaseEvidence` y su taxonomía.
+
+Validation:
+- unit tests de shape/type/required fields.
+
+Rollback boundary:
+- revertir solo el commit del contrato.
+
+### Paso 2 — Identity derivation
+
+Precondition:
+- tipos definidos.
+
+Change:
+- derivar resource/claim/generation/provider desde execution/descriptor.
+
+Validation:
+- wrong resource/claim/generation tests.
+
+Rollback boundary:
+- revertir adapters sin tocar parser.
+
+### Paso 3 — Authority admission
+
+Precondition:
+- identidad disponible.
+
+Change:
+- bloquear arbitrary evidence;
+- separar claim release de physical release;
+- gatear sanitation.
+
+Validation:
+- release/reconcile reject matrix.
+
+Rollback boundary:
+- revertir Authority + tests de contrato.
+
+### Paso 4 — Adapter integration
+
+Precondition:
+- Authority gate funcionando.
+
+Change:
+- QWeb/Playwright consumir evidence typed.
+
+Validation:
+- adapter unit tests.
+
+Rollback boundary:
+- revertir adapter layer.
+
+### Paso 5 — Quarantine handling
+
+Precondition:
+- sanitation admission definido.
+
+Change:
+- impedir weak evidence -> AVAILABLE.
+
+Validation:
+- quarantine regression tests.
+
+Rollback boundary:
+- revertir solo sanitation path.
+
+### Paso 6 — Caller migration
+
+Precondition:
+- adapters typed.
+
+Change:
+- migrar Reconciliation, Playwright shutdown/execute y `web_queue._finish_current()`.
+
+Validation:
+- integración normal/cancel/shutdown.
+
+Rollback boundary:
+- revertir callers antes de cualquier runtime provider change.
+
+### Paso 7 — Tests
+
+Precondition:
+- callers migrados.
+
+Change:
+- adaptar tests existentes y añadir regresiones mínimas.
+
+Validation:
+- suite selectiva relevante.
+
+Rollback boundary:
+- revertir tests sin alterar producción.
+
+### Paso 8 — CI
+
+Precondition:
+- suite local/targeted estable.
+
+Change:
+- ejecutar validación CI existente; no rediseñar workflow.
+
+Validation:
+- green CI para el scope.
+
+Rollback boundary:
+- ninguno adicional de producción.
+
+**Cada paso requiere su propia validación y no autoriza automáticamente el siguiente.**
+
+## 2F-8T DEPENDENCY
+
+### CAN IMPLEMENT WITHOUT 2F-8T
+
+- typed evidence representation;
+- current identity binding;
+- Authority admission;
+- quarantine rejection;
+- adapter API hardening;
+- unit tests;
+- integration tests sintéticos que no afirmen provider proof.
+
+### BLOCKED UNTIL 2F-8T
+
+- Gemini Web termination proof;
+- provider terminal state real;
+- provider generation correlation real;
+- provider ACK/equivalent;
+- validación runtime que demuestre que `#terminado` corresponde a termination física.
+
+La implementación de contract hardening puede comenzar sin 2F-8T, pero el **release físico real de Gemini no puede validarse ni declararse cerrado** mientras 2F-8T siga bloqueado.
+
+2F-8T permanece:
+
+**VERIFIED BLOCKER / ROOT CAUSE UNKNOWN**
+
+**NO REOPENED**
+
+## GATE DECISION
+
+**IMPLEMENTATION GATE READY**
+
+La evidencia actual es suficiente para emitir un task de implementación **solo para contract hardening**, con alcance explícito en los cinco archivos de producción identificados y sus tests correspondientes.
+
+No queda autorizada por este audit la implementación del provider termination runtime de Gemini.
+
+No se declara root cause.
+
+## GIT
+
+Esta auditoría se persistió como un único cambio documental.
+
+Branch:
+`audit/hueso-09-pre-implementation-2026-10-05`
+
+HEAD BEFORE:
+`30d7dba0e843061af52518cec5dba8685df67b60`
+
+PARENT:
+`30d7dba0e843061af52518cec5dba8685df67b60`
+
+Commit message:
+`docs: record HUESO-09 pre-implementation audit`
+
+No se modificó código ni tests durante esta tarea.
+No se creó ni modificó PR #93.
+
 ## HUESO 10 — SQLITE DATABASE LOCK
 
 Estado:
