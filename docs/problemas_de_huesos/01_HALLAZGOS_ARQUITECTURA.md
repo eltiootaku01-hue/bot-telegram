@@ -252,40 +252,177 @@ No cambiar packaging por hipótesis.
 
 ---
 
-## HUESO 09 — CANCELACIÓN NO PROPAGADA / ZOMBIE TASKS
+## HUESO 09 — CANCELACIÓN / RELEASE SAFETY / TERMINATION EVIDENCE
 
 Estado:
-**HYPOTHESIS / HIGH PRIORITY AUDIT**
+**VERIFIED RELEASE-GATE WEAKNESS**
 
-TaskEngine ya representa cancelación, timeout y lifecycle lógico.
+Existe una debilidad verificada en el contrato de liberación física: las APIs actuales aceptan evidencia como `str` no vacío sin validar su semántica, procedencia o nivel de terminación/saneamiento.
 
-Debe verificarse si esa cancelación alcanza realmente:
+Esto documenta una **contract weakness**. No declara el root cause de un incidente de producción.
 
-- HTTP/LLM calls;
-- Playwright;
-- WebChat;
-- workers;
-- subprocesses.
+### Adjudicación canónica
 
-### Riesgo hipotético
+| Finding | Estado | Prioridad | Qué queda demostrado |
+| --- | --- | --- | --- |
+| BUG-001 | **VERIFIED BUG** | **P0** | string no vacío puede autorizar release |
+| BUG-002 | **PARTIALLY VERIFIED** | **P2** | ventana Authority/Reconciliation |
+| BUG-003 | **VERIFIED RISK** | **P1** | reconcile débil puede salir de QUARANTINED |
+| BUG-004 | **NOT DEMONSTRATED** | — | no se demostró ataque same-claim/generation |
+| BUG-005 | **VERIFIED BUG** | **P1** | parser acepta `#terminado` embebido/citado |
 
-Una tarea podría aparecer como CANCELLED mientras una operación física o de red continúa ejecutándose.
+### BUG-001 — VERIFIED BUG
 
-### Consecuencias potenciales
+**P0 / BLOCKING RELEASE SAFETY**
 
-- consumo de tokens;
-- consumo de CPU;
-- procesos huérfanos;
-- callbacks tardíos;
-- respuestas duplicadas.
+Un `str` no vacío proporcionado por el caller puede recorrer:
 
-### Gate
+`non-empty caller-provided string -> confirm_termination() -> release()`
 
-Demostrar una cadena completa:
+sin una barrera semántica que demuestre termination.
 
-`cancel lógico -> cancel físico/I/O -> terminación -> evidencia -> release`
+La evidencia demostrada es la debilidad contractual. No se declara que BUG-001 sea el root cause de un incidente de producción.
 
----
+### BUG-003 — VERIFIED RISK
+
+**P1 / QUARANTINE RELEASE WEAKNESS**
+
+Una autoridad en estado:
+
+`QUARANTINED + arbitrary non-empty evidence -> AVAILABLE`
+
+puede salir de `QUARANTINED` mediante `reconcile()` con evidencia no tipada.
+
+La debilidad demostrada es la **absence of typed sanitation/reconciliation evidence**.
+
+No se afirma que `reconcile()` necesariamente deba exigir un ACK de Gemini.
+
+### BUG-005 — VERIFIED BUG
+
+**P1 / AMBIGUOUS PROTOCOL PARSER**
+
+El marcador:
+
+`#terminado`
+
+puede aparecer embebido o citado dentro del texto y aun así ser encontrado por el parser cuando coinciden bot/ticket actuales.
+
+Esto puede alimentar la debilidad de release descrita en BUG-001.
+
+### BUG-002 — PARTIALLY VERIFIED
+
+**P2 / CONSISTENCY WINDOW**
+
+La Authority puede quedar `AVAILABLE` antes de que Reconciliation escriba `termination_state/release_state CONFIRMED`.
+
+**Security consequence: NOT DEMONSTRATED.**
+
+No se justifica Two-Phase Commit (2PC) a partir de esta evidencia.
+
+### BUG-004 — NOT DEMONSTRATED
+
+La combinación:
+
+`same claim_id + same execution_generation + different operation_id`
+
+no fue demostrada como una secuencia legítima del lifecycle actual.
+
+Por tanto, no se registra como bug confirmado. Como máximo, queda como **DEFENSE-IN-DEPTH CANDIDATE**.
+
+### Contrato conceptual
+
+Debe mantenerse explícitamente la separación:
+
+`OWNERSHIP FENCING`
+`≠`
+`TERMINATION EVIDENCE`
+
+`OBSERVATION`
+`≠`
+`RELEASE AUTHORIZATION`
+
+`non-empty string`
+`≠`
+`semantic termination evidence`
+
+### #terminado
+
+`#terminado` representa **logical protocol closure**.
+
+`#terminado != provider termination proof`
+
+Por sí solo, `#terminado` no debe autorizar physical release. Esta es una propiedad del **contrato futuro**; no significa que la reparación ya esté implementada.
+
+### Quarantine
+
+La propiedad documental futura es:
+
+`CANCELLED_WITHOUT_TERMINATION_EVIDENCE`
+`->`
+`QUARANTINED`
+
+Debe diferenciarse:
+
+- termination confirmation;
+- resource sanitation / reconciliation.
+
+No se prescribe todavía cómo se implementará el saneamiento.
+
+La propiedad de seguridad a preservar es:
+
+`weak UI/protocol evidence`
+`must not be sufficient for AVAILABLE`
+
+### Root cause
+
+**NOT DECLARED**
+
+No se registra BUG-001, `#terminado`, QWebEngine ni ningún otro finding como root cause. La documentación distingue **contract weakness** de **incident root cause**.
+
+### 2F-8T
+
+**VERIFIED BLOCKER / ROOT CAUSE UNKNOWN**
+
+**NO REOPENED**
+
+No se introduce ninguna conclusión nueva sobre Qt/QWebEngine.
+
+### Diseño futuro — PROPUESTA
+
+El siguiente diseño queda documentado únicamente como propuesta, no como implementación:
+
+`PhysicalReleaseEvidence`
+
+con dos propósitos:
+
+- `TERMINATION`
+- `SANITIZATION`
+
+Campos posibles de diseño futuro:
+
+- `provider`
+- `evidence_type`
+- `evidence_level`
+- `physical_resource_id`
+- `claim_id`
+- `execution_generation`
+- `operation_id`
+- `ticket_id`
+- `observation`
+
+Todos estos campos son **future design / not implemented**.
+
+BUG-001, BUG-003 y BUG-005 deben converger en un único contrato futuro de evidencia.
+
+### Next gate
+
+**NEXT GATE: HUESO-09-MINIMAL-RELEASE-GATE-DESIGN**
+
+**NO IMPLEMENTATION YET**
+
+**HUESO-09 PROVIDER RUNTIME: BLOCKED**
+
+2F-8T continúa bloqueando el runtime de Gemini.
 
 ## HUESO 10 — SQLITE DATABASE LOCK
 
