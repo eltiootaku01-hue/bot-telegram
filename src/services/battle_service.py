@@ -4,7 +4,7 @@ import logging
 import math
 from typing import Any, Dict, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from src.db.models import ActiveMatch, CardInstance
@@ -145,82 +145,54 @@ def set_player_deck_and_lock(
     player_id: int,
     deck: Dict[str, Dict[str, Any]],
 ) -> bool:
-    """
-    Persiste un mazo real de CardInstance en ActiveMatch y bloquea sus cartas
-    de forma atómica desde el punto de vista de la transacción SQLAlchemy.
-
-    La función usa owner_id, porque es el campo de propiedad real del modelo
-    actual. Las columnas *_instance_id de ActiveMatch almacenan las referencias.
-    """
+    """Persiste y bloquea un mazo dentro de una sola SQLite write transaction."""
     required_slots = ("waifu", "equip", "magic")
     if not isinstance(deck, dict) or not all(
         isinstance(deck.get(slot), dict) and deck[slot].get("id") is not None
         for slot in required_slots
     ):
         return False
-
     card_ids = [str(deck[slot]["id"]) for slot in required_slots]
     if len(set(card_ids)) != len(card_ids):
         return False
-
-    match_stmt = (
-        select(ActiveMatch)
-        .where(ActiveMatch.id == match_id)
-        .with_for_update()
-    )
-    match = session.scalars(match_stmt).first()
-
-    if not match or match.status != "IN_PROGRESS":
-        return False
-
-    if player_id == match.player1_id:
-        slot_fields = (
-            "p1_waifu_instance_id",
-            "p1_equip_instance_id",
-            "p1_magic_instance_id",
-        )
-    elif player_id == match.player2_id:
-        slot_fields = (
-            "p2_waifu_instance_id",
-            "p2_equip_instance_id",
-            "p2_magic_instance_id",
-        )
-    else:
-        return False
-
-    card_stmt = (
-        select(CardInstance)
-        .where(
-            CardInstance.id.in_(card_ids),
-            CardInstance.owner_id == player_id,
-            CardInstance.is_locked.is_(False),
-        )
-        .with_for_update()
-    )
-    cards = session.scalars(card_stmt).all()
-
-    if len(cards) != len(card_ids):
-        session.rollback()
-        return False
-
-    cards_by_id = {str(card.id): card for card in cards}
-    if set(cards_by_id) != set(card_ids):
-        session.rollback()
-        return False
-
     try:
+        session.connection().exec_driver_sql("BEGIN IMMEDIATE")
+        match = session.scalars(select(ActiveMatch).where(ActiveMatch.id == match_id).execution_options(populate_existing=True)).first()
+        if not match or match.status != "IN_PROGRESS":
+            session.rollback()
+            return False
+        if player_id == match.player1_id:
+            slot_fields = ("p1_waifu_instance_id", "p1_equip_instance_id", "p1_magic_instance_id")
+        elif player_id == match.player2_id:
+            slot_fields = ("p2_waifu_instance_id", "p2_equip_instance_id", "p2_magic_instance_id")
+        else:
+            session.rollback()
+            return False
+        cards = session.scalars(
+            select(CardInstance)
+            .where(CardInstance.id.in_(card_ids), CardInstance.owner_id == player_id, CardInstance.is_locked.is_(False))
+            .execution_options(populate_existing=True)
+        ).all()
+        if len(cards) != len(card_ids) or {str(card.id) for card in cards} != set(card_ids):
+            session.rollback()
+            return False
+        for card_id in sorted(card_ids):
+            locked = session.execute(
+                update(CardInstance)
+                .where(CardInstance.id == card_id, CardInstance.owner_id == player_id, CardInstance.is_locked.is_(False))
+                .values(is_locked=True)
+            )
+            if locked.rowcount != 1:
+                session.rollback()
+                return False
         for field_name, card_id in zip(slot_fields, card_ids):
             setattr(match, field_name, card_id)
-
-        for card in cards:
-            card.is_locked = True
-
         session.commit()
         return True
     except Exception:
         session.rollback()
         logger.exception("No se pudo persistir y bloquear el mazo del duelo %s", match_id)
-        return False
+        raise
 
 
 def execute_turn(
@@ -229,141 +201,121 @@ def execute_turn(
     acting_player_id: int,
     action_type: str = "ATTACK",
 ) -> Dict[str, Any]:
-    """Resuelve un turno, actualiza HP/turno y finaliza el duelo si corresponde."""
+    """Resuelve un turno bajo una única SQLite write transaction."""
     if action_type != "ATTACK":
         return {"success": False, "error": f"Acción no soportada: {action_type}."}
-
-    match = (
-        session.query(ActiveMatch)
-        .filter(ActiveMatch.id == match_id)
-        .with_for_update()
-        .first()
-    )
-
-    if not match:
-        return {"success": False, "error": "El duelo no existe."}
-
-    if match.status != "IN_PROGRESS":
-        return {"success": False, "error": "El duelo no está en curso."}
-
-    current_player_id = (
-        match.current_turn_player_id
-        if match.current_turn_player_id is not None
-        else match.current_turn_id
-    )
-
-    if current_player_id != acting_player_id:
-        return {"success": False, "error": "No es tu turno de actuar."}
-
-    is_p1_acting = acting_player_id == match.player1_id
-    if not is_p1_acting and acting_player_id != match.player2_id:
-        return {"success": False, "error": "El jugador no participa en este duelo."}
-
-    defender_id = match.player2_id if is_p1_acting else match.player1_id
-
-    p1_deck = _load_player_deck(session, match, is_p1=True)
-    p2_deck = _load_player_deck(session, match, is_p1=False)
-    attacker_deck = p1_deck if is_p1_acting else p2_deck
-    defender_deck = p2_deck if is_p1_acting else p1_deck
-
-    if match.p1_hp is None:
-        match.p1_hp = DEFAULT_INITIAL_HP
-    if match.p2_hp is None:
-        match.p2_hp = DEFAULT_INITIAL_HP
-
-    attacker_hp = match.p1_hp if is_p1_acting else match.p2_hp
-    defender_hp = match.p2_hp if is_p1_acting else match.p1_hp
-
-    attacker_stats = calculate_combat_stats(
-        attacker_deck["waifu"],
-        attacker_deck["equipment"],
-        attacker_deck["magic"],
-    )
-    defender_stats = calculate_combat_stats(
-        defender_deck["waifu"],
-        defender_deck["equipment"],
-        defender_deck["magic"],
-    )
-
-    log_lines = []
-
-    if attacker_stats["heal_amount"] > 0:
-        recovered = attacker_stats["heal_amount"]
-        attacker_hp = min(DEFAULT_INITIAL_HP, attacker_hp + recovered)
-        log_lines.append(
-            f"✨ ¡Usó **Poción/Magia** y recuperó +{recovered} HP!"
-        )
-
-    raw_damage = attacker_stats["atk"] - defender_stats["def"]
-    damage_per_hit = max(MINIMUM_DAMAGE_FLOOR, raw_damage)
-    hits = 2 if attacker_stats["double_attack"] else 1
-    total_damage = damage_per_hit * hits
-
-    if hits == 2:
-        log_lines.append(
-            f"⚔️⚡ ¡Ataque Doble! Inflige 2 golpes de {damage_per_hit} de daño."
-        )
-    else:
-        log_lines.append(
-            f"⚔️ Inflige {total_damage} de daño "
-            f"(ATK: {attacker_stats['atk']} vs DEF: {defender_stats['def']})."
-        )
-
-    defender_hp = max(0, defender_hp - total_damage)
-
-    if is_p1_acting:
-        match.p1_hp = attacker_hp
-        match.p2_hp = defender_hp
-    else:
-        match.p2_hp = attacker_hp
-        match.p1_hp = defender_hp
-
-    match_ended = False
-    winner_id = None
-
-    if defender_hp <= 0:
-        match_ended = True
-        winner_id = acting_player_id
-        log_lines.append(
-            f"💥 ¡HP del rival reducido a 0! "
-            f"**Jugador {acting_player_id}** gana el duelo."
-        )
-
-        success, finish_message = finish_match(
-            session,
-            match_id=match.id,
-            winner_id=winner_id,
-        )
-        if not success:
+    try:
+        session.connection().exec_driver_sql("BEGIN IMMEDIATE")
+        match = session.scalars(select(ActiveMatch).where(ActiveMatch.id == match_id).execution_options(populate_existing=True)).first()
+        if not match:
             session.rollback()
-            return {"success": False, "error": finish_message}
-
-        log_lines.append(f"🏁 {finish_message}")
-    else:
+            return {"success": False, "error": "El duelo no existe."}
+        if match.status != "IN_PROGRESS":
+            session.rollback()
+            return {"success": False, "error": "El duelo no está en curso."}
+        current_player_id = match.current_turn_player_id if match.current_turn_player_id is not None else match.current_turn_id
+        if current_player_id != acting_player_id:
+            session.rollback()
+            return {"success": False, "error": "No es tu turno de actuar."}
+        is_p1_acting = acting_player_id == match.player1_id
+        if not is_p1_acting and acting_player_id != match.player2_id:
+            session.rollback()
+            return {"success": False, "error": "El jugador no participa en este duelo."}
+        defender_id = match.player2_id if is_p1_acting else match.player1_id
+        p1_deck = _load_player_deck(session, match, is_p1=True)
+        p2_deck = _load_player_deck(session, match, is_p1=False)
+        attacker_deck = p1_deck if is_p1_acting else p2_deck
+        defender_deck = p2_deck if is_p1_acting else p1_deck
+        expected_p1_hp = match.p1_hp
+        expected_p2_hp = match.p2_hp
+        p1_hp = DEFAULT_INITIAL_HP if expected_p1_hp is None else expected_p1_hp
+        p2_hp = DEFAULT_INITIAL_HP if expected_p2_hp is None else expected_p2_hp
+        attacker_hp = p1_hp if is_p1_acting else p2_hp
+        defender_hp = p2_hp if is_p1_acting else p1_hp
+        attacker_stats = calculate_combat_stats(attacker_deck["waifu"], attacker_deck["equipment"], attacker_deck["magic"])
+        defender_stats = calculate_combat_stats(defender_deck["waifu"], defender_deck["equipment"], defender_deck["magic"])
+        log_lines = []
+        if attacker_stats["heal_amount"] > 0:
+            recovered = attacker_stats["heal_amount"]
+            attacker_hp = min(DEFAULT_INITIAL_HP, attacker_hp + recovered)
+            log_lines.append(f"✨ ¡Usó **Poción/Magia** y recuperó +{recovered} HP!")
+        raw_damage = attacker_stats["atk"] - defender_stats["def"]
+        damage_per_hit = max(MINIMUM_DAMAGE_FLOOR, raw_damage)
+        hits = 2 if attacker_stats["double_attack"] else 1
+        total_damage = damage_per_hit * hits
+        if hits == 2:
+            log_lines.append(f"⚔️⚡ ¡Ataque Doble! Inflige 2 golpes de {damage_per_hit} de daño.")
+        else:
+            log_lines.append(
+                f"⚔️ Inflige {total_damage} de daño "
+                f"(ATK: {attacker_stats['atk']} vs DEF: {defender_stats['def']})."
+            )
+        defender_hp = max(0, defender_hp - total_damage)
+        final_p1_hp = attacker_hp if is_p1_acting else defender_hp
+        final_p2_hp = defender_hp if is_p1_acting else attacker_hp
+        match_ended = defender_hp <= 0
+        winner_id = acting_player_id if match_ended else None
+        if match_ended:
+            log_lines.append(f"💥 ¡HP del rival reducido a 0! **Jugador {acting_player_id}** gana el duelo.")
         next_turn = defender_id
-        match.current_turn_player_id = next_turn
-        match.current_turn_id = next_turn
-        session.commit()
-        log_lines.append(
-            f"🔄 Fin del turno. Es el turno del **Jugador {next_turn}**."
-        )
-
-    return {
-        "success": True,
-        "match_id": match.id,
-        "acting_player_id": acting_player_id,
-        "damage_dealt": total_damage,
-        "attacker_hp": attacker_hp,
-        "defender_hp": defender_hp,
-        "is_p1_hp": match.p1_hp,
-        "is_p2_hp": match.p2_hp,
-        "next_turn_player_id": (
-            match.current_turn_player_id if not match_ended else None
-        ),
-        "match_ended": match_ended,
-        "winner_id": winner_id,
-        "combat_log": "\n".join(log_lines),
-    }
+        conditions = [
+            ActiveMatch.id == match_id,
+            ActiveMatch.status == "IN_PROGRESS",
+            ActiveMatch.current_turn_id == match.current_turn_id,
+        ]
+        if match.current_turn_player_id is None:
+            conditions.append(ActiveMatch.current_turn_player_id.is_(None))
+        else:
+            conditions.append(ActiveMatch.current_turn_player_id == match.current_turn_player_id)
+        if expected_p1_hp is None:
+            conditions.append(ActiveMatch.p1_hp.is_(None))
+        else:
+            conditions.append(ActiveMatch.p1_hp == expected_p1_hp)
+        if expected_p2_hp is None:
+            conditions.append(ActiveMatch.p2_hp.is_(None))
+        else:
+            conditions.append(ActiveMatch.p2_hp == expected_p2_hp)
+        values = {"p1_hp": final_p1_hp, "p2_hp": final_p2_hp}
+        if not match_ended:
+            values["current_turn_player_id"] = next_turn
+            values["current_turn_id"] = next_turn
+        turn_result = session.execute(update(ActiveMatch).where(*conditions).values(**values))
+        if turn_result.rowcount != 1:
+            session.rollback()
+            return {"success": False, "error": "El turno ya no corresponde al estado actual del duelo."}
+        if match_ended:
+            session.expire_all()
+            current_match = session.get(ActiveMatch, match_id)
+            if current_match is None:
+                session.rollback()
+                return {"success": False, "error": "El duelo no existe."}
+            from src.services.match_service import _finish_match_in_transaction, set_referee_on_break
+            success, finish_message, referee = _finish_match_in_transaction(session, current_match, acting_player_id)
+            if not success:
+                session.rollback()
+                return {"success": False, "error": finish_message}
+            session.commit()
+            set_referee_on_break(referee)
+            log_lines.append(f"🏁 {finish_message}")
+        else:
+            session.commit()
+        return {
+            "success": True,
+            "match_id": match_id,
+            "acting_player_id": acting_player_id,
+            "damage_dealt": total_damage,
+            "attacker_hp": attacker_hp,
+            "defender_hp": defender_hp,
+            "is_p1_hp": final_p1_hp,
+            "is_p2_hp": final_p2_hp,
+            "next_turn_player_id": None if match_ended else next_turn,
+            "match_ended": match_ended,
+            "winner_id": winner_id,
+            "combat_log": "\n".join(log_lines),
+        }
+    except Exception:
+        session.rollback()
+        raise
 
 
 def _load_player_deck(
