@@ -90,13 +90,19 @@ def _worker(operation, database_path, payload, start_event, ready_queue, result_
             engine.dispose()
         result_queue.put(result)
     except Exception as exc:
-        result_queue.put({"error": f"{type(exc).__name__}: {exc}"})
+        result_queue.put({"worker_error": f"{type(exc).__name__}: {exc}"})
 
 
-def _assert_results(results, expected_successes=1):
-    errors = [item["error"] for item in results if "error" in item]
-    assert not errors, errors
+def _assert_results(results, expected_successes=1, expected_functional_errors=()):
+    worker_errors = [item["worker_error"] for item in results if "worker_error" in item]
+    assert not worker_errors, worker_errors
     assert sum(bool(item["success"]) for item in results) == expected_successes
+    functional_errors = [
+        item["error"]
+        for item in results
+        if not item["success"] and "error" in item
+    ]
+    assert functional_errors == list(expected_functional_errors)
 
 
 def test_l02_claim_drop_two_processes():
@@ -212,7 +218,7 @@ def test_l07_nonterminal_turn_two_processes():
             id="match-007",group_id=-1001,player1_id=1001,player2_id=2002,
             p1_hp=1000,p2_hp=1000,current_turn_id=1001,current_turn_player_id=1001,
             status="IN_PROGRESS",referee_name="Cari")])
-        _assert_results(_run_two_processes("turn",path,{"match_id":"match-007","player_id":1001}))
+        _assert_results(_run_two_processes("turn",path,{"match_id":"match-007","player_id":1001}), expected_functional_errors=("No es tu turno de actuar.",))
         engine=create_engine(_sqlite_url(path))
         with Session(engine) as session:
             match=session.get(ActiveMatch,"match-007")
@@ -228,7 +234,7 @@ def test_l07_terminal_turn_two_processes():
             id="match-008",group_id=-1001,player1_id=1001,player2_id=2002,
             p1_hp=1000,p2_hp=50,current_turn_id=1001,current_turn_player_id=1001,
             status="IN_PROGRESS",referee_name="Cari")])
-        _assert_results(_run_two_processes("turn",path,{"match_id":"match-008","player_id":1001}))
+        _assert_results(_run_two_processes("turn",path,{"match_id":"match-008","player_id":1001}), expected_functional_errors=("El duelo no está en curso.",))
         engine=create_engine(_sqlite_url(path))
         with Session(engine) as session:
             match=session.get(ActiveMatch,"match-008")
