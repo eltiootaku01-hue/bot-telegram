@@ -137,14 +137,13 @@ Toda nueva creación de workers debe tener owner y cleanup verificable.
 
 ## HUESO 05 — SQLITE / MULTIPROCESO
 
-Estado:
+Estado actual:
+**CLOSED / VERIFIED REPAIR + PASS**
+
+Estado histórico:
 **RISK / REQUIRES AUDIT**
 
-Existen varios componentes persistentes y potencialmente múltiples procesos.
-
-### Riesgo
-
-Es necesario verificar:
+El hallazgo histórico señalaba la necesidad de verificar:
 
 - WAL;
 - busy_timeout;
@@ -154,11 +153,24 @@ Es necesario verificar:
 - cierre limpio;
 - acceso multi-proceso.
 
-No asumir que SQLite está roto.
+### Cierre verificado
 
-### Gate
+Las líneas de trabajo H05-L02..L09 quedaron validadas como:
 
-Auditar cada base y cada conexión antes de considerar el ecosistema multi-proceso completamente sano.
+**VERIFIED PASS**
+
+La reparación correspondiente fue integrada mediante PR #96 en:
+
+`main@94757b257e9df0be3886fbaf11d66dd421c2c4e3`
+
+La evidencia de cierre es específica de HUESO-05 y conserva el historial del riesgo original. No implica despliegue en producción ni cierre del conjunto global de problemas de salud arquitectónica.
+
+No se observó `database is locked` en los escenarios HUESO-05 verificados. HUESO-10 mantiene su propio gate y estado independiente.
+
+### Estado
+
+HUESO-05 queda cerrado en el registro arquitectónico actual. Cualquier nueva incidencia o afirmación de bloqueo SQLite debe aportar evidencia propia y evaluarse mediante su gate correspondiente.
+
 
 ---
 
