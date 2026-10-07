@@ -453,8 +453,10 @@ def test_l09_incompatible_existing_index_fails_closed() -> None:
                 (_L09_INDEX_NAME,),
             ).fetchone()
             assert row is not None
-            assert "group_id" in row[0]
-            assert "referee_name" not in row[0]
+            columns = connection.execute(
+                f"PRAGMA index_info('{_L09_INDEX_NAME}')"
+            ).fetchall()
+            assert [column[2] for column in columns] == ["group_id"]
         finally:
             connection.close()
 
