@@ -25,11 +25,13 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication
 
 from bot_ia.core.physical_resource_authority import (
+    PhysicalReleaseEvidenceType,
     PhysicalResourceClaimError,
     PhysicalResourceDescriptor,
     PhysicalResourceOwnershipError,
     PhysicalResourceState,
     PhysicalWebChatResourceAuthority,
+    _issue_physical_release_evidence,
 )
 from bot_ia.core.web_physical_identity import (
     AuthenticationState,
@@ -234,6 +236,48 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
             requester_identity="playwright-test",
         )
 
+    def _termination_evidence(
+        self,
+        adapter,
+        execution,
+        *,
+        observation="controlled termination",
+    ):
+        snapshot = adapter.snapshot()
+        return _issue_physical_release_evidence(
+            provider=snapshot.provider,
+            evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+            physical_resource_id=execution.physical_resource_id,
+            claim_id=execution.claim_id,
+            execution_generation=execution.execution_generation,
+            operation_id=execution.operation_id,
+            ticket_id=execution.ticket_id,
+            observation=observation,
+        )
+
+    def _sanitization_evidence(
+        self,
+        adapter=None,
+        *,
+        observation="controlled sanitization",
+    ):
+        snapshot = (
+            adapter.snapshot()
+            if adapter is not None
+            else self.authority.snapshot(
+                self.descriptor.physical_resource_id
+            )
+        )
+        return _issue_physical_release_evidence(
+            provider=snapshot.provider,
+            evidence_type=PhysicalReleaseEvidenceType.SANITIZATION,
+            physical_resource_id=snapshot.physical_resource_id,
+            claim_id=snapshot.claim_id,
+            execution_generation=snapshot.execution_generation,
+            operation_id=snapshot.operation_id,
+            observation=observation,
+        )
+
     def test_x01_same_authority_instance(self) -> None:
         runtime = build_runtime(Path(__file__).resolve().parents[1])
         backend = CountingBackend(page=ControlledPage())
@@ -298,7 +342,11 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
         )
         self.qweb.confirm_termination(
             execution,
-            evidence="x02 controlled qweb release",
+            evidence=self._termination_evidence(
+                self.qweb,
+                execution,
+                observation="x02 controlled qweb release",
+            ),
         )
 
     def test_x03_playwright_first_denies_qweb_and_keeps_qweb_action_zero(self) -> None:
@@ -319,7 +367,11 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
         )
         self.playwright.confirm_termination(
             execution,
-            evidence="x03 controlled playwright release",
+            evidence=self._termination_evidence(
+                self.playwright,
+                execution,
+                observation="x03 controlled playwright release",
+            ),
         )
 
     def test_x04_concurrent_claims_have_exactly_one_winner(self) -> None:
@@ -418,7 +470,11 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
         )
         self.qweb.confirm_termination(
             q_execution,
-            evidence="x06 termination evidence",
+            evidence=self._termination_evidence(
+                self.qweb,
+                q_execution,
+                observation="x06 termination evidence",
+            ),
         )
         p_claim = self.playwright.claim_resource()
         p_execution = self.playwright.begin_execution(
@@ -433,7 +489,11 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
         )
         self.playwright.confirm_termination(
             p_execution,
-            evidence="x06 cleanup",
+            evidence=self._termination_evidence(
+                self.playwright,
+                p_execution,
+                observation="x06 cleanup",
+            ),
         )
 
     def test_x07_handoff_playwright_to_qweb(self) -> None:
@@ -446,7 +506,11 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
         )
         self.playwright.confirm_termination(
             p_execution,
-            evidence="x07 termination evidence",
+            evidence=self._termination_evidence(
+                self.playwright,
+                p_execution,
+                observation="x07 termination evidence",
+            ),
         )
         q_claim = self.qweb.claim_resource()
         q_execution = self.qweb.begin_execution(
@@ -460,7 +524,11 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
         )
         self.qweb.confirm_termination(
             q_execution,
-            evidence="x07 cleanup",
+            evidence=self._termination_evidence(
+                self.qweb,
+                q_execution,
+                observation="x07 cleanup",
+            ),
         )
 
     def test_x08_stale_release_cross_route_is_rejected(self) -> None:
@@ -492,9 +560,14 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
             ticket_id="x09-old",
             operation_id="qweb-x09-old",
         )
+        old_evidence = self._termination_evidence(
+            self.qweb,
+            old_execution,
+            observation="x09 qweb termination",
+        )
         self.qweb.confirm_termination(
             old_execution,
-            evidence="x09 qweb termination",
+            evidence=old_evidence,
         )
         new_claim = self.playwright.claim_resource()
         new_execution = self.playwright.begin_execution(
@@ -513,7 +586,7 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
         with self.assertRaises(PhysicalResourceOwnershipError):
             self.qweb.confirm_termination(
                 old_execution,
-                evidence="x09 stale callback release",
+                evidence=old_evidence,
             )
         snapshot = self.authority.snapshot(self.descriptor.physical_resource_id)
         self.assertEqual(new_execution.claim_id, snapshot.claim_id)
@@ -523,7 +596,11 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
         )
         self.playwright.confirm_termination(
             new_execution,
-            evidence="x09 cleanup",
+            evidence=self._termination_evidence(
+                self.playwright,
+                new_execution,
+                observation="x09 cleanup",
+            ),
         )
 
     def test_x10_cancellation_keeps_cross_route_exclusion(self) -> None:
@@ -563,7 +640,9 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
 
         reconciled = self.authority.reconcile(
             self.descriptor.physical_resource_id,
-            evidence="controlled surface verified free",
+            evidence=self._sanitization_evidence(
+                observation="controlled surface verified free",
+            ),
         )
         self.assertEqual(
             PhysicalResourceState.AVAILABLE,
@@ -684,8 +763,22 @@ class CrossRoutePhysicalExclusivityTests(unittest.TestCase):
             PhysicalResourceState.BUSY,
             self.authority.snapshot(descriptor_y.physical_resource_id).state,
         )
-        q_x.confirm_termination(x_execution, evidence="x15 cleanup x")
-        p_y.confirm_termination(y_execution, evidence="x15 cleanup y")
+        q_x.confirm_termination(
+            x_execution,
+            evidence=self._termination_evidence(
+                q_x,
+                x_execution,
+                observation="x15 cleanup x",
+            ),
+        )
+        p_y.confirm_termination(
+            y_execution,
+            evidence=self._termination_evidence(
+                p_y,
+                y_execution,
+                observation="x15 cleanup y",
+            ),
+        )
 
     def test_x16_resource_id_collision_uses_canonical_surface(self) -> None:
         surface_a = canonicalize_interaction_surface(
@@ -995,7 +1088,11 @@ identity_id = "shared"
             self.assertEqual(1, qweb_count)
             qweb.confirm_termination(
                 qweb_execution,
-                evidence="x20 qweb termination",
+                evidence=self._termination_evidence(
+                    qweb,
+                    qweb_execution,
+                    observation="x20 qweb termination",
+                ),
             )
 
             playwright_claim = worker.call(
@@ -1074,7 +1171,11 @@ identity_id = "shared"
             worker.call(
                 lambda adapter, _backend, _page: adapter.confirm_termination(
                     playwright_execution,
-                    evidence="x20 playwright termination",
+                    evidence=self._termination_evidence(
+                        adapter,
+                        playwright_execution,
+                        observation="x20 playwright termination",
+                    ),
                 )
             )
             self.assertEqual(

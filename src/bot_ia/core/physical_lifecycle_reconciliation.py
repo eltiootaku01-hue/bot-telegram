@@ -10,6 +10,7 @@ import threading
 from typing import Any, Protocol
 
 from bot_ia.core.physical_resource_authority import (
+    PhysicalReleaseEvidence,
     PhysicalResourceClaim,
     PhysicalResourceOwnershipError,
     PhysicalResourceSnapshot,
@@ -68,7 +69,7 @@ class PhysicalLifecycleAdapter(Protocol):
         self,
         execution: PhysicalExecutionLike,
         *,
-        evidence: str,
+        evidence: PhysicalReleaseEvidence,
     ) -> PhysicalResourceSnapshot:
         ...
 
@@ -246,11 +247,14 @@ class PhysicalLifecycleReconciliation:
         self,
         task_id: str,
         *,
-        evidence: str,
+        evidence: PhysicalReleaseEvidence,
     ) -> PhysicalLifecycleReconciliationRecord:
-        """Record backend termination evidence and reconcile physical release."""
-        if not isinstance(evidence, str) or not evidence.strip():
-            raise ValueError("termination evidence is required")
+        """Record verified backend termination evidence and reconcile release."""
+        if (
+            not isinstance(evidence, PhysicalReleaseEvidence)
+            or evidence.evidence_type.value != "TERMINATION"
+        ):
+            raise ValueError("typed termination evidence is required")
         adapter, execution, record = self._current_binding(task_id)
         try:
             snapshot = adapter.snapshot()
@@ -298,7 +302,7 @@ class PhysicalLifecycleReconciliation:
         self,
         task_id: str,
         *,
-        evidence: str,
+        evidence: PhysicalReleaseEvidence,
     ) -> PhysicalLifecycleReconciliationRecord:
         return self.record_termination(task_id, evidence=evidence)
 

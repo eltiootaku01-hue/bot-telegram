@@ -18,9 +18,11 @@ from bot_ia.core.physical_lifecycle_reconciliation import (
     PhysicalLifecycleReconciliation,
 )
 from bot_ia.core.physical_resource_authority import (
+    PhysicalReleaseEvidenceType,
     PhysicalResourceClaimError,
     PhysicalResourceState,
     PhysicalWebChatResourceAuthority,
+    _issue_physical_release_evidence,
 )
 from bot_ia.core.task_engine import TaskState
 from bot_ia.core.task_scheduler import (
@@ -68,6 +70,25 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
             "cari_gemini",
             expected_provider="gemini",
             expected_logical_actor="cari",
+        )
+
+    @staticmethod
+    def _termination_evidence(
+        adapter,
+        execution,
+        *,
+        observation: str,
+    ):
+        snapshot = adapter.snapshot()
+        return _issue_physical_release_evidence(
+            provider=snapshot.provider,
+            evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+            physical_resource_id=execution.physical_resource_id,
+            claim_id=execution.claim_id,
+            execution_generation=execution.execution_generation,
+            operation_id=execution.operation_id,
+            ticket_id=execution.ticket_id,
+            observation=observation,
         )
 
     def test_s01_application_startup_creates_runtime_lifecycle_components(self):
@@ -249,9 +270,19 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                 completed_busy.reconciliation_status,
             )
 
+            logical_observation = "#terminado controlled QWeb"
+            termination_evidence = self._termination_evidence(
+                adapter,
+                execution,
+                observation="independent synthetic QWeb termination authorization",
+            )
+            self.assertNotEqual(
+                logical_observation,
+                termination_evidence.observation,
+            )
             terminated = runtime.physical_lifecycle_reconciliation.record_termination(
                 task.task_id,
-                evidence="#terminado controlled QWeb",
+                evidence=termination_evidence,
             )
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,
@@ -309,9 +340,19 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                     {"prompt": "s04 controlled"},
                 )
             )
+            logical_observation = "controlled Playwright completion"
+            termination_evidence = self._termination_evidence(
+                adapter,
+                execution,
+                observation="independent synthetic Playwright termination authorization",
+            )
+            self.assertNotEqual(
+                logical_observation,
+                termination_evidence.observation,
+            )
             record = runtime.physical_lifecycle_reconciliation.record_termination(
                 task.task_id,
-                evidence="controlled Playwright completion",
+                evidence=termination_evidence,
             )
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,
@@ -516,9 +557,19 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                     lambda adapter, _backend, _page: adapter.claim_resource()
                 )
 
+            qweb_logical_observation = "#terminado controlled QWeb handoff"
+            qweb_termination_evidence = self._termination_evidence(
+                qweb,
+                q_execution,
+                observation="independent synthetic QWeb handoff termination authorization",
+            )
+            self.assertNotEqual(
+                qweb_logical_observation,
+                qweb_termination_evidence.observation,
+            )
             runtime.physical_lifecycle_reconciliation.record_termination(
                 q_task.task_id,
-                evidence="#terminado controlled QWeb handoff",
+                evidence=qweb_termination_evidence,
             )
 
             p_adapter = worker.call(
@@ -549,9 +600,19 @@ class ProductionRuntimeLifecycle8STests(unittest.TestCase):
                     {"prompt": "s08 handoff"},
                 )
             )
+            playwright_logical_observation = "controlled Playwright handoff"
+            playwright_termination_evidence = self._termination_evidence(
+                p_adapter,
+                p_execution,
+                observation="independent synthetic Playwright handoff termination authorization",
+            )
+            self.assertNotEqual(
+                playwright_logical_observation,
+                playwright_termination_evidence.observation,
+            )
             p_record = runtime.physical_lifecycle_reconciliation.record_termination(
                 p_task.task_id,
-                evidence="controlled Playwright handoff",
+                evidence=playwright_termination_evidence,
             )
             self.assertEqual(
                 PhysicalResourceState.AVAILABLE,

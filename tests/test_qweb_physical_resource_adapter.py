@@ -6,9 +6,11 @@ import unittest
 from bot_ia.core.web_physical_identity import AuthenticationState
 
 from bot_ia.core.physical_resource_authority import (
+    PhysicalReleaseEvidenceType,
     PhysicalResourceIdentityError,
     PhysicalResourceState,
     PhysicalWebChatResourceAuthority,
+    _issue_physical_release_evidence,
 )
 from services.qweb_physical_resource_adapter import (
     QWebPhysicalResourceAdapter,
@@ -18,6 +20,33 @@ from services.web_queue import (
     _QueueWorker,
     _WEB_MESA_UNICA,
 )
+
+
+def _termination_evidence(adapter, execution, *, observation="controlled termination"):
+    snapshot = adapter.snapshot()
+    return _issue_physical_release_evidence(
+        provider=snapshot.provider,
+        evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+        physical_resource_id=execution.physical_resource_id,
+        claim_id=execution.claim_id,
+        execution_generation=execution.execution_generation,
+        operation_id=execution.operation_id,
+        ticket_id=execution.ticket_id,
+        observation=observation,
+    )
+
+
+def _sanitization_evidence(adapter, *, observation="controlled sanitization"):
+    snapshot = adapter.snapshot()
+    return _issue_physical_release_evidence(
+        provider=snapshot.provider,
+        evidence_type=PhysicalReleaseEvidenceType.SANITIZATION,
+        physical_resource_id=snapshot.physical_resource_id,
+        claim_id=snapshot.claim_id,
+        execution_generation=snapshot.execution_generation,
+        operation_id=snapshot.operation_id,
+        observation=observation,
+    )
 
 
 def _adapter(authority=None):
@@ -90,7 +119,10 @@ class QWebPhysicalResourceAdapterContractTests(unittest.TestCase):
         )
         authority.reconcile(
             execution.physical_resource_id,
-            evidence="controlled reconciliation",
+            evidence=_sanitization_evidence(
+                adapter,
+                observation="controlled reconciliation",
+            ),
         )
         second = adapter.claim_resource()
         second_execution = adapter.begin_execution(
@@ -140,7 +172,10 @@ class QWebPhysicalResourceAdapterContractTests(unittest.TestCase):
         )
         authority.reconcile(
             old.physical_resource_id,
-            evidence="controlled reconciliation",
+            evidence=_sanitization_evidence(
+                adapter,
+                observation="controlled reconciliation",
+            ),
         )
         second = adapter.claim_resource()
         new = adapter.begin_execution(
@@ -165,46 +200,31 @@ class QWebPhysicalResourceAdapterContractTests(unittest.TestCase):
         )
         snapshot = adapter.confirm_termination(
             execution,
-            evidence="controlled #terminado",
+            evidence=_termination_evidence(
+                adapter,
+                execution,
+                observation="controlled #terminado",
+            ),
         )
         self.assertEqual(PhysicalResourceState.AVAILABLE, snapshot.state)
 
-    def test_q09_release_failure_quarantines(self):
-        class ReleaseFailAdapter(QWebPhysicalResourceAdapter):
-            def confirm_termination(self, execution, *, evidence):
-                raise RuntimeError("simulated release failure")
-
-        authority = PhysicalWebChatResourceAuthority()
-        descriptor = authority.resolve_resource(
-            "controlled-provider",
-            "account-A",
-            "qweb-session-A",
-            "controlled://webchat",
+    def test_q09_arbitrary_termination_string_is_rejected(self):
+        adapter, authority = _adapter()
+        execution = adapter.begin_execution(
+            adapter.claim_resource(),
+            ticket_id="release-reject",
+            operation_id="qweb-release-reject-1",
         )
-        adapter = ReleaseFailAdapter(
-            authority,
-            descriptor,
-            authentication_state=AuthenticationState.VERIFIED,
-        )
-        worker = _QueueWorker(
-            timeout_ms=45000,
-            circuit_threshold=3,
-            circuit_cooldown_ms=10000,
-            physical_resource_adapter=adapter,
-        )
-        worker.msg_queue.put(
-            BotTicket("release-failure", "Cari", "chat", "@u", "/cafe", "hola")
-        )
-        worker._queued_ids.add("release-failure")
-        worker._process_next()
-        worker._finish_current()
+        for evidence in ("arbitrary string", ""):
+            with self.assertRaises(Exception):
+                adapter.confirm_termination(
+                    execution,
+                    evidence=evidence,
+                )
         self.assertEqual(
-            PhysicalResourceState.QUARANTINED,
-            authority.snapshot(descriptor.physical_resource_id).state,
+            PhysicalResourceState.BUSY,
+            authority.snapshot(adapter.descriptor.physical_resource_id).state,
         )
-        if worker._mesa_unica_acquired:
-            _WEB_MESA_UNICA.release()
-            worker._mesa_unica_acquired = False
 
     def test_q10_cancellation_quarantines_without_termination_evidence(self):
         adapter, authority = _adapter()

@@ -5,16 +5,50 @@ import threading
 import unittest
 
 from bot_ia.core.physical_resource_authority import (
+    PhysicalReleaseEvidenceType,
     PhysicalResourceClaimError,
     PhysicalResourceIdentityError,
     PhysicalResourceOwnershipError,
     PhysicalResourceState,
     PhysicalResourceStateError,
     PhysicalWebChatResourceAuthority,
+    _issue_physical_release_evidence,
 )
 
 
 class PhysicalWebChatResourceAuthorityTests(unittest.TestCase):
+    def _termination_evidence(
+        self,
+        claim,
+        *,
+        operation_id=None,
+        observation="controlled termination",
+    ):
+        return _issue_physical_release_evidence(
+            provider=self.resource.provider,
+            evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+            physical_resource_id=claim.physical_resource_id,
+            claim_id=claim.claim_id,
+            execution_generation=claim.execution_generation,
+            operation_id=operation_id,
+            observation=observation,
+        )
+
+    def _sanitization_evidence(
+        self,
+        snapshot,
+        *,
+        observation="controlled sanitization",
+    ):
+        return _issue_physical_release_evidence(
+            provider=self.resource.provider,
+            evidence_type=PhysicalReleaseEvidenceType.SANITIZATION,
+            physical_resource_id=snapshot.physical_resource_id,
+            claim_id=snapshot.claim_id,
+            execution_generation=snapshot.execution_generation,
+            operation_id=snapshot.operation_id,
+            observation=observation,
+        )
     def setUp(self) -> None:
         self.authority = PhysicalWebChatResourceAuthority()
         self.resource = self.authority.resolve_resource(
@@ -96,7 +130,13 @@ class PhysicalWebChatResourceAuthorityTests(unittest.TestCase):
     def test_t09_late_callback_is_rejected(self) -> None:
         first = self.authority.claim(self.resource.physical_resource_id, "owner-a")
         self.authority.begin_execution(first, operation_id="op-1")
-        self.authority.release(first)
+        self.authority.release(
+            first,
+            evidence=self._termination_evidence(
+                first,
+                operation_id="op-1",
+            ),
+        )
         second = self.authority.claim(self.resource.physical_resource_id, "owner-b")
         self.authority.begin_execution(second, operation_id="op-2")
         self.assertFalse(
@@ -137,14 +177,147 @@ class PhysicalWebChatResourceAuthorityTests(unittest.TestCase):
         claim = self.authority.claim(self.resource.physical_resource_id, "owner-a")
         self.authority.begin_execution(claim)
         self.authority.quarantine(claim, "BACKEND_CRASH")
-        with self.assertRaises(ValueError):
-            self.authority.reconcile(self.resource.physical_resource_id, evidence="")
+        with self.assertRaises(PhysicalResourceStateError):
+            self.authority.reconcile(
+                self.resource.physical_resource_id,
+                evidence="",
+            )
+        snapshot = self.authority.snapshot(self.resource.physical_resource_id)
+        with self.assertRaises(PhysicalResourceStateError):
+            self.authority.reconcile(
+                self.resource.physical_resource_id,
+                evidence=_issue_physical_release_evidence(
+                    provider=self.resource.provider,
+                    evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+                    physical_resource_id=snapshot.physical_resource_id,
+                    claim_id=snapshot.claim_id,
+                    execution_generation=snapshot.execution_generation,
+                    operation_id=snapshot.operation_id,
+                    observation="wrong evidence type",
+                ),
+            )
         reconciled = self.authority.reconcile(
             self.resource.physical_resource_id,
-            evidence="backend recreated and surface verified free",
+            evidence=self._sanitization_evidence(
+                snapshot,
+                observation="backend recreated and surface verified free",
+            ),
         )
         self.assertEqual(PhysicalResourceState.AVAILABLE, reconciled.state)
         self.assertIsNone(reconciled.owner)
+
+    def test_t12b_public_evidence_constructor_is_blocked(self) -> None:
+        with self.assertRaises(TypeError):
+            from bot_ia.core.physical_resource_authority import PhysicalReleaseEvidence
+
+            PhysicalReleaseEvidence(
+                provider=self.resource.provider,
+                evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+                evidence_level="VERIFIED",
+                physical_resource_id=self.resource.physical_resource_id,
+            )
+
+    def test_t12c_active_release_rejects_arbitrary_and_empty_strings(self) -> None:
+        claim = self.authority.claim(self.resource.physical_resource_id, "owner-a")
+        self.authority.begin_execution(claim, operation_id="op-active")
+        for evidence in ("arbitrary", ""):
+            with self.assertRaises(PhysicalResourceStateError):
+                self.authority.release(claim, evidence=evidence)
+        self.assertEqual(
+            PhysicalResourceState.BUSY,
+            self.authority.snapshot(self.resource.physical_resource_id).state,
+        )
+
+    def test_t12d_active_release_accepts_matching_typed_evidence(self) -> None:
+        claim = self.authority.claim(self.resource.physical_resource_id, "owner-a")
+        self.authority.begin_execution(claim, operation_id="op-active")
+        released = self.authority.release(
+            claim,
+            evidence=self._termination_evidence(
+                claim,
+                operation_id="op-active",
+            ),
+        )
+        self.assertEqual(PhysicalResourceState.AVAILABLE, released.state)
+
+    def test_t12e_sanitization_requires_matching_quarantine_context(self) -> None:
+        claim = self.authority.claim(self.resource.physical_resource_id, "owner-a")
+        self.authority.begin_execution(
+            claim,
+            backend="qweb",
+            operation_id="op-sanitize",
+        )
+        self.authority.quarantine(claim, "TERMINATION_UNCONFIRMED")
+        snapshot = self.authority.snapshot(self.resource.physical_resource_id)
+        wrong = _issue_physical_release_evidence(
+            provider=self.resource.provider,
+            evidence_type=PhysicalReleaseEvidenceType.SANITIZATION,
+            physical_resource_id=snapshot.physical_resource_id,
+            claim_id="wrong-claim",
+            execution_generation=snapshot.execution_generation,
+            operation_id=snapshot.operation_id,
+            observation="wrong claim",
+        )
+        with self.assertRaises(PhysicalResourceStateError):
+            self.authority.reconcile(
+                self.resource.physical_resource_id,
+                evidence=wrong,
+            )
+        self.assertEqual(
+            PhysicalResourceState.QUARANTINED,
+            self.authority.snapshot(self.resource.physical_resource_id).state,
+        )
+        released = self.authority.reconcile(
+            self.resource.physical_resource_id,
+            evidence=self._sanitization_evidence(snapshot),
+        )
+        self.assertEqual(PhysicalResourceState.AVAILABLE, released.state)
+
+    def test_t12f_active_release_rejects_stale_generation_claim_resource_and_operation(self) -> None:
+        claim = self.authority.claim(self.resource.physical_resource_id, "owner-a")
+        self.authority.begin_execution(claim, operation_id="op-current")
+        snapshot = self.authority.snapshot(self.resource.physical_resource_id)
+        variants = (
+            _issue_physical_release_evidence(
+                provider=snapshot.provider,
+                evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+                physical_resource_id=snapshot.physical_resource_id,
+                claim_id=snapshot.claim_id,
+                execution_generation=snapshot.execution_generation + 1,
+                operation_id=snapshot.operation_id,
+            ),
+            _issue_physical_release_evidence(
+                provider=snapshot.provider,
+                evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+                physical_resource_id=snapshot.physical_resource_id,
+                claim_id="wrong-claim",
+                execution_generation=snapshot.execution_generation,
+                operation_id=snapshot.operation_id,
+            ),
+            _issue_physical_release_evidence(
+                provider=snapshot.provider,
+                evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+                physical_resource_id="wrong-resource",
+                claim_id=snapshot.claim_id,
+                execution_generation=snapshot.execution_generation,
+                operation_id=snapshot.operation_id,
+            ),
+            _issue_physical_release_evidence(
+                provider=snapshot.provider,
+                evidence_type=PhysicalReleaseEvidenceType.TERMINATION,
+                physical_resource_id=snapshot.physical_resource_id,
+                claim_id=snapshot.claim_id,
+                execution_generation=snapshot.execution_generation,
+                operation_id="wrong-operation",
+            ),
+        )
+        for evidence in variants:
+            with self.assertRaises(PhysicalResourceStateError):
+                self.authority.release(claim, evidence=evidence)
+        self.assertEqual(
+            PhysicalResourceState.BUSY,
+            self.authority.snapshot(self.resource.physical_resource_id).state,
+        )
 
     def test_t13_concurrent_claims_have_one_winner(self) -> None:
         barrier = threading.Barrier(8)
