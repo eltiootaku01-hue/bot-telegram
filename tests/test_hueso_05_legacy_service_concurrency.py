@@ -2,8 +2,12 @@
 
 from multiprocessing import get_context
 from pathlib import Path
+import sqlite3
 import tempfile
 
+from alembic import command
+from alembic.config import Config
+import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
@@ -283,3 +287,200 @@ def test_l09_referee_unique_index_two_processes():
             )).all()
             assert len(rows)==1
         engine.dispose()
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_L09_INDEX_NAME = "uq_active_matches_active_referee_name"
+_L09_EXPECTED_SQL = (
+    "CREATE UNIQUE INDEX "
+    "uq_active_matches_active_referee_name "
+    "ON active_matches (referee_name) "
+    "WHERE status IN ('WAITING', 'IN_PROGRESS')"
+)
+
+
+def _alembic_config(path: Path) -> Config:
+    config = Config(str(_REPO_ROOT / "alembic.ini"))
+    config.set_main_option(
+        "script_location",
+        str(_REPO_ROOT / "alembic"),
+    )
+    config.set_main_option("sqlalchemy.url", _sqlite_url(path))
+    return config
+
+
+def _stamp_pre_l09(path: Path) -> None:
+    command.stamp(_alembic_config(path), "b7c8d9e0f1a2")
+
+
+def _upgrade_head(path: Path) -> None:
+    command.upgrade(_alembic_config(path), "head")
+
+
+def _normalize_sql(value: str) -> str:
+    return " ".join(value.replace('"', "").split()).casefold()
+
+
+def _drop_l09_index(path: Path) -> None:
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            f"DROP INDEX IF EXISTS {_L09_INDEX_NAME}"
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def _assert_l09_index(path: Path) -> None:
+    connection = sqlite3.connect(path)
+    try:
+        index_rows = connection.execute(
+            "PRAGMA index_list('active_matches')"
+        ).fetchall()
+        target_rows = [
+            row for row in index_rows if row[1] == _L09_INDEX_NAME
+        ]
+        assert len(target_rows) == 1
+        assert int(target_rows[0][2]) == 1
+        assert int(target_rows[0][4]) == 1
+
+        columns = connection.execute(
+            "PRAGMA index_info('uq_active_matches_active_referee_name')"
+        ).fetchall()
+        assert [row[2] for row in columns] == ["referee_name"]
+
+        row = connection.execute(
+            """
+            SELECT tbl_name, sql
+            FROM sqlite_master
+            WHERE type = 'index'
+              AND name = ?
+            """,
+            (_L09_INDEX_NAME,),
+        ).fetchone()
+        assert row is not None
+        assert row[0] == "active_matches"
+        assert _normalize_sql(row[1]) == _normalize_sql(
+            _L09_EXPECTED_SQL
+        )
+    finally:
+        connection.close()
+
+
+def test_l09_create_all_index_only() -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        path = Path(temporary) / "create-all.sqlite3"
+        engine = create_engine(_sqlite_url(path))
+        Base.metadata.create_all(engine)
+        engine.dispose()
+
+        _assert_l09_index(path)
+
+
+def test_l09_alembic_only_creates_index() -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        path = Path(temporary) / "alembic-only.sqlite3"
+        engine = create_engine(_sqlite_url(path))
+        Base.metadata.create_all(engine)
+        engine.dispose()
+        _drop_l09_index(path)
+        _stamp_pre_l09(path)
+
+        _upgrade_head(path)
+
+        _assert_l09_index(path)
+
+
+def test_l09_dual_lifecycle_is_idempotent() -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        path = Path(temporary) / "dual-lifecycle.sqlite3"
+        engine = create_engine(_sqlite_url(path))
+        Base.metadata.create_all(engine)
+        engine.dispose()
+        _stamp_pre_l09(path)
+
+        _upgrade_head(path)
+
+        _assert_l09_index(path)
+        connection = sqlite3.connect(path)
+        try:
+            count = connection.execute(
+                "SELECT COUNT(*) "
+                "FROM sqlite_master "
+                "WHERE type = 'index' AND name = ?",
+                (_L09_INDEX_NAME,),
+            ).fetchone()[0]
+            assert count == 1
+        finally:
+            connection.close()
+
+
+def test_l09_incompatible_existing_index_fails_closed() -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        path = Path(temporary) / "incompatible-index.sqlite3"
+        engine = create_engine(_sqlite_url(path))
+        Base.metadata.create_all(engine)
+        engine.dispose()
+        _drop_l09_index(path)
+
+        connection = sqlite3.connect(path)
+        try:
+            connection.execute(
+                """
+                CREATE UNIQUE INDEX uq_active_matches_active_referee_name
+                ON active_matches (group_id)
+                WHERE status IN ('WAITING', 'IN_PROGRESS')
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        _stamp_pre_l09(path)
+
+        with pytest.raises(
+            RuntimeError,
+            match="incompatible definition",
+        ):
+            _upgrade_head(path)
+
+        connection = sqlite3.connect(path)
+        try:
+            row = connection.execute(
+                "SELECT sql FROM sqlite_master "
+                "WHERE type = 'index' AND name = ?",
+                (_L09_INDEX_NAME,),
+            ).fetchone()
+            assert row is not None
+            assert "group_id" in row[0]
+            assert "referee_name" not in row[0]
+        finally:
+            connection.close()
+
+
+def test_l09_downgrade_removes_migration_index() -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        path = Path(temporary) / "downgrade.sqlite3"
+        engine = create_engine(_sqlite_url(path))
+        Base.metadata.create_all(engine)
+        engine.dispose()
+        _stamp_pre_l09(path)
+        _upgrade_head(path)
+        _assert_l09_index(path)
+
+        command.downgrade(
+            _alembic_config(path),
+            "b7c8d9e0f1a2",
+        )
+
+        connection = sqlite3.connect(path)
+        try:
+            row = connection.execute(
+                "SELECT 1 FROM sqlite_master "
+                "WHERE type = 'index' AND name = ?",
+                (_L09_INDEX_NAME,),
+            ).fetchone()
+            assert row is None
+        finally:
+            connection.close()
