@@ -3,7 +3,7 @@ import uuid
 import random
 from typing import Optional, Tuple
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from sqlalchemy import func, select, update
 
 from src.db.models import Card, CardInstance, GroupDrop, User
 
@@ -63,34 +63,40 @@ def spawn_card_drop(session: Session, group_id: int, message_thread_id: Optional
 
 
 def claim_card_drop(session: Session, drop_id: int, user_id: int, username: Optional[str] = None) -> Tuple[bool, str]:
-    """
-    Intenta asignar una carta reclamada a un usuario.
-    Retorna (Éxito, Mensaje explicativo).
-    """
-    drop = session.get(GroupDrop, drop_id)
-
-    if not drop:
-        return False, "El drop ya no existe."
-
-    if drop.is_claimed:
-        return False, "¡Demasiado tarde! Alguien más ya reclamó esta carta."
-
-    # Asegurar que el usuario existe en la base de datos
-    user = session.get(User, user_id)
-    if not user:
-        user = User(id=user_id, username=username)
-        session.add(user)
-
-    # Asignar la propiedad de la carta
-    card_instance = session.get(CardInstance, drop.card_instance_id)
-    card_instance.owner_id = user_id
-
-    # Marcar el drop como reclamado
-    drop.is_claimed = True
-    drop.claimed_by_id = user_id
-
-    session.commit()
-
-    card_name = card_instance.card.name
-    copy_num = card_instance.copy_number
-    return True, f"¡Felicidades! Reclamaste **{card_name}** (Copia #{copy_num})."
+    """Intenta reclamar un drop bajo la autoridad de SQLite."""
+    try:
+        session.connection().exec_driver_sql("BEGIN IMMEDIATE")
+        drop = session.scalars(select(GroupDrop).where(GroupDrop.id == drop_id).execution_options(populate_existing=True)).first()
+        if not drop:
+            session.rollback()
+            return False, "El drop ya no existe."
+        if drop.is_claimed:
+            session.rollback()
+            return False, "¡Demasiado tarde! Alguien más ya reclamó esta carta."
+        user = session.scalars(select(User).where(User.id == user_id).execution_options(populate_existing=True)).first()
+        if not user:
+            user = User(id=user_id, username=username)
+            session.add(user)
+            session.flush()
+        claimed = session.execute(
+            update(GroupDrop)
+            .where(GroupDrop.id == drop_id, GroupDrop.is_claimed.is_(False))
+            .values(is_claimed=True, claimed_by_id=user_id)
+        )
+        if claimed.rowcount != 1:
+            session.rollback()
+            return False, "¡Demasiado tarde! Alguien más ya reclamó esta carta."
+        card_instance = session.scalars(
+            select(CardInstance).where(CardInstance.id == drop.card_instance_id).execution_options(populate_existing=True)
+        ).first()
+        if not card_instance:
+            session.rollback()
+            return False, "La carta del drop ya no existe."
+        card_instance.owner_id = user_id
+        session.commit()
+        card_name = card_instance.card.name
+        copy_num = card_instance.copy_number
+        return True, f"¡Felicidades! Reclamaste **{card_name}** (Copia #{copy_num})."
+    except Exception:
+        session.rollback()
+        raise

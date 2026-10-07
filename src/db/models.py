@@ -2,7 +2,7 @@
 import datetime
 import enum
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text, create_engine, Enum
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -114,6 +114,15 @@ class ActiveMatch(Base):
     status: Mapped[str] = mapped_column(String(20), default="IN_PROGRESS")
     referee_name: Mapped[str] = mapped_column(String(50), default="Mesera")
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
+
+    __table_args__ = (
+        Index(
+            "uq_active_matches_active_referee_name",
+            "referee_name",
+            unique=True,
+            sqlite_where=status.in_(["WAITING", "IN_PROGRESS"]),
+        ),
+    )
 
 
 class MatchHistory(Base):

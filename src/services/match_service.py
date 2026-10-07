@@ -5,7 +5,8 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Tuple
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.db.models import ActiveMatch, CardInstance, User
@@ -35,6 +36,11 @@ REFEREE_PROFILES: Dict[str, Dict[str, str]] = {
         "busy": "✨ *Sunna con voz pausada*: «Nos encontramos supervisando partidas o en pausa reglamentaria. Les ruego un momento de paciencia.»"
     }
 }
+
+
+def _begin_immediate(session: Session) -> None:
+    """Adquiere la write transaction SQLite antes de leer estado autoritativo."""
+    session.connection().exec_driver_sql("BEGIN IMMEDIATE")
 
 
 def is_referee_on_break(referee_name: str) -> bool:
@@ -169,41 +175,53 @@ def create_match_challenge(
     staked_card_id: Optional[str] = None,
     message_thread_id: Optional[int] = None
 ) -> Tuple[bool, str, Optional[ActiveMatch]]:
-    referee = get_available_referee(session)
-    if not referee:
-        return False, "☕ *Todas las meseras están en duelos o en su descanso de cocina.* ¡Inténtalo en un par de minutos!", None
-
-    active_stmt = select(ActiveMatch).where(
-        or_(ActiveMatch.player1_id == player1_id, ActiveMatch.player2_id == player1_id),
-        ActiveMatch.status.in_(["WAITING", "IN_PROGRESS"])
-    )
-    if session.scalars(active_stmt).first():
-        return False, "⚠️ Ya tienes una mesa o duelo en curso. Termina tu partida antes de pedir otra.", None
-
-    if staked_card_id:
-        card_inst = session.get(CardInstance, staked_card_id)
-        if not card_inst or card_inst.owner_id != player1_id:
-            return False, "⚠️ No posees la carta que intentas apostar en el duelo.", None
-
-    match_id = str(uuid.uuid4())
-    new_match = ActiveMatch(
-        id=match_id,
-        group_id=group_id,
-        message_thread_id=message_thread_id,
-        player1_id=player1_id,
-        player2_id=player2_id or 0,
-        p1_hp=100,
-        p2_hp=100,
-        current_turn_id=player1_id,
-        staked_card_instance_id=staked_card_id,
-        status="WAITING",
-        referee_name=referee
-    )
-
-    session.add(new_match)
-    session.commit()
-
-    return True, REFEREE_PROFILES[referee]["start"], new_match
+    try:
+        _begin_immediate(session)
+        participant_ids = {player1_id}
+        if player2_id not in (None, 0, player1_id):
+            participant_ids.add(player2_id)
+        active_stmt = select(ActiveMatch.id).where(
+            ActiveMatch.status.in_(["WAITING", "IN_PROGRESS"]),
+            or_(
+                ActiveMatch.player1_id.in_(participant_ids),
+                ActiveMatch.player2_id.in_(participant_ids),
+            ),
+        )
+        if session.scalars(active_stmt).first():
+            session.rollback()
+            return False, "⚠️ Ya tienes una mesa o duelo en curso. Termina tu partida antes de pedir otra.", None
+        referee = get_available_referee(session)
+        if not referee:
+            session.rollback()
+            return False, "☕ *Todas las meseras están en duelos o en su descanso de cocina.* ¡Inténtalo en un par de minutos!", None
+        if staked_card_id:
+            card_inst = session.get(CardInstance, staked_card_id)
+            if not card_inst or card_inst.owner_id != player1_id:
+                session.rollback()
+                return False, "⚠️ No posees la carta que intentas apostar en el duelo.", None
+        new_match = ActiveMatch(
+            id=str(uuid.uuid4()),
+            group_id=group_id,
+            message_thread_id=message_thread_id,
+            player1_id=player1_id,
+            player2_id=player2_id or 0,
+            p1_hp=100,
+            p2_hp=100,
+            current_turn_id=player1_id,
+            staked_card_instance_id=staked_card_id,
+            status="WAITING",
+            referee_name=referee,
+        )
+        session.add(new_match)
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            return False, "⚠️ La mesa no pudo reservarse porque otro proceso ocupó ese recurso.", None
+        return True, REFEREE_PROFILES[referee]["start"], new_match
+    except Exception:
+        session.rollback()
+        raise
 
 
 def accept_match_challenge(
@@ -211,33 +229,50 @@ def accept_match_challenge(
     match_id: str,
     player2_id: int
 ) -> Tuple[bool, str]:
-    match = session.get(ActiveMatch, match_id)
-
-    if not match or match.status != "WAITING":
-        return False, "Esta mesa ya no está disponible o el duelo ya terminó."
-
-    referee = match.referee_name
-    now = datetime.utcnow()
-
-    if (now - match.created_at).total_seconds() > MATCH_TIMEOUT_SECONDS:
-        release_staked_cards(session, match)
-        match.status = "EXPIRED"
-        match.staked_card_instance_id = None
-        set_referee_on_break(referee)
+    try:
+        _begin_immediate(session)
+        match = session.scalars(select(ActiveMatch).where(ActiveMatch.id == match_id).execution_options(populate_existing=True)).first()
+        if not match or match.status != "WAITING":
+            session.rollback()
+            return False, "Esta mesa ya no está disponible o el duelo ya terminó."
+        referee = match.referee_name
+        if (datetime.utcnow() - match.created_at).total_seconds() > MATCH_TIMEOUT_SECONDS:
+            release_staked_cards(session, match)
+            expired = session.execute(
+                update(ActiveMatch)
+                .where(ActiveMatch.id == match_id, ActiveMatch.status == "WAITING", ActiveMatch.player2_id == 0)
+                .values(status="EXPIRED", staked_card_instance_id=None)
+            )
+            if expired.rowcount != 1:
+                session.rollback()
+                return False, "Esta mesa ya no está disponible o el duelo ya terminó."
+            session.commit()
+            set_referee_on_break(referee)
+            return False, REFEREE_PROFILES[referee]["timeout"]
+        if match.player1_id == player2_id:
+            session.rollback()
+            return False, "No puedes aceptar tu propio reto."
+        if match.player2_id != 0 and match.player2_id != player2_id:
+            session.rollback()
+            return False, "Esta mesa fue reservada para otro jugador."
+        accepted = session.execute(
+            update(ActiveMatch)
+            .where(
+                ActiveMatch.id == match_id,
+                ActiveMatch.status == "WAITING",
+                ActiveMatch.player2_id == 0,
+                ActiveMatch.player1_id != player2_id,
+            )
+            .values(player2_id=player2_id, status="IN_PROGRESS")
+        )
+        if accepted.rowcount != 1:
+            session.rollback()
+            return False, "Esta mesa ya no está disponible o el duelo ya terminó."
         session.commit()
-        return False, REFEREE_PROFILES[referee]["timeout"]
-
-    if match.player1_id == player2_id:
-        return False, "No puedes aceptar tu propio reto."
-
-    if match.player2_id != 0 and match.player2_id != player2_id:
-        return False, "Esta mesa fue reservada para otro jugador."
-
-    match.player2_id = player2_id
-    match.status = "IN_PROGRESS"
-    session.commit()
-
-    return True, REFEREE_PROFILES[referee]["accept"]
+        return True, REFEREE_PROFILES[referee]["accept"]
+    except Exception:
+        session.rollback()
+        raise
 
 
 def validate_and_lock_staked_card(
@@ -248,67 +283,59 @@ def validate_and_lock_staked_card(
 ) -> Tuple[bool, str]:
     if user_id is None:
         return False, "Usuario no válido."
-
-    match_stmt = (
-        select(ActiveMatch)
-        .where(ActiveMatch.id == match_id)
-        .with_for_update()
-    )
-    match = session.scalars(match_stmt).first()
-
-    if not match or match.status not in {"WAITING_FOR_STAKES", "IN_PROGRESS"}:
-        return False, "El duelo no está en fase de apuestas o ya no existe."
-
-    if user_id not in {match.player1_id, match.player2_id}:
-        return False, "⚠️ **Operación Denegada:** no participas en este duelo."
-
-    card_stmt = (
-        select(CardInstance)
-        .where(CardInstance.id == str(card_instance_id))
-        .with_for_update()
-    )
-    card = session.scalars(card_stmt).first()
-
-    if not card:
-        return False, "La carta seleccionada no existe."
-
-    if getattr(card, "is_rental", False):
-        return False, "⚠️ **Operación Denegada:** Las cartas prestadas por la mesera no se pueden apostar."
-
-    if card.is_locked:
-        return False, "⚠️ Esta carta ya está en uso en otro duelo o mercado."
-
-    if card.owner_id != user_id:
-        return False, "⚠️ **Violación de Seguridad:** Intentaste apostar una carta que no te pertenece."
-
-    if match.p1_staked_card_id == card.id or match.p2_staked_card_id == card.id:
-        return False, "⚠️ Esta misma carta ya fue seleccionada como apuesta en este duelo."
-
-    card_definition = getattr(card, "card_template", None) or card.card
-    if card_definition is None:
-        return False, "⚠️ La instancia no tiene una carta base válida."
-
-    rarity = card_definition.rarity
-
-    if match.staked_rarity is None:
-        match.staked_rarity = rarity
-    elif rarity != match.staked_rarity:
-        return (
-            False,
-            f"⚠️ **Apuesta Inválida:** Tu oponente apostó una carta "
-            f"**{match.staked_rarity}**. Debes apostar una carta de la misma rareza."
+    try:
+        _begin_immediate(session)
+        match = session.scalars(select(ActiveMatch).where(ActiveMatch.id == match_id).execution_options(populate_existing=True)).first()
+        if not match or match.status not in {"WAITING_FOR_STAKES", "IN_PROGRESS"}:
+            session.rollback()
+            return False, "El duelo no está en fase de apuestas o ya no existe."
+        if user_id not in {match.player1_id, match.player2_id}:
+            session.rollback()
+            return False, "⚠️ **Operación Denegada:** no participas en este duelo."
+        card = session.scalars(select(CardInstance).where(CardInstance.id == str(card_instance_id)).execution_options(populate_existing=True)).first()
+        if not card:
+            session.rollback()
+            return False, "La carta seleccionada no existe."
+        if getattr(card, "is_rental", False):
+            session.rollback()
+            return False, "⚠️ **Operación Denegada:** Las cartas prestadas por la mesera no se pueden apostar."
+        if card.is_locked:
+            session.rollback()
+            return False, "⚠️ Esta carta ya está en uso en otro duelo o mercado."
+        if card.owner_id != user_id:
+            session.rollback()
+            return False, "⚠️ **Violación de Seguridad:** Intentaste apostar una carta que no te pertenece."
+        if match.p1_staked_card_id == card.id or match.p2_staked_card_id == card.id:
+            session.rollback()
+            return False, "⚠️ Esta misma carta ya fue seleccionada como apuesta en este duelo."
+        card_definition = getattr(card, "card_template", None) or card.card
+        if card_definition is None:
+            session.rollback()
+            return False, "⚠️ La instancia no tiene una carta base válida."
+        rarity = card_definition.rarity
+        if match.staked_rarity is None:
+            match.staked_rarity = rarity
+        elif rarity != match.staked_rarity:
+            session.rollback()
+            return False, f"⚠️ **Apuesta Inválida:** Tu oponente apostó una carta **{match.staked_rarity}**. Debes apostar una carta de la misma rareza."
+        lock_result = session.execute(
+            update(CardInstance)
+            .where(CardInstance.id == str(card_instance_id), CardInstance.owner_id == user_id, CardInstance.is_locked.is_(False))
+            .values(is_locked=True)
         )
-
-    if user_id == match.player1_id:
-        match.p1_staked_card_id = card.id
-    else:
-        match.p2_staked_card_id = card.id
-
-    card.is_locked = True
-    session.commit()
-
-    card_name = getattr(card_definition, "name", "Carta")
-    return True, f"✅ Carta **{card_name}** ({rarity}) fijada y bloqueada correctamente para el duelo."
+        if lock_result.rowcount != 1:
+            session.rollback()
+            return False, "⚠️ Esta carta ya está en uso en otro duelo o mercado."
+        if user_id == match.player1_id:
+            match.p1_staked_card_id = card.id
+        else:
+            match.p2_staked_card_id = card.id
+        session.commit()
+        card_name = getattr(card_definition, "name", "Carta")
+        return True, f"✅ Carta **{card_name}** ({rarity}) fijada y bloqueada correctamente para el duelo."
+    except Exception:
+        session.rollback()
+        raise
 
 
 def validate_and_set_stakes(
@@ -339,53 +366,68 @@ def validate_and_set_stakes(
     )
 
 
-def finish_match(
+def _finish_match_in_transaction(
     session: Session,
-    match_id: str,
-    winner_id: int
-) -> Tuple[bool, str]:
-    match = session.get(ActiveMatch, match_id)
-
-    if not match or match.status != "IN_PROGRESS":
-        return False, "No se encontró un duelo en curso con esa identificación."
-
+    match: ActiveMatch,
+    winner_id: int,
+) -> Tuple[bool, str, str]:
+    if match.status != "IN_PROGRESS":
+        return False, "No se encontró un duelo en curso con esa identificación.", match.referee_name
     if winner_id not in {match.player1_id, match.player2_id}:
-        return False, "El ganador indicado no participa en el duelo."
-
-    referee = match.referee_name
-
-    # Liberar siempre las cartas seleccionadas y apostadas antes de limpiar referencias.
-    release_staked_cards(session, match)
+        return False, "El ganador indicado no participa en el duelo.", match.referee_name
+    transition = session.execute(
+        update(ActiveMatch)
+        .where(ActiveMatch.id == match.id, ActiveMatch.status == "IN_PROGRESS")
+        .values(status="FINISHED")
+    )
+    if transition.rowcount != 1:
+        return False, "No se encontró un duelo en curso con esa identificación.", match.referee_name
     match.status = "FINISHED"
-
+    referee = match.referee_name
+    release_staked_cards(session, match)
     if match.staked_card_instance_id:
         card_inst = session.get(CardInstance, match.staked_card_instance_id)
         if card_inst:
             card_inst.owner_id = winner_id
             card_inst.is_locked = False
-
     if match.p1_staked_card_id and match.p2_staked_card_id:
         p1_card = session.get(CardInstance, str(match.p1_staked_card_id))
         p2_card = session.get(CardInstance, str(match.p2_staked_card_id))
-
         loser_card = p2_card if winner_id == match.player1_id else p1_card
         if loser_card:
             loser_card.owner_id = winner_id
             loser_card.is_locked = False
-
         for card_inst in (p1_card, p2_card):
             if card_inst:
                 card_inst.is_locked = False
-
     match.staked_card_instance_id = None
     match.p1_staked_card_id = None
     match.p2_staked_card_id = None
     match.staked_rarity = None
+    return True, f"🏁 Duelo concluido. {referee} se retira a la cocina por su receso reglamentario.", referee
 
-    set_referee_on_break(referee)
-    session.commit()
 
-    return True, f"🏁 Duelo concluido. {referee} se retira a la cocina por su receso reglamentario."
+def finish_match(
+    session: Session,
+    match_id: str,
+    winner_id: int
+) -> Tuple[bool, str]:
+    try:
+        _begin_immediate(session)
+        match = session.scalars(select(ActiveMatch).where(ActiveMatch.id == match_id).execution_options(populate_existing=True)).first()
+        if not match:
+            session.rollback()
+            return False, "No se encontró un duelo en curso con esa identificación."
+        success, message, referee = _finish_match_in_transaction(session, match, winner_id)
+        if not success:
+            session.rollback()
+            return False, message
+        session.commit()
+        set_referee_on_break(referee)
+        return True, message
+    except Exception:
+        session.rollback()
+        raise
 
 
 def forfeit_match(

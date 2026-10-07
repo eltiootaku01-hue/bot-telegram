@@ -175,12 +175,10 @@ class TestExecuteTurn:
         assert result["next_turn_player_id"] == 2002
         assert result["match_ended"] is False
 
-    @patch("src.services.battle_service.finish_match")
     @patch("src.services.battle_service._load_player_deck")
     def test_execute_turn_knockout_and_finish_match(
         self,
         mock_load_deck,
-        mock_finish,
         db_session,
         sample_match,
     ):
@@ -200,8 +198,6 @@ class TestExecuteTurn:
                 "magic": None,
             },
         ]
-        mock_finish.return_value = (True, "Duelo finalizado correctamente.")
-
         result = execute_turn(
             session=db_session,
             match_id=sample_match.id,
@@ -215,8 +211,4 @@ class TestExecuteTurn:
         assert result["match_ended"] is True
         assert result["winner_id"] == 1001
 
-        mock_finish.assert_called_once_with(
-            db_session,
-            match_id=sample_match.id,
-            winner_id=1001,
-        )
+        assert db_session.get(ActiveMatch, sample_match.id).status == "FINISHED"
