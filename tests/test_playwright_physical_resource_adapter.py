@@ -115,7 +115,8 @@ class _FakeLocator:
 
     async def click(self) -> None:
         self.clicked += 1
-        await self._backend.run_controlled_operation()
+        if self._backend._controlled_operation_prepared:
+            await self._backend.run_controlled_operation()
 
     async def inner_text(self) -> str:
         return "controlled response"
@@ -148,6 +149,8 @@ class _FakeBackend(WebQueueManager):
         self._cancel_sequence = None
         self._finish_sequence = None
         self._active_operation_id = None
+        self._controlled_operation_prepared = False
+        self.physical_work_observed = asyncio.Event()
         self.physical_work_count = 0
         self.post_cancel_physical_work = 0
         self.locator = _FakeLocator(self)
@@ -157,6 +160,10 @@ class _FakeBackend(WebQueueManager):
 
     async def close_browser_pool(self) -> None:
         self.close_called = True
+
+    def prepare_controlled_operation(self, operation_id: str) -> None:
+        self._pending_operation_id = operation_id
+        self._controlled_operation_prepared = True
 
     def request_physical_stop(self, operation_id: str) -> None:
         if self._active_operation_id != operation_id:
@@ -171,6 +178,7 @@ class _FakeBackend(WebQueueManager):
         self._finish_requested.set()
 
     async def run_controlled_operation(self) -> None:
+        self._controlled_operation_prepared = False
         self._active_operation_id = getattr(
             self,
             "_pending_operation_id",
@@ -200,6 +208,7 @@ class _FakeBackend(WebQueueManager):
                 or self._finish_sequence < self._cancel_sequence
             ):
                 self.physical_work_count += 1
+                self.physical_work_observed.set()
                 if self._cancel_sequence is not None:
                     self.post_cancel_physical_work += 0
             elif self._cancel_sequence is not None and not self.ignore_physical_stop:
@@ -208,6 +217,7 @@ class _FakeBackend(WebQueueManager):
             else:
                 await self._finish_requested.wait()
                 self.physical_work_count += 1
+                self.physical_work_observed.set()
                 if (
                     self._cancel_sequence is not None
                     and (
@@ -624,7 +634,9 @@ class PlaywrightPhysicalResourceAdapterTests(
             operation_id="playwright-p14-1",
             waitress_id="cari",
         )
-        backend._pending_operation_id = execution.operation_id
+        backend.prepare_controlled_operation(
+            execution.operation_id,
+        )
         send_task = asyncio.create_task(
             adapter.send(execution, "controlled cancellation")
         )
@@ -661,7 +673,9 @@ class PlaywrightPhysicalResourceAdapterTests(
             operation_id="playwright-p15-1",
             waitress_id="cari",
         )
-        backend._pending_operation_id = execution.operation_id
+        backend.prepare_controlled_operation(
+            execution.operation_id,
+        )
         send_task = asyncio.create_task(
             adapter.send(execution, "ignored cancellation")
         )
@@ -670,17 +684,16 @@ class PlaywrightPhysicalResourceAdapterTests(
         adapter.request_cancel(execution)
         await backend.cancel_requested.wait()
         backend.allow_finish()
+        await backend.physical_work_observed.wait()
         await backend.operation_finished.wait()
         await send_task
 
         self.assertEqual(1, backend.physical_work_count)
         self.assertEqual(1, backend.post_cancel_physical_work)
-        with self.assertRaises(AssertionError):
-            self.assertEqual(
-                0,
-                backend.post_cancel_physical_work,
-                "controlled stop invariant violated",
-            )
+        self.assertLess(
+            backend._cancel_sequence,
+            backend._finish_sequence,
+        )
 
     async def test_p16_controlled_finish_wins_before_cancel(self):
         adapter, authority, backend = self._adapter()
@@ -690,13 +703,16 @@ class PlaywrightPhysicalResourceAdapterTests(
             operation_id="playwright-p16-1",
             waitress_id="cari",
         )
-        backend._pending_operation_id = execution.operation_id
+        backend.prepare_controlled_operation(
+            execution.operation_id,
+        )
         send_task = asyncio.create_task(
             adapter.send(execution, "finish wins")
         )
 
         await backend.operation_in_flight.wait()
         backend.allow_finish()
+        await backend.physical_work_observed.wait()
         snapshot = adapter.request_cancel(execution)
         self.assertEqual(
             PhysicalResourceState.CANCELLING,
