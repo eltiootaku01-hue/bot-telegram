@@ -32,6 +32,58 @@ except ImportError:
     async_playwright = None
 
 
+CONTROLLED_TEST_TIMEOUT_SECONDS = 5.0
+
+
+async def _wait_for_controlled_event(
+    event: asyncio.Event,
+    *,
+    barrier: str,
+    backend,
+    operation_id: str,
+) -> None:
+    try:
+        await asyncio.wait_for(
+            event.wait(),
+            timeout=CONTROLLED_TEST_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError as error:
+        raise AssertionError(
+            "Timed out waiting for controlled barrier "
+            f"barrier={barrier!r} "
+            f"operation_id={operation_id!r} "
+            f"cancel_sequence={backend._cancel_sequence!r} "
+            f"finish_sequence={backend._finish_sequence!r} "
+            f"physical_work_count={backend.physical_work_count} "
+            f"post_cancel_physical_work={backend.post_cancel_physical_work}"
+        ) from error
+
+
+async def _wait_for_controlled_task(
+    task,
+    *,
+    barrier: str,
+    backend,
+    operation_id: str,
+) -> None:
+    try:
+        await asyncio.wait_for(
+            task,
+            timeout=CONTROLLED_TEST_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError as error:
+        raise AssertionError(
+            "Timed out waiting for controlled task "
+            f"barrier={barrier!r} "
+            f"operation_id={operation_id!r} "
+            f"task_done={task.done()} "
+            f"cancel_sequence={backend._cancel_sequence!r} "
+            f"finish_sequence={backend._finish_sequence!r} "
+            f"physical_work_count={backend.physical_work_count} "
+            f"post_cancel_physical_work={backend.post_cancel_physical_work}"
+        ) from error
+
+
 VALID_CONFIG = """
 [web_identities.controlled]
 provider = "test"
@@ -198,10 +250,20 @@ class _FakeBackend(WebQueueManager):
                 not self.cancel_requested.is_set()
                 and not self._finish_requested.is_set()
             ):
-                await asyncio.wait(
+                done, _pending = await asyncio.wait(
                     {cancel_wait, finish_wait},
+                    timeout=CONTROLLED_TEST_TIMEOUT_SECONDS,
                     return_when=asyncio.FIRST_COMPLETED,
                 )
+                if not done:
+                    raise AssertionError(
+                        "Timed out waiting for controlled operation control "
+                        f"operation_id={self._active_operation_id!r} "
+                        f"cancel_sequence={self._cancel_sequence!r} "
+                        f"finish_sequence={self._finish_sequence!r} "
+                        f"physical_work_count={self.physical_work_count} "
+                        f"post_cancel_physical_work={self.post_cancel_physical_work}"
+                    )
 
             if self._finish_sequence is not None and (
                 self._cancel_sequence is None
@@ -215,7 +277,20 @@ class _FakeBackend(WebQueueManager):
                 self.physical_stop_observed.set()
                 return
             else:
-                await self._finish_requested.wait()
+                try:
+                    await asyncio.wait_for(
+                        self._finish_requested.wait(),
+                        timeout=CONTROLLED_TEST_TIMEOUT_SECONDS,
+                    )
+                except asyncio.TimeoutError as error:
+                    raise AssertionError(
+                        "Timed out waiting for controlled finish request "
+                        f"operation_id={self._active_operation_id!r} "
+                        f"cancel_sequence={self._cancel_sequence!r} "
+                        f"finish_sequence={self._finish_sequence!r} "
+                        f"physical_work_count={self.physical_work_count} "
+                        f"post_cancel_physical_work={self.post_cancel_physical_work}"
+                    ) from error
                 self.physical_work_count += 1
                 self.physical_work_observed.set()
                 if (
@@ -641,7 +716,12 @@ class PlaywrightPhysicalResourceAdapterTests(
             adapter.send(execution, "controlled cancellation")
         )
 
-        await backend.operation_in_flight.wait()
+        await _wait_for_controlled_event(
+            backend.operation_in_flight,
+            barrier="operation_in_flight",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
         self.assertTrue(adapter.validate_execution(execution))
         snapshot = adapter.request_cancel(execution)
         self.assertEqual(
@@ -649,10 +729,30 @@ class PlaywrightPhysicalResourceAdapterTests(
             snapshot.state,
         )
 
-        await backend.cancel_requested.wait()
-        await backend.physical_stop_observed.wait()
-        await backend.operation_finished.wait()
-        await send_task
+        await _wait_for_controlled_event(
+            backend.cancel_requested,
+            barrier="cancel_requested",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
+        await _wait_for_controlled_event(
+            backend.physical_stop_observed,
+            barrier="physical_stop_observed",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
+        await _wait_for_controlled_event(
+            backend.operation_finished,
+            barrier="operation_finished",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
+        await _wait_for_controlled_task(
+            send_task,
+            barrier="send_task",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
 
         self.assertEqual(0, backend.physical_work_count)
         self.assertEqual(0, backend.post_cancel_physical_work)
@@ -680,13 +780,38 @@ class PlaywrightPhysicalResourceAdapterTests(
             adapter.send(execution, "ignored cancellation")
         )
 
-        await backend.operation_in_flight.wait()
+        await _wait_for_controlled_event(
+            backend.operation_in_flight,
+            barrier="operation_in_flight",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
         adapter.request_cancel(execution)
-        await backend.cancel_requested.wait()
+        await _wait_for_controlled_event(
+            backend.cancel_requested,
+            barrier="cancel_requested",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
         backend.allow_finish()
-        await backend.physical_work_observed.wait()
-        await backend.operation_finished.wait()
-        await send_task
+        await _wait_for_controlled_event(
+            backend.physical_work_observed,
+            barrier="physical_work_observed",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
+        await _wait_for_controlled_event(
+            backend.operation_finished,
+            barrier="operation_finished",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
+        await _wait_for_controlled_task(
+            send_task,
+            barrier="send_task",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
 
         self.assertEqual(1, backend.physical_work_count)
         self.assertEqual(1, backend.post_cancel_physical_work)
@@ -710,17 +835,37 @@ class PlaywrightPhysicalResourceAdapterTests(
             adapter.send(execution, "finish wins")
         )
 
-        await backend.operation_in_flight.wait()
+        await _wait_for_controlled_event(
+            backend.operation_in_flight,
+            barrier="operation_in_flight",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
         backend.allow_finish()
-        await backend.physical_work_observed.wait()
+        await _wait_for_controlled_event(
+            backend.physical_work_observed,
+            barrier="physical_work_observed",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
         snapshot = adapter.request_cancel(execution)
         self.assertEqual(
             PhysicalResourceState.CANCELLING,
             snapshot.state,
         )
 
-        await backend.operation_finished.wait()
-        await send_task
+        await _wait_for_controlled_event(
+            backend.operation_finished,
+            barrier="operation_finished",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
+        await _wait_for_controlled_task(
+            send_task,
+            barrier="send_task",
+            backend=backend,
+            operation_id=execution.operation_id,
+        )
 
         self.assertEqual(1, backend.physical_work_count)
         self.assertEqual(0, backend.post_cancel_physical_work)
