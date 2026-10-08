@@ -494,7 +494,17 @@ class PlaywrightPhysicalResourceAdapter:
         execution: PlaywrightPhysicalExecution,
     ) -> PhysicalResourceSnapshot:
         claim = self._claim_for_execution(execution)
-        return self._authority.request_cancel(claim)
+        snapshot = self._authority.request_cancel(claim)
+
+        request_physical_stop = getattr(
+            self._backend,
+            "request_physical_stop",
+            None,
+        )
+        if callable(request_physical_stop):
+            request_physical_stop(execution.operation_id)
+
+        return snapshot
 
     def confirm_termination(
         self,
