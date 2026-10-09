@@ -176,14 +176,22 @@ La evidencia actual no justifica tratar GUI TaskOrchestrator como runtime WebCha
 - [OBSERVED] F-008 confirms RuntimeObservation currently exposes only pending/active Scheduler snapshots.
 - [DECIDED] MIG-1 is not started and migration remains physically uninitiated.
 
-## FASE 2F-8 — Estado actual de continuidad en main (2026-09-30)
+## FASE 2F-8 — Checkpoint histórico de continuidad observado en main (2026-09-30)
+
+> **HISTORICAL — NOT CURRENT MAIN STATE.** Este bloque conserva el estado y la evidencia observados el 30 de septiembre de 2026. Todas las cifras de CI, recuentos de tests y estados 2F-8R/2F-8S que aparecen debajo pertenecen a ese checkpoint y no son resultados actuales.
+>
+> En ese checkpoint, `1763974f4dc27fb5ea5f66452c0f9b57297aaa76` era el HEAD de `main`; es un HEAD histórico, no el HEAD actual.
+>
+> `78d5fa6d0b539991aba1ee700121404678c21e59` conserva el significado de `LAST FUNCTIONAL BASELINE` para la línea funcional descrita aquí. No es el HEAD actual de `main`.
+>
+> **CURRENT MAIN REFERENCE — VERIFIED 2026-10-09 (before this documentation patch):** `main@9b191e578e86a65522cc374bdda24e53d386df37`. Esta referencia actual se registra separadamente y no altera la interpretación de los datos históricos siguientes.
 
 ### CONTINUATION POINT
 
-- Branch canónica actual: `main`.
-- HEAD actual: `1763974f4dc27fb5ea5f66452c0f9b57297aaa76`.
-- Parent inmediato: `78d5fa6d0b539991aba1ee700121404678c21e59`.
-- LAST FUNCTIONAL BASELINE: `78d5fa6d0b539991aba1ee700121404678c21e59`.
+- Branch canónica observada en el checkpoint: `main`.
+- HEAD histórico observado en el checkpoint: `1763974f4dc27fb5ea5f66452c0f9b57297aaa76`.
+- Parent inmediato histórico: `78d5fa6d0b539991aba1ee700121404678c21e59`.
+- LAST FUNCTIONAL BASELINE (histórico): `78d5fa6d0b539991aba1ee700121404678c21e59`.
 - Consolidación documental: `1763974f4dc27fb5ea5f66452c0f9b57297aaa76`.
 - Base 2F-8R: `2902ac7d019aac4f9d0f35d7ee578d88b1fc334b`.
 - HEAD válido previo de 2F-8S: `9feaf5b7d45da388d992df3565a45ee2fb9036d6`.
@@ -236,3 +244,10 @@ No hacer merge/cherry-pick/rebase histórico automáticamente.
 - [UNKNOWN] Evidencia externa de producción.
 
 La configuración productiva mantiene `authentication_state = "UNKNOWN"`; las identidades VERIFIED de tests controlados no constituyen autenticación real.
+
+## HUESO-05 — Registro de cierre verificado en la referencia actual (2026-10-09)
+
+- PR #96 (`HUESO-05: repair legacy service concurrency`) fue integrada en `94757b257e9df0be3886fbaf11d66dd421c2c4e3`.
+- El registro arquitectónico posterior está presente en `main@9b191e578e86a65522cc374bdda24e53d386df37`.
+- Estado registrado: `CLOSED / VERIFIED REPAIR + PASS` para las líneas H05-L02..L09 y los escenarios efectivamente validados.
+- Este cierre no demuestra despliegue en producción, no cierra todas las superficies SQLite del ecosistema y no modifica el estado independiente de HUESO-10.
