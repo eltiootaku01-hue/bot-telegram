@@ -301,35 +301,85 @@ Demostrar una cadena completa:
 
 ## HUESO 10 — SQLITE DATABASE LOCK
 
-Estado:
-**HYPOTHESIS / HIGH PRIORITY AUDIT**
+Estado actual:
+**VERIFIED SQLITE LOCK REPRODUCTION / PRODUCTION ROOT CAUSE UNKNOWN / LEVEL-3 BLOCKED**
 
-Debe verificarse si las conexiones SQLite establecen:
+Prioridad:
+**HIGH**
 
-- `journal_mode=WAL` cuando corresponde;
-- `busy_timeout` adecuado;
-- transacciones breves;
-- commits previsibles;
-- cierre correcto.
+HUESO-10 permanece **OPEN**. La reproducción descrita a continuación procede de ejecuciones diagnósticas previas reportadas; no fue reejecutada durante el gate documental actual.
 
-### Riesgo hipotético
+### Evidencia disponible
 
-`database is locked` bajo concurrencia.
+**REPORTED — PRIOR EXECUTION**
 
-### Consecuencias potenciales
+Un harness temporal externo al repositorio reportó:
 
-- fallos de workers;
-- pérdida de operaciones de outbox;
-- retry storms;
-- inconsistencia temporal.
+- SQLite real sobre una base temporal.
+- Dos procesos OS independientes y conexiones independientes.
+- Contención writer/writer usando `BEGIN IMMEDIATE`.
+- `sqlite3.OperationalError: database is locked`.
+- Tres reproducciones con timeout aproximado de cinco segundos y tres reproducciones adicionales con timeout de prueba de 300 ms.
+- `PRAGMA integrity_check = ok` en los escenarios de escritura concurrente descritos.
+- Fallo writer/writer observado tanto con journal `DELETE` como con `WAL`.
+- Diferencia observada entre `DELETE` y `WAL` en el escenario de lector retenido y commit del escritor.
 
-### Gate
+Entorno informado por la ejecución previa:
 
-Medir antes de modificar.
+- Python `3.13.5`
+- SQLAlchemy `2.0.50`
+- SQLite `3.46.1`
 
-No aplicar WAL globalmente sin verificar qué bases y procesos lo necesitan.
+Estas observaciones verifican una reproducción en el harness aislado según los informes anteriores; no son una ejecución nueva del repositorio ni una reproducción de un incidente de producción.
 
----
+### Factores contribuyentes y límites
+
+**VERIFIED — CONTROLLED EXPERIMENT (as reported)**
+
+La contención de escritor contra escritor mientras una transacción `BEGIN IMMEDIATE` mantiene la reserva de escritura fue identificada como factor contribuyente dentro del experimento controlado.
+
+**REPORTED — PRIOR EXECUTION**
+
+El comportamiento del escenario con lector retenido difirió entre `DELETE` y `WAL`. Esto no demuestra que WAL elimine los conflictos de escritores ni que impida `database is locked`.
+
+**NOT DEMONSTRATED**
+
+- Que un incidente real de producción haya seguido la misma secuencia.
+- Que los servicios originales ejecuten exactamente la misma secuencia transaccional.
+- Que un Engine, pool, timeout, journal mode o writer concreto sea la causa raíz del incidente real.
+- Que los resultados se reproduzcan bajo el entorno CI de Python `3.14`.
+- Que exista corrupción: los escenarios reportados indicaron `integrity_check = ok`, limitado a esas ejecuciones.
+
+### Validación de nivel 3
+
+**BLOCKED**
+
+Los últimos intentos de reentrada terminaron con:
+
+`EXECUTION BLOCKED — REQUIRED CHECKOUT NOT ACCESSIBLE`
+
+La validación de nivel 3 mediante las funciones originales de los servicios **no fue ejecutada**. No se intentó sustituirla por otro harness genérico durante este gate.
+
+### Estado y gate
+
+- **SQLITE LOCK IN ISOLATED HARNESS:** REPRODUCED — REPORTED BY PRIOR EXECUTIONS
+- **CONTRIBUTING FACTOR:** VERIFIED IN THE CONTROLLED EXPERIMENT — REPORTED BY PRIOR EXECUTIONS
+- **PRODUCTION INCIDENT:** NOT DEMONSTRATED
+- **EXACT SERVICE TRANSACTION PATH:** NOT VERIFIED
+- **PRODUCTION ROOT CAUSE:** UNKNOWN
+- **LEVEL-3 SERVICE VALIDATION:** BLOCKED / NOT EXECUTED
+- **IMPLEMENTATION:** NOT AUTHORIZED
+- **HUESO-10:** OPEN / HIGH
+
+### Condiciones necesarias para continuar
+
+1. Recuperar acceso verificable al checkout correspondiente, sin sustituirlo por otro harness genérico.
+2. Trazar y ejecutar la validación de nivel 3 usando las funciones originales de los servicios y una base temporal aislada.
+3. Registrar operaciones, fronteras transaccionales, proceso/conexión, journal mode, timeouts, excepciones y estado final.
+4. Separar una reproducción del servicio de cualquier incidente real de producción; mantener la causa raíz desconocida hasta contar con reproducción, aislamiento y evidencia causal.
+5. Abrir un gate de implementación separado sólo después de adjudicar esa evidencia.
+
+No se declara reparada la aplicación ni cerrado HUESO-10.
 
 ## HUESO 11 — PROVIDER STARVATION
 
