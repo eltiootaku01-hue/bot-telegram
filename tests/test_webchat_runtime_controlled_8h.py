@@ -81,7 +81,7 @@ class ControlledWebChatHarness:
             self._on_render_process_terminated
         )
         self._record_load_diagnostic("setHtml requested")
-        self.view.setHtml(self.HTML, QUrl("http://controlled.local/"))
+        self.view.setHtml(self.HTML, QUrl("about:blank"))
 
     def _record_load_diagnostic(self, event: str) -> None:
         elapsed = time.monotonic() - self._load_started_at
@@ -381,7 +381,7 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
         self.harness.events.clear()
         self.harness.view.setHtml(
             "<!doctype html><html><body><section id='assistant'></section></body></html>",
-            QUrl("http://controlled.local/second"),
+            QUrl("about:blank"),
         )
         self.assertTrue(
             self.harness.wait_until(
