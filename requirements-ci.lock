@@ -1,0 +1,26 @@
+# Fully pinned CI dependency lock for CPython 3.14 on Windows and Ubuntu.
+# Pins were taken from the last observed successful Windows full-suite run
+# (37651016841), before unbounded PySide6 resolution advanced from 6.11.2 to 6.12.0.
+# Update this file together with pyproject.toml, then validate the complete CI matrix.
+# CI checks this file and never regenerates or edits it automatically.
+
+Mako==1.4.3
+MarkupSafe==3.0.4
+PySide6==6.11.2
+PySide6-Addons==6.11.2
+PySide6-Essentials==6.11.2
+SQLAlchemy==2.1.3
+alembic==1.20.0
+colorama==0.4.6; sys_platform == "win32"
+greenlet==3.5.6
+iniconfig==2.3.1
+packaging==26.3
+playwright==1.63.0
+pluggy==1.6.0
+pyee==13.0.1
+Pygments==2.21.0
+pytest==9.1.1
+python-dotenv==1.2.4
+shiboken6==6.11.2
+typing-extensions==4.16.0
+tzdata==2026.5
