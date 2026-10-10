@@ -61,6 +61,14 @@ jobs:
         run: python scripts/check_code_policy.py --git-range-env
       - name: Import runtime surface
         run: python -c "import bot_ia; import core.config; import bot_ia.runtime; import bot_ia.core.application; import bot_ia.core.local_workflow; import bot_ia.core.web_queue; import gui.task_orchestrator; import gui.gui_bridge; import bot_ia.interfaces.web; import bot_ia.interfaces.telegram_novel_v2; import launcher; import desktop_entry; import gui.app"
+      - name: Diagnose controlled WebChat test in isolation (temporary)
+        id: controlled_webchat_isolated
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        env:
+          PYTHONWARNINGS: error::ResourceWarning
+          QT_LOGGING_RULES: "qt.webengine.*=true;qt.webenginecontext=true"
+        run: python -m pytest -q -vv --capture=tee-sys tests/test_webchat_runtime_controlled_8h.py
       - name: Run test suite
         env:
           PYTHONWARNINGS: error::ResourceWarning
