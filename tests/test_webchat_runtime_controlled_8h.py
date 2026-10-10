@@ -86,6 +86,11 @@ class ControlledWebChatHarness:
     def _record_load_diagnostic(self, event: str) -> None:
         elapsed = time.monotonic() - self._load_started_at
         self.load_diagnostics.append((elapsed, event))
+        print(
+            f"QWEBENGINE_LOAD_EVENT +{elapsed:.3f}s {event}",
+            file=sys.stderr,
+            flush=True,
+        )
 
     def _on_load_started(self) -> None:
         self.load_started_count += 1
@@ -210,6 +215,22 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
         os.environ.setdefault(
             "QTWEBENGINE_CHROMIUM_FLAGS",
             "--headless --disable-gpu",
+        )
+        try:
+            webengine_package_version = version("PySide6-Addons")
+        except Exception as error:  # diagnostic must not mask the load failure
+            webengine_package_version = (
+                f"unavailable ({type(error).__name__}: {error})"
+            )
+        print(
+            "QWEBENGINE_LOAD_ENV: "
+            f"python={sys.version.split()[0]}, PySide6={PySide6.__version__}, "
+            f"Qt={qVersion()}, PySide6-Addons={webengine_package_version!r}, "
+            f"QT_QPA_PLATFORM={os.environ.get('QT_QPA_PLATFORM')!r}, "
+            "QTWEBENGINE_CHROMIUM_FLAGS="
+            f"{os.environ.get('QTWEBENGINE_CHROMIUM_FLAGS')!r}",
+            file=sys.stderr,
+            flush=True,
         )
         cls.harness = ControlledWebChatHarness()
         if not cls.harness.wait_until(lambda: cls.harness.loaded):
