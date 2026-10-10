@@ -4,20 +4,10 @@ version = "1.0.0"
 description = "BOT-IA Knowledge Engine and multi-interface personal bot"
 requires-python = ">=3.14"
 # compatibility marker: python_version < "3.14"
-dependencies = [
-    "tzdata==2026.5",
-    "PySide6==6.11.2",
-    "playwright==1.63.0",
-    "python-dotenv==1.2.4",
-    "SQLAlchemy==2.1.3",
-    "qasync>=0.28,<0.29; python_version < \"3.14\"",
-]
+dependencies = ["tzdata", "PySide6>=6.8", "playwright>=1.61,<2", "python-dotenv>=1.1,<2", "SQLAlchemy>=2.0,<3", "qasync>=0.28,<0.29; python_version < \"3.14\""]
 
 [dependency-groups]
-test = [
-    "pytest==9.1.1",
-    "alembic==1.20.0",
-]
+test = ["pytest>=9.1,<10", "alembic>=1.20,<2"]
 
 [project.scripts]
 bot-ia = "bot_ia.__main__:main"

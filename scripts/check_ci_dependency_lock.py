@@ -93,16 +93,6 @@ def main() -> int:
                 environment=environment
             ):
                 continue
-            specifiers = list(requirement.specifier)
-            if (
-                len(specifiers) != 1
-                or specifiers[0].operator != "=="
-                or specifiers[0].version.endswith(".*")
-            ):
-                raise ValueError(
-                    f"active project dependency must be exactly pinned: {raw_requirement}"
-                )
-
             name = canonicalize_name(requirement.name)
             locked = active_lock.get(name)
             if locked is None:
@@ -110,11 +100,14 @@ def main() -> int:
                     f"{requirement.name} is missing from {LOCK_FILE.name} for {sys_platform}"
                 )
             locked_version = Version(next(iter(locked.specifier)).version)
-            declared_version = Version(specifiers[0].version)
-            if locked_version != declared_version:
+            if not requirement.specifier.contains(
+                locked_version,
+                prereleases=True,
+            ):
+                declared = str(requirement.specifier) or "any version"
                 raise ValueError(
-                    f"{requirement.name} disagrees between pyproject.toml "
-                    f"({declared_version}) and {LOCK_FILE.name} ({locked_version})"
+                    f"{requirement.name} requirement {declared} in pyproject.toml "
+                    f"does not allow the pinned version {locked_version} in {LOCK_FILE.name}"
                 )
 
     active_environment = default_environment()
