@@ -4,6 +4,7 @@
 import json
 import os
 import sys
+from importlib.metadata import version
 import time
 import unittest
 
@@ -114,11 +115,11 @@ class ControlledWebChatHarness:
     def load_failure_summary(self) -> str:
         page_url = self.view.url().toString()
         try:
-            qt_webengine_version = str(
-                self.view.page().profile().httpUserAgent()
-            )
+            qt_webengine_package_version = version("PySide6-Addons")
         except Exception as error:  # diagnostic must not mask the load failure
-            qt_webengine_version = f"unavailable ({type(error).__name__}: {error})"
+            qt_webengine_package_version = (
+                f"unavailable ({type(error).__name__}: {error})"
+            )
         event_log = "; ".join(
             f"+{elapsed:.3f}s {event}"
             for elapsed, event in self.load_diagnostics
@@ -133,7 +134,9 @@ class ControlledWebChatHarness:
             f"loadFinished_results={self.load_finished_results!r}, "
             f"loadProgress_values={self.load_progress_values!r}, "
             f"render_process_terminations={self.render_process_terminations!r}, "
-            f"current_url={page_url!r}, profile_user_agent={qt_webengine_version!r}, "
+            f"current_url={page_url!r}, "
+            "PySide6-Addons_QtWebEngine_package="
+            f"{qt_webengine_package_version!r}, "
             f"events=[{event_log}]"
         )
 
