@@ -236,6 +236,15 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
         if not cls.harness.wait_until(lambda: cls.harness.loaded):
             summary = cls.harness.load_failure_summary()
             print(f"QWEBENGINE_LOAD_DIAGNOSTICS: {summary}", file=sys.stderr, flush=True)
+            try:
+                cls.harness.close()
+            except Exception as cleanup_error:
+                print(
+                    "QWEBENGINE_LOAD_CLEANUP_ERROR: "
+                    f"{type(cleanup_error).__name__}: {cleanup_error}",
+                    file=sys.stderr,
+                    flush=True,
+                )
             raise AssertionError(summary)
         cls.harness.install_monitor()
 
