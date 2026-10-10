@@ -64,4 +64,5 @@ jobs:
       - name: Run test suite
         env:
           PYTHONWARNINGS: error::ResourceWarning
+          QT_LOGGING_RULES: "qt.webengine.*=true;qt.webenginecontext=true"
         run: python -m pytest -q -vv
