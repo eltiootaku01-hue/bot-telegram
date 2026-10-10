@@ -65,4 +65,4 @@ jobs:
         env:
           PYTHONWARNINGS: error::ResourceWarning
           QT_LOGGING_RULES: "qt.webengine.*=true;qt.webenginecontext=true"
-        run: python -m pytest -q -vv
+        run: python -m pytest -q -vv --capture=tee-sys
