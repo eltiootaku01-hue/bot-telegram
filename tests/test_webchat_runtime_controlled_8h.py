@@ -137,7 +137,7 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         os.environ.setdefault(
             "QTWEBENGINE_CHROMIUM_FLAGS",
-            "--headless --disable-gpu --disable-software-rasterizer",
+            "--headless --disable-gpu",
         )
         cls.harness = ControlledWebChatHarness()
         if not cls.harness.wait_until(lambda: cls.harness.loaded):
