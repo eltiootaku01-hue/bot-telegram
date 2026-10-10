@@ -69,6 +69,7 @@ class ControlledWebChatHarness:
         self.load_finished_results: list[bool] = []
         self.load_started_count = 0
         self.load_progress_values: list[int] = []
+        self.last_observed_url: str | None = None
         self.render_process_terminations: list[tuple[str, int]] = []
         self.load_diagnostics: list[tuple[float, str]] = []
         self._load_started_at = time.monotonic()
@@ -95,7 +96,8 @@ class ControlledWebChatHarness:
         self._record_load_diagnostic(f"loadProgress={progress}")
 
     def _on_url_changed(self, url: QUrl) -> None:
-        self._record_load_diagnostic(f"urlChanged={url.toString()!r}")
+        self.last_observed_url = url.toString()
+        self._record_load_diagnostic(f"urlChanged={self.last_observed_url!r}")
 
     def _on_render_process_terminated(self, status, exit_code: int) -> None:
         status_name = getattr(status, "name", str(status))
@@ -113,7 +115,9 @@ class ControlledWebChatHarness:
         self._record_load_diagnostic(f"loadFinished={bool(ok)}")
 
     def load_failure_summary(self) -> str:
-        page_url = self.view.url().toString()
+        # Use the URL signal snapshot; do not call back into a possibly hung
+        # WebEngine page while reporting the original load failure.
+        page_url = self.last_observed_url
         try:
             qt_webengine_package_version = version("PySide6-Addons")
         except Exception as error:  # diagnostic must not mask the load failure
