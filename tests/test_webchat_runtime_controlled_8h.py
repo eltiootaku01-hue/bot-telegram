@@ -10,6 +10,7 @@ import unittest
 
 import PySide6
 from PySide6.QtCore import QObject, QEventLoop, QTimer, Signal, Slot, QUrl, qVersion
+from PySide6.QtCore import QCoreApplication, QEvent
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication
@@ -58,6 +59,9 @@ class ControlledWebChatHarness:
 
     def __init__(self) -> None:
         self.app = QApplication.instance() or QApplication(sys.argv)
+        # Drain deferred QObject deletions left by earlier manually pumped Qt fixtures.
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.app.processEvents()
         self.view = QWebEngineView()
         self.channel = QWebChannel(self.view.page())
         self.bridge = CapturedBridge()
@@ -204,7 +208,9 @@ class ControlledWebChatHarness:
     def close(self) -> None:
         self.view.close()
         self.channel.deregisterObject(self.bridge)
+        self.bridge.deleteLater()
         self.view.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         self.app.processEvents()
 
 
