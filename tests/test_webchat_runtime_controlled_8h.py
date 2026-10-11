@@ -87,6 +87,9 @@ class ControlledWebChatHarness:
         self.view.page().renderProcessTerminated.connect(
             self._on_render_process_terminated
         )
+        QTimer.singleShot(0, self._start_initial_load)
+
+    def _start_initial_load(self) -> None:
         self._record_load_diagnostic("setHtml requested")
         self.view.setHtml(self.HTML, QUrl("http://controlled.local/"))
 
