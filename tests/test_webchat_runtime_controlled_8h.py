@@ -84,6 +84,7 @@ class ControlledWebChatHarness:
         self.view.loadProgress.connect(self._on_load_progress)
         self.view.urlChanged.connect(self._on_url_changed)
         self.view.loadFinished.connect(self._on_loaded)
+        self.view.page().loadingChanged.connect(self._on_loading_changed)
         self.view.page().renderProcessTerminated.connect(
             self._on_render_process_terminated
         )
@@ -117,6 +118,21 @@ class ControlledWebChatHarness:
     def _on_url_changed(self, url: QUrl) -> None:
         self.last_observed_url = url.toString()
         self._record_load_diagnostic(f"urlChanged={self.last_observed_url!r}")
+
+    def _on_loading_changed(self, info) -> None:
+        status = info.status()
+        status_name = getattr(status, "name", str(status))
+        url = info.url().toString()
+        error_code = info.errorCode()
+        error_domain = info.errorDomain()
+        error_domain_name = getattr(error_domain, "name", str(error_domain))
+        error_string = info.errorString()
+        self._record_load_diagnostic(
+            "loadingChanged "
+            f"status={status_name} url={url!r} "
+            f"errorCode={error_code} errorDomain={error_domain_name} "
+            f"errorString={error_string!r}"
+        )
 
     def _on_render_process_terminated(self, status, exit_code: int) -> None:
         status_name = getattr(status, "name", str(status))
