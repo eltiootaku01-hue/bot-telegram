@@ -4,15 +4,10 @@
 import json
 import os
 import sys
-from importlib.metadata import version
-import time
 import unittest
 
-import PySide6
-from PySide6.QtCore import QObject, QEventLoop, QTimer, Signal, Slot, QUrl, qVersion
-from PySide6.QtCore import QCoreApplication, QEvent
+from PySide6.QtCore import QObject, QEventLoop, QTimer, Signal, Slot, QUrl
 from PySide6.QtWebChannel import QWebChannel
-from PySide6.QtWebEngineCore import QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication
 
@@ -60,124 +55,22 @@ class ControlledWebChatHarness:
 
     def __init__(self) -> None:
         self.app = QApplication.instance() or QApplication(sys.argv)
-        # Drain deferred QObject deletions left by earlier manually pumped Qt fixtures.
-        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
-        self.app.processEvents()
-        # Isolate this late-suite fixture from earlier pages using the default profile.
-        self.profile = QWebEngineProfile()
-        self.view = QWebEngineView(self.profile)
+        self.view = QWebEngineView()
         self.channel = QWebChannel(self.view.page())
         self.bridge = CapturedBridge()
-        self._bridge_registered = False
-        self._web_channel_attached = False
+        self.channel.registerObject("casaQueueBridge", self.bridge)
+        self.view.page().setWebChannel(self.channel)
         self.events: list[tuple[str, str]] = []
         self.bridge.event_received.connect(self._capture)
         self.loaded = False
-        self.load_finished_results: list[bool] = []
-        self.load_started_count = 0
-        self.load_progress_values: list[int] = []
-        self.last_observed_url: str | None = None
-        self.render_process_terminations: list[tuple[str, int]] = []
-        self.load_diagnostics: list[tuple[float, str]] = []
-        self._load_started_at = time.monotonic()
-        self.view.loadStarted.connect(self._on_load_started)
-        self.view.loadProgress.connect(self._on_load_progress)
-        self.view.urlChanged.connect(self._on_url_changed)
         self.view.loadFinished.connect(self._on_loaded)
-        self.view.page().loadingChanged.connect(self._on_loading_changed)
-        self.view.page().renderProcessTerminated.connect(
-            self._on_render_process_terminated
-        )
-        QTimer.singleShot(0, self._start_initial_load)
-
-    def _start_initial_load(self) -> None:
-        self._record_load_diagnostic("setHtml requested")
         self.view.setHtml(self.HTML, QUrl("http://controlled.local/"))
-
-    def _record_load_diagnostic(self, event: str) -> None:
-        elapsed = time.monotonic() - self._load_started_at
-        self.load_diagnostics.append((elapsed, event))
-        print(
-            f"QWEBENGINE_LOAD_EVENT +{elapsed:.3f}s {event}",
-            file=sys.stderr,
-            flush=True,
-        )
-
-    def _on_load_started(self) -> None:
-        # Keep the channel detached during every setHtml navigation.
-        if self._web_channel_attached:
-            self.view.page().setWebChannel(None)
-            self._web_channel_attached = False
-        self.load_started_count += 1
-        self._record_load_diagnostic("loadStarted")
-
-    def _on_load_progress(self, progress: int) -> None:
-        self.load_progress_values.append(progress)
-        self._record_load_diagnostic(f"loadProgress={progress}")
-
-    def _on_url_changed(self, url: QUrl) -> None:
-        self.last_observed_url = url.toString()
-        self._record_load_diagnostic(f"urlChanged={self.last_observed_url!r}")
-
-    def _on_loading_changed(self, info) -> None:
-        status = info.status()
-        status_name = getattr(status, "name", str(status))
-        url = info.url().toString()
-        error_code = info.errorCode()
-        error_domain = info.errorDomain()
-        error_domain_name = getattr(error_domain, "name", str(error_domain))
-        error_string = info.errorString()
-        self._record_load_diagnostic(
-            "loadingChanged "
-            f"status={status_name} url={url!r} "
-            f"errorCode={error_code} errorDomain={error_domain_name} "
-            f"errorString={error_string!r}"
-        )
-
-    def _on_render_process_terminated(self, status, exit_code: int) -> None:
-        status_name = getattr(status, "name", str(status))
-        self.render_process_terminations.append((status_name, exit_code))
-        self._record_load_diagnostic(
-            f"renderProcessTerminated status={status_name} exit_code={exit_code}"
-        )
 
     def _capture(self, event_type: str, payload: str) -> None:
         self.events.append((event_type, payload))
 
     def _on_loaded(self, ok: bool) -> None:
-        self.load_finished_results.append(bool(ok))
-        self.loaded = bool(ok)
-        self._record_load_diagnostic(f"loadFinished={bool(ok)}")
-
-    def load_failure_summary(self) -> str:
-        # Use the URL signal snapshot; do not call back into a possibly hung
-        # WebEngine page while reporting the original load failure.
-        page_url = self.last_observed_url
-        try:
-            qt_webengine_package_version = version("PySide6-Addons")
-        except Exception as error:  # diagnostic must not mask the load failure
-            qt_webengine_package_version = (
-                f"unavailable ({type(error).__name__}: {error})"
-            )
-        event_log = "; ".join(
-            f"+{elapsed:.3f}s {event}"
-            for elapsed, event in self.load_diagnostics
-        ) or "no load signals recorded"
-        return (
-            "QWebEngine local page did not load within 5000 ms; "
-            f"python={sys.version.split()[0]}, PySide6={PySide6.__version__}, "
-            f"Qt={qVersion()}, QT_QPA_PLATFORM={os.environ.get('QT_QPA_PLATFORM')!r}, "
-            "QTWEBENGINE_CHROMIUM_FLAGS="
-            f"{os.environ.get('QTWEBENGINE_CHROMIUM_FLAGS')!r}, "
-            f"loadStarted_count={self.load_started_count}, "
-            f"loadFinished_results={self.load_finished_results!r}, "
-            f"loadProgress_values={self.load_progress_values!r}, "
-            f"render_process_terminations={self.render_process_terminations!r}, "
-            f"current_url={page_url!r}, "
-            "PySide6-Addons_QtWebEngine_package="
-            f"{qt_webengine_package_version!r}, "
-            f"events=[{event_log}]"
-        )
+        self.loaded = ok
 
     def wait_until(self, predicate, timeout_ms: int = 5000) -> bool:
         loop = QEventLoop()
@@ -217,12 +110,6 @@ class ControlledWebChatHarness:
         return result[0]
 
     def install_monitor(self) -> None:
-        if not self._bridge_registered:
-            self.channel.registerObject("casaQueueBridge", self.bridge)
-            self._bridge_registered = True
-        if not self._web_channel_attached:
-            self.view.page().setWebChannel(self.channel)
-            self._web_channel_attached = True
         result = self.run_js(WEB_MONITOR_JS)
         self.assert_loaded()
         if result not in ("INSTALL_REQUESTED", "ALREADY_INSTALLED"):
@@ -240,13 +127,7 @@ class ControlledWebChatHarness:
     def close(self) -> None:
         self.view.close()
         self.channel.deregisterObject(self.bridge)
-        self.bridge.deleteLater()
         self.view.deleteLater()
-        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
-        self.app.processEvents()
-        # The profile must outlive its page; dispose it only after the view is gone.
-        self.profile.deleteLater()
-        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         self.app.processEvents()
 
 
@@ -256,38 +137,11 @@ class WebChatRuntimeControlledTests(unittest.TestCase):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         os.environ.setdefault(
             "QTWEBENGINE_CHROMIUM_FLAGS",
-            "--headless --disable-gpu",
-        )
-        try:
-            webengine_package_version = version("PySide6-Addons")
-        except Exception as error:  # diagnostic must not mask the load failure
-            webengine_package_version = (
-                f"unavailable ({type(error).__name__}: {error})"
-            )
-        print(
-            "QWEBENGINE_LOAD_ENV: "
-            f"python={sys.version.split()[0]}, PySide6={PySide6.__version__}, "
-            f"Qt={qVersion()}, PySide6-Addons={webengine_package_version!r}, "
-            f"QT_QPA_PLATFORM={os.environ.get('QT_QPA_PLATFORM')!r}, "
-            "QTWEBENGINE_CHROMIUM_FLAGS="
-            f"{os.environ.get('QTWEBENGINE_CHROMIUM_FLAGS')!r}",
-            file=sys.stderr,
-            flush=True,
+            "--headless --disable-gpu --disable-software-rasterizer",
         )
         cls.harness = ControlledWebChatHarness()
         if not cls.harness.wait_until(lambda: cls.harness.loaded):
-            summary = cls.harness.load_failure_summary()
-            print(f"QWEBENGINE_LOAD_DIAGNOSTICS: {summary}", file=sys.stderr, flush=True)
-            try:
-                cls.harness.close()
-            except Exception as cleanup_error:
-                print(
-                    "QWEBENGINE_LOAD_CLEANUP_ERROR: "
-                    f"{type(cleanup_error).__name__}: {cleanup_error}",
-                    file=sys.stderr,
-                    flush=True,
-                )
-            raise AssertionError(summary)
+            raise AssertionError("QWebEngine local page did not load")
         cls.harness.install_monitor()
 
     @classmethod

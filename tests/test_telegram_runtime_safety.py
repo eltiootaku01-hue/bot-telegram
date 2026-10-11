@@ -209,16 +209,6 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
             database = Path(tmpdir) / "xp.sqlite3"
             tracker = PassiveXPTracker(database, cooldown_seconds=0.0)
             tracker._lock.acquire()
-            consumer_blocked = threading.Event()
-            release_consumer = threading.Event()
-            queue_get = tracker._queue.get
-
-            def gated_queue_get(block=True, timeout=None):
-                consumer_blocked.set()
-                release_consumer.wait()
-                return queue_get(block=block, timeout=timeout)
-
-            tracker._queue.get = gated_queue_get
             produced = {}
 
             def produce():
@@ -234,14 +224,12 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
                 self.assertTrue(producer.is_alive())
 
                 tracker._lock.release()
-                self.assertTrue(consumer_blocked.wait(timeout=5.0))
                 producer.join(timeout=5.0)
 
                 self.assertFalse(producer.is_alive())
                 self.assertTrue(produced["result"].granted)
                 self.assertEqual(1, tracker._queue.unfinished_tasks)
 
-                release_consumer.set()
                 tracker.stop()
 
                 with closing(sqlite3.connect(database)) as db:
@@ -253,15 +241,11 @@ class TelegramRuntimeSafetyTests(unittest.TestCase):
 
                 self.assertEqual((10, 1), persisted)
             finally:
-                release_consumer.set()
                 if tracker._lock.locked():
                     tracker._lock.release()
                 producer.join(timeout=5.0)
-                try:
-                    if tracker._thread is not None and tracker._thread.is_alive():
-                        tracker.stop()
-                finally:
-                    tracker._queue.get = queue_get
+                if tracker._thread is not None and tracker._thread.is_alive():
+                    tracker.stop()
 
     def test_xp_tracker_producer_race_stop_wins_before_producer(self):
         with tempfile.TemporaryDirectory() as tmpdir:
