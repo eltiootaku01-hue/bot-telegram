@@ -68,7 +68,7 @@ class ControlledWebChatHarness:
         self.view = QWebEngineView(self.profile)
         self.channel = QWebChannel(self.view.page())
         self.bridge = CapturedBridge()
-        self.channel.registerObject("casaQueueBridge", self.bridge)
+        self._bridge_registered = False
         self.view.page().setWebChannel(self.channel)
         self.events: list[tuple[str, str]] = []
         self.bridge.event_received.connect(self._capture)
@@ -197,6 +197,9 @@ class ControlledWebChatHarness:
         return result[0]
 
     def install_monitor(self) -> None:
+        if not self._bridge_registered:
+            self.channel.registerObject("casaQueueBridge", self.bridge)
+            self._bridge_registered = True
         result = self.run_js(WEB_MONITOR_JS)
         self.assert_loaded()
         if result not in ("INSTALL_REQUESTED", "ALREADY_INSTALLED"):
