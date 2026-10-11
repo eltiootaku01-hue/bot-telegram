@@ -16,7 +16,7 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault(
     "QTWEBENGINE_CHROMIUM_FLAGS",
-    "--headless --disable-gpu --disable-software-rasterizer",
+    "--headless --disable-gpu",
 )
 
 from PySide6.QtCore import QEventLoop, QTimer, QUrl
