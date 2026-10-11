@@ -12,6 +12,7 @@ import PySide6
 from PySide6.QtCore import QObject, QEventLoop, QTimer, Signal, Slot, QUrl, qVersion
 from PySide6.QtCore import QCoreApplication, QEvent
 from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtWebEngineCore import QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication
 
@@ -62,7 +63,9 @@ class ControlledWebChatHarness:
         # Drain deferred QObject deletions left by earlier manually pumped Qt fixtures.
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         self.app.processEvents()
-        self.view = QWebEngineView()
+        # Isolate this late-suite fixture from earlier pages using the default profile.
+        self.profile = QWebEngineProfile()
+        self.view = QWebEngineView(self.profile)
         self.channel = QWebChannel(self.view.page())
         self.bridge = CapturedBridge()
         self.channel.registerObject("casaQueueBridge", self.bridge)
@@ -210,6 +213,10 @@ class ControlledWebChatHarness:
         self.channel.deregisterObject(self.bridge)
         self.bridge.deleteLater()
         self.view.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.app.processEvents()
+        # The profile must outlive its page; dispose it only after the view is gone.
+        self.profile.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         self.app.processEvents()
 
