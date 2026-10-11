@@ -69,7 +69,7 @@ class ControlledWebChatHarness:
         self.channel = QWebChannel(self.view.page())
         self.bridge = CapturedBridge()
         self._bridge_registered = False
-        self.view.page().setWebChannel(self.channel)
+        self._web_channel_attached = False
         self.events: list[tuple[str, str]] = []
         self.bridge.event_received.connect(self._capture)
         self.loaded = False
@@ -103,6 +103,10 @@ class ControlledWebChatHarness:
         )
 
     def _on_load_started(self) -> None:
+        # Keep the channel detached during every setHtml navigation.
+        if self._web_channel_attached:
+            self.view.page().setWebChannel(None)
+            self._web_channel_attached = False
         self.load_started_count += 1
         self._record_load_diagnostic("loadStarted")
 
@@ -200,6 +204,9 @@ class ControlledWebChatHarness:
         if not self._bridge_registered:
             self.channel.registerObject("casaQueueBridge", self.bridge)
             self._bridge_registered = True
+        if not self._web_channel_attached:
+            self.view.page().setWebChannel(self.channel)
+            self._web_channel_attached = True
         result = self.run_js(WEB_MONITOR_JS)
         self.assert_loaded()
         if result not in ("INSTALL_REQUESTED", "ALREADY_INSTALLED"):
