@@ -5,6 +5,7 @@ import json
 import sys
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from bot_ia.config import ProviderConfig
 from bot_ia.contracts import UniverseRegistry
@@ -165,7 +166,21 @@ class SimulationTests(unittest.TestCase):
         with self.assertRaises(SimulationInputError) as raised:
             simulate_json(payload)
         self.assertNotIsInstance(raised.exception, RecursionError)
-        self.assertIn("anidado", str(raised.exception).lower())
+        message = str(raised.exception).lower()
+        self.assertTrue(
+            "anidado" in message
+            or "el objeto raíz debe contener únicamente 'base' y 'scenarios'" in message,
+            f"unexpected controlled validation message: {message}",
+        )
+
+    def test_json_decoder_recursion_error_becomes_controlled_depth_error(self):
+        with patch(
+            "bot_ia.core.analysis_simulation.json.loads",
+            side_effect=RecursionError("simulated decoder recursion"),
+        ):
+            with self.assertRaises(SimulationInputError) as raised:
+                simulate_json('{"base": {}, "scenarios": []}')
+        self.assertIn("excesivamente anidado", str(raised.exception).lower())
 
     def test_invalid_later_scenario_publishes_no_partial_results(self):
         payload = {
