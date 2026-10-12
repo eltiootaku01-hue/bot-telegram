@@ -67,6 +67,11 @@ class IntentClassifier:
         self._rules = rules
 
     def classify(self, message: NormalizedMessage) -> Intent:
+        # Explicit commands win over broad natural-language rules.
+        if re.match(r"^/analizar(?:\s|$)", message.normalized):
+            return Intent.ANALYSIS
+        if re.match(r"^/simular(?:\s|$)", message.normalized):
+            return Intent.SIMULATION
         for rule in self._rules:
             if rule.matches(message.normalized):
                 return rule.intent

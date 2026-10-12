@@ -16,6 +16,8 @@ from bot_ia.librarian.models import CatalogEntry, Coverage, CoverageStatus, Evid
 from bot_ia.memory import MemoryStore
 from bot_ia.providers import ProviderManager, ProviderRequest, ProviderResponse, ProviderStatus
 
+from .analysis_simulation import AnalysisResult, analysis_prompt, extract_analysis_content, validate_analysis_payload
+
 from .application import ApplicationRequest
 from .evidence_gate import EvidenceGate
 from .external_policy import wrap_external_proposal
@@ -80,6 +82,68 @@ class LocalWorkflow:
                 raise ValueError(f"universe already registered in workflow: {definition.universe_id}")
             self._entries[definition.universe_id] = entries
             self._entity_indexes[definition.universe_id] = EntityIndex(entries)
+
+    def execute_analysis(self, request: ApplicationRequest, brain: BrainResult, decision: RouteDecision) -> AnalysisResult:
+        """Use the configured provider for analysis without inventing a universe."""
+        analysis_content = extract_analysis_content(request.message)
+        if not analysis_content:
+            return AnalysisResult.invalid_input()
+        if self._provider_manager is None:
+            return AnalysisResult.unavailable("provider_not_configured")
+
+        evidence_references: tuple[str, ...] = ()
+        evidence_status = "No se recuperó evidencia documental: la solicitud no tiene un universo de biblioteca resuelto."
+        evidence_material = "Sin evidencia documental recuperada."
+        if brain.universe_id is not None:
+            query = RetrievalQuery(analysis_content, brain.universe_id)
+            with self._state_lock:
+                entries = self._entries.get(brain.universe_id, ())
+            evidence = self._librarian.retrieve(query, entries)
+            evidence_references = tuple(dict.fromkeys(
+                fragment.source_id for fragment in evidence.fragments
+                if fragment.source_id
+            ))
+            evidence_status = (
+                f"universe={brain.universe_id}; coverage={evidence.coverage.status.value}; "
+                f"matched={evidence.coverage.matched_count}; sources={len(evidence_references)}"
+            )
+            if evidence.fragments:
+                evidence_material = "\n\n".join(
+                    f"[source_id={fragment.source_id}; lines={fragment.start_line}-{fragment.end_line}]\n{fragment.text}"
+                    for fragment in evidence.fragments
+                )
+            else:
+                evidence_material = self._evidence_gate.build_factual_answer(evidence)
+
+        config = self._provider_config
+        provider_request = ProviderRequest(
+            config.provider_id,
+            config.model,
+            analysis_prompt(analysis_content, evidence_status, evidence_material),
+            config.max_output_tokens,
+            config.timeout_seconds,
+            f"{config.provider_id}:analysis:{brain.normalized.normalized}",
+            decision.reason,
+        )
+        try:
+            execution = self._provider_manager.execute(
+                decision, provider_request, fallback_provider=config.fallback_provider
+            )
+        except Exception:
+            return AnalysisResult.unavailable("provider_execution_failed")
+        response = execution.response
+        if response.status is not ProviderStatus.SUCCESS or not response.output_text:
+            return AnalysisResult.unavailable("provider_unavailable")
+        try:
+            report = validate_analysis_payload(
+                response.output_text,
+                content=analysis_content,
+                evidence_references=evidence_references,
+                evidence_status=evidence_status,
+            )
+        except (TypeError, ValueError):
+            return AnalysisResult.unavailable("invalid_provider_output")
+        return AnalysisResult.completed(report)
 
     def execute(self, request: ApplicationRequest, brain: BrainResult, decision: RouteDecision) -> LocalExecution:
         if brain.universe_id is None:

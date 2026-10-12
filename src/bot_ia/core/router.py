@@ -10,6 +10,10 @@ class Router:
     _SEARCH_INTENTS = frozenset({Intent.FACTUAL, Intent.CHARACTER, Intent.CANON, Intent.CONTINUITY, Intent.EXTERNAL_RESEARCH})
 
     def decide(self, result: BrainResult) -> RouteDecision:
+        if result.intent is Intent.SIMULATION:
+            return RouteDecision(Route.LOCAL, "deterministic local numeric simulation", result.confidence, result.intent, result.universe_id)
+        if result.intent is Intent.ANALYSIS:
+            return RouteDecision(Route.LLM, "structured analysis through configured provider", result.confidence, result.intent, result.universe_id, requires_llm=True, agent_id="ia_chan")
         if result.state_status == "rejected":
             return RouteDecision(Route.LOCAL, "state change rejected", result.confidence, result.intent, result.universe_id, clarification=result.clarification)
         if result.ambiguity or result.intent is Intent.CLARIFICATION_NEEDED:
