@@ -121,6 +121,10 @@ def simulate_json(payload: str) -> SimulationResult:
         )
     except SimulationInputError:
         raise
+    except RecursionError as error:
+        raise SimulationInputError(
+            "JSON excesivamente anidado: reduce la profundidad del objeto"
+        ) from error
     except (json.JSONDecodeError, TypeError, ValueError) as error:
         raise SimulationInputError(f"JSON inválido: {error}") from error
 
@@ -152,7 +156,6 @@ def simulate_json(payload: str) -> SimulationResult:
         scenario_names.add(name)
         if not isinstance(changes, list) or not changes:
             raise SimulationInputError(f"{label}.changes debe ser una lista no vacía")
-        seen_metrics: set[str] = set()
         clean_changes: list[dict[str, Any]] = []
         for change_index, change in enumerate(changes):
             change_label = f"{label}.changes[{change_index}]"
@@ -162,9 +165,6 @@ def simulate_json(payload: str) -> SimulationResult:
             operation = change["operation"]
             if not isinstance(metric, str) or metric not in base:
                 raise SimulationInputError(f"métrica inexistente en {change_label}: {metric!r}")
-            if metric in seen_metrics:
-                raise SimulationInputError(f"métrica repetida en el escenario '{name}': {metric}")
-            seen_metrics.add(metric)
             if not isinstance(operation, str) or operation not in {"set", "add", "multiply"}:
                 raise SimulationInputError(f"operación no permitida en {change_label}: {operation!r}")
             value = _finite_number(change["value"], f"{change_label}.value")

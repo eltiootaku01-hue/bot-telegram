@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import unittest
 from types import SimpleNamespace
 
@@ -136,19 +137,66 @@ class SimulationTests(unittest.TestCase):
             with self.subTest(payload=payload), self.assertRaises(SimulationInputError):
                 simulate_json(payload)
 
-    def test_rejects_empty_and_ambiguous_structures(self):
+    def test_rejects_empty_structures(self):
         invalid = [
             {"base": {}, "scenarios": [{"name": "s", "changes": [{"metric": "x", "operation": "add", "value": 1}]}]},
             {"base": {"x": 1}, "scenarios": []},
             {"base": {"x": 1}, "scenarios": [{"name": "s", "changes": []}]},
-            {"base": {"x": 1}, "scenarios": [{"name": "s", "changes": [
-                {"metric": "x", "operation": "add", "value": 1},
-                {"metric": "x", "operation": "set", "value": 2},
-            ]}]},
         ]
         for item in invalid:
             with self.subTest(item=item), self.assertRaises(SimulationInputError):
                 simulate_json(json.dumps(item))
+
+    def test_repeated_metric_changes_are_applied_sequentially(self):
+        result = simulate_json(json.dumps({
+            "base": {"ventas": 10},
+            "scenarios": [{"name": "secuencial", "changes": [
+                {"metric": "ventas", "operation": "add", "value": 2},
+                {"metric": "ventas", "operation": "multiply", "value": 3},
+            ]}],
+        }))
+        self.assertEqual("completed", result.status)
+        self.assertEqual(1, len(result.scenarios))
+        self.assertEqual(36, result.scenarios[0]["metrics"][0]["final_value"])
+
+    def test_deeply_nested_json_becomes_controlled_input_error(self):
+        depth = sys.getrecursionlimit() + 100
+        payload = "[" * depth + "0" + "]" * depth
+        with self.assertRaises(SimulationInputError) as raised:
+            simulate_json(payload)
+        self.assertNotIsInstance(raised.exception, RecursionError)
+        self.assertIn("anidado", str(raised.exception).lower())
+
+    def test_invalid_later_scenario_publishes_no_partial_results(self):
+        payload = {
+            "base": {"ventas": 10},
+            "scenarios": [
+                {"name": "valido", "changes": [
+                    {"metric": "ventas", "operation": "add", "value": 2},
+                ]},
+                {"name": "invalido", "changes": [
+                    {"metric": "desconocida", "operation": "add", "value": 1},
+                ]},
+            ],
+        }
+        result = execute_simulation_command("/simular " + json.dumps(payload))
+        self.assertEqual("invalid", result.status)
+        self.assertEqual((), result.scenarios)
+
+    def test_deeply_nested_json_is_controlled_through_application(self):
+        depth = sys.getrecursionlimit() + 100
+        nested = "[" * depth + "0" + "]" * depth
+        payload = (
+            '{"base":{"ventas":10},"scenarios":[{"name":"valido","changes":'
+            '[{"metric":"ventas","operation":"add","value":2}]}],"extra":'
+            + nested
+            + "}"
+        )
+        app = BotApplication(LocalBrain(UniverseRegistry()), Router(), InMemorySessionStore())
+        response = app.handle(ApplicationRequest("u", "c", "/simular " + payload))
+        self.assertEqual("invalid", response.execution.status)
+        self.assertEqual((), response.execution.scenarios)
+        self.assertIn("No se ejecutó la simulación", response.text)
 
     def test_rejects_duplicate_json_keys(self):
         payload = '{"base":{"x":1},"scenarios":[{"name":"s","name":"s2","changes":[{"metric":"x","operation":"add","value":1}]}]}'

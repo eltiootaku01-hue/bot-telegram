@@ -23,7 +23,7 @@ The existing `IAChanOutputContract` is universe-bound and factual-response-orien
 
 ## Simulation contract
 
-The JSON root contains exactly `base` and `scenarios`. Base metrics are finite numbers. Each scenario contains a unique non-empty `name` and a non-empty `changes` list. Each change contains exactly `metric`, `operation`, and `value`. Metrics must exist in the base; a metric may be changed at most once per scenario; operations are `set`, `add`, and `multiply`. Boolean, NaN, infinity, duplicate JSON keys, unknown fields, duplicate metric changes, and non-finite results are rejected before a successful result is returned.
+The JSON root contains exactly `base` and `scenarios`. Base metrics are finite numbers. Each scenario contains a unique non-empty `name` and a non-empty `changes` list. Each change contains exactly `metric`, `operation`, and `value`. Metrics must exist in the base; operations are `set`, `add`, and `multiply`. A metric may appear multiple times in a scenario: each valid change is applied to the value produced by the previous change, in the exact order listed. Boolean, NaN, infinity, duplicate JSON keys, unknown fields, and non-finite results are rejected before a successful result is returned. Excessively nested JSON that causes the decoder to raise `RecursionError` is reported as a controlled `SimulationInputError`; the command returns `status="invalid"` with no scenarios published.
 
 Every scenario starts from an independent copy of the base. Changes are applied in listed order. `absolute_difference` is the signed numeric delta `final_value - base_value`; `percentage_difference` is the signed percentage change. When the base is zero, percentage is `null` and an explicit explanation is returned.
 
