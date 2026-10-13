@@ -16,11 +16,11 @@ from bot_ia.core.local_workflow import LocalWorkflow
 from bot_ia.core.models import Intent, Route
 from bot_ia.interfaces.telegram import (
     PollingConfig,
-    TelegramAdapter,
     TelegramApiClient,
     TelegramPoller,
 )
 from bot_ia.interfaces.telegram_event_ledger import TelegramEventLedger
+from bot_ia.interfaces.telegram_projects import TelegramProjectsAdapter
 from bot_ia.interfaces.telegram_instance_lock import TelegramInstanceLock
 from bot_ia.providers import ProviderResponse, ProviderStatus, ProviderUsage
 
@@ -154,7 +154,7 @@ class TelegramAnalysisSimulationIntegrationTests(unittest.TestCase):
             InMemorySessionStore(),
             executor=workflow,
         )
-        adapter = TelegramAdapter(application)
+        adapter = TelegramProjectsAdapter(application, SimpleNamespace())
         poller = TelegramPoller(
             client,
             adapter,
@@ -295,6 +295,104 @@ class TelegramAnalysisSimulationIntegrationTests(unittest.TestCase):
             [method for method, _payload, _timeout in context["transport"].calls],
             ["getUpdates", "sendMessage"],
         )
+
+
+    def _seed_pending_state(self, context, pending: str) -> tuple[str, str]:
+        adapter = context["adapter"]
+        key = ("1234567", str(context["chat_id"]))
+        adapter._pending[key] = pending
+        adapter._selected_main[key] = "stale-main-selection"
+        adapter._selected_secondary[key] = "stale-secondary-selection"
+        adapter._context_selection[key] = {0}
+        adapter._fallback_query[key] = "stale fallback query"
+        return key
+
+    def test_explicit_commands_precede_all_pending_input_modes(self):
+        pending_states = ("new_novel", "local", "prompt", "edit:wording")
+        update_id = 4200
+        for command_kind in ("simular", "analizar"):
+            for pending in pending_states:
+                with self.subTest(command=command_kind, pending=pending):
+                    current_id = update_id
+                    update_id += 1
+                    if command_kind == "simular":
+                        command = "/simular " + json.dumps(SIMULATION_JSON, separators=(",", ":"))
+                    else:
+                        command = "/analizar contenido limpio de prueba"
+                    context = self._run_update(command, current_id)
+                    key = self._seed_pending_state(context, pending)
+                    app = context["application"]
+                    workflow = context["workflow"]
+                    captured = []
+                    responses = []
+                    original_handle = app.handle
+
+                    def capture(request):
+                        captured.append(request)
+                        response = original_handle(request)
+                        responses.append(response)
+                        return response
+
+                    with (
+                        patch.object(app, "handle", side_effect=capture) as handle_spy,
+                        patch.object(workflow, "execute_analysis", wraps=workflow.execute_analysis) as analysis_spy,
+                    ):
+                        _result, payload = self._assert_delivery(context, current_id)
+
+                    self.assertEqual(handle_spy.call_count, 1)
+                    self.assertEqual(len(captured), 1)
+                    self.assertEqual(captured[0].message, command)
+                    self.assertNotIn(key, context["adapter"]._pending)
+                    self.assertNotIn(key, context["adapter"]._selected_main)
+                    self.assertNotIn(key, context["adapter"]._selected_secondary)
+                    self.assertNotIn(key, context["adapter"]._context_selection)
+                    self.assertNotIn(key, context["adapter"]._fallback_query)
+                    self.assertEqual(len(responses), 1)
+                    response = responses[0]
+                    if command_kind == "simular":
+                        self.assertEqual(response.brain.intent, Intent.SIMULATION)
+                        self.assertEqual(response.decision.route, Route.LOCAL)
+                        self.assertEqual(response.execution.status, "completed")
+                        self.assertEqual(analysis_spy.call_count, 0)
+                        self.assertEqual(context["provider"].calls, [])
+                        self.assertIn('"final_value": 120', payload["text"])
+                    else:
+                        self.assertEqual(response.brain.intent, Intent.ANALYSIS)
+                        self.assertEqual(response.decision.route, Route.LLM)
+                        self.assertEqual(analysis_spy.call_count, 1)
+                        self.assertEqual(len(context["provider"].calls), 1)
+                        report = response.execution.report
+                        self.assertIsNotNone(report)
+                        self.assertEqual(report.content_analyzed, "contenido limpio de prueba")
+                        self.assertIn("Evaluar la propuesta indicada", payload["text"])
+                    self.assertEqual(
+                        [method for method, _payload, _timeout in context["transport"].calls],
+                        ["getUpdates", "sendMessage"],
+                    )
+
+    def test_ordinary_message_still_consumes_existing_pending_mode(self):
+        context = self._run_update("un boceto breve de escena", 4301)
+        key = self._seed_pending_state(context, "local")
+        app = context["application"]
+        with patch.object(app, "handle", wraps=app.handle) as handle_spy:
+            _result, payload = self._assert_delivery(context, 4301)
+        self.assertEqual(handle_spy.call_count, 0)
+        self.assertNotIn(key, context["adapter"]._pending)
+        self.assertTrue(payload["text"])
+        self.assertEqual(
+            [method for method, _payload, _timeout in context["transport"].calls],
+            ["getUpdates", "sendMessage"],
+        )
+
+    def test_command_prefix_collision_does_not_override_pending_mode(self):
+        context = self._run_update("/simularx esto es texto ordinario", 4302)
+        key = self._seed_pending_state(context, "local")
+        app = context["application"]
+        with patch.object(app, "handle", wraps=app.handle) as handle_spy:
+            _result, payload = self._assert_delivery(context, 4302)
+        self.assertEqual(handle_spy.call_count, 0)
+        self.assertNotIn(key, context["adapter"]._pending)
+        self.assertTrue(payload["text"])
 
 
 if __name__ == "__main__":
