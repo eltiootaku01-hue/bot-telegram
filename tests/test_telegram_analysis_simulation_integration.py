@@ -16,9 +16,11 @@ from bot_ia.core.local_workflow import LocalWorkflow
 from bot_ia.core.models import Intent, Route
 from bot_ia.interfaces.telegram import (
     PollingConfig,
+    TelegramAdapter,
     TelegramApiClient,
     TelegramPoller,
 )
+from bot_ia.interfaces.telegram_ui import TelegramNovelAdapter
 from bot_ia.interfaces.telegram_event_ledger import TelegramEventLedger
 from bot_ia.interfaces.telegram_projects import TelegramProjectsAdapter
 from bot_ia.interfaces.telegram_instance_lock import TelegramInstanceLock
@@ -296,6 +298,32 @@ class TelegramAnalysisSimulationIntegrationTests(unittest.TestCase):
             ["getUpdates", "sendMessage"],
         )
 
+
+    def test_novel_adapter_preserves_tavern_manager_and_initializes_ui_state(self):
+        application = object()
+        manager = object()
+        with patch.object(
+            TelegramAdapter,
+            "__init__",
+            autospec=True,
+            return_value=None,
+        ) as base_init:
+            adapter = TelegramNovelAdapter(
+                application,
+                tavern_manager=manager,
+            )
+
+        base_init.assert_called_once_with(
+            adapter,
+            application,
+            tavern_manager=manager,
+        )
+        self.assertEqual(adapter._pending, {})
+        self.assertEqual(adapter._last_message, {})
+        self.assertEqual(adapter._last_execution, {})
+        self.assertEqual(adapter._context_selection, {})
+        self.assertEqual(adapter._fallback_query, {})
+        self.assertFalse(adapter._state_activity)
 
     def _seed_pending_state(self, context, pending: str) -> tuple[str, str]:
         adapter = context["adapter"]
