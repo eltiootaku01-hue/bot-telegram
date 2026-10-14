@@ -39,7 +39,7 @@ def _is_private_or_loopback_host(host: str) -> bool:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="BOT-IA Knowledge Engine")
-    parser.add_argument("--mode", choices=("console", "telegram", "web", "web-chat"), default="console")
+    parser.add_argument("--mode", choices=("console", "telegram", "web", "web-chat", "preflight"), default="console")
     parser.add_argument("--host", default=os.getenv("BOT_IA_HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.getenv("BOT_IA_PORT", "8787")))
     return parser
@@ -163,6 +163,10 @@ def main() -> None:
     project_root = PROJECT_ROOT
     load_dotenv(project_root / ".env")
     args = _parser().parse_args()
+    if args.mode == "preflight":
+        from bot_ia.preflight import run_preflight
+
+        raise SystemExit(run_preflight(project_root))
     runtime, application, universe_id, provider_id = _build_application(project_root)
     try:
         if args.mode == "console":
