@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import re
+
 from bot_ia.core.application import BotApplication
 from bot_ia.core.project_manager import ProjectError
 from bot_ia.interfaces.telegram import TelegramOutbound, parse_callback_update, parse_update
@@ -65,6 +67,15 @@ class TelegramProjectsAdapter(TelegramNovelV2Adapter):
         if "callback_query" not in update:
             inbound = parse_update(update)
             key = (inbound.user_id, inbound.conversation_id)
+            if re.match(r"^\s*/(?:analizar|simular)(?=\s|$)", inbound.text, flags=re.IGNORECASE):
+                # Explicit analysis/simulation commands outrank every conversational input mode.
+                # Clear only this conversation's pending UI state, then use the normal dispatch chain.
+                self._pending.pop(key, None)
+                self._selected_main.pop(key, None)
+                self._selected_secondary.pop(key, None)
+                self._context_selection.pop(key, None)
+                self._fallback_query.pop(key, None)
+                return super().handle_update(update)
             if self._pending.get(key) == "new_novel":
                 self._pending.pop(key, None)
                 try:

@@ -12,9 +12,10 @@ from typing import Callable
 from bot_ia.contracts import SessionState, UniverseDefinition
 from bot_ia.librarian.models import CatalogEntry
 
+from .analysis_simulation import AnalysisResult, execute_simulation_command
 from .brain import LocalBrain
 from .local_response import build_local_response
-from .models import BrainRequest, BrainResult, EntityCandidate, Route, RouteDecision
+from .models import BrainRequest, BrainResult, EntityCandidate, Intent, Route, RouteDecision
 from .router import Router
 
 CandidateProvider = Callable[[str], tuple[EntityCandidate, ...]]
@@ -130,6 +131,15 @@ class BotApplication:
             decision = replace(decision, route=Route.LLM, reason="external API explicitly authorized; local evidence remains required", requires_search=True, requires_llm=True, agent_id="ia_chan", external_api_authorized=True)
         if brain.state is not None:
             self._sessions.put(request.user_id, request.conversation_id, brain.state)
+        if brain.intent is Intent.SIMULATION:
+            execution = execute_simulation_command(request.message)
+            return ApplicationResponse(execution.text, brain, decision, execution)
+        if brain.intent is Intent.ANALYSIS:
+            if hasattr(self._executor, "execute_analysis"):
+                execution = self._executor.execute_analysis(request, brain, decision)
+            else:
+                execution = AnalysisResult.unavailable("provider_not_configured")
+            return ApplicationResponse(execution.text, brain, decision, execution)
         execution = None
         workflow_required = self._executor is not None and not (universe_id is None and decision.route in {Route.LOCAL, Route.CLARIFICATION})
         if workflow_required:

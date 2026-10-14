@@ -30,10 +30,13 @@ class TelegramNovelAdapter(TelegramAdapter):
         *,
         tavern_manager: WaitressSessionManager | None = None,
     ) -> None:
-        super().__init__(
-            application,
-            tavern_manager=tavern_manager,
-        )
+        super().__init__(application, tavern_manager=tavern_manager)
+        self._pending: dict[tuple[str, str], str] = {}
+        self._last_message: dict[tuple[str, str], str] = {}
+        self._last_execution: dict[tuple[str, str], object] = {}
+        self._context_selection: dict[tuple[str, str], set[int]] = {}
+        self._fallback_query: dict[tuple[str, str], str] = {}
+        self._state_activity: OrderedDict[tuple[str, str], None] = OrderedDict()
 
     MAIN_MENU = (
         (("📖 Novela", "menu:novel"), ("📝 Editar", "menu:edit")),
@@ -46,14 +49,6 @@ class TelegramNovelAdapter(TelegramAdapter):
 
     MAX_UI_SESSION_STATES = 512
 
-    def __init__(self, application: BotApplication) -> None:
-        super().__init__(application)
-        self._pending: dict[tuple[str, str], str] = {}
-        self._last_message: dict[tuple[str, str], str] = {}
-        self._last_execution: dict[tuple[str, str], object] = {}
-        self._context_selection: dict[tuple[str, str], set[int]] = {}
-        self._fallback_query: dict[tuple[str, str], str] = {}
-        self._state_activity: OrderedDict[tuple[str, str], None] = OrderedDict()
 
     def _touch_state(self, key: tuple[str, str]) -> None:
         self._state_activity.pop(key, None)

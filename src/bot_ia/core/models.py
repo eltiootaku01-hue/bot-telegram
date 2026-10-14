@@ -22,6 +22,8 @@ class Intent(str, Enum):
     CREATIVE_WRITING = "creative_writing"
     EDITORIAL_REVIEW = "editorial_review"
     EXTERNAL_RESEARCH = "external_research"
+    ANALYSIS = "analysis"
+    SIMULATION = "simulation"
     UNIVERSE_CHANGE = "universe_change"
     CLARIFICATION_NEEDED = "clarification_needed"
     UNKNOWN = "unknown"
