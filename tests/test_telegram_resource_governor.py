@@ -98,6 +98,27 @@ class TelegramResourceGovernorTests(unittest.TestCase):
             self.assertIsNone(poller._comment_raw_update({"message": {}}))
         analyze.assert_not_called()
 
+    def test_resource_pause_notice_is_throttled_per_chat(self):
+        poller = object.__new__(TelegramPoller)
+        poller._resource_notice_times = {}
+        with patch(
+            "bot_ia.interfaces.telegram.time.monotonic",
+            side_effect=(100.0, 120.0, 161.0),
+        ):
+            self.assertTrue(poller._should_notify_resource_paused("123"))
+            self.assertFalse(poller._should_notify_resource_paused("123"))
+            self.assertTrue(poller._should_notify_resource_paused("123"))
+
+    def test_resource_pause_notice_cooldown_is_independent_per_chat(self):
+        poller = object.__new__(TelegramPoller)
+        poller._resource_notice_times = {}
+        with patch(
+            "bot_ia.interfaces.telegram.time.monotonic",
+            side_effect=(100.0, 101.0),
+        ):
+            self.assertTrue(poller._should_notify_resource_paused("123"))
+            self.assertTrue(poller._should_notify_resource_paused("456"))
+
     def test_raw_comment_path_remains_available_when_p2_is_allowed(self):
         poller = object.__new__(TelegramPoller)
         poller._resource_preferences = FixedResourceStore(True)
