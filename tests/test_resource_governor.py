@@ -153,6 +153,24 @@ class ResourceGovernorTests(unittest.TestCase):
         self.assertTrue(all(state is PressureLevel.CRITICAL for state in states[:-1]))
         self.assertEqual(states[-1], PressureLevel.REDUCING)
 
+    def test_hysteresis_recovers_through_stages_in_order(self):
+        samples = [MemorySnapshot(True, 1_150_000_000, 1_200_000_000, 1)]
+        samples += [MemorySnapshot(True, 990_000_000, 1_000_000_000, 1)] * 10
+        samples += [MemorySnapshot(True, 940_000_000, 950_000_000, 1)] * 10
+        samples += [MemorySnapshot(True, 890_000_000, 900_000_000, 1)] * 10
+        samples += [MemorySnapshot(True, 740_000_000, 750_000_000, 1)] * 10
+        governor = self.governor(samples)
+        self.assertEqual(governor.sample().pressure, PressureLevel.CRITICAL)
+        for expected in (
+            PressureLevel.REDUCING,
+            PressureLevel.GAMES_PAUSED,
+            PressureLevel.WARNING,
+            PressureLevel.NORMAL,
+        ):
+            for _ in range(10):
+                state = governor.sample()
+            self.assertEqual(state.pressure, expected)
+
     def test_peak_is_separate_from_current_working_set(self):
         governor = self.governor([
             MemorySnapshot(True, 700_000_000, 750_000_000, 1),
@@ -194,6 +212,25 @@ class ResourceGovernorTests(unittest.TestCase):
         governor.sample()
         self.assertTrue(self.store.allows_priority(TaskPriority.P2_ORDINARY, now=1000))
         self.assertTrue(self.store.allows_priority(TaskPriority.P3_GAMES, now=1000))
+        self.assertFalse(self.store.allows_priority(TaskPriority.P4_BACKGROUND, now=1000))
+
+    def test_worker_policy_sheds_p4_then_p3_before_p2(self):
+        governor = self.governor(
+            [
+                MemorySnapshot(True, 1_275_000_000, 1_300_000_000, 1),
+                MemorySnapshot(True, 1_425_000_000, 1_450_000_000, 1),
+            ],
+            budget=1_500_000_000,
+        )
+        warning = governor.sample()
+        self.assertEqual(warning.pressure, PressureLevel.WARNING)
+        self.assertTrue(self.store.allows_priority(TaskPriority.P2_ORDINARY, now=1000))
+        self.assertTrue(self.store.allows_priority(TaskPriority.P3_GAMES, now=1000))
+        self.assertFalse(self.store.allows_priority(TaskPriority.P4_BACKGROUND, now=1000))
+        games_paused = governor.sample()
+        self.assertEqual(games_paused.pressure, PressureLevel.GAMES_PAUSED)
+        self.assertTrue(self.store.allows_priority(TaskPriority.P2_ORDINARY, now=1000))
+        self.assertFalse(self.store.allows_priority(TaskPriority.P3_GAMES, now=1000))
         self.assertFalse(self.store.allows_priority(TaskPriority.P4_BACKGROUND, now=1000))
 
     def test_off_windows_sensor_reports_unknown_not_zero(self):
