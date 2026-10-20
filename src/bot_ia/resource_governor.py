@@ -24,6 +24,7 @@ SCHEMA_VERSION = 1
 RUNTIME_STALE_SECONDS = 5.0
 SAMPLE_INTERVAL_SECONDS = 1.0
 WARNING_FRACTION = 0.85
+GAMES_PRESSURE_FRACTION = 0.95
 PRESSURE_FRACTION = 1.00
 CRITICAL_FRACTION = 1.10
 CRITICAL_RECOVERY_FRACTION = 0.90
@@ -44,8 +45,9 @@ class PressureLevel(IntEnum):
     UNKNOWN = -1
     NORMAL = 0
     WARNING = 1
-    REDUCING = 2
-    CRITICAL = 3
+    GAMES_PAUSED = 2
+    REDUCING = 3
+    CRITICAL = 4
 
 
 PROFILE_NAMES = {
@@ -110,24 +112,42 @@ class GovernorSnapshot:
             return "PRESUPUESTO NO VERIFICADO"
         if (self.memory.working_set_bytes or 0) > self.budget_bytes:
             return "PRESUPUESTO SUPERADO"
-        if self.pressure in {PressureLevel.WARNING, PressureLevel.REDUCING, PressureLevel.CRITICAL}:
+        if self.pressure in {
+            PressureLevel.WARNING,
+            PressureLevel.GAMES_PAUSED,
+            PressureLevel.REDUCING,
+            PressureLevel.CRITICAL,
+        }:
             return "REDUCIENDO CARGA"
         return "DENTRO DEL PRESUPUESTO"
 
     @property
     def paused_categories(self) -> tuple[str, ...]:
         if not self.memory.valid or self.pressure is PressureLevel.UNKNOWN:
-            return ("interacciones ordinarias", "juegos", "trabajo de fondo")
-        if self.pressure is PressureLevel.NORMAL:
-            paused = []
-            if self.budget_bytes < 1_500_000_000:
-                paused.append("juegos")
-            if self.budget_bytes < 1_750_000_000:
-                paused.append("trabajo de fondo y navegación pesada")
-            return tuple(paused)
-        if self.pressure is PressureLevel.WARNING:
-            return ("juegos", "trabajo de fondo y navegación pesada")
-        return ("interacciones ordinarias", "juegos", "trabajo de fondo y navegación pesada")
+            return (
+                "interacciones ordinarias",
+                "juegos",
+                "trabajo de fondo y navegación pesada",
+            )
+        paused: list[str] = []
+        if self.budget_bytes < 1_500_000_000:
+            paused.append("juegos")
+        if self.budget_bytes < 1_750_000_000 or self.pressure in {
+            PressureLevel.WARNING,
+            PressureLevel.GAMES_PAUSED,
+            PressureLevel.REDUCING,
+            PressureLevel.CRITICAL,
+        }:
+            paused.append("trabajo de fondo y navegación pesada")
+        if self.pressure in {
+            PressureLevel.GAMES_PAUSED,
+            PressureLevel.REDUCING,
+            PressureLevel.CRITICAL,
+        } and "juegos" not in paused:
+            paused.append("juegos")
+        if self.pressure in {PressureLevel.REDUCING, PressureLevel.CRITICAL}:
+            paused.insert(0, "interacciones ordinarias")
+        return tuple(paused)
 
 
 @dataclass(frozen=True, slots=True)
@@ -226,12 +246,16 @@ class ResourcePreferenceStore:
             return False
         if priority is TaskPriority.P2_ORDINARY:
             return True
-        if pressure is PressureLevel.WARNING:
-            return False
         if priority is TaskPriority.P3_GAMES:
-            return budget >= 1_500_000_000
+            return (
+                pressure is not PressureLevel.GAMES_PAUSED
+                and budget >= 1_500_000_000
+            )
         if priority is TaskPriority.P4_BACKGROUND:
-            return budget >= 1_750_000_000
+            return (
+                pressure is PressureLevel.NORMAL
+                and budget >= 1_750_000_000
+            )
         return False
 
     def secondary_comments_allowed(self, *, now: float | None = None) -> bool:
@@ -453,7 +477,7 @@ class ResourceGovernor:
 
     def _advance_pressure(self, working_set_bytes: int) -> None:
         ratio, current = working_set_bytes / self._budget_bytes, self._pressure
-        # Escalation is immediate; each recovery step requires ten consecutive samples.
+        # Escalate immediately; recover one level only after ten stable samples.
         if current is PressureLevel.CRITICAL:
             if ratio <= CRITICAL_RECOVERY_FRACTION:
                 self._recovery_count += 1
@@ -469,12 +493,23 @@ class ResourceGovernor:
             if ratio <= PRESSURE_RECOVERY_FRACTION:
                 self._recovery_count += 1
                 if self._recovery_count >= RECOVERY_SECONDS:
-                    self._pressure, self._recovery_count = PressureLevel.WARNING, 0
+                    self._pressure, self._recovery_count = PressureLevel.GAMES_PAUSED, 0
             else:
                 self._recovery_count = 0
             return
         if ratio >= PRESSURE_FRACTION:
             self._pressure, self._recovery_count = PressureLevel.REDUCING, 0
+            return
+        if current is PressureLevel.GAMES_PAUSED:
+            if ratio <= WARNING_RECOVERY_FRACTION:
+                self._recovery_count += 1
+                if self._recovery_count >= RECOVERY_SECONDS:
+                    self._pressure, self._recovery_count = PressureLevel.WARNING, 0
+            else:
+                self._recovery_count = 0
+            return
+        if ratio >= GAMES_PRESSURE_FRACTION:
+            self._pressure, self._recovery_count = PressureLevel.GAMES_PAUSED, 0
             return
         if current is PressureLevel.WARNING:
             if ratio <= WARNING_RECOVERY_FRACTION:
@@ -497,12 +532,16 @@ class ResourceGovernor:
             return False
         if priority is TaskPriority.P2_ORDINARY:
             return True
-        if self._pressure is PressureLevel.WARNING:
-            return False
         if priority is TaskPriority.P3_GAMES:
-            return self._budget_bytes >= 1_500_000_000
+            return (
+                self._pressure is not PressureLevel.GAMES_PAUSED
+                and self._budget_bytes >= 1_500_000_000
+            )
         if priority is TaskPriority.P4_BACKGROUND:
-            return self._budget_bytes >= 1_750_000_000
+            return (
+                self._pressure is PressureLevel.NORMAL
+                and self._budget_bytes >= 1_750_000_000
+            )
         return False
 
     def denial_reason(self, priority: TaskPriority) -> str:
@@ -511,13 +550,15 @@ class ResourceGovernor:
             return "La política conserva P0/P1 en todos los perfiles"
         if not self._last_memory.valid or self._pressure is PressureLevel.UNKNOWN:
             return "PRESUPUESTO NO VERIFICADO: no se admiten nuevas tareas secundarias"
-        if self._pressure is PressureLevel.CRITICAL or (
+        if self._pressure in {PressureLevel.CRITICAL, PressureLevel.REDUCING} or (
             self._last_memory.working_set_bytes is not None
             and self._last_memory.working_set_bytes > self._budget_bytes
         ):
             return "PRESUPUESTO SUPERADO: se conservan solo moderación y funciones críticas"
-        if self._pressure in {PressureLevel.WARNING, PressureLevel.REDUCING}:
-            return "REDUCIENDO CARGA: la categoría solicitada permanece en pausa"
+        if self._pressure is PressureLevel.GAMES_PAUSED:
+            return "REDUCIENDO CARGA: juegos y tareas de fondo están pausados"
+        if self._pressure is PressureLevel.WARNING and priority is TaskPriority.P4_BACKGROUND:
+            return "REDUCIENDO CARGA: trabajo de fondo y navegación pesada están pausados"
         if priority is TaskPriority.P3_GAMES and self._budget_bytes < 1_500_000_000:
             return "El perfil actual mantiene pausados los juegos"
         if priority is TaskPriority.P4_BACKGROUND and self._budget_bytes < 1_750_000_000:
