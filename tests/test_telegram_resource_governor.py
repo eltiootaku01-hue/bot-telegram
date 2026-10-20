@@ -18,6 +18,12 @@ class FixedResourceStore:
 
 
 class TelegramResourceGovernorTests(unittest.TestCase):
+    @staticmethod
+    def _poller():
+        poller = object.__new__(TelegramPoller)
+        poller._adapter = SimpleNamespace(_pending_attachments={})
+        return poller
+
     def test_critical_commands_remain_p1(self):
         for command in ("/start", "/menu", "/help", "/setup_group", "/queja"):
             self.assertIs(
@@ -43,29 +49,50 @@ class TelegramResourceGovernorTests(unittest.TestCase):
             )
 
     def test_connected_poller_classifies_critical_and_secondary_updates(self):
+        poller = self._poller()
         self.assertIs(
-            TelegramPoller._resource_priority_for_update({"message": {"text": "/help"}}),
+            poller._resource_priority_for_update({"message": {"text": "/help"}}),
             TaskPriority.P1_CRITICAL,
         )
         self.assertIs(
-            TelegramPoller._resource_priority_for_update({"message": {"text": "/gacha"}}),
+            poller._resource_priority_for_update({"message": {"text": "/gacha"}}),
             TaskPriority.P3_GAMES,
         )
         self.assertIs(
-            TelegramPoller._resource_priority_for_update({"message": {"text": "hola"}}),
+            poller._resource_priority_for_update({"message": {"text": "hola"}}),
             TaskPriority.P2_ORDINARY,
         )
         self.assertIs(
-            TelegramPoller._resource_priority_for_update({
+            poller._resource_priority_for_update({
                 "callback_query": {"data": "order:confirm:abc"}
             }),
             TaskPriority.P1_CRITICAL,
         )
         self.assertIs(
-            TelegramPoller._resource_priority_for_update({
+            poller._resource_priority_for_update({
                 "callback_query": {"data": "bebida:resolution:512"}
             }),
             TaskPriority.P3_GAMES,
+        )
+
+    def test_pending_admin_order_photo_remains_p1(self):
+        poller = self._poller()
+        poller._adapter._pending_attachments["42"] = object()
+        photo_update = {
+            "message": {
+                "from": {"id": 42},
+                "chat": {"id": 99},
+                "photo": [{"file_id": "test-photo"}],
+            }
+        }
+        self.assertIs(
+            poller._resource_priority_for_update(photo_update),
+            TaskPriority.P1_CRITICAL,
+        )
+        photo_update["message"]["from"]["id"] = 43
+        self.assertIs(
+            poller._resource_priority_for_update(photo_update),
+            TaskPriority.P2_ORDINARY,
         )
 
     def test_polling_conversation_id_handles_message_and_callback(self):
