@@ -107,13 +107,28 @@ class ResourceGovernorTests(unittest.TestCase):
         governor.sample()
         self.assertTrue(governor.allows(TaskPriority.P4_BACKGROUND))
 
-    def test_warning_pauses_p3_p4_before_p2(self):
+    def test_warning_pauses_p4_before_p3_and_p2(self):
         governor = self.governor(
             [MemorySnapshot(True, 1_275_000_000, 1_300_000_000, 1)],
             budget=1_500_000_000,
         )
         state = governor.sample()
         self.assertEqual(state.pressure, PressureLevel.WARNING)
+        self.assertTrue(governor.allows(TaskPriority.P2_ORDINARY))
+        self.assertTrue(governor.allows(TaskPriority.P3_GAMES))
+        self.assertFalse(governor.allows(TaskPriority.P4_BACKGROUND))
+        self.assertEqual(
+            state.paused_categories,
+            ("trabajo de fondo y navegación pesada",),
+        )
+
+    def test_games_stage_pauses_p3_before_p2(self):
+        governor = self.governor(
+            [MemorySnapshot(True, 1_425_000_000, 1_450_000_000, 1)],
+            budget=1_500_000_000,
+        )
+        state = governor.sample()
+        self.assertEqual(state.pressure, PressureLevel.GAMES_PAUSED)
         self.assertTrue(governor.allows(TaskPriority.P2_ORDINARY))
         self.assertFalse(governor.allows(TaskPriority.P3_GAMES))
         self.assertFalse(governor.allows(TaskPriority.P4_BACKGROUND))
