@@ -60,6 +60,7 @@ class TelegramInputError(ValueError):
 MAX_INBOUND_TEXT_CHARS = 24_000
 MAX_CALLBACK_DATA_CHARS = 256
 MAX_TELEGRAM_HTTP_RESPONSE_BYTES = 1 * 1024 * 1024
+RESOURCE_NOTICE_COOLDOWN_SECONDS = 60.0
 ORDER_ID_PATTERN = re.compile(r"^ORD-[0-9A-F]{10}$")
 ORDER_CALLBACK_PATTERN = re.compile(
     r"^order:(confirm|cancel):(ORD-[0-9A-F]{10})$"
@@ -1435,6 +1436,7 @@ class TelegramPoller:
         )
         self._callback_mutex = MutexGuard()
         self._pending_delivery: tuple[TelegramOutboxRecord, tuple[int, ...]] | None = None
+        self._resource_notice_times: dict[str, float] = {}
 
     @property
     def offset(self) -> int | None:
@@ -1500,6 +1502,17 @@ class TelegramPoller:
             "La moderación y los comandos críticos conservan prioridad.",
             "resource_limited",
         )
+
+    def _should_notify_resource_paused(self, conversation_id: str) -> bool:
+        now = time.monotonic()
+        previous = self._resource_notice_times.get(conversation_id)
+        if previous is not None and now - previous < RESOURCE_NOTICE_COOLDOWN_SECONDS:
+            return False
+        self._resource_notice_times[conversation_id] = now
+        if len(self._resource_notice_times) > 512:
+            oldest = min(self._resource_notice_times, key=self._resource_notice_times.get)
+            self._resource_notice_times.pop(oldest, None)
+        return True
 
     @staticmethod
     def _message_ids_from_result(result: object) -> tuple[int, ...]:
@@ -1954,7 +1967,11 @@ class TelegramPoller:
                         if moderation_outbound is not None:
                             outbound = moderation_outbound
                         elif resource_paused:
-                            outbound = self._resource_paused_response(resource_conversation_id)
+                            outbound = (
+                                self._resource_paused_response(resource_conversation_id)
+                                if self._should_notify_resource_paused(resource_conversation_id)
+                                else None
+                            )
                         elif comment_outbound is not None:
                             outbound = comment_outbound
                         elif (
