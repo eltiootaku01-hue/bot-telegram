@@ -88,7 +88,9 @@ from bot_ia.core.waitress_session_manager import (
     WaitressUnavailableError,
 )
 from bot_ia.runtime import RuntimeComponents, build_runtime
+from bot_ia.resource_governor import ResourceGovernor, TaskPriority
 from .gui_bridge import WorkerSignals
+from .resource_governor_panel import ResourceGovernorPanel
 from .styles import application_qss
 from .widgets import BotTile, CardFrame, PillButton, SectionHeader
 from .waifu_registry import (
@@ -2993,6 +2995,8 @@ class CommandCenterWindow(QMainWindow):
         self.signals.group_setup_finished.connect(self._on_group_setup_finished)
         self.signals.group_setup_failed.connect(self._on_group_setup_failed)
 
+        self.resource_governor = ResourceGovernor(root_pid=os.getpid())
+        self.resource_governor_panel = ResourceGovernorPanel(self.resource_governor, self)
         self._configure_window()
         self._build_layout()
         self._wire_backend()
@@ -3248,6 +3252,7 @@ class CommandCenterWindow(QMainWindow):
             parent=self,
         )
         self.main_tabs.addTab(self.incidents_panel, "🛡 Incidencias & Moderación")
+        self.main_tabs.addTab(self.resource_governor_panel, "🧠 Control de Recursos")
 
         root_layout.addWidget(self.main_tabs, 1)
         self.setCentralWidget(root)
@@ -3258,6 +3263,7 @@ class CommandCenterWindow(QMainWindow):
             "Chat Schrödinger",
             "Pedidos & Hashtags",
             "Incidencias & Moderación",
+            "Control de Recursos",
         )
         if 0 <= index < len(titles):
             self.page_title.setText(titles[index])
@@ -3964,7 +3970,31 @@ class CommandCenterWindow(QMainWindow):
         if isinstance(log, QPlainTextEdit):
             dialog.history.setPlainText(log.toPlainText())
 
+    def _resource_admission_denied(self, priority: TaskPriority, label: str) -> bool:
+        if self.resource_governor.allows(priority):
+            return False
+        reason = self.resource_governor.denial_reason(priority)
+        self._append_system(
+            f"⏸ {label}: {reason}. La prioridad P0/P1 de moderación y funciones críticas se conserva."
+        )
+        if hasattr(self, "send_button"):
+            self.send_button.setEnabled(True)
+        return True
+
+    @staticmethod
+    def _looks_like_game_command(message: str) -> bool:
+        normalized = " ".join(message.casefold().strip().split())
+        return any(
+            token in normalized
+            for token in (
+                "21", "blackjack", "black jack", "piedra", "papel", "tijera",
+                "uno", "juego de cartas", "juego de mesa", "mesa local",
+            )
+        )
+
     def _open_mini_games(self) -> None:
+        if self._resource_admission_denied(TaskPriority.P3_GAMES, "Mini-juegos"):
+            return
         if self._mini_games_dialog is None:
             dialog = QDialog(self)
             dialog.setWindowTitle("🎮 Mini-Juegos · Taberna local")
@@ -4004,6 +4034,8 @@ class CommandCenterWindow(QMainWindow):
         self._mini_games_dialog.activateWindow()
 
     def _start_local_game_command(self, command: str) -> None:
+        if self._resource_admission_denied(TaskPriority.P3_GAMES, "Mini-juego"):
+            return
         self.chat_mode.setCurrentIndex(1)
         self.input.setPlainText(command)
         self.input.setFocus()
@@ -4139,6 +4171,8 @@ class CommandCenterWindow(QMainWindow):
         return True
 
     def _try_local_game_response(self, message: str) -> bool:
+        if self._looks_like_game_command(message) and self._resource_admission_denied(TaskPriority.P3_GAMES, "Mini-juego"):
+            return True
         bot_id = self._selected_bot_id
         response = self._mini_game_router.route(
             message,
@@ -4170,6 +4204,8 @@ class CommandCenterWindow(QMainWindow):
         if self._try_local_game_response(message):
             return
         if self._try_local_bot_response(message):
+            return
+        if self._resource_admission_denied(TaskPriority.P2_ORDINARY, "Conversación secundaria"):
             return
         self._send_web_persona(message)
         dialog = self._expanded_bot_dialogs.get(bot_id)
@@ -4250,6 +4286,8 @@ class CommandCenterWindow(QMainWindow):
 
         mode = self.chat_mode.currentIndex()
         if mode == 0:
+            if self._resource_admission_denied(TaskPriority.P2_ORDINARY, "Interacción ordinaria"):
+                return
             request = ApplicationRequest(
                 DESKTOP_USER,
                 DESKTOP_SESSION,
@@ -4273,6 +4311,11 @@ class CommandCenterWindow(QMainWindow):
         self._send_web_persona(message)
 
     def _send_tavern(self, message: str) -> None:
+        if self._looks_like_game_command(message):
+            if self._resource_admission_denied(TaskPriority.P3_GAMES, "Mini-juego"):
+                return
+        elif self._resource_admission_denied(TaskPriority.P2_ORDINARY, "Conversación de Taberna"):
+            return
         if self._try_local_game_response(message):
             self.refresh_state()
             return
@@ -4317,6 +4360,8 @@ class CommandCenterWindow(QMainWindow):
 
     def _send_web_persona(self, message: str) -> None:
         if self._try_local_bot_response(message):
+            return
+        if self._resource_admission_denied(TaskPriority.P4_BACKGROUND, "Navegación pesada/WebQueue"):
             return
         if self._web_queue is None:
             self._append_system(
@@ -4631,6 +4676,8 @@ class CommandCenterWindow(QMainWindow):
     def _start_matrix_chain(self, start_bot_id: str = "cari") -> None:
         if self._closing or self._matrix_dispatcher.is_running:
             return
+        if self._resource_admission_denied(TaskPriority.P4_BACKGROUND, "Cadena secuencial de 4 bots"):
+            return
 
         command = self.input.toPlainText().strip()
         if not command:
@@ -4789,6 +4836,8 @@ class CommandCenterWindow(QMainWindow):
             self._append_system(
                 "🔑 Ya hay una sesión de inicio manual en curso."
             )
+            return
+        if self._resource_admission_denied(TaskPriority.P4_BACKGROUND, "Inicio de navegador manual"):
             return
 
         requested_bot_id = bot_id or self._selected_bot_id
@@ -5983,6 +6032,8 @@ class CommandCenterWindow(QMainWindow):
         if process is not None and process.poll() is None:
             if button is not None:
                 button.setText("● Chat local activo")
+            return
+        if self._resource_admission_denied(TaskPriority.P4_BACKGROUND, "Inicio de Chat Web"):
             return
 
         env = os.environ.copy()
