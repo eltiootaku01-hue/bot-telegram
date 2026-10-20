@@ -4203,9 +4203,9 @@ class CommandCenterWindow(QMainWindow):
         self.select_bot(bot_id)
         if self._try_local_game_response(message):
             return
-        if self._try_local_bot_response(message):
+        if self._resource_admission_denied(TaskPriority.P2_ORDINARY, "Interacción ordinaria"):
             return
-        if self._resource_admission_denied(TaskPriority.P2_ORDINARY, "Conversación secundaria"):
+        if self._try_local_bot_response(message):
             return
         self._send_web_persona(message)
         dialog = self._expanded_bot_dialogs.get(bot_id)
@@ -4359,6 +4359,8 @@ class CommandCenterWindow(QMainWindow):
             self.refresh_state()
 
     def _send_web_persona(self, message: str) -> None:
+        if self._resource_admission_denied(TaskPriority.P2_ORDINARY, "Interacción ordinaria"):
+            return
         if self._try_local_bot_response(message):
             return
         if self._resource_admission_denied(TaskPriority.P4_BACKGROUND, "Navegación pesada/WebQueue"):
