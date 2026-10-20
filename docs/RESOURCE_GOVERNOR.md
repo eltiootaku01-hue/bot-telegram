@@ -39,6 +39,14 @@ Only the numeric budget and non-secret runtime metrics/status are saved in per-u
 
 The GUI distinguishes DENTRO DEL PRESUPUESTO, REDUCIENDO CARGA, PRESUPUESTO SUPERADO, PRESUPUESTO NO VERIFICADO and MODO LIMITADO POR GATE. Body Health remains blocked. This change cannot activate Discord or absent services, and does not modify WebQueue, QWebEngine, TaskEngine, TaskScheduler or the physical WebChat authority.
 
+## Connected entry points and explicit limit
+
+The desktop GUI checks admission before accepting ordinary chat, local-game turns, multi-bot chains, manual browser setup, new local WebChat worker starts and heavy WebQueue persona work. Local game commands are checked again at each user action, so a visible game window does not imply that the next turn is admitted.
+
+The live Telegram poller runs the existing raw moderation check before applying secondary-work admission. If moderation returns an action, it is handled without consulting the secondary-work gate. Otherwise, the poller classifies the update and gates it before ordinary comment analysis or adapter dispatch; inline-query work is also gated. Critical command routes and administrative order/complaint callbacks remain P1. These checks apply at the current admission boundaries; they do not alter the Telegram transport, outbox or event ledger.
+
+**Known limitation:** this candidate does not forcibly suspend or resume an already-running WebQueue/TaskOrchestrator operation or terminate a browser process when pressure begins. The protected execution and physical WebChat authority surfaces remain untouched. Therefore, the code governs new admissions and subsequent user actions, but it does not yet prove full preemption of all in-flight P3/P4 work. That stronger pause/resume behavior needs a separately authorized, architecture-safe lifecycle gate before the feature can be considered complete.
+
 ## Validation still required
 
 Unit tests cover budget arithmetic, policy, hysteresis, persistence, unknown sensor behavior and the worker policy. The Qt desktop integration, real Windows process-tree accounting and packaged Windows product require separate validation. Unit tests do not prove the product stays below 2 GB. Full-product measurement remains a later, separately authorized phase.
