@@ -15,6 +15,7 @@ from urllib.request import Request, urlopen
 
 from bot_ia.core.application import ApplicationRequest, ApplicationResponse, BotApplication
 from bot_ia.paths import PROJECT_ROOT
+from bot_ia.resource_governor import ResourcePreferenceStore, TaskPriority
 from bot_ia.core.waitress_session_manager import TavernError, TavernReply, WaitressSessionManager
 from bot_ia.librarian.models import CoverageStatus
 from bot_ia.security.authority import AuthorizationRequest, AuthorityCore
@@ -235,8 +236,10 @@ class TelegramAdapter:
         *,
         tavern_manager: WaitressSessionManager | None = None,
         room_router: TelegramRoomRouter | None = None,
+        resource_store: ResourcePreferenceStore | None = None,
     ) -> None:
         self._application = application
+        self._resource_preferences = resource_store or ResourcePreferenceStore()
         self._tavern_manager = tavern_manager
         self._wallet_store = CafeWalletStore(PROJECT_ROOT)
         self._waifu_registry = WaifuRegistry(PROJECT_ROOT)
@@ -552,6 +555,7 @@ class TelegramAdapter:
         comment = (
             None
             if command_candidate.startswith("/")
+            or self._resource_preferences.allows_priority(TaskPriority.P2_ORDINARY) is False
             else analyze_telegram_comment(update)
         )
         if comment is not None and comment.should_reply:
@@ -578,7 +582,10 @@ class TelegramAdapter:
                 str(inbound.metadata.get("room_key", "general")),
                 auto_delete_seconds=30,
             )
-        command = inbound.text.casefold().split()[0]
+        priority = self._resource_priority_for_message(inbound.text)
+        if self._resource_preferences.allows_priority(priority) is False:
+            return self._resource_paused_response(inbound.conversation_id)
+        command = inbound.text.casefold().split()[0].split("@", 1)[0]
 
         if command in {"/start", "/menu"}:
             return TelegramOutbound(
@@ -874,8 +881,45 @@ class TelegramAdapter:
             seconds=seconds,
         )
 
+    @staticmethod
+    def _resource_priority_for_message(text: str) -> TaskPriority:
+        command = text.casefold().split()[0].split("@", 1)[0] if text.strip() else ""
+        if command in {"/start", "/menu", "/help", "/setup_group", "/queja"}:
+            return TaskPriority.P1_CRITICAL
+        if command in {
+            "/21", "/blackjack", "/apuestas", "/apuesta", "/gacha", "/pity",
+            "/propina", "/afinidad", "/mesera", "/vip", "/donar", "/puntos",
+            "/economia", "/precios", "/duelo", "/charla", "/tradicional",
+            "/favorita", "/ayuda_taberna", "/guia",
+        }:
+            return TaskPriority.P3_GAMES
+        return TaskPriority.P2_ORDINARY
+
+    @staticmethod
+    def _resource_priority_for_callback(data: str) -> TaskPriority:
+        if data.startswith(("order:confirm:", "order:cancel:", "order:attach:", "complaint:")):
+            return TaskPriority.P1_CRITICAL
+        if data in {
+            "gacha:draw", "pity:show", "economy:show", "affinity:show",
+            "vip:show", "vip:donate",
+        }:
+            return TaskPriority.P3_GAMES
+        return TaskPriority.P2_ORDINARY
+
+    @staticmethod
+    def _resource_paused_response(conversation_id: str) -> TelegramOutbound:
+        return TelegramOutbound(
+            conversation_id,
+            "⏸ Esta actividad secundaria está pausada por el presupuesto de recursos. "
+            "La moderación y los comandos críticos conservan prioridad.",
+            "resource_limited",
+        )
+
     def handle_callback(self, update: dict[str, object]) -> TelegramOutbound:
         callback = parse_callback_update(update)
+        priority = self._resource_priority_for_callback(callback.data)
+        if self._resource_preferences.allows_priority(priority) is False:
+            return self._resource_paused_response(callback.conversation_id)
         actions = {
             "menu:write": "Quiero escribir una escena o capítulo. Ayúdame usando los archivos locales del proyecto y la continuidad establecida.",
             "menu:edit": "Quiero editar o revisar un texto usando los archivos locales relevantes como referencia.",
@@ -1376,8 +1420,10 @@ class TelegramPoller:
         outbox_store: TelegramOutboxStore | None = None,
         event_ledger: TelegramEventLedger | None = None,
         instance_lock: TelegramInstanceLock | None = None,
+        resource_store: ResourcePreferenceStore | None = None,
     ) -> None:
         self._client, self._adapter, self._config = client, adapter, config or PollingConfig()
+        self._resource_preferences = resource_store or ResourcePreferenceStore()
         self._sleeper, self._logger, self._running, self._offset = sleeper, logger or (lambda _: None), True, None
         self._outbox = outbox_store
         self._event_ledger = event_ledger or TelegramEventLedger(
@@ -1455,6 +1501,8 @@ class TelegramPoller:
                 )
 
     def _comment_raw_update(self, update: dict[str, object]) -> TelegramOutbound | None:
+        if self._resource_preferences.allows_priority(TaskPriority.P2_ORDINARY) is False:
+            return None
         decision = analyze_telegram_comment(update)
         if not decision.should_reply:
             return None
