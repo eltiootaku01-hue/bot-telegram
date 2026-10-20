@@ -25,8 +25,11 @@ class TelegramResourceGovernorTests(unittest.TestCase):
                 TaskPriority.P1_CRITICAL,
             )
 
-    def test_game_and_social_commands_are_p3(self):
-        for command in ("/gacha", "/pity", "/blackjack", "/duelo", "/mesera"):
+    def test_game_social_and_order_commands_are_p3(self):
+        for command in (
+            "/gacha", "/pity", "/blackjack", "/duelo", "/mesera",
+            "/inventario", "/turnos", "/bebida",
+        ):
             self.assertIs(
                 TelegramAdapter._resource_priority_for_message(command),
                 TaskPriority.P3_GAMES,
@@ -38,6 +41,46 @@ class TelegramResourceGovernorTests(unittest.TestCase):
                 TelegramAdapter._resource_priority_for_callback(data),
                 TaskPriority.P1_CRITICAL,
             )
+
+    def test_connected_poller_classifies_critical_and_secondary_updates(self):
+        self.assertIs(
+            TelegramPoller._resource_priority_for_update({"message": {"text": "/help"}}),
+            TaskPriority.P1_CRITICAL,
+        )
+        self.assertIs(
+            TelegramPoller._resource_priority_for_update({"message": {"text": "/gacha"}}),
+            TaskPriority.P3_GAMES,
+        )
+        self.assertIs(
+            TelegramPoller._resource_priority_for_update({"message": {"text": "hola"}}),
+            TaskPriority.P2_ORDINARY,
+        )
+        self.assertIs(
+            TelegramPoller._resource_priority_for_update({
+                "callback_query": {"data": "order:confirm:abc"}
+            }),
+            TaskPriority.P1_CRITICAL,
+        )
+        self.assertIs(
+            TelegramPoller._resource_priority_for_update({
+                "callback_query": {"data": "bebida:resolution:512"}
+            }),
+            TaskPriority.P3_GAMES,
+        )
+
+    def test_polling_conversation_id_handles_message_and_callback(self):
+        self.assertEqual(
+            TelegramPoller._resource_conversation_id({
+                "message": {"chat": {"id": 123}},
+            }),
+            "123",
+        )
+        self.assertEqual(
+            TelegramPoller._resource_conversation_id({
+                "callback_query": {"message": {"chat": {"id": 456}}},
+            }),
+            "456",
+        )
 
     def test_gacha_callback_is_blocked_when_p3_is_not_admitted(self):
         adapter = object.__new__(TelegramAdapter)
