@@ -1448,8 +1448,7 @@ class TelegramPoller:
         if callable(close):
             close()
 
-    @staticmethod
-    def _resource_priority_for_update(update: dict[str, object]) -> TaskPriority:
+    def _resource_priority_for_update(self, update: dict[str, object]) -> TaskPriority:
         callback = update.get("callback_query")
         if isinstance(callback, dict):
             data = callback.get("data")
@@ -1464,6 +1463,13 @@ class TelegramPoller:
             return TaskPriority.P2_ORDINARY
         message = update.get("message")
         if isinstance(message, dict):
+            photos = message.get("photo")
+            sender = message.get("from")
+            if isinstance(photos, list) and photos and isinstance(sender, dict):
+                admin_id = str(sender.get("id", "")).strip()
+                pending = getattr(self._adapter, "_pending_attachments", {})
+                if admin_id and isinstance(pending, dict) and admin_id in pending:
+                    return TaskPriority.P1_CRITICAL
             raw_text = message.get("text") or message.get("caption") or ""
             text = raw_text if isinstance(raw_text, str) else ""
             command = text.casefold().split()[0].split("@", 1)[0] if text.strip() else ""
