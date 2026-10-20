@@ -386,8 +386,8 @@ class ResourceGovernor:
         loaded = self.store.load_preferences()
         self._budget_bytes = loaded.budget_bytes
         self.configuration_recovered = loaded.recovered
-        self.preference_saved = not loaded.recovered
-        if loaded.recovered:
+        self.preference_saved = loaded.present and not loaded.recovered
+        if loaded.recovered or not loaded.present:
             self.preference_saved = self.store.save_budget(MIN_BUDGET_BYTES)
         self._pressure = PressureLevel.UNKNOWN
         self._last_memory = MemorySnapshot.invalid("Todavía no hay una muestra válida")
