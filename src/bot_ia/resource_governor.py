@@ -27,8 +27,9 @@ WARNING_FRACTION = 0.85
 GAMES_PRESSURE_FRACTION = 0.95
 PRESSURE_FRACTION = 1.00
 CRITICAL_FRACTION = 1.10
-CRITICAL_RECOVERY_FRACTION = 0.90
-PRESSURE_RECOVERY_FRACTION = 0.80
+CRITICAL_RECOVERY_FRACTION = 1.00
+PRESSURE_RECOVERY_FRACTION = 0.95
+GAMES_RECOVERY_FRACTION = 0.90
 WARNING_RECOVERY_FRACTION = 0.75
 RECOVERY_SECONDS = 10
 
@@ -501,7 +502,7 @@ class ResourceGovernor:
             self._pressure, self._recovery_count = PressureLevel.REDUCING, 0
             return
         if current is PressureLevel.GAMES_PAUSED:
-            if ratio <= WARNING_RECOVERY_FRACTION:
+            if ratio <= GAMES_RECOVERY_FRACTION:
                 self._recovery_count += 1
                 if self._recovery_count >= RECOVERY_SECONDS:
                     self._pressure, self._recovery_count = PressureLevel.WARNING, 0
@@ -550,11 +551,13 @@ class ResourceGovernor:
             return "La política conserva P0/P1 en todos los perfiles"
         if not self._last_memory.valid or self._pressure is PressureLevel.UNKNOWN:
             return "PRESUPUESTO NO VERIFICADO: no se admiten nuevas tareas secundarias"
-        if self._pressure in {PressureLevel.CRITICAL, PressureLevel.REDUCING} or (
+        if self._pressure is PressureLevel.CRITICAL or (
             self._last_memory.working_set_bytes is not None
             and self._last_memory.working_set_bytes > self._budget_bytes
         ):
             return "PRESUPUESTO SUPERADO: se conservan solo moderación y funciones críticas"
+        if self._pressure is PressureLevel.REDUCING:
+            return "REDUCIENDO CARGA: P2-P4 pausadas al alcanzar el presupuesto"
         if self._pressure is PressureLevel.GAMES_PAUSED:
             return "REDUCIENDO CARGA: juegos y tareas de fondo están pausados"
         if self._pressure is PressureLevel.WARNING and priority is TaskPriority.P4_BACKGROUND:
