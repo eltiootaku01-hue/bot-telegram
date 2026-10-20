@@ -24,14 +24,18 @@ The observed peak is kept for the current application session; it is not persist
 
 ## Pressure and hysteresis
 
-- Warning begins at 85% of the configured budget. New P3/P4 work stops; P2 may continue below the hard budget.
-- Reducing begins at 100%. New P2/P3/P4 work is denied; P0/P1 remains allowed.
-- Critical begins at 110%. The same admission restriction applies; essential processes are not killed.
-- Critical recovers to Reducing after 10 consecutive samples at or below 90%.
-- Reducing recovers to Warning after 10 consecutive samples at or below 80%.
+The governor drops categories in the required order: P4, then P3, then P2. P0/P1 is not disabled by the resource admission policy.
+
+- Warning starts at 85% of the selected budget. P4 background/heavy-browser work is not admitted; P3 is still allowed when the selected profile supports games, and P2 may continue.
+- Games-paused starts at 95%. New P3 and P4 work is denied; P2 may continue.
+- Reducing starts at 100%. New P2/P3/P4 work is denied.
+- Critical starts at 110%. The same secondary-work admission restriction applies; essential processes are not killed.
+- Critical recovers to Reducing after 10 consecutive samples at or below 100%.
+- Reducing recovers to Games-paused after 10 consecutive samples at or below 95%.
+- Games-paused recovers to Warning after 10 consecutive samples at or below 90%.
 - Warning recovers to Normal after 10 consecutive samples at or below 75%.
 
-If the last published state is older than five seconds, workers treat secondary activity as unavailable. This prevents stale measurements from being represented as current health.
+Escalation is immediate. Each recovery moves one stage only after the stable-sample requirement. If the last published state is older than five seconds, workers treat secondary activity as unavailable. This prevents stale measurements from being represented as current health.
 
 ## Persistence and UI
 
