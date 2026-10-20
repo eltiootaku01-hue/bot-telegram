@@ -890,7 +890,7 @@ class TelegramAdapter:
             "/21", "/blackjack", "/apuestas", "/apuesta", "/gacha", "/pity",
             "/propina", "/afinidad", "/mesera", "/vip", "/donar", "/puntos",
             "/economia", "/precios", "/duelo", "/charla", "/tradicional",
-            "/favorita", "/ayuda_taberna", "/guia",
+            "/favorita", "/ayuda_taberna", "/guia", "/inventario", "/turnos", "/bebida",
         }:
             return TaskPriority.P3_GAMES
         return TaskPriority.P2_ORDINARY
@@ -899,7 +899,7 @@ class TelegramAdapter:
     def _resource_priority_for_callback(data: str) -> TaskPriority:
         if data.startswith(("order:confirm:", "order:cancel:", "order:attach:", "complaint:")):
             return TaskPriority.P1_CRITICAL
-        if data in {
+        if data.startswith(("bebida:", "gacha:", "pity:", "economy:", "affinity:", "vip:")) or data in {
             "gacha:draw", "pity:show", "economy:show", "affinity:show",
             "vip:show", "vip:donate",
         }:
@@ -1454,7 +1454,7 @@ class TelegramPoller:
             if isinstance(data, str):
                 if data.startswith(("order:confirm:", "order:cancel:", "order:attach:", "complaint:")):
                     return TaskPriority.P1_CRITICAL
-                if data in {
+                if data.startswith(("bebida:", "gacha:", "pity:", "economy:", "affinity:", "vip:")) or data in {
                     "gacha:draw", "pity:show", "economy:show", "affinity:show",
                     "vip:show", "vip:donate",
                 }:
@@ -1471,7 +1471,7 @@ class TelegramPoller:
                 "/21", "/blackjack", "/apuestas", "/apuesta", "/gacha", "/pity",
                 "/propina", "/afinidad", "/mesera", "/vip", "/donar", "/puntos",
                 "/economia", "/precios", "/duelo", "/charla", "/tradicional",
-                "/favorita", "/ayuda_taberna", "/guia",
+                "/favorita", "/ayuda_taberna", "/guia", "/inventario", "/turnos", "/bebida",
             }:
                 return TaskPriority.P3_GAMES
         return TaskPriority.P2_ORDINARY
