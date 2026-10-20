@@ -1447,6 +1447,61 @@ class TelegramPoller:
             close()
 
     @staticmethod
+    def _resource_priority_for_update(update: dict[str, object]) -> TaskPriority:
+        callback = update.get("callback_query")
+        if isinstance(callback, dict):
+            data = callback.get("data")
+            if isinstance(data, str):
+                if data.startswith(("order:confirm:", "order:cancel:", "order:attach:", "complaint:")):
+                    return TaskPriority.P1_CRITICAL
+                if data in {
+                    "gacha:draw", "pity:show", "economy:show", "affinity:show",
+                    "vip:show", "vip:donate",
+                }:
+                    return TaskPriority.P3_GAMES
+            return TaskPriority.P2_ORDINARY
+        message = update.get("message")
+        if isinstance(message, dict):
+            raw_text = message.get("text") or message.get("caption") or ""
+            text = raw_text if isinstance(raw_text, str) else ""
+            command = text.casefold().split()[0].split("@", 1)[0] if text.strip() else ""
+            if command in {"/start", "/menu", "/help", "/setup_group", "/queja"}:
+                return TaskPriority.P1_CRITICAL
+            if command in {
+                "/21", "/blackjack", "/apuestas", "/apuesta", "/gacha", "/pity",
+                "/propina", "/afinidad", "/mesera", "/vip", "/donar", "/puntos",
+                "/economia", "/precios", "/duelo", "/charla", "/tradicional",
+                "/favorita", "/ayuda_taberna", "/guia",
+            }:
+                return TaskPriority.P3_GAMES
+        return TaskPriority.P2_ORDINARY
+
+    @staticmethod
+    def _resource_conversation_id(update: dict[str, object]) -> str:
+        message = update.get("message")
+        if isinstance(message, dict):
+            chat = message.get("chat")
+            if isinstance(chat, dict) and chat.get("id") is not None:
+                return str(chat["id"])
+        callback = update.get("callback_query")
+        if isinstance(callback, dict):
+            callback_message = callback.get("message")
+            if isinstance(callback_message, dict):
+                chat = callback_message.get("chat")
+                if isinstance(chat, dict) and chat.get("id") is not None:
+                    return str(chat["id"])
+        return ""
+
+    @staticmethod
+    def _resource_paused_response(conversation_id: str) -> TelegramOutbound:
+        return TelegramOutbound(
+            conversation_id,
+            "⏸ Esta actividad secundaria está pausada por el presupuesto de recursos. "
+            "La moderación y los comandos críticos conservan prioridad.",
+            "resource_limited",
+        )
+
+    @staticmethod
     def _message_ids_from_result(result: object) -> tuple[int, ...]:
         if not isinstance(result, dict):
             return ()
@@ -1837,14 +1892,25 @@ class TelegramPoller:
                         inline_query = update.get("inline_query")
                         if isinstance(inline_query, dict):
                             inline = parse_inline_query_update(update)
-                            result = self._inline_handler.handle(
-                                user_id=inline.user_id,
-                                query=inline.query,
-                                chat_id=inline.chat_id,
-                            )
-                            self._client.answer_inline_query(
-                                inline.query_id,
-                                {
+                            if self._resource_preferences.allows_priority(TaskPriority.P2_ORDINARY) is False:
+                                paused_text = (
+                                    "⏸ La búsqueda secundaria está pausada por el presupuesto de recursos. "
+                                    "La moderación y los comandos críticos conservan prioridad."
+                                )
+                                inline_result = {
+                                    "type": "article",
+                                    "id": "resource-limited",
+                                    "title": "⏸ Actividad pausada",
+                                    "description": paused_text,
+                                    "input_message_content": {"message_text": paused_text},
+                                }
+                            else:
+                                result = self._inline_handler.handle(
+                                    user_id=inline.user_id,
+                                    query=inline.query,
+                                    chat_id=inline.chat_id,
+                                )
+                                inline_result = {
                                     "type": "article",
                                     "id": "cafe-redirect",
                                     "title": "☕ Café Otaku",
@@ -1860,7 +1926,10 @@ class TelegramPoller:
                                             }
                                         ]]
                                     },
-                                },
+                                }
+                            self._client.answer_inline_query(
+                                inline.query_id,
+                                inline_result,
                             )
                             self._mark_events_completed(update_id, update)
                             if callback_key:
@@ -1870,13 +1939,22 @@ class TelegramPoller:
                             sent += 1
                             continue
                         moderation_outbound = self._moderate_raw_update(update)
+                        resource_priority = self._resource_priority_for_update(update)
+                        resource_conversation_id = self._resource_conversation_id(update)
+                        resource_paused = (
+                            moderation_outbound is None
+                            and bool(resource_conversation_id)
+                            and self._resource_preferences.allows_priority(resource_priority) is False
+                        )
                         comment_outbound = (
                             None
-                            if moderation_outbound is not None
+                            if moderation_outbound is not None or resource_paused
                             else self._comment_raw_update(update)
                         )
                         if moderation_outbound is not None:
                             outbound = moderation_outbound
+                        elif resource_paused:
+                            outbound = self._resource_paused_response(resource_conversation_id)
                         elif comment_outbound is not None:
                             outbound = comment_outbound
                         elif (
