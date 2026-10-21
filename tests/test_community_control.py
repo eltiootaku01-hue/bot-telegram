@@ -69,7 +69,7 @@ class CommunityAdmissionControllerTests(unittest.TestCase):
             low.max_user_events_per_window,
             medium.max_user_events_per_window,
         )
-        self.assertLess(low.max_rate_identities, medium.max_rate_identities)
+        self.assertLess(low.max_rate_identities_per_platform, medium.max_rate_identities_per_platform)
         self.assertLess(
             low.max_active_speaker_leases,
             medium.max_active_speaker_leases,
@@ -191,7 +191,7 @@ class CommunityAdmissionControllerTests(unittest.TestCase):
 
     def test_rate_identity_table_has_a_hard_capacity(self):
         policy = compact_policy(
-            max_rate_identities=1,
+            max_rate_identities_per_platform=1,
             max_pending_per_user=10,
             max_pending_per_room=20,
             max_user_events_per_window=10,
