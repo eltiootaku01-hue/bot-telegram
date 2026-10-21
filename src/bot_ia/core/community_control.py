@@ -48,7 +48,7 @@ class CommunityControlPolicy:
     max_pending_per_user: int = 5
     user_rate_window_seconds: float = 10.0
     max_user_events_per_window: int = 6
-    max_rate_identities: int = 1_024
+    max_rate_identities_per_platform: int = 1_024
     queue_ttl_seconds: float = 45.0
     dedupe_ttl_seconds: float = 900.0
     max_dedupe_entries: int = 10_000
@@ -67,7 +67,7 @@ class CommunityControlPolicy:
             self.max_pending_per_room,
             self.max_pending_per_user,
             self.max_user_events_per_window,
-            self.max_rate_identities,
+            self.max_rate_identities_per_platform,
             self.max_dedupe_entries,
             self.max_active_speaker_leases,
         )
@@ -106,7 +106,7 @@ class CommunityControlPolicy:
             max_pending_per_user=3,
             user_rate_window_seconds=10.0,
             max_user_events_per_window=3,
-            max_rate_identities=512,
+            max_rate_identities_per_platform=512,
             queue_ttl_seconds=20.0,
             dedupe_ttl_seconds=600.0,
             max_dedupe_entries=5_000,
@@ -243,7 +243,10 @@ class CommunityAdmissionController:
             if not critical:
                 if (
                     rate_key not in self._user_rate
-                    and len(self._user_rate) >= self.policy.max_rate_identities
+                    and sum(
+                        1 for rate_platform, _ in self._user_rate
+                        if rate_platform is event.platform
+                    ) >= self.policy.max_rate_identities_per_platform
                 ):
                     return self._reject("rate_identity_capacity")
                 rate_events = self._user_rate[rate_key]
