@@ -70,3 +70,8 @@ Action buttons recalculate enabled/paused state from the same global budget and 
 ## Validation still required
 
 Unit tests cover budget arithmetic, policy, hysteresis, persistence, unknown sensor behavior and the worker policy. The Qt desktop integration, real Windows process-tree accounting and packaged Windows product require separate validation. Unit tests do not prove the product stays below 2 GB. Full-product measurement remains a later, separately authorized phase.
+
+
+## Community controller cross-reference
+
+The separate, isolated policy engine for the proposed Telegram/Discord shared planner is documented in docs/architecture/COMMUNITY_CONTROL_POLICY.md and implemented as src/bot_ia/core/community_control.py. Its Medium and Low Resource modes constrain queue depth and per-user event admission; they are not RAM budgets. The Resource Governor remains the independent memory admission gate. Neither policy is active on live platform message paths until authorized adapter integration and focused validation are complete.
