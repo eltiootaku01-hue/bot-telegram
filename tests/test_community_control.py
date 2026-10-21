@@ -137,10 +137,10 @@ class CommunityAdmissionControllerTests(unittest.TestCase):
                 priority=TaskPriority.P2_ORDINARY,
             )).accepted)
         self.assertTrue(controller.enqueue(make_event(
-            event_id="admin", user_id="admin", priority=TaskPriority.P1_CRITICAL
+            event_id="game", user_id="game-user", priority=TaskPriority.P3_GAMES
         )).accepted)
         self.assertTrue(controller.enqueue(make_event(
-            event_id="game", user_id="game-user", priority=TaskPriority.P3_GAMES
+            event_id="admin", user_id="admin", priority=TaskPriority.P1_CRITICAL
         )).accepted)
 
         admitted = controller.enqueue(make_event(
