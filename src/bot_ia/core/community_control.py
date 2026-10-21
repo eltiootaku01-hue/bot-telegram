@@ -146,6 +146,8 @@ class CommunityEvent:
             raise ValueError("event text exceeds configured input bound")
         if not isinstance(self.actor_is_bot, bool):
             raise ValueError("actor_is_bot must be boolean")
+        if isinstance(self.priority, bool):
+            raise ValueError("invalid task priority")
         try:
             object.__setattr__(self, "priority", TaskPriority(self.priority))
         except (TypeError, ValueError) as error:
