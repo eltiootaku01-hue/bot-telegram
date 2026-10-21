@@ -27,7 +27,7 @@ Los perfiles de esta tabla regulan la admisión de eventos y la longitud de cola
 | Máximo pendiente por sala | 80 | 32 |
 | Máximo pendiente por usuario en una sala | 5 | 3 |
 | Eventos ordinarios admitidos por usuario | 6 cada 10 segundos | 3 cada 10 segundos |
-| Identidades con ventana de ritmo activas | 1.024 | 512 |
+| Identidades con ventana de ritmo activas por plataforma | 1.024 | 512 |
 | Reservas de portavoz simultáneas máximas | 128 | 64 |
 | Caducidad de P2/P3/P4 pendientes | 45 segundos | 20 segundos |
 | Ventana de deduplicación | 15 minutos | 10 minutos |
@@ -64,7 +64,7 @@ Archivo: src/bot_ia/core/community_control.py.
 - Despacha prioridad alta primero y reparte eventos de igual prioridad de forma rotativa por plataforma, sala y usuario.
 - Caduca trabajo P2/P3/P4 anticuado; conserva P0/P1 hasta procesarlos o hasta que se alcance el límite acotado que produce una señal explícita de saturación.
 - Proporciona una reserva temporal de portavoz por plataforma + sala, de 1 a 120 segundos (20 segundos por defecto), con un tope global de reservas simultáneas.
-- Acota también la tabla de usuarios para limitar ritmo y elimina sus entradas vencidas.
+- Acota también la tabla de usuarios para limitar ritmo y elimina sus entradas vencidas; la capacidad se aplica por plataforma para que una comunidad no agote la cuota de la otra.
 - Ofrece métricas agregadas sin texto de mensaje ni credenciales.
 
 ### Qué no hace todavía
