@@ -114,4 +114,4 @@ El motor de comunidad regula cola/rendimiento; el Resource Governor regula admis
 6. Probar inundación controlada, desconexión, reinicio y recuperación de tareas ambiguas. La saturación debe ser visible y deliberada.
 7. Medir en el PC Windows la RAM real del producto y validar su relación con el Resource Governor.
 
-**Estado de cierre:** motor de política aislado + pruebas escritas; no integrado en el camino activo de mensajes, no ejecutado en CI en esta rama y no validado con 100 usuarios reales o simulados. No abrir ni fusionar la rama hasta completar esos gates por separado.
+**Estado de cierre:** la compuerta aislada de GitHub Actions completó correctamente el chequeo de política de código y los 19 tests de tests/test_community_control.py en 0,11 s (run 39611948190, commit probado b5f6d85105975f1e26d3d3d344620efbe9244ec5). La suite general no se ejecutó; el motor sigue sin integrarse en el camino activo de mensajes y no se ha validado con 100 usuarios reales o simulados. No abrir ni fusionar la rama hasta completar esos gates por separado.
