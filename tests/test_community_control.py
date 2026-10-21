@@ -125,7 +125,7 @@ class CommunityAdmissionControllerTests(unittest.TestCase):
     def test_security_priority_displaces_lower_priority_when_queue_is_full(self):
         policy = compact_policy(
             queue_capacity_per_platform=4,
-            critical_reserve_per_platform=2,
+            critical_reserve_per_platform=1,
             max_pending_per_room=10,
             max_pending_per_user=10,
             max_user_events_per_window=20,
