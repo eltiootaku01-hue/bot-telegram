@@ -2996,10 +2996,16 @@ class CommandCenterWindow(QMainWindow):
         self.signals.group_setup_failed.connect(self._on_group_setup_failed)
 
         self.resource_governor = ResourceGovernor(root_pid=os.getpid())
-        self.resource_governor_panel = ResourceGovernorPanel(self.resource_governor, self)
+        self.resource_governor_panel = ResourceGovernorPanel(
+            self.resource_governor,
+            self,
+            profiles=BOT_PROFILES,
+            matrix_bot_ids=tuple(spec.bot_id for spec in MATRIX_BOT_SPECS),
+        )
         self._configure_window()
         self._build_layout()
         self._wire_backend()
+        self.resource_governor_panel.refresh_bot_actions()
         self._platform_health_workers: list[PlatformHealthWorker] = []
         self._start_platform_health_checks()
         self._load_web_page()
