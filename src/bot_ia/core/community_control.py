@@ -356,7 +356,7 @@ class CommunityAdmissionController:
         task_id: str,
     ) -> bool:
         """Release a room lease only when the owning task ID matches."""
-        selected_platform = CommunityPlatform(str(platform).strip().lower())
+        selected_platform = self._as_platform(platform)
         key = (selected_platform, self._identifier(room_id, "room_id"))
         task = self._identifier(task_id, "task_id")
         with self._lock:
@@ -368,6 +368,7 @@ class CommunityAdmissionController:
 
     def queue_depth(self, platform: CommunityPlatform | str | None = None) -> int:
         with self._lock:
+            self._purge(self._clock())
             if platform is None:
                 return sum(self._platform_depth(item) for item in CommunityPlatform)
             return self._platform_depth(self._as_platform(platform))
@@ -375,6 +376,8 @@ class CommunityAdmissionController:
     def snapshot(self) -> dict[str, object]:
         """Return aggregate counters only; never expose message text or tokens."""
         with self._lock:
+            now = self._clock()
+            self._purge(now)
             return {
                 "mode": self.policy.mode.value,
                 "queue_depth": {
@@ -388,7 +391,7 @@ class CommunityAdmissionController:
                 "evicted_total": self._evicted_total,
                 "expired_total": self._expired_total,
                 "active_speaker_leases": sum(
-                    lease.expires_at > self._clock() for lease in self._leases.values()
+                    lease.expires_at > now for lease in self._leases.values()
                 ),
             }
 
