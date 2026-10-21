@@ -150,6 +150,7 @@ class ResourceGovernorPanelTests(unittest.TestCase):
     def test_role_specific_actions_are_connected_to_existing_handlers(self):
         self.panel.bot_cards["cari"]["extra"]["waifu"].click()
         self.assertEqual(self.window.opened_waifu, ["cari"])
+        self.panel.memory_dial.setValue(2)
         self.panel.bot_cards["chie"]["extra"]["games"].click()
         self.assertEqual(self.window.opened_games, 1)
         self.panel.bot_cards["chloe"]["extra"]["order"].click()
