@@ -70,6 +70,21 @@ class CommunityAdmissionControllerTests(unittest.TestCase):
             medium.max_user_events_per_window,
         )
 
+    def test_invalid_queue_and_nonfinite_limits_are_rejected(self):
+        with self.assertRaises(ValueError):
+            compact_policy(
+                queue_capacity_per_platform=8,
+                critical_reserve_per_platform=8,
+            )
+        with self.assertRaises(ValueError):
+            compact_policy(queue_ttl_seconds=float("nan"))
+        with self.assertRaises(ValueError):
+            compact_policy(user_rate_window_seconds=float("inf"))
+
+    def test_boolean_is_not_accepted_as_a_priority(self):
+        with self.assertRaises(ValueError):
+            make_event(priority=True)
+
     def test_event_identity_and_input_bounds_are_validated(self):
         with self.assertRaises(ValueError):
             make_event(platform="irc")
