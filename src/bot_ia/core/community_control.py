@@ -112,7 +112,11 @@ class CommunityEvent:
 
     def __post_init__(self) -> None:
         try:
-            platform = CommunityPlatform(str(self.platform).strip().lower())
+            platform = (
+                self.platform
+                if isinstance(self.platform, CommunityPlatform)
+                else CommunityPlatform(str(self.platform).strip().lower())
+            )
         except ValueError as error:
             raise ValueError("platform must be telegram or discord") from error
         object.__setattr__(self, "platform", platform)
@@ -326,7 +330,7 @@ class CommunityAdmissionController:
         lease_seconds: float = 20.0,
     ) -> bool:
         """Reserve one public speaker for a room/turn to prevent character pile-ons."""
-        selected_platform = CommunityPlatform(str(platform).strip().lower())
+        selected_platform = self._as_platform(platform)
         room = self._identifier(room_id, "room_id")
         speaker = self._identifier(speaker_id, "speaker_id")
         task = self._identifier(task_id, "task_id")
@@ -366,7 +370,7 @@ class CommunityAdmissionController:
         with self._lock:
             if platform is None:
                 return sum(self._platform_depth(item) for item in CommunityPlatform)
-            return self._platform_depth(CommunityPlatform(str(platform).strip().lower()))
+            return self._platform_depth(self._as_platform(platform))
 
     def snapshot(self) -> dict[str, object]:
         """Return aggregate counters only; never expose message text or tokens."""
@@ -391,6 +395,15 @@ class CommunityAdmissionController:
     def _reject(self, reason: str) -> AdmissionResult:
         self._rejected[reason] += 1
         return AdmissionResult(False, reason)
+
+    @staticmethod
+    def _as_platform(value: CommunityPlatform | str) -> CommunityPlatform:
+        if isinstance(value, CommunityPlatform):
+            return value
+        try:
+            return CommunityPlatform(str(value).strip().lower())
+        except ValueError as error:
+            raise ValueError("platform must be telegram or discord") from error
 
     @staticmethod
     def _identifier(value: str, field_name: str) -> str:
