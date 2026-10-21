@@ -255,4 +255,4 @@ La política incluye deduplicación por plataforma + evento, rechazo de mensajes
 
 **Límite crítico:** la cola y las reservas viven en memoria del proceso, y los adaptadores actuales todavía no llaman al motor. Por lo tanto, todavía no gobierna el tráfico real y no sustituye al ledger/outbox durables, a la autorización específica de cada plataforma ni al Resource Governor. Los adaptadores deben clasificar seguridad de forma determinista antes de cuotas ordinarias y aplicar la política de RAM al retirar trabajo P2/P3/P4.
 
-Los tests están escritos, pero no ejecutados en esta sesión; no se ha creado una ejecución CI porque eso volvería a abrir el gate general que contiene el bloqueo protegido de QWebEngine. Discord sigue sin estar probado como adaptador real de mensajes y no hay prueba de carga con 100 usuarios.
+La compuerta aislada de GitHub Actions ejecutó el chequeo de política de código (PASS) y 19 tests del controlador (PASS; run 39611948190, 0,11 s). Esta compuerta no ejecuta la suite general y no reabre el gate protegido de QWebEngine. Discord sigue sin estar probado como adaptador real de mensajes y no hay prueba de carga con 100 usuarios.
