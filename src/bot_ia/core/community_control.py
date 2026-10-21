@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections import OrderedDict, defaultdict, deque
 from dataclasses import dataclass
 from enum import Enum
+import math
 import threading
 import time
 from typing import Callable, Iterator
@@ -73,10 +74,19 @@ class CommunityControlPolicy:
             raise ValueError("critical reserve must be smaller than queue capacity")
         if self.max_pending_per_user > self.max_pending_per_room:
             raise ValueError("per-user pending limit cannot exceed room limit")
-        if self.user_rate_window_seconds <= 0:
-            raise ValueError("user rate window must be positive")
-        if self.queue_ttl_seconds <= 0 or self.dedupe_ttl_seconds <= 0:
-            raise ValueError("queue and dedupe lifetimes must be positive")
+        float_limits = (
+            self.user_rate_window_seconds,
+            self.queue_ttl_seconds,
+            self.dedupe_ttl_seconds,
+        )
+        if any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or value <= 0
+            for value in float_limits
+        ):
+            raise ValueError("rate window and lifetimes must be finite and positive")
 
     @classmethod
     def for_mode(cls, mode: ControlMode | str) -> "CommunityControlPolicy":
