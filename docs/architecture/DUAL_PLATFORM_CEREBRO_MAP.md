@@ -172,13 +172,13 @@ Son **200 personas en total**, pero el número de personas por sí solo no deter
 |---|---|---:|---|
 | Conversación tranquila | 1 mensaje cada 2 minutos | ~100 eventos/min (~1,7/s) | Procesamiento normal; no toda charla genera una llamada de IA. |
 | Chat activo | 1 mensaje cada 20 segundos | ~600 eventos/min (10/s) | Reglas rápidas, colas justas, respuestas por mención/comando/intención y tareas pesadas limitadas. |
-| Inundación automatizada | 5 mensajes por segundo | ~120.000 eventos/min (2.000/s) | No es carga a prometer en un PC local. Activar límites de ingreso, descartar spam/no prioritario, proteger P0 y mostrar degradación explícita. |
+| Inundación automatizada | 5 mensajes por segundo | ~60.000 eventos/min (1.000/s) | No es carga a prometer en un PC local. Activar límites de ingreso, descartar spam/no prioritario, proteger P0 y mostrar degradación explícita. |
 
 Estos ritmos son **escenarios de cálculo**, no pruebas de rendimiento realizadas sobre este repositorio.
 
 En el escenario activo, llamar a un modelo de IA por cada evento implicaría 600 solicitudes/minuto. Si, además, cada evento activara los seis perfiles, serían 3.600 trabajos de personaje por minuto antes de contar reintentos, navegación o respuestas. El diseño debe impedir ese patrón.
 
-En una inundación de 2.000 eventos/s el sistema de escritorio no puede prometer atención individual en tiempo real. La conducta correcta es degradarse de manera controlada: filtrar/rechazar spam, respetar permisos y límites de plataforma, dejar las tareas no esenciales en espera o descartarlas por caducidad y no fingir que todo fue procesado.
+En una inundación de 1.000 eventos/s el sistema de escritorio no puede prometer atención individual en tiempo real. La conducta correcta es degradarse de manera controlada: filtrar/rechazar spam, respetar permisos y límites de plataforma, dejar las tareas no esenciales en espera o descartarlas por caducidad y no fingir que todo fue procesado.
 
 ### Respuesta definida cuando la cola crece
 
