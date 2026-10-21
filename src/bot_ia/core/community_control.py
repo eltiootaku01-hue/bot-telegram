@@ -48,6 +48,7 @@ class CommunityControlPolicy:
     max_pending_per_user: int = 5
     user_rate_window_seconds: float = 10.0
     max_user_events_per_window: int = 6
+    max_rate_identities: int = 1_024
     queue_ttl_seconds: float = 45.0
     dedupe_ttl_seconds: float = 900.0
     max_dedupe_entries: int = 10_000
@@ -66,6 +67,7 @@ class CommunityControlPolicy:
             self.max_pending_per_room,
             self.max_pending_per_user,
             self.max_user_events_per_window,
+            self.max_rate_identities,
             self.max_dedupe_entries,
             self.max_active_speaker_leases,
         )
@@ -104,6 +106,7 @@ class CommunityControlPolicy:
             max_pending_per_user=3,
             user_rate_window_seconds=10.0,
             max_user_events_per_window=3,
+            max_rate_identities=512,
             queue_ttl_seconds=20.0,
             dedupe_ttl_seconds=600.0,
             max_dedupe_entries=5_000,
@@ -236,10 +239,17 @@ class CommunityAdmissionController:
             user_depth = self._user_depth(event.platform, event.room_id, event.user_id)
 
             rate_key = (event.platform, event.user_id)
-            rate_events = self._user_rate[rate_key]
-            self._prune_rate(rate_events, now)
-            if not critical and len(rate_events) >= self.policy.max_user_events_per_window:
-                return self._reject("user_rate_limited")
+            rate_events: deque[float] | None = None
+            if not critical:
+                if (
+                    rate_key not in self._user_rate
+                    and len(self._user_rate) >= self.policy.max_rate_identities
+                ):
+                    return self._reject("rate_identity_capacity")
+                rate_events = self._user_rate[rate_key]
+                self._prune_rate(rate_events, now)
+                if len(rate_events) >= self.policy.max_user_events_per_window:
+                    return self._reject("user_rate_limited")
             if not critical and user_depth >= self.policy.max_pending_per_user:
                 return self._reject("user_pending_limit")
             if not critical and room_depth >= self.policy.max_pending_per_room:
@@ -270,7 +280,7 @@ class CommunityAdmissionController:
             while len(self._dedupe) > self.policy.max_dedupe_entries:
                 self._dedupe.popitem(last=False)
 
-            if not critical:
+            if rate_events is not None:
                 rate_events.append(now)
             self._accepted_total += 1
             return AdmissionResult(True, "accepted", displaced_event_id)
