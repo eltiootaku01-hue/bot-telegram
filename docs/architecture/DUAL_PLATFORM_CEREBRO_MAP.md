@@ -1,6 +1,6 @@
 # BOT-IA — Plano conceptual de Telegram + Discord + Cerebro
 
-**Estado:** propuesta de arquitectura, no integración de Discord completada ni prueba de carga.  
+**Estado:** mapa conceptual + motor de control aislado; Discord y la ruta compartida de mensajes siguen sin integración completa ni prueba de carga.  
 **Rama:** `feat/dual-platform-cerebro-architecture-2026-10-21`  
 **Regla de evidencia:** el panel visible no demuestra que un personaje esté ejecutándose; una conexión comprobada tampoco demuestra que el bot ya procese mensajes.
 
@@ -235,3 +235,20 @@ No se modifica la autoridad física de WebChat, QWebEngine, TaskEngine ni TaskSc
 - Discord Gateway: https://docs.discord.com/developers/events/gateway
 - Discord API rate limits: https://docs.discord.com/developers/topics/rate-limits
 - Discord privileged intents: https://support-dev.discord.com/hc/en-us/articles/6207308062871-What-are-Privileged-Intents
+
+
+## 10. Implementación de control de comunidad en esta rama
+
+Se añadió una primera implementación aislada del contrato común:
+
+- Código: src/bot_ia/core/community_control.py
+- Pruebas escritas: tests/test_community_control.py
+- Normativa de operación: docs/architecture/COMMUNITY_CONTROL_POLICY.md
+
+El motor dispone de dos perfiles de cola: **Medio** por defecto (256 eventos por plataforma, 32 reservados para P0/P1, tope de 80 por sala y de 5 por usuario dentro de una sala; 6 admisiones ordinarias por usuario cada 10 segundos) y **Bajo en recursos** (128 por plataforma, 24 reservados, 32 por sala, 3 por usuario por sala y 3 admisiones ordinarias por usuario cada 10 segundos). El trabajo P2/P3/P4 caduca cuando queda anticuado; los P0/P1 no caducan por TTL, pero están sujetos a la capacidad crítica limitada.
+
+La política incluye deduplicación por plataforma + evento, rechazo de mensajes identificados como enviados por bots, reserva de portavoz única por sala, planificación por prioridad y reparto rotativo entre plataformas/salas/usuarios en la misma prioridad. No añade dependencias de terceros ni crea procesos de servicios externos.
+
+**Límite crítico:** la cola y las reservas viven en memoria del proceso, y los adaptadores actuales todavía no llaman al motor. Por lo tanto, todavía no gobierna el tráfico real y no sustituye al ledger/outbox durables, a la autorización específica de cada plataforma ni al Resource Governor. Los adaptadores deben clasificar seguridad de forma determinista antes de cuotas ordinarias y aplicar la política de RAM al retirar trabajo P2/P3/P4.
+
+Los tests están escritos, pero no ejecutados en esta sesión; no se ha creado una ejecución CI porque eso volvería a abrir el gate general que contiene el bloqueo protegido de QWebEngine. Discord sigue sin estar probado como adaptador real de mensajes y no hay prueba de carga con 100 usuarios.
