@@ -51,6 +51,22 @@ The live Telegram poller runs the existing raw moderation check before applying 
 
 **Known limitation:** this candidate does not forcibly suspend or resume an already-running WebQueue/TaskOrchestrator operation or terminate a browser process when pressure begins. The protected execution and physical WebChat authority surfaces remain untouched. Therefore, the code governs new admissions and subsequent user actions, but it does not yet prove full preemption of all in-flight P3/P4 work. That stronger pause/resume behavior needs a separately authorized, architecture-safe lifecycle gate before the feature can be considered complete.
 
+## Desktop bot dashboard
+
+The “Control de Memoria” view uses a rotary Qt dial with five presets (1.00, 1.25, 1.50, 1.75 and 2.00 decimal GB). Turning it updates the saved budget, samples the sensor and refreshes action admission; it does not start external services or terminate running processes. Preset buttons use the same code path.
+
+The dashboard displays the six profiles in `BOT_PROFILES`: Cari, Cami, Sunna, Chie, Chloe and Scarlet. Four profiles—Cari, Cami, Sunna and Chie—have entries in `MATRIX_BOT_SPECS`; those are configured for the existing sequential matrix. This is a count of GUI profiles, not proof of six independent processes or six active workers. The Telegram polling worker is separate from these character profiles.
+
+Per-profile actions are shown only when an existing code path is identifiable:
+- Every profile can be selected. The Taberna “Charla” and “Descanso” actions are enabled only when the current SQLite roster contains that profile; no missing roster entry is fabricated.
+- Cari exposes the Waifu/TCG registry.
+- Cami exposes the existing incidences/moderation panel.
+- Chie exposes the already-existing local mini-games, subject to P3 admission.
+- Matrix profiles expose “Abrir ficha” and “Iniciar desde aquí”; starting work remains P4, uses the text already prepared in the Lobby and follows existing gates.
+- Chloe and Scarlet expose the existing order dialog and are not presented as configured matrix-browser workers.
+
+Action buttons recalculate enabled/paused state from the same global budget and latest sample. P0/P1 controls remain available; P2/P3/P4 actions are disabled according to profile, pressure and data freshness. The dashboard must not label a profile “active” solely because its card is visible.
+
 ## Validation still required
 
 Unit tests cover budget arithmetic, policy, hysteresis, persistence, unknown sensor behavior and the worker policy. The Qt desktop integration, real Windows process-tree accounting and packaged Windows product require separate validation. Unit tests do not prove the product stays below 2 GB. Full-product measurement remains a later, separately authorized phase.
