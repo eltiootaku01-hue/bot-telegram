@@ -3899,6 +3899,13 @@ class CommandCenterWindow(QMainWindow):
             )
             self._expanded_bot_dialogs[bot_id] = dialog
 
+        # Only the four configured matrix profiles have a validated browser
+        # chain/manual-login route. Character profiles must not display actions
+        # that would dispatch an empty or unsupported matrix chain.
+        matrix_configured = bot_id in self._matrix_widgets
+        dialog.start_button.setVisible(matrix_configured)
+        dialog.manual_button.setVisible(matrix_configured)
+
         widgets = self._matrix_widgets.get(bot_id, {})
         provider = widgets.get("provider")
         if isinstance(provider, QComboBox):
