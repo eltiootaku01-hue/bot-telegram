@@ -23,10 +23,12 @@ flowchart TB
     end
 
     subgraph IN["ENTRADA SEPARADA POR PLATAFORMA"]
-      TGA["Adaptador Telegram\nvalidar · deduplicar · normalizar"]
+      TGA["Adaptador Telegram\nvalidar · autorizar · normalizar"]
       DCA["Adaptador Discord\nGateway · permisos · normalizar"]
-      QT["Cola justa Telegram"]
-      QD["Cola justa Discord"]
+      TGS["Filtro barato + clasificación P0"]
+      DCS["Filtro barato + clasificación P0"]
+      QT["Cola limitada Telegram"]
+      QD["Cola limitada Discord"]
     end
 
     subgraph BRAIN["CEREBRO COORDINADOR"]
@@ -52,11 +54,11 @@ flowchart TB
       OBOX["Outbox por plataforma\nritmo · reintentos · deduplicación"]
     end
 
-    TG --> TGA --> QT
-    DC --> DCA --> QD
-    QT --> AUTH
-    QD --> AUTH
-    AUTH --> MOD --> ROUTER
+    TG --> TGA --> TGS --> QT
+    DC --> DCA --> DCS --> QD
+    QT --> MOD
+    QD --> MOD
+    MOD --> AUTH --> ROUTER
     ROUTER <--> MEMORY
     ROUTER --> FAIR
     FAIR --> CAMI
@@ -99,16 +101,18 @@ flowchart TB
 
 ### Cerebro central
 
-El cerebro no es otra persona que hable todo el tiempo. Es el coordinador que:
+El cerebro no es otra persona que hable todo el tiempo. Es el coordinador que recibe eventos ya normalizados por adaptadores. Antes de las cuotas ordinarias, cada adaptador debe validar longitud/estructura y permisos del destino, rechazar eventos de bots y ejecutar la clasificación determinista barata de seguridad. Las detecciones con acción de moderación se encolan como P0.
 
-1. valida la plataforma, la sala y los permisos;
-2. descarta duplicados y eventos inválidos;
-3. ejecuta primero el filtro P0 de moderación;
-4. clasifica el tipo de solicitud;
-5. selecciona un personaje responsable;
-6. consulta solo el contexto imprescindible;
-7. solicita permiso al planificador antes de trabajo no esencial;
-8. acepta una respuesta y la entrega por la salida de la plataforma correcta.
+Después, el coordinador:
+
+1. vuelve a comprobar autorización antes de cualquier efecto;
+2. trata los duplicados mediante el ledger durable de la plataforma;
+3. atiende primero el trabajo P0/P1;
+4. clasifica la intención y selecciona un personaje responsable;
+5. consulta solo el contexto imprescindible de esa plataforma y sala;
+6. solicita admisión de recursos para trabajo no esencial;
+7. reserva un único portavoz por sala/turno;
+8. comprueba que la tarea sigue vigente y entrega por la salida de la misma plataforma.
 
 El cerebro no debe unir historiales de Telegram y Discord por defecto. Son dominios de contexto diferentes. Solo se compartirán resúmenes entre plataformas mediante una opción explícita, autorizada y auditable.
 
