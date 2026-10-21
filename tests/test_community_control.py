@@ -69,6 +69,11 @@ class CommunityAdmissionControllerTests(unittest.TestCase):
             low.max_user_events_per_window,
             medium.max_user_events_per_window,
         )
+        self.assertLess(low.max_rate_identities, medium.max_rate_identities)
+        self.assertLess(
+            low.max_active_speaker_leases,
+            medium.max_active_speaker_leases,
+        )
 
     def test_invalid_queue_and_nonfinite_limits_are_rejected(self):
         with self.assertRaises(ValueError):
@@ -184,6 +189,28 @@ class CommunityAdmissionControllerTests(unittest.TestCase):
         ))
         self.assertTrue(critical.accepted)
 
+    def test_rate_identity_table_has_a_hard_capacity(self):
+        policy = compact_policy(
+            max_rate_identities=1,
+            max_pending_per_user=10,
+            max_pending_per_room=20,
+            max_user_events_per_window=10,
+        )
+        controller = CommunityAdmissionController(policy, clock=self.clock)
+        self.assertTrue(controller.enqueue(make_event(
+            event_id="first", user_id="first-user"
+        )).accepted)
+        limited = controller.enqueue(make_event(
+            event_id="second", user_id="second-user"
+        ))
+        self.assertEqual(limited.reason, "rate_identity_capacity")
+
+        self.clock.advance(11.0)
+        retried = controller.enqueue(make_event(
+            event_id="third", user_id="second-user"
+        ))
+        self.assertTrue(retried.accepted)
+
     def test_user_and_room_pending_limits_bound_regular_work(self):
         policy = compact_policy(
             max_pending_per_user=2,
@@ -285,6 +312,21 @@ class CommunityAdmissionControllerTests(unittest.TestCase):
         self.assertTrue(self.controller.acquire_speaker(
             CommunityPlatform.TELEGRAM, "general", "sunna", "task-2"
         ))
+
+    def test_speaker_lease_table_has_a_hard_capacity_and_expires(self):
+        policy = compact_policy(max_active_speaker_leases=1)
+        controller = CommunityAdmissionController(policy, clock=self.clock)
+        self.assertTrue(controller.acquire_speaker(
+            CommunityPlatform.TELEGRAM, "room-a", "cari", "task-a"
+        ))
+        self.assertFalse(controller.acquire_speaker(
+            CommunityPlatform.TELEGRAM, "room-b", "sunna", "task-b"
+        ))
+        self.clock.advance(21.0)
+        self.assertTrue(controller.acquire_speaker(
+            CommunityPlatform.TELEGRAM, "room-b", "sunna", "task-b"
+        ))
+        self.assertEqual(controller.snapshot()["active_speaker_leases"], 1)
 
     def test_speaker_leases_are_isolated_by_platform(self):
         self.assertTrue(self.controller.acquire_speaker(
