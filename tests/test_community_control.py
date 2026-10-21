@@ -204,6 +204,10 @@ class CommunityAdmissionControllerTests(unittest.TestCase):
             event_id="second", user_id="second-user"
         ))
         self.assertEqual(limited.reason, "rate_identity_capacity")
+        other_platform = controller.enqueue(make_event(
+            CommunityPlatform.DISCORD, event_id="discord-event", user_id="discord-user"
+        ))
+        self.assertTrue(other_platform.accepted)
 
         self.clock.advance(11.0)
         retried = controller.enqueue(make_event(
