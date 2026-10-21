@@ -51,6 +51,7 @@ class CommunityControlPolicy:
     queue_ttl_seconds: float = 45.0
     dedupe_ttl_seconds: float = 900.0
     max_dedupe_entries: int = 10_000
+    max_active_speaker_leases: int = 128
 
     def __post_init__(self) -> None:
         try:
@@ -66,6 +67,7 @@ class CommunityControlPolicy:
             self.max_pending_per_user,
             self.max_user_events_per_window,
             self.max_dedupe_entries,
+            self.max_active_speaker_leases,
         )
         if any(isinstance(value, bool) or not isinstance(value, int) or value < 1
                for value in integer_limits):
@@ -105,6 +107,7 @@ class CommunityControlPolicy:
             queue_ttl_seconds=20.0,
             dedupe_ttl_seconds=600.0,
             max_dedupe_entries=5_000,
+            max_active_speaker_leases=64,
         )
 
 
@@ -351,12 +354,15 @@ class CommunityAdmissionController:
 
         with self._lock:
             now = self._clock()
+            self._purge(now)
             key = (selected_platform, room)
             current = self._leases.get(key)
             if current is not None and current.expires_at > now:
                 if current.speaker_id == speaker and current.task_id == task:
                     self._leases[key] = _SpeakerLease(speaker, task, now + lease_seconds)
                     return True
+                return False
+            if len(self._leases) >= self.policy.max_active_speaker_leases:
                 return False
             self._leases[key] = _SpeakerLease(speaker, task, now + lease_seconds)
             return True
@@ -372,6 +378,7 @@ class CommunityAdmissionController:
         key = (selected_platform, self._identifier(room_id, "room_id"))
         task = self._identifier(task_id, "task_id")
         with self._lock:
+            self._purge(self._clock())
             current = self._leases.get(key)
             if current is None or current.task_id != task:
                 return False
@@ -491,6 +498,7 @@ class CommunityAdmissionController:
             users.pop(user_id, None)
         if not users:
             self._queues[platform].pop(room_id, None)
+            self._last_user.pop((platform, room_id), None)
 
     def _evict_lower_priority(
         self,
@@ -529,6 +537,10 @@ class CommunityAdmissionController:
             self._prune_rate(events, now)
             if not events:
                 self._user_rate.pop(key, None)
+
+        for key, lease in list(self._leases.items()):
+            if lease.expires_at <= now:
+                self._leases.pop(key, None)
 
         # Ordinary work may expire; moderation/admin events are never silently
         # removed by TTL and remain visible in bounded queue/overflow counters.
