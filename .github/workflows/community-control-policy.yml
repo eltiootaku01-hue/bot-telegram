@@ -7,6 +7,8 @@ on:
     paths:
       - src/bot_ia/core/community_control.py
       - tests/test_community_control.py
+      - tests/test_personality_contract_document.py
+      - docs/architecture/PERSONALITY_CONTRACT_V1.md
       - .github/workflows/community-control-policy.yml
 
 permissions:
@@ -30,3 +32,5 @@ jobs:
         run: python scripts/check_code_policy.py src/bot_ia/core/community_control.py tests/test_community_control.py
       - name: Run community controller unit tests
         run: python -m pytest -q tests/test_community_control.py
+      - name: Validate personality contract document
+        run: python -m unittest tests.test_personality_contract_document -v
