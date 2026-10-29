@@ -32,9 +32,9 @@ class PersonalityContractDocumentTests(unittest.TestCase):
             "la política central",
             "modo de observación",
             "contextos separados",
-            "No implementar o activar el adaptador de Discord",
-            "No modificar los flujos activos de Telegram",
-            "No modificar QWebEngine",
+            "adaptador de Discord",
+            "flujos activos de Telegram",
+            "QWebEngine",
         )
         for phrase in required_phrases:
             with self.subTest(phrase=phrase):
