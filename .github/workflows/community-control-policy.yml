@@ -29,8 +29,8 @@ jobs:
       - name: Install focused test dependency
         run: python -m pip install --disable-pip-version-check pytest
       - name: Check Python code policy for isolated files
-        run: python scripts/check_code_policy.py src/bot_ia/core/community_control.py tests/test_community_control.py
+        run: python scripts/check_code_policy.py src/bot_ia/core/community_control.py tests/test_community_control.py tests/test_personality_contract_document.py
       - name: Run community controller unit tests
         run: python -m pytest -q tests/test_community_control.py
       - name: Validate personality contract document
-        run: python -m unittest tests.test_personality_contract_document -v
+        run: python tests/test_personality_contract_document.py -v
