@@ -146,6 +146,13 @@ class TelegramResourceGovernorTests(unittest.TestCase):
             self.assertTrue(poller._should_notify_resource_paused("123"))
             self.assertTrue(poller._should_notify_resource_paused("456"))
 
+    def test_unknown_resource_state_blocks_p2_comment_analysis(self):
+        poller = object.__new__(TelegramPoller)
+        poller._resource_preferences = FixedResourceStore(None)
+        with patch("bot_ia.interfaces.telegram.analyze_telegram_comment") as analyze:
+            self.assertIsNone(poller._comment_raw_update({"message": {}}))
+        analyze.assert_not_called()
+
     def test_raw_comment_path_remains_available_when_p2_is_allowed(self):
         poller = object.__new__(TelegramPoller)
         poller._resource_preferences = FixedResourceStore(True)
