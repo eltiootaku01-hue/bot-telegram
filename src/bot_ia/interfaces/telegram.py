@@ -556,7 +556,7 @@ class TelegramAdapter:
         comment = (
             None
             if command_candidate.startswith("/")
-            or self._resource_preferences.allows_priority(TaskPriority.P2_ORDINARY) is False
+            or not self._resource_preferences.allows_priority(TaskPriority.P2_ORDINARY)
             else analyze_telegram_comment(update)
         )
         if comment is not None and comment.should_reply:
@@ -584,7 +584,7 @@ class TelegramAdapter:
                 auto_delete_seconds=30,
             )
         priority = self._resource_priority_for_message(inbound.text)
-        if self._resource_preferences.allows_priority(priority) is False:
+        if not self._resource_preferences.allows_priority(priority):
             return self._resource_paused_response(inbound.conversation_id)
         command = inbound.text.casefold().split()[0].split("@", 1)[0]
 
@@ -919,7 +919,7 @@ class TelegramAdapter:
     def handle_callback(self, update: dict[str, object]) -> TelegramOutbound:
         callback = parse_callback_update(update)
         priority = self._resource_priority_for_callback(callback.data)
-        if self._resource_preferences.allows_priority(priority) is False:
+        if not self._resource_preferences.allows_priority(priority):
             return self._resource_paused_response(callback.conversation_id)
         actions = {
             "menu:write": "Quiero escribir una escena o capítulo. Ayúdame usando los archivos locales del proyecto y la continuidad establecida.",
@@ -1575,7 +1575,7 @@ class TelegramPoller:
                 )
 
     def _comment_raw_update(self, update: dict[str, object]) -> TelegramOutbound | None:
-        if self._resource_preferences.allows_priority(TaskPriority.P2_ORDINARY) is False:
+        if not self._resource_preferences.allows_priority(TaskPriority.P2_ORDINARY):
             return None
         decision = analyze_telegram_comment(update)
         if not decision.should_reply:
@@ -1911,7 +1911,7 @@ class TelegramPoller:
                         inline_query = update.get("inline_query")
                         if isinstance(inline_query, dict):
                             inline = parse_inline_query_update(update)
-                            if self._resource_preferences.allows_priority(TaskPriority.P2_ORDINARY) is False:
+                            if not self._resource_preferences.allows_priority(TaskPriority.P2_ORDINARY):
                                 paused_text = (
                                     "⏸ La búsqueda secundaria está pausada por el presupuesto de recursos. "
                                     "La moderación y los comandos críticos conservan prioridad."
@@ -1963,7 +1963,7 @@ class TelegramPoller:
                         resource_paused = (
                             moderation_outbound is None
                             and bool(resource_conversation_id)
-                            and self._resource_preferences.allows_priority(resource_priority) is False
+                            and not self._resource_preferences.allows_priority(resource_priority)
                         )
                         comment_outbound = (
                             None
