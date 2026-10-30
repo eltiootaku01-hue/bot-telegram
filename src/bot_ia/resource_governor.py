@@ -212,15 +212,15 @@ class ResourcePreferenceStore:
         }
         return self._atomic_write(payload)
 
-    def allows_priority(self, priority: TaskPriority, *, now: float | None = None) -> bool | None:
-        """Read worker policy. None means the GUI has never activated this feature."""
+    def allows_priority(self, priority: TaskPriority, *, now: float | None = None) -> bool:
+        """Read worker policy; missing or stale measurements fail closed."""
         priority = TaskPriority(priority)
         if priority in {TaskPriority.P0_MODERATION, TaskPriority.P1_CRITICAL}:
             return True
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except FileNotFoundError:
-            return None
+            return False
         except (OSError, ValueError, TypeError):
             return False
         if not isinstance(payload, dict) or payload.get("schema_version") != SCHEMA_VERSION:
@@ -260,7 +260,7 @@ class ResourcePreferenceStore:
         return False
 
     def secondary_comments_allowed(self, *, now: float | None = None) -> bool:
-        return self.allows_priority(TaskPriority.P2_ORDINARY, now=now) is not False
+        return self.allows_priority(TaskPriority.P2_ORDINARY, now=now)
 
     def _atomic_write(self, payload: dict[str, object]) -> bool:
         temporary = None
