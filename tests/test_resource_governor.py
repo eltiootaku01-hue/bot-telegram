@@ -191,9 +191,12 @@ class ResourceGovernorTests(unittest.TestCase):
         self.assertNotIn("token", json.dumps(payload).lower())
         self.assertNotIn("secret", json.dumps(payload).lower())
 
-    def test_missing_runtime_state_preserves_legacy_secondary_behavior(self):
-        self.assertIsNone(self.store.allows_priority(TaskPriority.P2_ORDINARY))
-        self.assertTrue(self.store.secondary_comments_allowed(now=1000))
+    def test_missing_runtime_state_blocks_secondary_but_keeps_critical(self):
+        for priority in (TaskPriority.P0_MODERATION, TaskPriority.P1_CRITICAL):
+            self.assertTrue(self.store.allows_priority(priority, now=1000))
+        for priority in (TaskPriority.P2_ORDINARY, TaskPriority.P3_GAMES, TaskPriority.P4_BACKGROUND):
+            self.assertFalse(self.store.allows_priority(priority, now=1000))
+        self.assertFalse(self.store.secondary_comments_allowed(now=1000))
 
     def test_invalid_or_stale_runtime_blocks_secondary_tasks(self):
         governor = self.governor([MemorySnapshot.invalid("sensor unavailable")])
